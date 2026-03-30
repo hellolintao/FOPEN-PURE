@@ -1,20 +1,18 @@
 <view class="mine-container">
-  <view class="user-info">
-    <image class="avatar" src="{{userInfo.avatarUrl || '/images/icons/avatar.png'}}"></image>
-    <view class="user-main">
-      <view class="user-name">{{userInfo.name || '未登录'}}</view>
-      <view class="user-level">能力等级：{{userInfo.level || 0}}</view>
-    </view>
-    <button wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">登录</button>
-  </view>
-  <view class="user-stats">
-    <view class="stat-item">胜率：{{userInfo.winRate || 0}}%</view>
-    <view class="stat-item">积分：{{userInfo.score || 0}}</view>
-    <view class="stat-item">状态：{{userInfo.status || '未知'}}</view>
-  </view>
-  <view class="user-intro">
-    <view class="intro-title">简介</view>
-    <view class="intro-content">{{userInfo.intro || '暂无简介'}}</view>
-  </view>
-  <view class="edit-profile-text">编辑资料</view>
+	<view class="user-info-center">
+		<image class="avatar" src="{{userInfo.avatarUrl || '/images/icons/avatar.png'}}"></image>
+		<view class="user-name">{{userInfo.name || '未登录'}}</view>
+		<button wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">登录</button>
+	</view>
+	<view class="mine-card">
+		<button class="mine-btn" bindtap="onMyMatch">
+			<image class="btn-icon" src="/images/icons/goods.png"></image>
+			我的比赛
+		</button>
+		<button class="mine-btn" bindtap="onSetting">
+			<image class="btn-icon" src="/images/icons/setting.svg"></image>
+			设置
+		</button>
+	</view>
+	<view class="edit-profile-text" bindtap="onEditProfile">编辑资料</view>
 </view>

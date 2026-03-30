@@ -1,33 +1,55 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
-cloud.init()
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('members')
 
 exports.main = async (event, context) => {
-  const { action, data, page = 1, pageSize = 10, keyword } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
+  const { action, data, page = 1, pageSize = 10, keyword } = event
 
   switch (action) {
     case 'add': {
-      // 新增会员，openid 唯一
+      // 新增会员，openid唯一
       const exist = await collection.where({ openid }).get()
       if (exist.data && exist.data.length > 0) {
         return { errMsg: 'already registered', data: exist.data[0] }
       }
-      data.openid = openid
-      data.registerTime = db.serverDate()
-      data.winRate = 0
-      data.score = 0
-      return await collection.add({ data })
+      const now = db.serverDate()
+      return await collection.add({
+        data: {
+          openid,
+          name: data.name,
+          avatarUrl: data.avatarUrl,
+          phone: data.phone || '',
+          status: data.status || '',
+          createTime: now,
+          updateTime: now
+        }
+      })
+    }
+    case 'get': {
+      // 获取会员信息 by openid
+      return await collection.where({ openid }).get()
+    }
+    case 'update': {
+      // 更新会员信息 by openid
+      const now = db.serverDate()
+      return await collection.where({ openid }).update({
+        data: {
+          ...data,
+          updateTime: now
+        }
+      })
+    }
+    case 'delete': {
+      // 删除会员 by openid
+      return await collection.where({ openid }).remove()
     }
     case 'search': {
-      // 查询会员，支持 openid 精确查找，或姓名/手机号模糊，分页
-      if (event.byOpenid) {
-        return await collection.where({ openid }).get()
-      }
+      // 支持按姓名或手机号模糊搜索，分页
       const query = []
       if (keyword) {
         query.push(
@@ -43,25 +65,6 @@ exports.main = async (event, context) => {
         .limit(pageSize)
         .get()
     }
-    case 'update':
-      // 修改会员
-      return await collection.doc(data._id).update({ data })
-    case 'delete':
-      // 删除会员
-      return await collection.doc(data._id).remove()
-    case 'getRank':
-      // 获取 winRate 排名前50的用户
-      return await collection
-        .orderBy('winRate', 'desc')
-        .limit(50)
-        .field({
-          name: true,
-          winRate: true,
-          level: true,
-          score: true,
-          avatarUrl: true
-        })
-        .get()
     default:
       return { errMsg: 'invalid action' }
   }

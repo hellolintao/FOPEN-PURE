@@ -1,47 +1,53 @@
 Page({
 	data: {
-		isLogin: false,
 		userInfo: {
 			avatarUrl: '',
-			name: '',
-			level: 0,
-			winRate: 0,
-			score: 0,
-			status: '',
-			intro: ''
-		}
+			name: ''
+		},
+		isLogin: false
 	},
 	onLoad() {
-		// 这里可以根据实际业务判断是否已登录，并拉取用户信息
-		// 示例：this.getUserInfo()
+		this.checkLogin()
+	},
+	checkLogin() {
+		// 尝试获取openid对应的会员信息
+		wx.cloud.callFunction({
+			name: 'members',
+			data: { action: 'get' },
+			success: res => {
+				if (res.result && res.result.data && res.result.data.length > 0) {
+					const user = res.result.data[0]
+					this.setData({
+						isLogin: true,
+						userInfo: {
+							avatarUrl: user.avatarUrl || '',
+							name: user.name || ''
+						}
+					})
+				} else {
+					this.setData({ isLogin: false })
+				}
+			}
+		})
 	},
 	onLogin() {
-    console.log('onl;ognge')
 		wx.getUserProfile({
 			desc: '用于完善会员资料',
 			success: res => {
-				const wxUser = res.userInfo;
-				// 用 openid 精确查找会员
+				const wxUser = res.userInfo
+				// 检查数据库是否有该openid会员
 				wx.cloud.callFunction({
 					name: 'members',
-					data: {
-						action: 'search',
-						byOpenid: true
-					},
-					success: searchRes => {
-						if (searchRes.result && searchRes.result.data && searchRes.result.data.length > 0) {
-							// 已注册，展示会员信息
-							const member = searchRes.result.data[0];
+					data: { action: 'get' },
+					success: getRes => {
+						if (getRes.result && getRes.result.data && getRes.result.data.length > 0) {
+							// 已注册
+							const user = getRes.result.data[0]
 							this.setData({
 								isLogin: true,
 								userInfo: {
-									avatarUrl: member.avatarUrl || wxUser.avatarUrl,
-									name: member.name,
-									level: member.level || 0,
-									winRate: member.winRate || 0,
-									score: member.score || 0,
-									status: member.status || '',
-									intro: member.intro || ''
+									avatarUrl: user.avatarUrl || wxUser.avatarUrl,
+									name: user.name || wxUser.nickName
 								}
 							})
 						} else {
@@ -60,12 +66,7 @@ Page({
 										isLogin: true,
 										userInfo: {
 											avatarUrl: wxUser.avatarUrl,
-											name: wxUser.nickName,
-											level: 0,
-											winRate: 0,
-											score: 0,
-											status: '',
-											intro: ''
+											name: wxUser.nickName
 										}
 									})
 								}
@@ -75,5 +76,14 @@ Page({
 				})
 			}
 		})
+	},
+	onEditProfile() {
+		wx.showToast({ title: '编辑资料', icon: 'none' })
+	},
+	onMyMatch() {
+		wx.showToast({ title: '我的比赛', icon: 'none' })
+	},
+	onSetting() {
+		wx.showToast({ title: '设置', icon: 'none' })
 	}
 })
