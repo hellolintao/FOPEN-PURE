@@ -49,10 +49,10 @@ Page({
   onEditInputName(e) {
     this.setData({ 'editSeason.name': e.detail.value })
   },
-  onEditInputStart(e) {
+  onEditPickStartDate(e) {
     this.setData({ 'editSeason.startDate': e.detail.value })
   },
-  onEditInputEnd(e) {
+  onEditPickEndDate(e) {
     this.setData({ 'editSeason.endDate': e.detail.value })
   },
   onCancelEdit() {
@@ -80,10 +80,10 @@ Page({
   onInputName(e) {
     this.setData({ 'newSeason.name': e.detail.value })
   },
-  onInputStart(e) {
+  onPickStartDate(e) {
     this.setData({ 'newSeason.startDate': e.detail.value })
   },
-  onInputEnd(e) {
+  onPickEndDate(e) {
     this.setData({ 'newSeason.endDate': e.detail.value })
   },
   onCancelAdd() {
