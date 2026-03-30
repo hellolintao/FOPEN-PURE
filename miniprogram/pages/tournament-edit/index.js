@@ -1,9 +1,11 @@
 Page({
   data: {
     isEdit: false,
-    tournament: { name: '', seasonId: '', startDate: '', endDate: '', location: '', type: '', description: '' },
+    tournament: { name: '', seasonId: '', startDate: '', endDate: '', location: '', type: '', format: '', description: '' },
     typeOptions: ['单打', '双打'],
     typeIndex: 0,
+    formatOptions: ['单淘', '双淘', '循环', '小组', '常规'],
+    formatIndex: 0,
     seasonOptions: [],
     seasonIndex: 0
   },
@@ -20,13 +22,15 @@ Page({
         if (options.tournament) {
           const t = JSON.parse(decodeURIComponent(options.tournament))
           const idx = this.data.typeOptions.indexOf(t.type)
+          const fidx = this.data.formatOptions.indexOf(t.format || '常规')
           // 这里也要用 _id 匹配
           const sidx = seasonOptions.findIndex(s => s.value === t.seasonId)
           seasonIndex = sidx >= 0 ? sidx : 0
           tournament = t
           this.setData({
             isEdit: true,
-            typeIndex: idx >= 0 ? idx : 0
+            typeIndex: idx >= 0 ? idx : 0,
+            formatIndex: fidx >= 0 ? fidx : 0
           })
         }
         // 如果是新增，默认选中第一个赛季
@@ -60,6 +64,13 @@ Page({
       'tournament.type': this.data.typeOptions[idx]
     })
   },
+  onPickFormat(e) {
+    const idx = e.detail.value
+    this.setData({
+      formatIndex: idx,
+      'tournament.format': this.data.formatOptions[idx]
+    })
+  },
   onPickStart(e) {
     this.setData({ 'tournament.startDate': e.detail.value })
   },
@@ -68,7 +79,7 @@ Page({
   },
   onSubmit() {
     const t = this.data.tournament
-    if (!t.name || !t.seasonId || !t.startDate || !t.endDate || !t.location || !t.type) {
+    if (!t.name || !t.seasonId || !t.startDate || !t.endDate || !t.location || !t.type || !t.format) {
       wx.showToast({ title: '请填写完整', icon: 'none' })
       return
     }
@@ -114,6 +125,31 @@ Page({
       success: res => {
         if (res.confirm) {
           wx.navigateBack()
+        }
+      }
+    })
+  },
+  onDelete() {
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除该赛事吗？此操作不可恢复。',
+      confirmColor: '#e54545',
+      success: res => {
+        if (res.confirm) {
+          wx.cloud.callFunction({
+            name: 'tournaments',
+            data: {
+              action: 'delete',
+              _id: this.data.tournament._id
+            },
+            success: () => {
+              wx.showToast({ title: '删除成功', icon: 'success' })
+              wx.navigateBack()
+            },
+            fail: () => {
+              wx.showToast({ title: '删除失败', icon: 'error' })
+            }
+          })
         }
       }
     })

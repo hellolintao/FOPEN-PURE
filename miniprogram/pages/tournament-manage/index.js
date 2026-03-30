@@ -1,7 +1,8 @@
 Page({
     data: {
         tournamentList: [],
-        // 仅保留列表数据
+        totalTournaments: 0,
+        ongoingTournaments: 0,
     },
     onShow() {
         this.getTournamentList()
@@ -11,7 +12,12 @@ Page({
             name: 'tournaments',
             data: { action: 'list' },
             success: res => {
-                this.setData({ tournamentList: res.result.data || [] })
+                const list = res.result.data || []
+                this.setData({
+                    tournamentList: list,
+                    totalTournaments: list.length,
+                    ongoingTournaments: list.filter(t => t.status === 'ongoing').length
+                })
             }
         })
     },
@@ -32,14 +38,14 @@ Page({
                     wx.cloud.callFunction({
                         name: 'tournaments',
                         data: { action: 'updateStatus', _id: id, status },
-                        success: res => {
+                        success: () => {
                             wx.showToast({
                                 title: '状态已更新',
                                 icon: 'success'
                             })
                             this.getTournamentList()
                         },
-                        fail: err => {
+                        fail: () => {
                             wx.showToast({
                                 title: '更新失败',
                                 icon: 'error'
@@ -50,34 +56,8 @@ Page({
             }
         })
     },
-    onDeleteTournament(e) {
-        const id = e.currentTarget.dataset.id
-        wx.showModal({
-            title: '确认删除',
-            content: '确定要删除该赛事吗？此操作不可恢复。',
-            confirmColor: '#e54545',
-            success: res => {
-                if (res.confirm) {
-                    wx.cloud.callFunction({
-                        name: 'tournaments',
-                        data: { action: 'delete', _id: id },
-                        success: res => {
-                            wx.showToast({
-                                title: '删除成功',
-                                icon: 'success'
-                            })
-                            this.getTournamentList()
-                        },
-                        fail: err => {
-                            wx.showToast({
-                                title: '删除失败',
-                                icon: 'error'
-                            })
-                        }
-                    })
-                }
-            }
-        })
+    onStopPropagation() {
+        // 阻止事件冒泡
     },
     onAddTournament() {
         wx.navigateTo({

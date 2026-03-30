@@ -121,6 +121,7 @@
   right: 0;
   background: linear-gradient(180deg, transparent 0%, #101017 20%, #0d0d14 100%);
   backdrop-filter: blur(20rpx);
+  z-index: 999;
 }
 
 .dialog-btn {
@@ -146,6 +147,17 @@
 .dialog-btn.cancel:active {
   background: rgba(255, 255, 255, 0.12);
   transform: scale(0.98);
+}
+
+.dialog-btn.delete {
+  background: linear-gradient(135deg, #e54545 0%, #ff6b6b 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 32rpx rgba(229,69,69,0.4);
+}
+
+.dialog-btn.delete:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 16rpx rgba(229,69,69,0.3);
 }
 
 .dialog-btn.primary {

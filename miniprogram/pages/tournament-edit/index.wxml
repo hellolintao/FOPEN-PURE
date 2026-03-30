@@ -70,6 +70,19 @@
       </picker>
     </view>
 
+    <!-- 格式 -->
+    <view class="form-item">
+      <view class="field-label">
+        <text class="required">*</text>赛事格式
+      </view>
+      <picker mode="selector" range="{{formatOptions}}" value="{{formatIndex}}" bindchange="onPickFormat">
+        <view class="dialog-input picker-input">
+          <text class="picker-text">{{tournament.format || '选择格式'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
     <!-- 描述 -->
     <view class="form-item">
       <view class="field-label">赛事描述</view>
@@ -80,6 +93,7 @@
   <!-- 底部按钮 -->
   <view class="dialog-actions">
     <button class="dialog-btn cancel" bindtap="onCancel">取消</button>
+    <button class="dialog-btn delete" wx:if="{{isEdit}}" bindtap="onDelete">删除赛事</button>
     <button class="dialog-btn primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认新增'}}</button>
   </view>
 </view>

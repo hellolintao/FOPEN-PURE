@@ -20,6 +20,7 @@ exports.main = async (event, context) => {
           endDate: data.endDate,
           location: data.location,
           type: data.type,
+          format: data.format || '常规',
           status: data.status || 'upcoming',
           description: data.description || '',
           createTime: now,
