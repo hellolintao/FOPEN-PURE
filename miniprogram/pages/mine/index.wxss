@@ -1,3 +1,83 @@
-.tab-page { padding: 80rpx 0; text-align: center; }
-.tab-title { font-size: 40rpx; color: #7c3aed; margin-bottom: 20rpx; }
-.tab-desc { color: #aaa; font-size: 28rpx; }
+.edit-profile-text {
+	color: #7c3aed;
+	font-size: 26rpx;
+	text-align: center;
+	margin: 48rpx 0 0 0;
+	letter-spacing: 1rpx;
+	opacity: 0.85;
+}
+.mine-container {
+	background: #101017;
+	min-height: 100vh;
+	color: #fff;
+	padding: 40rpx 0;
+}
+.user-info {
+	display: flex;
+	align-items: center;
+	padding: 40rpx 40rpx 20rpx 40rpx;
+}
+.avatar {
+	width: 120rpx;
+	height: 120rpx;
+	border-radius: 50%;
+	background: #222;
+	border: 4rpx solid #7c3aed;
+}
+.user-main {
+	flex: 1;
+	margin-left: 32rpx;
+  margin-right: 32rpx;
+}
+.user-name {
+	font-size: 36rpx;
+	font-weight: bold;
+	color: #fff;
+}
+.user-level {
+	font-size: 28rpx;
+	color: #7c3aed;
+	margin-top: 8rpx;
+  white-space: nowrap;
+}
+.login-btn {
+	background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+	color: #fff;
+	border: none;
+	border-radius: 32rpx;
+	padding: 0 10rpx;
+	height: 64rpx;
+	line-height: 64rpx;
+	font-size: 28rpx;
+	margin-left: 10rpx;
+}
+.user-stats {
+	display: flex;
+	justify-content: space-around;
+	margin: 32rpx 0;
+}
+.stat-item {
+	font-size: 28rpx;
+	color: #fff;
+	background: #181828;
+	border-radius: 16rpx;
+	padding: 16rpx 32rpx;
+	min-width: 160rpx;
+	text-align: center;
+}
+.user-intro {
+	margin: 40rpx 40rpx 0 40rpx;
+	background: #181828;
+	border-radius: 16rpx;
+	padding: 32rpx;
+}
+.intro-title {
+	font-size: 28rpx;
+	color: #7c3aed;
+	margin-bottom: 12rpx;
+}
+.intro-content {
+	font-size: 26rpx;
+	color: #fff;
+	line-height: 1.7;
+}
