@@ -1,0 +1,4 @@
+<view class="tab-page">
+  <view class="tab-title">排名</view>
+  <view class="tab-desc">这里展示排行榜和排名相关内容。</view>
+</view>

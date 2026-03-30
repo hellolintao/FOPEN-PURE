@@ -1,0 +1,4 @@
+<view class="tab-page">
+  <view class="tab-title">成员</view>
+  <view class="tab-desc">这里展示成员列表和成员相关信息。</view>
+</view>

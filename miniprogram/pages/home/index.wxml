@@ -1,0 +1,4 @@
+<view class="tab-page">
+  <view class="tab-title">首页</view>
+  <view class="tab-desc">这里是首页，展示应用的主要内容和入口。</view>
+</view>

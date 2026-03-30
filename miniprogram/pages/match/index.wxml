@@ -1,0 +1,4 @@
+<view class="tab-page">
+  <view class="tab-title">赛事</view>
+  <view class="tab-desc">这里展示各类赛事信息和相关内容。</view>
+</view>
