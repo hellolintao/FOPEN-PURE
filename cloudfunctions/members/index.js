@@ -49,6 +49,19 @@ exports.main = async (event, context) => {
     case 'delete':
       // 删除会员
       return await collection.doc(data._id).remove()
+    case 'getRank':
+      // 获取 winRate 排名前50的用户
+      return await collection
+        .orderBy('winRate', 'desc')
+        .limit(50)
+        .field({
+          name: true,
+          winRate: true,
+          level: true,
+          score: true,
+          avatarUrl: true
+        })
+        .get()
     default:
       return { errMsg: 'invalid action' }
   }

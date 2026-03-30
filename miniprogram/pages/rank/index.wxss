@@ -1,3 +1,67 @@
-.tab-page { padding: 80rpx 0; text-align: center; }
-.tab-title { font-size: 40rpx; color: #7c3aed; margin-bottom: 20rpx; }
-.tab-desc { color: #aaa; font-size: 28rpx; }
+.rank-tabs {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 32rpx;
+	gap: 40rpx;
+}
+.rank-tab {
+	font-size: 32rpx;
+	color: #aaa;
+	padding: 12rpx 40rpx;
+	border-radius: 32rpx;
+	background: #181828;
+	transition: all 0.2s;
+}
+.rank-tab.active {
+	color: #fff;
+	background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+	font-weight: bold;
+	box-shadow: 0 2rpx 8rpx rgba(124,58,237,0.12);
+}
+.rank-container {
+	background: #101017;
+	min-height: 100vh;
+	padding: 40rpx 0;
+}
+.rank-title {
+	font-size: 40rpx;
+	color: #7c3aed;
+	text-align: center;
+	margin-bottom: 32rpx;
+}
+.rank-empty {
+	color: #aaa;
+	text-align: center;
+	margin-top: 80rpx;
+}
+.rank-item {
+	display: flex;
+	align-items: center;
+	background: #181828;
+	border-radius: 16rpx;
+	margin: 20rpx 32rpx;
+	padding: 24rpx 20rpx;
+}
+.rank-avatar {
+	width: 80rpx;
+	height: 80rpx;
+	border-radius: 50%;
+	background: #222;
+	border: 3rpx solid #7c3aed;
+}
+.rank-info {
+	flex: 1;
+	margin-left: 28rpx;
+}
+.rank-name {
+	font-size: 32rpx;
+	color: #fff;
+	font-weight: bold;
+}
+.rank-meta {
+	margin-top: 8rpx;
+	color: #aaa;
+	font-size: 26rpx;
+	display: flex;
+	gap: 32rpx;
+}

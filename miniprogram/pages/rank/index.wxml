@@ -1,4 +1,21 @@
-<view class="tab-page">
-  <view class="tab-title">排名</view>
-  <view class="tab-desc">这里展示排行榜和排名相关内容。</view>
+<view class="rank-container">
+  <view class="rank-tabs">
+    <view class="rank-tab {{rankType === 'single' ? 'active' : ''}}" bindtap="onTabChange" data-type="single">单打</view>
+    <view class="rank-tab {{rankType === 'double' ? 'active' : ''}}" bindtap="onTabChange" data-type="double">双打</view>
+  </view>
+  <view class="rank-title">排行榜</view>
+  <view wx:if="{{rankList.length === 0}}" class="rank-empty">暂无数据</view>
+  <block wx:for="{{rankList}}" wx:key="{{index}}">
+    <view class="rank-item">
+      <image class="rank-avatar" src="{{item.avatarUrl || '/images/icons/avatar.png'}}"></image>
+      <view class="rank-info">
+        <view class="rank-name">{{item.name}}</view>
+        <view class="rank-meta">
+          <text>胜率：{{item.winRate || 0}}</text>
+          <text>等级：{{item.level || '-'}} </text>
+          <text>积分：{{item.score || 0}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
 </view>
