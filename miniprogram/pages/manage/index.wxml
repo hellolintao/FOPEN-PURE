@@ -1,0 +1,9 @@
+<view class="manage-container">
+  <view class="manage-title">管理中心</view>
+  <view class="manage-list">
+    <view class="manage-item" bindtap="onSeasonManage">赛季管理</view>
+    <view class="manage-item" bindtap="onTournamentManage">赛事管理</view>
+    <view class="manage-item" bindtap="onMatchManage">比赛管理</view>
+    <view class="manage-item" bindtap="onMemberManage">会员管理</view>
+  </view>
+</view>

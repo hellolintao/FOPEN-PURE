@@ -3,7 +3,11 @@
     "pages/home/index",
     "pages/match/index",
     "pages/rank/index",
-    "pages/mine/index"
+    "pages/mine/index",
+    "pages/manage/index",
+    "pages/season-manage/index",
+    "pages/tournament-manage/index",
+    "pages/tournament-edit/index"
   ],
   "tabBar": {
     "color": "#888",

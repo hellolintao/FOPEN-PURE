@@ -1,7 +1,7 @@
 .mine-container {
 	background: #101017;
 	min-height: 100vh;
-	color: #fff;
+	color: #FFFFFF;
 	padding: 40rpx 0;
 }
 .user-info-center {
@@ -23,12 +23,12 @@
 .user-name {
 	font-size: 38rpx;
 	font-weight: bold;
-	color: #fff;
+	color: #FFFFFF;
 	margin-bottom: 10rpx;
 }
 .login-btn {
 	background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
-	color: #fff;
+	color: #FFFFFF;
 	border: none;
 	border-radius: 32rpx;
 	padding: 0 48rpx;
@@ -53,7 +53,7 @@
 	align-items: center;
 	justify-content: center;
 	background: none;
-	color: #fff;
+	color: #FFFFFF;
 	border: none;
 	border-radius: 20rpx;
 	font-size: 28rpx;

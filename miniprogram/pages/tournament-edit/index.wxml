@@ -1,0 +1,28 @@
+<view class="tournament-edit-container">
+  <view class="tournament-edit-title">{{isEdit ? '编辑赛事' : '新增赛事'}}</view>
+  <view class="field-label">赛事名称</view>
+  <input class="dialog-input" placeholder="请输入赛事名称" value="{{tournament.name}}" data-key="name" bindinput="onInput" />
+  <view class="field-label">所属赛季</view>
+  <picker mode="selector" range="{{seasonOptions}}" range-key="label" value="{{seasonIndex}}" bindchange="onPickSeason">
+    <view class="dialog-input">{{seasonOptions.length > 0 ? seasonOptions[seasonIndex].label : '选择所属赛季'}}</view>
+  </picker>
+  <view class="field-label">开始日期</view>
+  <picker mode="date" value="{{tournament.startDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickStart">
+    <view class="dialog-input">{{tournament.startDate || '选择开始日期'}}</view>
+  </picker>
+  <view class="field-label">结束日期</view>
+  <picker mode="date" value="{{tournament.endDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickEnd">
+    <view class="dialog-input">{{tournament.endDate || '选择结束日期'}}</view>
+  </picker>
+  <view class="field-label">场地名称</view>
+  <input class="dialog-input" placeholder="请输入场地名称" value="{{tournament.location}}" data-key="location" bindinput="onInput" />
+  <view class="field-label">类型</view>
+  <picker mode="selector" range="{{typeOptions}}" value="{{typeIndex}}" bindchange="onPickType">
+    <view class="dialog-input">{{tournament.type || '选择类型'}}</view>
+  </picker>
+  <view class="field-label">描述</view>
+  <textarea class="dialog-textarea" placeholder="请输入描述" value="{{tournament.description}}" data-key="description" bindinput="onInput" />
+  <view class="dialog-actions">
+    <button class="dialog-btn primary" bindtap="onSubmit">{{isEdit ? '保存' : '新增'}}</button>
+  </view>
+</view>

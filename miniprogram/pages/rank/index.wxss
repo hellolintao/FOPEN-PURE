@@ -13,7 +13,7 @@
 	transition: all 0.2s;
 }
 .rank-tab.active {
-	color: #fff;
+	color: #FFFFFF;
 	background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
 	font-weight: bold;
 	box-shadow: 0 2rpx 8rpx rgba(124,58,237,0.12);
@@ -55,7 +55,7 @@
 }
 .rank-name {
 	font-size: 32rpx;
-	color: #fff;
+	color: #FFFFFF;
 	font-weight: bold;
 }
 .rank-meta {

@@ -15,4 +15,7 @@
 		</button>
 	</view>
 	<view class="edit-profile-text" bindtap="onEditProfile">编辑资料</view>
+	<view class="manage-btn-bar">
+		<button class="manage-btn" bindtap="onManage">管理</button>
+	</view>
 </view>

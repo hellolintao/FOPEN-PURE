@@ -1,0 +1,45 @@
+<view class="season-manage-container">
+  <view class="season-title">赛季管理</view>
+  <block wx:for="{{seasonList}}" wx:key="_id">
+    <view class="season-item">
+      <view class="season-info">
+        <view class="season-name">{{item.name}}</view>
+        <view class="season-meta">
+          <text>状态：{{item.status}}</text>
+          <text>时间：{{item.startDate}} ~ {{item.endDate}}</text>
+        </view>
+      </view>
+      <view class="season-actions">
+        <button class="season-btn delete" bindtap="onDeleteSeason" data-id="{{item._id}}">删除</button>
+        <button wx:if="{{item.status === 'active'}}" class="season-btn edit" bindtap="onEditSeason" data-id="{{item._id}}">编辑</button>
+      </view>
+    </view>
+  </block>
+  <view class="add-btn-bar">
+    <button class="add-btn" bindtap="onAddSeason">新增赛季</button>
+  </view>
+  <view wx:if="{{showAddDialog}}" class="dialog-mask">
+    <view class="dialog">
+      <view class="dialog-title">新增赛季</view>
+      <input class="dialog-input" placeholder="赛季名称" value="{{newSeason.name}}" bindinput="onInputName" />
+      <input class="dialog-input" placeholder="开始日期(YYYY-MM-DD)" value="{{newSeason.startDate}}" bindinput="onInputStart" />
+      <input class="dialog-input" placeholder="结束日期(YYYY-MM-DD)" value="{{newSeason.endDate}}" bindinput="onInputEnd" />
+      <view class="dialog-actions">
+        <button class="dialog-btn" bindtap="onCancelAdd">取消</button>
+        <button class="dialog-btn primary" bindtap="onConfirmAdd">确定</button>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{showEditDialog}}" class="dialog-mask">
+    <view class="dialog">
+      <view class="dialog-title">编辑赛季</view>
+      <input class="dialog-input" placeholder="赛季名称" value="{{editSeason.name}}" bindinput="onEditInputName" />
+      <input class="dialog-input" placeholder="开始日期(YYYY-MM-DD)" value="{{editSeason.startDate}}" bindinput="onEditInputStart" />
+      <input class="dialog-input" placeholder="结束日期(YYYY-MM-DD)" value="{{editSeason.endDate}}" bindinput="onEditInputEnd" />
+      <view class="dialog-actions">
+        <button class="dialog-btn" bindtap="onCancelEdit">取消</button>
+        <button class="dialog-btn primary" bindtap="onConfirmEdit">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

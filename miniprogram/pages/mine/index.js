@@ -80,10 +80,13 @@ Page({
 	onEditProfile() {
 		wx.showToast({ title: '编辑资料', icon: 'none' })
 	},
+	onManage() {
+		wx.navigateTo({ url: '/pages/manage/index' })
+	},
 	onMyMatch() {
 		wx.showToast({ title: '我的比赛', icon: 'none' })
 	},
 	onSetting() {
 		wx.showToast({ title: '设置', icon: 'none' })
-	}
+	},
 })

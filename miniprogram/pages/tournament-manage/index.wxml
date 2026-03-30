@@ -1,0 +1,34 @@
+<view class="tournament-manage-container">
+  <view class="tournament-title">赛事管理</view>
+  <block wx:for="{{tournamentList}}" wx:key="_id">
+    <view class="tournament-item">
+      <view class="tournament-info">
+        <view class="tournament-name">{{item.name}}</view>
+        <view class="tournament-meta">
+          <text>赛季：{{item.seasonName || '-'}}</text>
+          <text>时间：{{item.startDate}} ~ {{item.endDate}}</text>
+          <text>场地：{{item.location}}</text>
+        </view>
+        <view class="tournament-meta">
+          <text>类型：{{item.type}}</text>
+        </view>
+        <view class="tournament-desc">{{item.description}}</view>
+      </view>
+      <view class="tournament-actions">
+        <view class="status-btn-row">
+          <button class="status-btn {{item.status === 'upcoming' ? 'active upcoming' : ''}}" bindtap="onSetStatus" data-id="{{item._id}}" data-status="upcoming">待开始</button>
+          <button class="status-btn {{item.status === 'ongoing' ? 'active ongoing' : ''}}" bindtap="onSetStatus" data-id="{{item._id}}" data-status="ongoing">进行中</button>
+          <button class="status-btn {{item.status === 'completed' ? 'active completed' : ''}}" bindtap="onSetStatus" data-id="{{item._id}}" data-status="completed">已结束</button>
+        </view>
+        <view class="btn-actions-row">
+          <button class="mini-btn edit-btn" bindtap="onEditTournament" data-id="{{item._id}}">编辑</button>
+          <button class="mini-btn delete-btn" bindtap="onDeleteTournament" data-id="{{item._id}}">删除</button>
+        </view>
+      </view>
+    </view>
+  </block>
+  <view class="add-btn-bar">
+    <button class="add-btn" bindtap="onAddTournament">新增赛事</button>
+  </view>
+  <!-- 弹窗相关代码已移除 -->
+</view>
