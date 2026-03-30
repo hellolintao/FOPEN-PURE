@@ -1,0 +1,10 @@
+{
+  "usingComponents": {},
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 50,
+  "backgroundColorTop": "#101017",
+  "backgroundColorBottom": "#0d0d14",
+  "navigationBarTitleText": "会员管理",
+  "navigationBarBackgroundColor": "#101017",
+  "navigationBarTextStyle": "white"
+}

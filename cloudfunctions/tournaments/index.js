@@ -6,7 +6,7 @@ const _ = db.command
 const collection = db.collection('tournaments')
 
 exports.main = async (event, context) => {
-  const { action, data, page = 1, pageSize = 10, keyword, id } = event
+  const { action, data, page = 1, pageSize = 10, keyword, id, status, _id } = event
   const now = db.serverDate()
   switch (action) {
     case 'add': {
@@ -40,9 +40,18 @@ exports.main = async (event, context) => {
         }
       })
     }
+    case 'updateStatus': {
+      // 更新赛事状态
+      return await collection.doc(_id || id).update({
+        data: {
+          status,
+          updateTime: now
+        }
+      })
+    }
     case 'delete': {
       // 删除赛事
-      return await collection.doc(id).remove()
+      return await collection.doc(_id || id).remove()
     }
     case 'list': {
       // 分页查询赛事，支持按名称模糊搜索，并聚合赛季名称

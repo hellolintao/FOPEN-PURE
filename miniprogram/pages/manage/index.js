@@ -10,6 +10,6 @@ Page({
     wx.showToast({ title: '比赛管理', icon: 'none' })
   },
   onMemberManage() {
-    wx.showToast({ title: '会员管理', icon: 'none' })
+    wx.navigateTo({ url: '/pages/member-manage/index' })
   }
 })

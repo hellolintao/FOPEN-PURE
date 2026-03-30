@@ -1,5 +1,5 @@
 .mine-container {
-	background: #101017;
+	background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
 	min-height: 100vh;
 	color: #FFFFFF;
 	padding: 40rpx 0;
@@ -16,9 +16,10 @@
 	width: 140rpx;
 	height: 140rpx;
 	border-radius: 50%;
-	background: #222;
-	border: 5rpx solid #7c3aed;
+	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
+	border: 4rpx solid #7c3aed;
 	margin-bottom: 18rpx;
+	box-shadow: 0 0 30rpx rgba(124,58,237,0.3);
 }
 .user-name {
 	font-size: 38rpx;
@@ -39,13 +40,13 @@
 	margin-top: 18rpx;
 }
 .mine-card {
-	background: #181828;
+	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
 	border-radius: 24rpx;
 	margin: 0 40rpx 32rpx 40rpx;
 	padding: 32rpx 0;
 	display: flex;
 	justify-content: space-around;
-	box-shadow: 0 4rpx 24rpx rgba(124,58,237,0.08);
+	box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.15), inset 0 1rpx 0 rgba(255,255,255,0.05);
 }
 .mine-btn {
 	display: flex;

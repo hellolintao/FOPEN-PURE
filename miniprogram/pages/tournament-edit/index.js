@@ -68,7 +68,6 @@ Page({
   },
   onSubmit() {
     const t = this.data.tournament
-    console.log(t)
     if (!t.name || !t.seasonId || !t.startDate || !t.endDate || !t.location || !t.type) {
       wx.showToast({ title: '请填写完整', icon: 'none' })
       return
@@ -84,8 +83,11 @@ Page({
           data: updateData
         },
         success: () => {
-          wx.showToast({ title: '保存成功', icon: 'none' })
+          wx.showToast({ title: '保存成功', icon: 'success' })
           wx.navigateBack()
+        },
+        fail: () => {
+          wx.showToast({ title: '保存失败', icon: 'error' })
         }
       })
     } else {
@@ -96,10 +98,24 @@ Page({
           data: { ...t, _id: 'tournament_' + Date.now() }
         },
         success: () => {
-          wx.showToast({ title: '新增成功', icon: 'none' })
+          wx.showToast({ title: '新增成功', icon: 'success' })
           wx.navigateBack()
+        },
+        fail: () => {
+          wx.showToast({ title: '新增失败', icon: 'error' })
         }
       })
     }
+  },
+  onCancel() {
+    wx.showModal({
+      title: '确认取消',
+      content: '确定要放弃当前编辑内容吗？',
+      success: res => {
+        if (res.confirm) {
+          wx.navigateBack()
+        }
+      }
+    })
   }
 })

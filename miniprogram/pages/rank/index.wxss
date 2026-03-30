@@ -14,20 +14,23 @@
 }
 .rank-tab.active {
 	color: #FFFFFF;
-	background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+	background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
 	font-weight: bold;
-	box-shadow: 0 2rpx 8rpx rgba(124,58,237,0.12);
+	box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
 }
 .rank-container {
-	background: #101017;
+	background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
 	min-height: 100vh;
 	padding: 40rpx 0;
 }
 .rank-title {
-	font-size: 40rpx;
+	font-size: 44rpx;
 	color: #7c3aed;
 	text-align: center;
 	margin-bottom: 32rpx;
+	font-weight: 600;
+	letter-spacing: 2rpx;
+	text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 .rank-empty {
 	color: #aaa;
@@ -37,17 +40,20 @@
 .rank-item {
 	display: flex;
 	align-items: center;
-	background: #181828;
+	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
 	border-radius: 16rpx;
 	margin: 20rpx 32rpx;
 	padding: 24rpx 20rpx;
+	box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.1), inset 0 1rpx 0 rgba(255,255,255,0.05);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .rank-avatar {
 	width: 80rpx;
 	height: 80rpx;
 	border-radius: 50%;
-	background: #222;
+	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
 	border: 3rpx solid #7c3aed;
+	box-shadow: 0 0 20rpx rgba(124,58,237,0.2);
 }
 .rank-info {
 	flex: 1;

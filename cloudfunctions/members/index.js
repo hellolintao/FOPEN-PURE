@@ -8,7 +8,7 @@ const collection = db.collection('members')
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { action, data, page = 1, pageSize = 10, keyword } = event
+  const { action, data, page = 1, pageSize = 10, keyword, _id } = event
 
   switch (action) {
     case 'add': {
@@ -61,9 +61,43 @@ exports.main = async (event, context) => {
       }
       return await collection
         .where(query.length ? _.and(query) : {})
+        .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .get()
+    }
+    case 'list': {
+      // 获取会员列表，支持状态过滤和分页
+      const query = []
+      if (data && data.status) {
+        query.push({ status: data.status })
+      }
+      return await collection
+        .where(query.length ? _.and(query) : {})
+        .orderBy('createTime', 'desc')
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    }
+    case 'updateById': {
+      // 根据_id更新会员信息
+      if (!_id) {
+        return { errMsg: '_id is required' }
+      }
+      const now = db.serverDate()
+      return await collection.doc(_id).update({
+        data: {
+          ...data,
+          updateTime: now
+        }
+      })
+    }
+    case 'deleteById': {
+      // 根据_id删除会员
+      if (!_id) {
+        return { errMsg: '_id is required' }
+      }
+      return await collection.doc(_id).remove()
     }
     default:
       return { errMsg: 'invalid action' }

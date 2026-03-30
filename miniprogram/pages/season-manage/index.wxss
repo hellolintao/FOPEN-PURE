@@ -1,24 +1,28 @@
 .season-manage-container {
-  background: #101017;
+  background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
   min-height: 100vh;
   color: #FFFFFF;
   padding: 40rpx 0;
 }
 .season-title {
-  font-size: 40rpx;
+  font-size: 44rpx;
   color: #7c3aed;
   text-align: center;
   margin-bottom: 48rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 .season-item {
-  background: #181828;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
   border-radius: 20rpx;
   margin: 0 40rpx 32rpx 40rpx;
   padding: 32rpx 24rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4rpx 24rpx rgba(124,58,237,0.08);
+  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.12), inset 0 1rpx 0 rgba(255,255,255,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .season-info {
   flex: 1;
@@ -56,15 +60,16 @@
   color: #FFFFFF;
 }
 .season-btn.edit {
-  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
   color: #FFFFFF;
+  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
 }
 .add-btn-bar {
   margin: 48rpx 0 0 0;
   text-align: center;
 }
 .add-btn {
-  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
   color: #FFFFFF;
   border: none;
   border-radius: 32rpx;
@@ -73,7 +78,12 @@
   line-height: 64rpx;
   font-size: 28rpx;
   font-weight: 500;
-  box-shadow: 0 4rpx 24rpx rgba(124,58,237,0.08);
+  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.add-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.3);
 }
 .dialog-mask {
   position: fixed;
@@ -85,11 +95,12 @@
   justify-content: center;
 }
 .dialog {
-  background: #22223a;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
   border-radius: 24rpx;
   padding: 48rpx 32rpx 32rpx 32rpx;
   width: 80vw;
   max-width: 600rpx;
+  box-shadow: 0 20rpx 60rpx rgba(0,0,0,0.5);
 }
 .dialog-title {
   font-size: 32rpx;
@@ -122,6 +133,7 @@
   font-weight: 500;
 }
 .dialog-btn.primary {
-  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
   color: #FFFFFF;
+  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
 }
