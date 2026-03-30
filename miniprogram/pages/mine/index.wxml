@@ -1,21 +1,92 @@
 <view class="mine-container">
-	<view class="user-info-center">
-		<image class="avatar" src="{{userInfo.avatarUrl || '/images/icons/avatar.png'}}"></image>
-		<view class="user-name">{{userInfo.name || '未登录'}}</view>
-		<button wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">登录</button>
-	</view>
-	<view class="mine-card">
-		<button class="mine-btn" bindtap="onMyMatch">
-			<image class="btn-icon" src="/images/icons/goods.png"></image>
-			我的比赛
-		</button>
-		<button class="mine-btn" bindtap="onSetting">
-			<image class="btn-icon" src="/images/icons/setting.svg"></image>
-			设置
-		</button>
-	</view>
-	<view class="edit-profile-text" bindtap="onEditProfile">编辑资料</view>
-	<view class="manage-btn-bar">
-		<button class="manage-btn" bindtap="onManage">管理</button>
-	</view>
+  <!-- 顶部用户信息卡片 -->
+  <view class="user-card">
+    <view class="user-avatar-wrapper">
+      <image 
+        class="user-avatar" 
+        src="{{userInfo.avatarUrl}}" 
+        mode="aspectFill"
+      />
+      <view class="avatar-glow"></view>
+    </view>
+    <view class="user-details">
+      <view class="user-name">{{userInfo.name || '欢迎你'}}</view>
+      <view class="user-status">
+        <view class="status-dot"></view>
+        <text>{{isLogin ? '已登录' : '未登录'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 未登录时的登录按钮 -->
+  <view wx:if="{{!isLogin}}" class="login-section">
+    <button class="login-btn" bindtap="onLogin">
+      <text class="btn-icon">🔐</text>
+      登录账号
+    </button>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view wx:if="{{isLogin}}" class="stats-card">
+    <view class="stat-item">
+      <text class="stat-value">0</text>
+      <text class="stat-label">我的比赛</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">0</text>
+      <text class="stat-label">参与场次</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">0</text>
+      <text class="stat-label">获得排名</text>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-section">
+    <view class="menu-card">
+      <view class="menu-item" bindtap="onMyMatch">
+        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <text class="menu-icon">🏆</text>
+        </view>
+        <view class="menu-content">
+          <text class="menu-title">我的比赛</text>
+          <text class="menu-desc">查看参与的赛事</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
+      <view class="menu-item" bindtap="onEditProfile">
+        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+          <text class="menu-icon">✏️</text>
+        </view>
+        <view class="menu-content">
+          <text class="menu-title">编辑资料</text>
+          <text class="menu-desc">完善个人信息</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
+      <view class="menu-item" bindtap="onSetting">
+        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+          <text class="menu-icon">⚙️</text>
+        </view>
+        <view class="menu-content">
+          <text class="menu-title">设置</text>
+          <text class="menu-desc">偏好和系统设置</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 管理入口 -->
+  <view class="manage-section">
+    <button class="manage-btn" bindtap="onManage">
+      <text class="manage-icon">🎯</text>
+      <text>进入管理后台</text>
+    </button>
+  </view>
 </view>
