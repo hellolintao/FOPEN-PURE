@@ -4,7 +4,8 @@ Page({
 			avatarUrl: '',
 			name: ''
 		},
-		isLogin: false
+		isLogin: false,
+		isAdmin: false
 	},
 	onLoad() {
 		this.checkLogin()
@@ -22,13 +23,14 @@ Page({
 					const user = res.result.data[0]
 					this.setData({
 						isLogin: true,
+						isAdmin: user.admin || false,
 						userInfo: {
 							avatarUrl: user.avatarUrl || '',
 							name: user.name || ''
 						}
 					})
 				} else {
-					this.setData({ isLogin: false })
+					this.setData({ isLogin: false, isAdmin: false })
 				}
 			}
 		})
@@ -49,6 +51,7 @@ Page({
 					const user = getRes.result.data[0]
 					this.setData({
 						isLogin: true,
+						isAdmin: user.admin || false,
 						userInfo: {
 							avatarUrl: user.avatarUrl || 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132',
 							name: user.name || '微信用户'

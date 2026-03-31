@@ -39,6 +39,20 @@
         </view>
       </picker>
     </view>
+
+    <!-- 是否管理员 -->
+    <view class="form-item">
+      <view class="field-label">管理员权限</view>
+      <view class="switch-wrapper">
+        <switch
+          class="switch"
+          checked="{{member.admin}}"
+          bindchange="onAdminChange"
+          color="#1890ff"
+        />
+        <text class="switch-label">{{member.admin ? '是' : '否'}}</text>
+      </view>
+    </view>
   </view>
 
   <!-- 底部按钮 -->

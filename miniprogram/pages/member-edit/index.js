@@ -1,7 +1,7 @@
 Page({
   data: {
     isEdit: false,
-    member: { name: '', phone: '', avatarUrl: '', status: '' },
+    member: { name: '', phone: '', avatarUrl: '', status: '', admin: false },
     memberId: '',
     statusOptions: [
       { label: '活跃', value: 'active' },
@@ -24,6 +24,7 @@ Page({
       // 默认设置为活跃状态
       this.setData({
         'member.status': 'active',
+        'member.admin': false,
         statusIndex: 0
       })
     }
@@ -41,6 +42,13 @@ Page({
     this.setData({
       statusIndex: idx,
       'member.status': this.data.statusOptions[idx].value
+    })
+  },
+
+  // 管理员开关变化
+  onAdminChange(e) {
+    this.setData({
+      'member.admin': e.detail.value
     })
   },
 
@@ -103,7 +111,8 @@ Page({
           data: {
             name: member.name,
             phone: member.phone,
-            status: member.status
+            status: member.status,
+            admin: member.admin
           }
         },
         success: res => {
@@ -115,7 +124,8 @@ Page({
             _id: this.data.memberId,
             name: member.name,
             phone: member.phone,
-            status: member.status
+            status: member.status,
+            admin: member.admin
           }
 
           setTimeout(() => {

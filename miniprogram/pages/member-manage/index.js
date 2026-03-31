@@ -40,7 +40,7 @@ Page({
 
   // 更新单个会员项目
   updateMemberItem(updateData) {
-    const { _id, name, phone, status } = updateData
+    const { _id, name, phone, status, admin } = updateData
     const { memberList } = this.data
 
     const updatedList = memberList.map(item => {
@@ -49,7 +49,8 @@ Page({
           ...item,
           name,
           phone,
-          status
+          status,
+          admin
         }
       }
       return item

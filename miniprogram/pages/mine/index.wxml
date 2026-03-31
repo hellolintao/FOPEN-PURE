@@ -73,7 +73,7 @@
   </view>
 
   <!-- 管理入口 -->
-  <view class="manage-btn" bindtap="onManage">
+  <view wx:if="{{isAdmin}}" class="manage-btn" bindtap="onManage">
     <text class="manage-icon">🎯</text>
     <text>进入管理后台</text>
   </view>
