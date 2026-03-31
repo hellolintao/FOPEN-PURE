@@ -2,6 +2,7 @@ Page({
   data: {
     tournamentId: '',
     tournament: null,
+    registrations: [],
     loading: true
   },
 
@@ -10,6 +11,7 @@ Page({
     if (id) {
       this.setData({ tournamentId: id });
       this.loadTournamentDetail();
+      this.loadRegistrations();
     }
   },
 
@@ -17,6 +19,7 @@ Page({
     // 页面显示时刷新数据
     if (this.data.tournamentId) {
       this.loadTournamentDetail();
+      this.loadRegistrations();
     }
   },
 
@@ -53,6 +56,26 @@ Page({
     }
   },
 
+  async loadRegistrations() {
+    try {
+      const db = wx.cloud.database();
+      const _ = db.command;
+      const result = await db.collection('tournament_registrations')
+        .where({
+          tournamentId: this.data.tournamentId,
+          status: _.neq('cancelled')
+        })
+        .orderBy('seed', 'asc')
+        .get();
+
+      this.setData({
+        registrations: result.data || []
+      });
+    } catch (err) {
+      console.error('加载参赛人员失败:', err);
+    }
+  },
+
   getStatusText(status) {
     const statusMap = {
       'upcoming': '待开始',
@@ -75,6 +98,13 @@ Page({
   onAddPlayer() {
     wx.navigateTo({
       url: `/pages/tournament-add-player/index?id=${this.data.tournamentId}`
+    });
+  },
+
+  onEditMatchups() {
+    wx.showToast({
+      title: '对位编辑功能开发中',
+      icon: 'none'
     });
   },
 
@@ -114,7 +144,9 @@ Page({
 
   onPullDownRefresh() {
     this.loadTournamentDetail().then(() => {
-      wx.stopPullDownRefresh();
+      this.loadRegistrations().then(() => {
+        wx.stopPullDownRefresh();
+      });
     });
   }
 });

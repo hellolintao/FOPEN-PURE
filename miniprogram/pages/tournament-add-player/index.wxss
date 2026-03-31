@@ -1,30 +1,309 @@
 .tournament-add-player-container {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+/* 已报名人员区域 */
+.registered-section {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 33.33vh;
+}
+
+.section-header {
+  padding: 20rpx 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60rpx 40rpx;
-}
-
-.empty-icon {
-  font-size: 160rpx;
-  margin-bottom: 40rpx;
-  opacity: 0.8;
-}
-
-.empty-title {
   color: white;
-  font-size: 40rpx;
+  font-size: 30rpx;
   font-weight: bold;
+}
+
+.title-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.section-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 24rpx;
+}
+
+.registered-list {
+  flex: 1;
+  padding: 0 20rpx 20rpx;
+  overflow-y: auto;
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.hint-icon {
+  font-size: 80rpx;
   margin-bottom: 20rpx;
 }
 
-.empty-desc {
-  color: rgba(255, 255, 255, 0.8);
+.hint-text {
   font-size: 28rpx;
+  margin-bottom: 10rpx;
+}
+
+.hint-desc {
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.registered-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 12rpx;
+  transition: all 0.3s;
+}
+
+.member-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.member-avatar-placeholder {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24rpx;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.member-name {
+  flex: 1;
+  margin-left: 16rpx;
+  color: white;
+  font-size: 28rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-badge {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-icon {
+  color: white;
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+/* 会员列表区域 */
+.member-list-section {
+  flex: 2;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 搜索框 */
+.search-bar {
+  margin: 20rpx 30rpx;
+  background: white;
+  border-radius: 40rpx;
+  padding: 0 30rpx;
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.search-icon {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  height: 100%;
+}
+
+.clear-btn {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 24rpx;
+  margin-left: 10rpx;
+}
+
+/* 会员列表 */
+.member-list {
+  flex: 1;
+  padding: 0 30rpx 20rpx;
+  overflow-y: auto;
+}
+
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 100rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+}
+
+.loading-text {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+}
+
+.member-info {
+  flex: 1;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.member-info .member-name {
+  color: #333;
+  font-size: 28rpx;
+  margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-phone {
+  color: #999;
+  font-size: 24rpx;
+}
+
+.select-badge {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.select-badge.selected {
+  background: #52c41a;
+}
+
+.select-icon {
+  color: #999;
+  font-size: 32rpx;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.select-badge.selected .select-icon {
+  color: white;
+}
+
+/* 底部按钮 */
+.footer-actions {
+  background: white;
+  padding: 20rpx 30rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.submit-btn {
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 44rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.submit-btn[disabled] {
+  background: #e0e0e0;
+  color: #999;
+}
+
+.btn-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.btn-text {
+  line-height: 1;
 }

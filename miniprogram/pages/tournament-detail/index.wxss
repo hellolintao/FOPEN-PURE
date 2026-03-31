@@ -1,38 +1,7 @@
 .tournament-detail-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding-bottom: 240rpx;
-}
-
-/* 返回区域 */
-.back-section {
-  padding: 30rpx;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 50rpx;
-  padding: 20rpx 30rpx;
-  color: white;
-  font-size: 28rpx;
-  width: fit-content;
-}
-
-.back-btn::after {
-  border: none;
-}
-
-.back-icon {
-  font-size: 40rpx;
-  margin-right: 10rpx;
-  line-height: 1;
-}
-
-.back-text {
-  line-height: 1;
+  padding-bottom: 180rpx;
 }
 
 /* 卡片样式 */
@@ -47,58 +16,186 @@
 .card-header {
   display: flex;
   align-items: center;
-  padding: 30rpx;
+  justify-content: space-between;
+  padding: 24rpx 30rpx;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
-.header-icon {
-  font-size: 36rpx;
-  margin-right: 16rpx;
-}
-
 .header-title {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: bold;
 }
 
-/* 信息行 */
-.info-row {
+.header-edit-btn {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  border-radius: 50%;
+  width: 56rpx;
+  height: 56rpx;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-edit-btn::after {
+  border: none;
+}
+
+.edit-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.header-btn {
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  border-radius: 28rpx;
+  padding: 12rpx 28rpx;
+  color: white;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.header-btn::after {
+  border: none;
+}
+
+.header-btn.add {
+  background: #52c41a;
+}
+
+/* 信息内容 */
+.info-content {
+  padding: 20rpx 0;
+}
+
+.info-row.compact {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 24rpx 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 12rpx 30rpx;
+  border-bottom: 1rpx solid #f5f5f5;
 }
 
-.info-row:last-child {
+.info-row.compact:last-child {
   border-bottom: none;
 }
 
-.label {
-  color: #666;
-  font-size: 28rpx;
-  min-width: 160rpx;
+.info-row.compact .label {
+  color: #999;
+  font-size: 24rpx;
+  min-width: 90rpx;
   flex-shrink: 0;
 }
 
-.value {
+.info-row.compact .value {
   color: #333;
-  font-size: 28rpx;
+  font-size: 24rpx;
   text-align: right;
   flex: 1;
   word-break: break-all;
+  line-height: 1.5;
 }
 
-.value.desc {
+.info-row.compact .value.desc {
   line-height: 1.6;
+}
+
+.info-row.compact .value.time {
+  color: #999;
+  font-size: 22rpx;
+}
+
+/* 分隔线 */
+.info-divider {
+  padding: 8rpx 30rpx 4rpx;
+  background: #f9f9f9;
+  color: #667eea;
+  font-size: 22rpx;
+  font-weight: 500;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 积分网格 */
+.points-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+  padding: 12rpx 30rpx;
+}
+
+.point-item {
+  background: #f9f9f9;
+  border-radius: 12rpx;
+  padding: 16rpx 12rpx;
+  text-align: center;
+}
+
+.point-label {
+  display: block;
+  color: #999;
+  font-size: 20rpx;
+  margin-bottom: 8rpx;
+}
+
+.point-value {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.point-value.win {
+  color: #52c41a;
+}
+
+.point-value.loss {
+  color: #f56c6c;
+}
+
+.point-value.walkover {
+  color: #e6a23c;
+}
+
+/* 轮次奖励 */
+.bonus-section {
+  padding: 12rpx 30rpx;
+}
+
+.bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+}
+
+.bonus-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f9f9f9;
+  border-radius: 12rpx;
+  padding: 14rpx 12rpx;
+}
+
+.bonus-label {
+  color: #999;
+  font-size: 20rpx;
+  margin-bottom: 6rpx;
+}
+
+.bonus-value {
+  color: #667eea;
+  font-size: 28rpx;
+  font-weight: bold;
 }
 
 /* 状态徽章 */
 .status-badge {
-  padding: 8rpx 20rpx;
-  border-radius: 30rpx;
-  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 24rpx;
+  font-size: 22rpx;
   color: white;
   font-weight: 500;
 }
@@ -115,84 +212,117 @@
   background: #909399;
 }
 
-/* 积分规则网格 */
-.rules-grid {
+/* 参赛人员 */
+.players-content {
+  padding: 20rpx;
+  min-height: 200rpx;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 30rpx;
+  color: #ccc;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* 9宫格布局 */
+.players-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20rpx;
-  padding: 30rpx;
+  gap: 16rpx;
 }
 
-.rule-item {
-  background: #f7f7f7;
+.player-card {
+  position: relative;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f5f5fa 100%);
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 24rpx 16rpx 20rpx;
   text-align: center;
+  border: 2rpx solid #e8e8f0;
 }
 
-.rule-label {
+.player-badge {
+  position: absolute;
+  top: -8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44rpx;
+  height: 44rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20rpx;
+  font-weight: bold;
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+}
+
+.player-name {
   display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-partner {
+  display: block;
+  font-size: 22rpx;
   color: #666;
-  font-size: 24rpx;
+  margin-bottom: 4rpx;
+}
+
+.player-team {
+  display: block;
+  font-size: 20rpx;
+  color: #999;
   margin-bottom: 12rpx;
 }
 
-.rule-value {
-  display: block;
-  font-size: 48rpx;
-  font-weight: bold;
-  color: #667eea;
-}
-
-.rule-value.win {
-  color: #52c41a;
-}
-
-.rule-value.loss {
-  color: #f56c6c;
-}
-
-.rule-value.walkover {
-  color: #e6a23c;
-}
-
-/* 轮次奖励 */
-.bonus-section {
-  border-top: 1rpx solid #f0f0f0;
-}
-
-.section-title {
-  padding: 24rpx 30rpx 20rpx;
-  color: #333;
-  font-size: 28rpx;
+.player-status {
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
   font-weight: 500;
 }
 
-.bonus-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16rpx;
-  padding: 0 30rpx 30rpx;
+.player-status.confirmed {
+  background: #e6f7e6;
+  color: #52c41a;
 }
 
-.bonus-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f7f7f7;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+.player-status.registered {
+  background: #fff7e6;
+  color: #fa8c16;
 }
 
-.bonus-label {
-  color: #666;
-  font-size: 24rpx;
+.player-status.withdrew {
+  background: #f5f5f5;
+  color: #999;
 }
 
-.bonus-value {
-  color: #667eea;
-  font-size: 32rpx;
-  font-weight: bold;
+/* 对位表 */
+.matchups-content {
+  padding: 20rpx 0;
+  min-height: 200rpx;
 }
 
 /* 删除按钮区域 */
@@ -225,52 +355,4 @@
 
 .delete-text {
   line-height: 1;
-}
-
-/* 操作按钮 */
-.action-buttons {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  padding: 20rpx 30rpx;
-  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.1);
-  display: flex;
-  gap: 20rpx;
-}
-
-.action-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 88rpx;
-  border-radius: 44rpx;
-  border: none;
-  font-size: 30rpx;
-  font-weight: 500;
-}
-
-.action-btn::after {
-  border: none;
-}
-
-.btn-icon {
-  font-size: 32rpx;
-  margin-right: 12rpx;
-}
-
-.btn-text {
-  line-height: 1;
-}
-
-.edit-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.add-player-btn {
-  background: #52c41a;
-  color: white;
 }
