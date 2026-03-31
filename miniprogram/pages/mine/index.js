@@ -102,7 +102,7 @@ Page({
 		wx.navigateTo({ url: '/pages/manage/index' })
 	},
 	onMyMatch() {
-		wx.showToast({ title: '我的比赛', icon: 'none' })
+		wx.navigateTo({ url: '/pages/my-match/index' })
 	},
 	onSetting() {
 		wx.navigateTo({ url: '/pages/setting/index' })

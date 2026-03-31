@@ -8,10 +8,6 @@
       <text class="card-title">赛事管理</text>
     </view>
 
-    <view class="manage-card" bindtap="onMatchManage">
-      <text class="card-title">比赛管理</text>
-    </view>
-
     <view class="manage-card" bindtap="onMemberManage">
       <text class="card-title">会员管理</text>
     </view>

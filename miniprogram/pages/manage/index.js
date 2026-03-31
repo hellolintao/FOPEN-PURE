@@ -6,9 +6,6 @@ Page({
   onTournamentManage() {
     wx.navigateTo({ url: '/pages/tournament-manage/index' })
   },
-  onMatchManage() {
-    wx.showToast({ title: '比赛管理', icon: 'none' })
-  },
   onMemberManage() {
     wx.navigateTo({ url: '/pages/member-manage/index' })
   }

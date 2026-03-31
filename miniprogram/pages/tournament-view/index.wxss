@@ -1,0 +1,288 @@
+/* ========== 容器 ========== */
+.tournament-view-container {
+  min-height: 100vh;
+  background: #f7f7f7;
+  padding-bottom: 24rpx;
+}
+
+/* ========== 加载状态 ========== */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* ========== 内容包装器 ========== */
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 24rpx;
+}
+
+/* ========== 卡片 ========== */
+.section-card {
+  background: #ffffff;
+  border-radius: 8rpx;
+  padding: 24rpx;
+}
+
+/* ========== 标题 ========== */
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #e5e5e5;
+}
+
+.section-title-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #e5e5e5;
+}
+
+.section-title-with-action .section-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.section-subtitle {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #666666;
+  margin: 24rpx 0 16rpx 0;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e5e5e5;
+}
+
+/* ========== 详情按钮 ========== */
+.detail-btn {
+  padding: 8rpx 24rpx;
+  background: #333333;
+  border-radius: 4rpx;
+}
+
+.detail-btn text {
+  font-size: 26rpx;
+  color: #ffffff;
+}
+
+.detail-btn:active {
+  background: #555555;
+}
+
+/* ========== 信息项 ========== */
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 28rpx;
+  color: #666666;
+  min-width: 180rpx;
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: #333333;
+  flex: 1;
+  text-align: right;
+}
+
+/* ========== 奖励列表 ========== */
+.bonus-list {
+  padding-top: 8rpx;
+}
+
+/* ========== 空提示 ========== */
+.empty-tip {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* ========== 参赛人员列表 ========== */
+.player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.player-item {
+  padding: 20rpx;
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333333;
+}
+
+.player-seed {
+  font-size: 24rpx;
+  color: #999;
+  background: #e5e5e5;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.partner-info {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.partner-label {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.partner-name {
+  font-size: 26rpx;
+  color: #333333;
+}
+
+.team-info {
+  padding-top: 4rpx;
+}
+
+.team-name {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+/* ========== 对位信息列表 ========== */
+.brackets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.bracket-item {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.bracket-header {
+  padding: 16rpx;
+  background: #f0f0f0;
+  border-radius: 8rpx;
+}
+
+.bracket-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.match-item {
+  padding: 20rpx;
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.match-position {
+  display: flex;
+  align-items: center;
+}
+
+.position-text {
+  font-size: 24rpx;
+  color: #999;
+  background: #e5e5e5;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.match-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.match-player {
+  flex: 1;
+  text-align: center;
+}
+
+.player-status {
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.player-status.winner {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.vs-text {
+  font-size: 24rpx;
+  color: #999;
+  font-weight: 600;
+}
+
+.match-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-badge {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 4rpx;
+}
+
+.status-pending {
+  color: #999;
+  background: #e5e5e5;
+}
+
+.status-ongoing {
+  color: #1890ff;
+  background: #e6f7ff;
+}
+
+.status-completed {
+  color: #52c41a;
+  background: #f6ffed;
+}
