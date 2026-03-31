@@ -1,101 +1,89 @@
 .season-manage-container {
-  background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
+  background: #f7f7f7;
   min-height: 100vh;
-  color: #FFFFFF;
+  color: #333333;
   padding: 40rpx 0;
 }
 .season-title {
   font-size: 44rpx;
-  color: #7c3aed;
+  color: #333333;
   text-align: center;
   margin-bottom: 48rpx;
   font-weight: 600;
-  letter-spacing: 2rpx;
-  text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 .season-item {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border-radius: 20rpx 20rpx 0 0;
+  background: #ffffff;
+  border-radius: 8rpx;
   margin: 0 40rpx 0 40rpx;
   padding: 32rpx 24rpx;
   display: flex;
   align-items: center;
-  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.12), inset 0 1rpx 0 rgba(255,255,255,0.05);
 }
 .season-info {
   flex: 1;
 }
 .season-name {
   font-size: 32rpx;
-  color: #FFFFFF;
-  font-weight: bold;
+  color: #333333;
+  font-weight: 500;
   margin-bottom: 12rpx;
 }
 .season-meta {
-  color: #aaa;
+  color: #999999;
   font-size: 26rpx;
   display: flex;
   gap: 32rpx;
 }
 .season-actions-row {
-  background: linear-gradient(135deg, #16162a 0%, #141424 100%);
+  background: #ffffff;
   margin: 0 40rpx 32rpx 40rpx;
   padding: 16rpx 24rpx;
-  border-radius: 0 0 20rpx 20rpx;
+  border-radius: 0 0 8rpx 8rpx;
   display: flex;
   justify-content: flex-end;
   gap: 16rpx;
-  border-top: 1rpx solid rgba(124,58,237,0.1);
+  border-top: 1rpx solid #f0f0f0;
+  margin-top: -16rpx;
 }
 .season-btn {
-  background: rgba(124, 58, 237, 0.15);
-  color: #a78bfa;
-  border: 1rpx solid rgba(124, 58, 237, 0.3);
-  border-radius: 12rpx;
+  background: #f5f5f5;
+  color: #666666;
+  border: none;
+  border-radius: 8rpx;
   padding: 12rpx 32rpx;
   font-size: 26rpx;
-  font-weight: 500;
+  font-weight: 400;
   transition: all 0.2s;
 }
 .season-btn.delete {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
+  color: #999999;
 }
 .season-btn.delete:active {
-  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  color: #fff;
-  transform: scale(0.96);
+  background: #e8e8e8;
+  color: #333333;
 }
 .season-btn.edit {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  color: #fff;
-  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
-  border: none;
+  background: #333333;
+  color: #ffffff;
 }
 .season-btn.edit:active {
-  transform: scale(0.96);
+  opacity: 0.8;
 }
 .add-btn-bar {
-  margin: 48rpx 0 0 0;
-  text-align: center;
+  margin: 48rpx 40rpx 0 40rpx;
 }
 .add-btn {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  color: #FFFFFF;
+  background: #333333;
+  color: #ffffff;
   border: none;
-  border-radius: 32rpx;
-  padding: 0 64rpx;
-  height: 64rpx;
-  line-height: 64rpx;
+  border-radius: 8rpx;
+  padding: 24rpx;
+  width: 100%;
   font-size: 28rpx;
   font-weight: 500;
-  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 .add-btn:active {
-  transform: scale(0.96);
-  box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.3);
+  opacity: 0.8;
 }
 .dialog-mask {
   position: fixed;
@@ -107,25 +95,25 @@
   justify-content: center;
 }
 .dialog {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border-radius: 24rpx;
+  background: #ffffff;
+  border-radius: 8rpx;
   padding: 48rpx 32rpx 32rpx 32rpx;
   width: 80vw;
   max-width: 600rpx;
-  box-shadow: 0 20rpx 60rpx rgba(0,0,0,0.5);
 }
 .dialog-title {
   font-size: 32rpx;
-  color: #7c3aed;
+  color: #333333;
   margin-bottom: 32rpx;
   text-align: center;
+  font-weight: 500;
 }
 .dialog-input {
   width: 100%;
-  background: #181828;
+  background: #f5f5f5;
   border: none;
-  border-radius: 12rpx;
-  color: #FFFFFF;
+  border-radius: 8rpx;
+  color: #333333;
   font-size: 28rpx;
   padding: 18rpx 20rpx;
   margin-bottom: 24rpx;
@@ -136,22 +124,20 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  transition: border-color 0.3s;
 }
 
 .dialog-input.picker:active {
-  background: #202030;
+  background: #e8e8e8;
 }
 
 .dialog-input.picker .placeholder {
-  color: #666;
+  color: #999999;
 }
 
 .picker-arrow {
   font-size: 36rpx;
-  color: #7c3aed;
+  color: #999999;
   margin-left: 16rpx;
-  opacity: 0.7;
 }
 .dialog-actions {
   display: flex;
@@ -159,16 +145,15 @@
   gap: 32rpx;
 }
 .dialog-btn {
-  background: #222;
-  color: #FFFFFF;
+  background: #f5f5f5;
+  color: #333333;
   border: none;
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   padding: 12rpx 32rpx;
   font-size: 26rpx;
-  font-weight: 500;
+  font-weight: 400;
 }
 .dialog-btn.primary {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  color: #FFFFFF;
-  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
+  background: #333333;
+  color: #ffffff;
 }

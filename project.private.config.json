@@ -22,11 +22,18 @@
     "miniprogram": {
       "list": [
         {
+          "name": "pages/round-settlement/index",
+          "pathName": "pages/round-settlement/index",
+          "query": "tournamentId=tournament_2026_122091_391&round=1",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
           "name": "赛事编辑",
           "pathName": "pages/tournament-edit/index",
           "query": "id=tournament_2026_122091_391",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "成绩录入",

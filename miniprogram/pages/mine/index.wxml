@@ -14,7 +14,6 @@
 
   <!-- 登录按钮 -->
   <view wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">
-    <text class="login-icon">🔐</text>
     <text>微信一键登录</text>
   </view>
 
@@ -39,42 +38,23 @@
   <!-- 功能列表 -->
   <view class="menu-list">
     <view class="menu-item" bindtap="onMyMatch">
-      <view class="menu-left">
-        <view class="menu-icon my-match-icon">🏆</view>
-        <view class="menu-text">
-          <text class="menu-title">我的比赛</text>
-          <text class="menu-desc">查看参与的赛事</text>
-        </view>
-      </view>
+      <text class="menu-title">我的比赛</text>
       <text class="menu-arrow">›</text>
     </view>
 
     <view class="menu-item" bindtap="onEditProfile">
-      <view class="menu-left">
-        <view class="menu-icon edit-icon">✏️</view>
-        <view class="menu-text">
-          <text class="menu-title">编辑资料</text>
-          <text class="menu-desc">完善个人信息</text>
-        </view>
-      </view>
+      <text class="menu-title">编辑资料</text>
       <text class="menu-arrow">›</text>
     </view>
 
     <view class="menu-item" bindtap="onSetting">
-      <view class="menu-left">
-        <view class="menu-icon setting-icon">⚙️</view>
-        <view class="menu-text">
-          <text class="menu-title">设置</text>
-          <text class="menu-desc">偏好和系统设置</text>
-        </view>
-      </view>
+      <text class="menu-title">设置</text>
       <text class="menu-arrow">›</text>
     </view>
   </view>
 
   <!-- 管理入口 -->
   <view wx:if="{{isAdmin}}" class="manage-btn" bindtap="onManage">
-    <text class="manage-icon">🎯</text>
     <text>进入管理后台</text>
   </view>
 </view>

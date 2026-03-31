@@ -16,7 +16,8 @@
     "pages/setting/index",
     "pages/edit-profile/index",
     "pages/tournament-brackets/index",
-    "pages/tournament-score/index"
+    "pages/tournament-score/index",
+    "pages/round-settlement/index"
   ],
   "tabBar": {
     "color": "#888",

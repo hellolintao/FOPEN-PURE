@@ -1,5 +1,5 @@
 .member-manage-container {
-  background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
+  background: #f7f7f7;
   min-height: 100vh;
   padding: 40rpx 0;
   padding-bottom: 20rpx;
@@ -7,12 +7,10 @@
 
 .member-title {
   font-size: 44rpx;
-  color: #7c3aed;
+  color: #333333;
   text-align: center;
   margin-bottom: 32rpx;
   font-weight: 600;
-  letter-spacing: 2rpx;
-  text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 
 /* 搜索栏 */
@@ -23,27 +21,14 @@
 .search-input-wrapper {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border: 2rpx solid rgba(124,58,237,0.15);
-  border-radius: 32rpx;
+  background: #ffffff;
+  border-radius: 8rpx;
   padding: 16rpx 24rpx;
-  transition: border-color 0.3s;
-}
-
-.search-input-wrapper:focus-within {
-  border-color: #7c3aed;
-  box-shadow: 0 0 20rpx rgba(124,58,237,0.2);
-}
-
-.search-icon {
-  font-size: 32rpx;
-  margin-right: 12rpx;
-  opacity: 0.7;
 }
 
 .search-input {
   flex: 1;
-  color: #fff;
+  color: #333333;
   font-size: 28rpx;
 }
 
@@ -53,9 +38,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: #f5f5f5;
   border-radius: 50%;
-  color: #aaa;
+  color: #999999;
   font-size: 24rpx;
   margin-left: 16rpx;
 }
@@ -71,19 +56,16 @@
   flex: 1;
   text-align: center;
   padding: 16rpx 0;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border-radius: 16rpx;
-  color: #aaa;
+  background: #ffffff;
+  border-radius: 8rpx;
+  color: #999999;
   font-size: 26rpx;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.2);
+  font-weight: 400;
 }
 
 .filter-item.active {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  color: #fff;
-  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
+  background: #333333;
+  color: #ffffff;
 }
 
 /* 会员列表 */
@@ -94,39 +76,28 @@
 .member-item {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border-radius: 20rpx;
+  background: #ffffff;
+  border-radius: 8rpx;
   margin-bottom: 24rpx;
   padding: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.1), inset 0 1rpx 0 rgba(255,255,255,0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
-  border: 2rpx solid transparent;
 }
 
 .member-item:active {
-  transform: scale(0.98);
-  border-color: rgba(124,58,237,0.5);
-  box-shadow: 0 4rpx 20rpx rgba(124,58,237,0.2);
+  background: #f5f5f5;
 }
 
 .member-avatar {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: #222;
-  border: 3rpx solid #7c3aed;
+  background: #f5f5f5;
+  border: 2rpx solid #e0e0e0;
   margin-right: 24rpx;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.2);
-  transition: transform 0.2s ease;
-}
-
-.member-avatar:active {
-  transform: scale(0.9);
 }
 
 .avatar-img {
@@ -136,8 +107,8 @@
 
 .avatar-placeholder {
   font-size: 48rpx;
-  color: #7c3aed;
-  font-weight: bold;
+  color: #999999;
+  font-weight: 500;
 }
 
 .member-info {
@@ -147,8 +118,8 @@
 
 .member-name {
   font-size: 32rpx;
-  color: #fff;
-  font-weight: bold;
+  color: #333333;
+  font-weight: 500;
   margin-bottom: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -157,7 +128,7 @@
 
 .member-phone {
   font-size: 26rpx;
-  color: #aaa;
+  color: #999999;
   margin-bottom: 6rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -166,7 +137,7 @@
 
 .member-meta {
   font-size: 24rpx;
-  color: #888;
+  color: #cccccc;
 }
 
 .join-time {
@@ -175,22 +146,21 @@
 
 .member-status {
   padding: 8rpx 20rpx;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   font-size: 24rpx;
-  font-weight: 500;
+  font-weight: 400;
   margin-right: 16rpx;
   flex-shrink: 0;
 }
 
 .member-status.active {
-  background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
-  color: #fff;
-  box-shadow: 0 2rpx 8rpx rgba(34,197,94,0.3);
+  background: #333333;
+  color: #ffffff;
 }
 
 .member-status.inactive {
-  background: rgba(255, 255, 255, 0.1);
-  color: #aaa;
+  background: #f5f5f5;
+  color: #999999;
 }
 
 /* 空状态 */
@@ -202,15 +172,9 @@
   padding: 120rpx 0;
 }
 
-.empty-icon {
-  font-size: 120rpx;
-  opacity: 0.3;
-  margin-bottom: 24rpx;
-}
-
 .empty-text {
   font-size: 28rpx;
-  color: #aaa;
+  color: #999999;
 }
 
 /* 加载更多 */
@@ -221,7 +185,7 @@
 
 .loading-text, .no-more-text {
   font-size: 26rpx;
-  color: #888;
+  color: #999999;
 }
 
 .loading {
@@ -232,5 +196,5 @@
 }
 
 .no-more {
-  color: #666;
+  color: #999999;
 }

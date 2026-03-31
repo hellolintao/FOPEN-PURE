@@ -274,7 +274,9 @@ Page({
       });
 
       setTimeout(() => {
-        wx.navigateBack();
+        wx.redirectTo({
+          url: `/pages/round-settlement/index?tournamentId=${this.data.tournamentId}&round=${tournament.config.currentRound || 1}`
+        });
       }, 1500);
 
     } catch (err) {

@@ -1,16 +1,15 @@
 .tournament-detail-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f7f7f7;
   padding-bottom: 180rpx;
 }
 
 /* 卡片样式 */
 .section-card {
-  background: white;
+  background: #ffffff;
   margin: 20rpx 30rpx;
-  border-radius: 24rpx;
+  border-radius: 8rpx;
   overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
@@ -18,19 +17,20 @@
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 30rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #ffffff;
+  color: #333333;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
 .header-title {
   font-size: 30rpx;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .header-edit-btn {
-  background: rgba(255, 255, 255, 0.3);
+  background: #f5f5f5;
   border: none;
-  border-radius: 50%;
+  border-radius: 8rpx;
   width: 56rpx;
   height: 56rpx;
   padding: 0;
@@ -46,16 +46,17 @@
 .edit-icon {
   font-size: 28rpx;
   line-height: 1;
+  color: #666666;
 }
 
 .header-btn {
-  background: rgba(255, 255, 255, 0.25);
+  background: #f5f5f5;
   border: none;
-  border-radius: 28rpx;
+  border-radius: 8rpx;
   padding: 12rpx 28rpx;
-  color: white;
+  color: #333333;
   font-size: 26rpx;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .header-btn::after {
@@ -63,7 +64,8 @@
 }
 
 .header-btn.add {
-  background: #52c41a;
+  background: #333333;
+  color: #ffffff;
 }
 
 /* 信息内容 */
@@ -84,14 +86,14 @@
 }
 
 .info-row.compact .label {
-  color: #999;
+  color: #999999;
   font-size: 24rpx;
   min-width: 90rpx;
   flex-shrink: 0;
 }
 
 .info-row.compact .value {
-  color: #333;
+  color: #333333;
   font-size: 24rpx;
   text-align: right;
   flex: 1;
@@ -103,16 +105,11 @@
   line-height: 1.6;
 }
 
-.info-row.compact .value.time {
-  color: #999;
-  font-size: 22rpx;
-}
-
 /* 分隔线 */
 .info-divider {
   padding: 8rpx 30rpx 4rpx;
   background: #f9f9f9;
-  color: #667eea;
+  color: #333333;
   font-size: 22rpx;
   font-weight: 500;
   border-bottom: 1rpx solid #f0f0f0;
@@ -127,15 +124,15 @@
 }
 
 .point-item {
-  background: #f9f9f9;
-  border-radius: 12rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
   padding: 16rpx 12rpx;
   text-align: center;
 }
 
 .point-label {
   display: block;
-  color: #999;
+  color: #999999;
   font-size: 20rpx;
   margin-bottom: 8rpx;
 }
@@ -143,20 +140,20 @@
 .point-value {
   display: block;
   font-size: 36rpx;
-  font-weight: bold;
-  color: #667eea;
+  font-weight: 500;
+  color: #333333;
 }
 
 .point-value.win {
-  color: #52c41a;
+  color: #333333;
 }
 
 .point-value.loss {
-  color: #f56c6c;
+  color: #333333;
 }
 
 .point-value.walkover {
-  color: #e6a23c;
+  color: #333333;
 }
 
 /* 轮次奖励 */
@@ -174,42 +171,45 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f9f9f9;
-  border-radius: 12rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
   padding: 14rpx 12rpx;
 }
 
 .bonus-label {
-  color: #999;
+  color: #999999;
   font-size: 20rpx;
   margin-bottom: 6rpx;
 }
 
 .bonus-value {
-  color: #667eea;
+  color: #333333;
   font-size: 28rpx;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* 状态徽章 */
 .status-badge {
   padding: 6rpx 16rpx;
-  border-radius: 24rpx;
+  border-radius: 8rpx;
   font-size: 22rpx;
   color: white;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .status-badge.upcoming {
-  background: #ffc107;
+  background: #f5f5f5;
+  color: #666666;
 }
 
 .status-badge.ongoing {
-  background: #52c41a;
+  background: #333333;
+  color: #ffffff;
 }
 
 .status-badge.completed {
-  background: #909399;
+  background: #f5f5f5;
+  color: #999999;
 }
 
 /* 参赛人员 */
@@ -224,7 +224,7 @@
   align-items: center;
   justify-content: center;
   padding: 80rpx 30rpx;
-  color: #ccc;
+  color: #999999;
 }
 
 .empty-icon {
@@ -234,7 +234,7 @@
 
 .empty-text {
   font-size: 26rpx;
-  color: #999;
+  color: #999999;
 }
 
 /* 9宫格布局 */
@@ -246,11 +246,10 @@
 
 .player-card {
   position: relative;
-  background: linear-gradient(135deg, #f8f9ff 0%, #f5f5fa 100%);
-  border-radius: 16rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
   padding: 24rpx 16rpx 20rpx;
   text-align: center;
-  border: 2rpx solid #e8e8f0;
 }
 
 .player-badge {
@@ -260,22 +259,21 @@
   transform: translateX(-50%);
   width: 44rpx;
   height: 44rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #333333;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 20rpx;
-  font-weight: bold;
-  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+  font-weight: 500;
 }
 
 .player-name {
   display: block;
   font-size: 26rpx;
-  font-weight: 600;
-  color: #333;
+  font-weight: 500;
+  color: #333333;
   margin-bottom: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -297,7 +295,7 @@
 
 .doubles-info .player-name {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 8rpx;
 }
 
@@ -310,7 +308,7 @@
 
 .player-detail {
   font-size: 22rpx;
-  color: #666;
+  color: #666666;
   flex: 1;
   text-align: center;
   overflow: hidden;
@@ -320,44 +318,44 @@
 
 .player-divider {
   font-size: 20rpx;
-  color: #ddd;
+  color: #cccccc;
 }
 
 .player-partner {
   display: block;
   font-size: 22rpx;
-  color: #666;
+  color: #666666;
   margin-bottom: 4rpx;
 }
 
 .player-team {
   display: block;
   font-size: 20rpx;
-  color: #999;
+  color: #999999;
   margin-bottom: 12rpx;
 }
 
 .player-status {
   display: inline-block;
   padding: 6rpx 16rpx;
-  border-radius: 20rpx;
+  border-radius: 8rpx;
   font-size: 20rpx;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .player-status.confirmed {
-  background: #e6f7e6;
-  color: #52c41a;
+  background: #f5f5f5;
+  color: #333333;
 }
 
 .player-status.registered {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: #f5f5f5;
+  color: #666666;
 }
 
 .player-status.withdrew {
   background: #f5f5f5;
-  color: #999;
+  color: #999999;
 }
 
 /* 对位表 */
@@ -376,7 +374,7 @@
 
 .preview-text {
   font-size: 28rpx;
-  color: #666;
+  color: #666666;
 }
 
 .brackets-list {
@@ -393,15 +391,15 @@
 
 .round-header {
   padding: 10rpx 20rpx;
-  background: #f5f6fa;
+  background: #f5f5f5;
   border-radius: 8rpx;
   margin-bottom: 16rpx;
 }
 
 .round-title {
   font-size: 26rpx;
-  color: #667eea;
-  font-weight: 600;
+  color: #333333;
+  font-weight: 500;
 }
 
 .round-matches {
@@ -413,7 +411,7 @@
   align-items: center;
   padding: 20rpx;
   background: #f9f9f9;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   margin-bottom: 12rpx;
 }
 
@@ -444,47 +442,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #333333;
   color: white;
   border-radius: 50%;
   font-size: 20rpx;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0 10rpx;
   flex-shrink: 0;
 }
 
 .match-status {
   padding: 6rpx 12rpx;
-  border-radius: 20rpx;
+  border-radius: 8rpx;
   font-size: 20rpx;
   margin-left: 16rpx;
   flex-shrink: 0;
 }
 
 .match-status.pending {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: #f5f5f5;
+  color: #666666;
 }
 
 .match-status.ongoing {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: #f5f5f5;
+  color: #333333;
 }
 
 .match-status.completed {
-  background: #e6f7e6;
-  color: #52c41a;
+  background: #f5f5f5;
+  color: #333333;
 }
 
 .enter-score-btn {
   margin-top: 20rpx;
   padding: 24rpx;
-  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  border-radius: 12rpx;
+  background: #333333;
+  border-radius: 8rpx;
   text-align: center;
   font-size: 28rpx;
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* 删除按钮区域 */
@@ -497,11 +495,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff0f0;
-  border: 2rpx solid #f56c6c;
-  border-radius: 16rpx;
+  background: #f5f5f5;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
   padding: 30rpx;
-  color: #f56c6c;
+  color: #999999;
   font-size: 32rpx;
   font-weight: 500;
 }

@@ -2,7 +2,6 @@
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-wrapper">
-      <text class="search-icon">🔍</text>
       <input
         class="search-input"
         placeholder="搜索会员姓名或手机号"
@@ -31,7 +30,6 @@
   <!-- 会员列表 -->
   <view class="member-list">
     <view wx:if="{{memberList.length === 0 && !loading}}" class="empty-state">
-      <text class="empty-icon">👤</text>
       <text class="empty-text">暂无会员数据</text>
     </view>
 

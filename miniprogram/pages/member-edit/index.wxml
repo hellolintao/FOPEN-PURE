@@ -5,7 +5,6 @@
       <view class="avatar-preview">
         <image wx:if="{{member.avatarUrl}}" src="{{member.avatarUrl}}" class="avatar-img" mode="aspectFill" />
         <view wx:else class="avatar-placeholder">
-          <text class="placeholder-icon">👤</text>
           <text class="placeholder-text">默认头像</text>
         </view>
       </view>
@@ -46,7 +45,7 @@
           class="switch"
           checked="{{member.admin}}"
           bindchange="onAdminChange"
-          color="#1890ff"
+          color="#333333"
         />
         <text class="switch-label">{{member.admin ? '是' : '否'}}</text>
       </view>

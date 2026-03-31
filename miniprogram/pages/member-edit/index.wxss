@@ -1,7 +1,7 @@
 .member-edit-container {
-  background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
+  background: #f7f7f7;
   min-height: 100vh;
-  color: #fff;
+  color: #333333;
   padding: 40rpx 0;
   display: flex;
   flex-direction: column;
@@ -9,12 +9,10 @@
 
 .member-edit-title {
   font-size: 44rpx;
-  color: #7c3aed;
+  color: #333333;
   text-align: center;
   margin-bottom: 48rpx;
   font-weight: 600;
-  letter-spacing: 2rpx;
-  text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 
 /* 表单区域 */
@@ -28,7 +26,7 @@
 }
 
 .field-label {
-  color: #bfaeff;
+  color: #333333;
   font-size: 28rpx;
   margin-bottom: 12rpx;
   display: flex;
@@ -37,10 +35,10 @@
 }
 
 .required {
-  color: #ff5c5c;
+  color: #999999;
   margin-right: 4rpx;
   font-size: 32rpx;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* 头像区域（只读） */
@@ -57,12 +55,11 @@
   height: 160rpx;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border: 3rpx solid rgba(124,58,237,0.3);
+  background: #ffffff;
+  border: 2rpx solid #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.2);
 }
 
 .avatar-img {
@@ -77,46 +74,21 @@
   justify-content: center;
 }
 
-.placeholder-icon {
-  font-size: 64rpx;
-  margin-bottom: 8rpx;
-  opacity: 0.5;
-}
-
 .placeholder-text {
   font-size: 24rpx;
-  color: #888;
-}
-
-.avatar-hint {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(124,58,237,0.8);
-  color: #fff;
-  font-size: 20rpx;
-  padding: 8rpx 0;
-  text-align: center;
-  backdrop-filter: blur(10rpx);
+  color: #999999;
 }
 
 /* 输入框样式 */
 .dialog-input {
   width: 100%;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-  border: 2rpx solid rgba(124,58,237,0.15);
-  border-radius: 16rpx;
-  color: #fff;
+  background: #ffffff;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  color: #333333;
   font-size: 28rpx;
   padding: 24rpx 28rpx;
-  transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
   box-sizing: border-box;
-}
-
-.dialog-input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 20rpx rgba(124,58,237,0.2);
 }
 
 .picker-input {
@@ -132,9 +104,20 @@
 
 .picker-arrow {
   font-size: 32rpx;
-  color: #7c3aed;
+  color: #999999;
   margin-left: 16rpx;
-  opacity: 0.7;
+}
+
+/* Switch样式 */
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.switch-label {
+  font-size: 28rpx;
+  color: #333333;
 }
 
 /* 底部按钮区域 */
@@ -147,8 +130,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, transparent 0%, #101017 20%, #0d0d14 100%);
-  backdrop-filter: blur(20rpx);
+  background: #f7f7f7;
 }
 
 .dialog-btn {
@@ -156,44 +138,35 @@
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  border-radius: 24rpx;
-  font-size: 30rpx;
-  font-weight: 600;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  font-weight: 500;
   border: none;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
 }
 
 .dialog-btn.delete {
-  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  color: #fff;
-  box-shadow: 0 8rpx 32rpx rgba(239,68,68,0.4);
+  background: #f5f5f5;
+  color: #666666;
 }
 
 .dialog-btn.delete:active {
-  transform: scale(0.96);
-  box-shadow: 0 4rpx 16rpx rgba(239,68,68,0.3);
+  background: #e8e8e8;
 }
 
 .dialog-btn.cancel {
-  background: rgba(255, 255, 255, 0.08);
-  color: #aaa;
-  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  background: #f5f5f5;
+  color: #333333;
 }
 
 .dialog-btn.cancel:active {
-  background: rgba(255, 255, 255, 0.12);
-  transform: scale(0.98);
+  background: #e8e8e8;
 }
 
 .dialog-btn.primary {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  color: #fff;
-  box-shadow: 0 8rpx 32rpx rgba(124,58,237,0.4);
+  background: #333333;
+  color: #ffffff;
 }
 
 .dialog-btn.primary:active {
-  transform: scale(0.96);
-  box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.3);
+  opacity: 0.8;
 }
