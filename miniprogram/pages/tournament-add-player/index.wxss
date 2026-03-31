@@ -1,0 +1,30 @@
+.tournament-add-player-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60rpx 40rpx;
+}
+
+.empty-icon {
+  font-size: 160rpx;
+  margin-bottom: 40rpx;
+  opacity: 0.8;
+}
+
+.empty-title {
+  color: white;
+  font-size: 40rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.empty-desc {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 28rpx;
+}

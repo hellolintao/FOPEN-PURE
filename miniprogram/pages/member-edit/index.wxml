@@ -1,6 +1,4 @@
 <view class="member-edit-container">
-  <view class="member-edit-title">{{isEdit ? '编辑会员' : '新增会员'}}</view>
-  
   <view class="form-section">
     <!-- 头像（只读显示） -->
     <view class="avatar-section">

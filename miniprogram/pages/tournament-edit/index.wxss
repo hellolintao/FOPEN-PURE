@@ -1,26 +1,113 @@
+/* 容器 */
 .tournament-edit-container {
   background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
   min-height: 100vh;
   color: #fff;
-  padding: 40rpx 0;
+  padding: 40rpx 0 180rpx 0;
   display: flex;
   flex-direction: column;
 }
 
-.tournament-edit-title {
+/* 页面标题 */
+.page-title {
   font-size: 44rpx;
   color: #7c3aed;
   text-align: center;
-  margin-bottom: 48rpx;
+  margin-bottom: 40rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
   text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 
+/* 步骤指示器 */
+.steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40rpx;
+  margin-bottom: 48rpx;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+
+.step-number {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 3rpx solid rgba(124,58,237,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #888;
+  transition: all 0.3s ease;
+}
+
+.step-item.active .step-number {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  border-color: #7c3aed;
+  color: #fff;
+  box-shadow: 0 4rpx 20rpx rgba(124,58,237,0.4);
+}
+
+.step-item.completed .step-number {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  border-color: #10b981;
+  color: #fff;
+}
+
+.step-label {
+  font-size: 24rpx;
+  color: #888;
+  transition: color 0.3s ease;
+}
+
+.step-item.active .step-label {
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.step-line {
+  flex: 1;
+  height: 3rpx;
+  background: rgba(255,255,255,0.08);
+  margin: 0 24rpx;
+  margin-top: 36rpx;
+  transition: background 0.3s ease;
+}
+
+.step-line.active {
+  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+}
+
+/* 步骤内容 */
+.step-content {
+  flex: 1;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* 表单区域 */
 .form-section {
   padding: 0 40rpx;
-  flex: 1;
 }
 
 .form-item {
@@ -109,10 +196,26 @@
   box-shadow: 0 0 20rpx rgba(124,58,237,0.2);
 }
 
+/* 奖励积分区域 */
+.bonus-section {
+  margin-top: 40rpx;
+  padding-top: 32rpx;
+  border-top: 2rpx solid rgba(124,58,237,0.2);
+}
+
+.section-title {
+  font-size: 32rpx;
+  color: #7c3aed;
+  margin-bottom: 32rpx;
+  font-weight: 600;
+  padding-left: 12rpx;
+  border-left: 4rpx solid #7c3aed;
+}
+
 /* 底部按钮区域 */
 .dialog-actions {
   display: flex;
-  gap: 24rpx;
+  gap: 16rpx;
   padding: 40rpx;
   padding-bottom: 60rpx;
   position: fixed;
@@ -130,7 +233,7 @@
   line-height: 88rpx;
   text-align: center;
   border-radius: 24rpx;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 600;
   border: none;
   transition: all 0.3s ease;
@@ -149,15 +252,15 @@
   transform: scale(0.98);
 }
 
-.dialog-btn.delete {
-  background: linear-gradient(135deg, #e54545 0%, #ff6b6b 100%);
-  color: #fff;
-  box-shadow: 0 8rpx 32rpx rgba(229,69,69,0.4);
+.dialog-btn.prev {
+  background: rgba(124, 58, 237, 0.2);
+  color: #a78bfa;
+  border: 2rpx solid rgba(124, 58, 237, 0.3);
 }
 
-.dialog-btn.delete:active {
-  transform: scale(0.96);
-  box-shadow: 0 4rpx 16rpx rgba(229,69,69,0.3);
+.dialog-btn.prev:active {
+  background: rgba(124, 58, 237, 0.3);
+  transform: scale(0.98);
 }
 
 .dialog-btn.primary {
@@ -169,4 +272,26 @@
 .dialog-btn.primary:active {
   transform: scale(0.96);
   box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.3);
+}
+
+.dialog-btn.submit {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 32rpx rgba(16,185,129,0.4);
+}
+
+.dialog-btn.submit:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 16rpx rgba(16,185,129,0.3);
+}
+
+.dialog-btn.delete {
+  background: linear-gradient(135deg, #e54545 0%, #ff6b6b 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 32rpx rgba(229,69,69,0.4);
+}
+
+.dialog-btn.delete:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 16rpx rgba(229,69,69,0.3);
 }

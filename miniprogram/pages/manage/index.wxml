@@ -1,9 +1,4 @@
 <view class="manage-container">
-  <view class="manage-header">
-    <text class="manage-title">管理中心</text>
-    <text class="manage-subtitle">选择管理模块</text>
-  </view>
-
   <view class="manage-grid">
     <view class="manage-card season-card" bindtap="onSeasonManage">
       <view class="card-icon">📅</view>

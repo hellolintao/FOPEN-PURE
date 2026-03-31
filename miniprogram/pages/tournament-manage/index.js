@@ -23,9 +23,8 @@ Page({
     },
     onEditTournament(e) {
         const id = e.currentTarget.dataset.id
-        const t = this.data.tournamentList.find(x => x._id === id)
         wx.navigateTo({
-            url: '/pages/tournament-edit/index?tournament=' + encodeURIComponent(JSON.stringify(t))
+            url: '/pages/tournament-detail/index?id=' + id
         })
     },
     onSetStatus(e) {

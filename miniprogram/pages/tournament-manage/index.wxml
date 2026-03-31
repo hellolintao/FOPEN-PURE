@@ -9,7 +9,6 @@
   <!-- 标题区域 -->
   <view class="header-section">
     <view class="title-container">
-      <text class="tournament-title">赛事管理</text>
       <view class="title-underline"></view>
     </view>
     <view class="stats-container">

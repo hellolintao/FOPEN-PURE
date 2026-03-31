@@ -1,5 +1,4 @@
 <view class="season-manage-container">
-  <view class="season-title">赛季管理</view>
   <block wx:for="{{seasonList}}" wx:key="_id">
     <view class="season-item">
       <view class="season-info">

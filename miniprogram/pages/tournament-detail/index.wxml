@@ -1,0 +1,137 @@
+<view class="tournament-detail-container">
+  <!-- 基本信息卡片 -->
+  <view class="section-card">
+    <view class="card-header">
+      <view class="header-icon">📋</view>
+      <text class="header-title">基本信息</text>
+    </view>
+    <view class="info-row">
+      <text class="label">赛事名称</text>
+      <text class="value">{{tournament.name}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">所属赛季</text>
+      <text class="value">{{tournament.seasonName || '未设置'}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">赛事时间</text>
+      <text class="value">{{tournament.startDate}} ~ {{tournament.endDate}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">场地</text>
+      <text class="value">{{tournament.location}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">赛事类型</text>
+      <text class="value">{{tournament.type}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">状态</text>
+      <view class="status-badge {{tournament.status}}">{{getStatusText(tournament.status)}}</view>
+    </view>
+    <view class="info-row" wx:if="{{tournament.description}}">
+      <text class="label">描述</text>
+      <text class="value desc">{{tournament.description}}</text>
+    </view>
+  </view>
+
+  <!-- 配置信息卡片 -->
+  <view class="section-card">
+    <view class="card-header">
+      <view class="header-icon">⚙️</view>
+      <text class="header-title">配置信息</text>
+    </view>
+    <view class="info-row">
+      <text class="label">最大参赛人数</text>
+      <text class="value">{{tournament.config.maxPlayers || '-'}}人</text>
+    </view>
+    <view class="info-row">
+      <text class="label">当前轮次</text>
+      <text class="value">第{{tournament.config.currentRound || 1}}轮</text>
+    </view>
+    <view class="info-row">
+      <text class="label">总轮数</text>
+      <text class="value">{{tournament.config.totalRounds || '-'}}轮</text>
+    </view>
+    <view class="info-row">
+      <text class="label">每场比赛人数</text>
+      <text class="value">{{tournament.config.playersPerMatch || '-'}}人</text>
+    </view>
+    <view class="info-row">
+      <text class="label">淘汰类型</text>
+      <text class="value">{{tournament.config.eliminationType || '-'}}</text>
+    </view>
+  </view>
+
+  <!-- 积分规则卡片 -->
+  <view class="section-card">
+    <view class="card-header">
+      <view class="header-icon">🏆</view>
+      <text class="header-title">积分规则</text>
+    </view>
+    <view class="rules-grid">
+      <view class="rule-item">
+        <text class="rule-label">胜利</text>
+        <text class="rule-value win">{{tournament.pointsRules.win || 0}}</text>
+      </view>
+      <view class="rule-item">
+        <text class="rule-label">失败</text>
+        <text class="rule-value loss">{{tournament.pointsRules.loss || 0}}</text>
+      </view>
+      <view class="rule-item">
+        <text class="rule-label">弃权</text>
+        <text class="rule-value walkover">{{tournament.pointsRules.walkover || 0}}</text>
+      </view>
+    </view>
+
+    <view class="bonus-section" wx:if="{{tournament.pointsRules.bonusByRound}}">
+      <view class="section-title">轮次奖励积分</view>
+      <view class="bonus-grid">
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.round_1 !== undefined}}">
+          <text class="bonus-label">第一轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.round_1}}</text>
+        </view>
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.round_2 !== undefined}}">
+          <text class="bonus-label">第二轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.round_2}}</text>
+        </view>
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.quarter_final !== undefined}}">
+          <text class="bonus-label">四分之一决赛</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.quarter_final}}</text>
+        </view>
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.semi_final !== undefined}}">
+          <text class="bonus-label">半决赛</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.semi_final}}</text>
+        </view>
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.final !== undefined}}">
+          <text class="bonus-label">决赛</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.final}}</text>
+        </view>
+        <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.champion !== undefined}}">
+          <text class="bonus-label">冠军</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound.champion}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 删除按钮 -->
+  <view class="delete-section">
+    <button class="delete-btn" bindtap="onDelete">
+      <text class="delete-icon">🗑️</text>
+      <text class="delete-text">删除赛事</text>
+    </button>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons">
+    <button class="action-btn edit-btn" bindtap="onEdit">
+      <text class="btn-icon">✏️</text>
+      <text class="btn-text">编辑赛事</text>
+    </button>
+    <button class="action-btn add-player-btn" bindtap="onAddPlayer">
+      <text class="btn-icon">➕</text>
+      <text class="btn-text">添加参赛人员</text>
+    </button>
+  </view>
+</view>

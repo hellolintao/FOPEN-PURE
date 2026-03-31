@@ -1,6 +1,4 @@
 <view class="member-manage-container">
-  <view class="member-title">会员管理</view>
-
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-wrapper">

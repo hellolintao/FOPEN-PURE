@@ -1,0 +1,276 @@
+.tournament-detail-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding-bottom: 240rpx;
+}
+
+/* 返回区域 */
+.back-section {
+  padding: 30rpx;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50rpx;
+  padding: 20rpx 30rpx;
+  color: white;
+  font-size: 28rpx;
+  width: fit-content;
+}
+
+.back-btn::after {
+  border: none;
+}
+
+.back-icon {
+  font-size: 40rpx;
+  margin-right: 10rpx;
+  line-height: 1;
+}
+
+.back-text {
+  line-height: 1;
+}
+
+/* 卡片样式 */
+.section-card {
+  background: white;
+  margin: 20rpx 30rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.header-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+/* 信息行 */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  color: #666;
+  font-size: 28rpx;
+  min-width: 160rpx;
+  flex-shrink: 0;
+}
+
+.value {
+  color: #333;
+  font-size: 28rpx;
+  text-align: right;
+  flex: 1;
+  word-break: break-all;
+}
+
+.value.desc {
+  line-height: 1.6;
+}
+
+/* 状态徽章 */
+.status-badge {
+  padding: 8rpx 20rpx;
+  border-radius: 30rpx;
+  font-size: 24rpx;
+  color: white;
+  font-weight: 500;
+}
+
+.status-badge.upcoming {
+  background: #ffc107;
+}
+
+.status-badge.ongoing {
+  background: #52c41a;
+}
+
+.status-badge.completed {
+  background: #909399;
+}
+
+/* 积分规则网格 */
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+  padding: 30rpx;
+}
+
+.rule-item {
+  background: #f7f7f7;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  text-align: center;
+}
+
+.rule-label {
+  display: block;
+  color: #666;
+  font-size: 24rpx;
+  margin-bottom: 12rpx;
+}
+
+.rule-value {
+  display: block;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.rule-value.win {
+  color: #52c41a;
+}
+
+.rule-value.loss {
+  color: #f56c6c;
+}
+
+.rule-value.walkover {
+  color: #e6a23c;
+}
+
+/* 轮次奖励 */
+.bonus-section {
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.section-title {
+  padding: 24rpx 30rpx 20rpx;
+  color: #333;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 0 30rpx 30rpx;
+}
+
+.bonus-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f7f7f7;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+}
+
+.bonus-label {
+  color: #666;
+  font-size: 24rpx;
+}
+
+.bonus-value {
+  color: #667eea;
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+/* 删除按钮区域 */
+.delete-section {
+  padding: 30rpx;
+}
+
+.delete-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff0f0;
+  border: 2rpx solid #f56c6c;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  color: #f56c6c;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.delete-btn::after {
+  border: none;
+}
+
+.delete-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.delete-text {
+  line-height: 1;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 20rpx 30rpx;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 44rpx;
+  border: none;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.action-btn::after {
+  border: none;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.btn-text {
+  line-height: 1;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.add-player-btn {
+  background: #52c41a;
+  color: white;
+}
