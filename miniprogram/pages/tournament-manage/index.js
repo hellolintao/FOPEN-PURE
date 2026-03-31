@@ -3,23 +3,64 @@ Page({
         tournamentList: [],
         totalTournaments: 0,
         ongoingTournaments: 0,
+        page: 1,
+        pageSize: 10,
+        loading: false,
+        hasMore: true
+    },
+    onLoad() {
+        this.getTournamentList()
     },
     onShow() {
+        this.setData({
+            page: 1,
+            tournamentList: [],
+            hasMore: true
+        })
         this.getTournamentList()
     },
     getTournamentList() {
+        if (this.data.loading || !this.data.hasMore) {
+            return
+        }
+
+        this.setData({ loading: true })
+
         wx.cloud.callFunction({
             name: 'tournaments',
-            data: { action: 'list' },
+            data: {
+                action: 'list',
+                page: this.data.page,
+                pageSize: this.data.pageSize
+            },
             success: res => {
                 const list = res.result.data || []
+                const total = res.result.total || 0
+
                 this.setData({
-                    tournamentList: list,
-                    totalTournaments: list.length,
-                    ongoingTournaments: list.filter(t => t.status === 'ongoing').length
+                    tournamentList: this.data.page === 1 ? list : [...this.data.tournamentList, ...list],
+                    totalTournaments: total,
+                    ongoingTournaments: list.filter(t => t.status === 'ongoing').length,
+                    hasMore: this.data.tournamentList.length + list.length < total,
+                    loading: false
+                })
+            },
+            fail: () => {
+                this.setData({ loading: false })
+                wx.showToast({
+                    title: '加载失败',
+                    icon: 'none'
                 })
             }
         })
+    },
+    onReachBottom() {
+        if (!this.data.loading && this.data.hasMore) {
+            this.setData({
+                page: this.data.page + 1
+            })
+            this.getTournamentList()
+        }
     },
     onEditTournament(e) {
         const id = e.currentTarget.dataset.id
@@ -41,6 +82,11 @@ Page({
                             wx.showToast({
                                 title: '状态已更新',
                                 icon: 'success'
+                            })
+                            this.setData({
+                                page: 1,
+                                tournamentList: [],
+                                hasMore: true
                             })
                             this.getTournamentList()
                         },

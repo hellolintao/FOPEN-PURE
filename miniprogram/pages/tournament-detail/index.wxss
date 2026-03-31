@@ -379,6 +379,114 @@
   color: #666;
 }
 
+.brackets-list {
+  padding: 20rpx 0;
+}
+
+.round-section {
+  margin-bottom: 30rpx;
+}
+
+.round-section:last-child {
+  margin-bottom: 0;
+}
+
+.round-header {
+  padding: 10rpx 20rpx;
+  background: #f5f6fa;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.round-title {
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.round-matches {
+  padding: 0 10rpx;
+}
+
+.round-match {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #f9f9f9;
+  border-radius: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.round-match:last-child {
+  margin-bottom: 0;
+}
+
+.match-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.match-player:first-child {
+  justify-content: flex-end;
+  padding-right: 10rpx;
+}
+
+.match-player:last-child {
+  justify-content: flex-start;
+  padding-left: 10rpx;
+}
+
+.match-divider {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  font-size: 20rpx;
+  font-weight: 700;
+  margin: 0 10rpx;
+  flex-shrink: 0;
+}
+
+.match-status {
+  padding: 6rpx 12rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+
+.match-status.pending {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.match-status.ongoing {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.match-status.completed {
+  background: #e6f7e6;
+  color: #52c41a;
+}
+
+.enter-score-btn {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  border-radius: 12rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
 /* 删除按钮区域 */
 .delete-section {
   padding: 30rpx;

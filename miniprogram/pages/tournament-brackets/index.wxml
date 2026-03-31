@@ -7,8 +7,8 @@
     </view>
 
     <!-- 单打参赛人员 -->
-    <view wx:if="{{tournament.type === 'singles'}}" class="participants-list">
-      <view class="participant-item" wx:for="{{registrations}}" wx:key="_id">
+    <view wx:if="{{tournament.type === 'singles'}}" class="participants-grid">
+      <view class="participant-card" wx:for="{{registrations}}" wx:key="_id">
         <view class="participant-badge">{{item.seed || '-'}}</view>
         <text class="participant-name">{{item.playerName}}</text>
         <view class="participant-status {{item.status}}">
@@ -18,8 +18,8 @@
     </view>
 
     <!-- 双打参赛队伍 -->
-    <view wx:if="{{tournament.type === 'doubles'}}" class="participants-list">
-      <view class="participant-item team" wx:for="{{registrations}}" wx:key="_id">
+    <view wx:if="{{tournament.type === 'doubles'}}" class="participants-grid">
+      <view class="participant-card team" wx:for="{{registrations}}" wx:key="_id">
         <view class="participant-badge">{{item.seed || '-'}}</view>
         <view class="team-info">
           <text class="team-name">{{item.teamName || item.playerName}}</text>
@@ -33,6 +33,34 @@
           {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- 第一轮对位 -->
+  <view class="brackets-section">
+    <view class="section-header">
+      <text class="section-title">第一轮对位</text>
+      <text class="section-count">{{matchups.length}}场</text>
+    </view>
+
+    <view class="matchups-list">
+      <view class="matchup-item" wx:for="{{matchups}}" wx:key="index">
+        <view class="matchup-player left" bindtap="onSelectPlayer" data-match-index="{{index}}" data-position="player1">
+          <text class="player-name {{item.player1 ? '' : 'placeholder'}}">{{item.player1 || '点击选择'}}</text>
+        </view>
+        <view class="matchup-divider">Vs</view>
+        <view class="matchup-player right" bindtap="onSelectPlayer" data-match-index="{{index}}" data-position="player2">
+          <text class="player-name {{item.player2 ? '' : 'placeholder'}}">{{item.player2 || '点击选择'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="random-btn" bindtap="onRandomMatchups">
+      <text>随机对位</text>
+    </view>
+
+    <view class="save-btn" bindtap="onSaveMatchups">
+      <text>保存</text>
     </view>
   </view>
 </view>

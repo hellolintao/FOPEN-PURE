@@ -149,6 +149,12 @@ Page({
     });
   },
 
+  onEnterScore() {
+    wx.navigateTo({
+      url: `/pages/tournament-score/index?id=${this.data.tournamentId}`
+    });
+  },
+
   onDelete() {
     wx.showModal({
       title: '确认删除',

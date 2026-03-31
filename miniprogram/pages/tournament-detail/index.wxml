@@ -158,9 +158,28 @@
         <text class="empty-icon">📊</text>
         <text class="empty-text">暂无对位信息</text>
       </view>
-      <view wx:else class="brackets-preview">
-        <view class="preview-info">
-          <text class="preview-text">共{{brackets.length}}轮，{{totalMatches}}场比赛</text>
+      <view wx:else class="brackets-list">
+        <view class="round-section" wx:for="{{brackets}}" wx:key="_id">
+          <view class="round-header">
+            <text class="round-title">第{{item.round}}轮</text>
+          </view>
+          <view class="round-matches">
+            <view class="round-match" wx:for="{{item.matches}}" wx:for-item="match" wx:key="matchId">
+              <view class="match-player">
+                <text class="player-name">{{match.player1.name}}</text>
+              </view>
+              <view class="match-divider">Vs</view>
+              <view class="match-player">
+                <text class="player-name">{{match.player2.name}}</text>
+              </view>
+              <view class="match-status {{match.status}}">
+                {{match.status === 'pending' ? '待开始' : match.status === 'ongoing' ? '进行中' : '已完成'}}
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="enter-score-btn" bindtap="onEnterScore">
+          <text>录入成绩</text>
         </view>
       </view>
     </view>
