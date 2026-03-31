@@ -22,12 +22,11 @@ Page({
         loss: 20,
         walkover: 50,
         bonusByRound: {
-          round_1: 0,
-          round_2: 50,
-          quarter_final: 100,
-          semi_final: 200,
-          final: 300,
-          champion: 500
+          1: 0,
+          2: 50,
+          3: 100,
+          4: 200,
+          5: 300
         }
       }
     },
@@ -454,16 +453,15 @@ Page({
         seedPlayers: tournament.config?.seedPlayers || []
       },
       pointsRules: {
-        win: parseInt(tournament.pointsRules?.win) || 100,
-        loss: parseInt(tournament.pointsRules?.loss) || 20,
-        walkover: parseInt(tournament.pointsRules?.walkover) || 50,
+        win: parseInt(tournament.pointsRules && tournament.pointsRules.win) || 100,
+        loss: parseInt(tournament.pointsRules && tournament.pointsRules.loss) || 20,
+        walkover: parseInt(tournament.pointsRules && tournament.pointsRules.walkover) || 50,
         bonusByRound: {
-          round_1: parseInt(tournament.pointsRules?.bonusByRound?.round_1) || 0,
-          round_2: parseInt(tournament.pointsRules?.bonusByRound?.round_2) || 50,
-          quarter_final: parseInt(tournament.pointsRules?.bonusByRound?.quarter_final) || 100,
-          semi_final: parseInt(tournament.pointsRules?.bonusByRound?.semi_final) || 200,
-          final: parseInt(tournament.pointsRules?.bonusByRound?.final) || 300,
-          champion: parseInt(tournament.pointsRules?.bonusByRound?.champion) || 500
+          1: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[1]) || 0,
+          2: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[2]) || 50,
+          3: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[3]) || 100,
+          4: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[4]) || 200,
+          5: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[5]) || 300
         }
       }
     }

@@ -1,8 +1,6 @@
 Page({
     data: {
         tournamentList: [],
-        totalTournaments: 0,
-        ongoingTournaments: 0,
         page: 1,
         pageSize: 10,
         loading: false,
@@ -39,8 +37,6 @@ Page({
 
                 this.setData({
                     tournamentList: this.data.page === 1 ? list : [...this.data.tournamentList, ...list],
-                    totalTournaments: total,
-                    ongoingTournaments: list.filter(t => t.status === 'ongoing').length,
                     hasMore: this.data.tournamentList.length + list.length < total,
                     loading: false
                 })

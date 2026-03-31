@@ -108,12 +108,11 @@ exports.main = async (event, context) => {
           loss: 20,
           walkover: 50,
           bonusByRound: {
-            round_1: 0,
-            round_2: 50,
-            quarter_final: 100,
-            semi_final: 200,
-            final: 300,
-            champion: 500
+            1: 0,
+            2: 50,
+            3: 100,
+            4: 200,
+            5: 300
           }
         },
 

@@ -11,17 +11,6 @@
     <view class="title-container">
       <view class="title-underline"></view>
     </view>
-    <view class="stats-container">
-      <view class="stat-item">
-        <text class="stat-value">{{totalTournaments}}</text>
-        <text class="stat-label">总赛事</text>
-      </view>
-      <view class="stat-divider"></view>
-      <view class="stat-item">
-        <text class="stat-value">{{ongoingTournaments}}</text>
-        <text class="stat-label">进行中</text>
-      </view>
-    </view>
   </view>
 
   <!-- 列表区域 -->

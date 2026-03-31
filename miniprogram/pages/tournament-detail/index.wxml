@@ -78,29 +78,25 @@
       </view>
       <view class="bonus-section" wx:if="{{tournament.pointsRules.bonusByRound}}">
         <view class="bonus-grid">
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.round_1 !== undefined}}">
-            <text class="bonus-label">第一轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.round_1}}</text>
+          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[1] !== undefined}}">
+            <text class="bonus-label">第1轮</text>
+            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[1]}}</text>
           </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.round_2 !== undefined}}">
-            <text class="bonus-label">第二轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.round_2}}</text>
+          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[2] !== undefined}}">
+            <text class="bonus-label">第2轮</text>
+            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[2]}}</text>
           </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.quarter_final !== undefined}}">
-            <text class="bonus-label">四分之一</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.quarter_final}}</text>
+          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[3] !== undefined}}">
+            <text class="bonus-label">第3轮</text>
+            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[3]}}</text>
           </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.semi_final !== undefined}}">
-            <text class="bonus-label">半决赛</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.semi_final}}</text>
+          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[4] !== undefined}}">
+            <text class="bonus-label">第4轮</text>
+            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[4]}}</text>
           </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.final !== undefined}}">
-            <text class="bonus-label">决赛</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.final}}</text>
-          </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound.champion !== undefined}}">
-            <text class="bonus-label">冠军</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound.champion}}</text>
+          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[5] !== undefined}}">
+            <text class="bonus-label">第5轮</text>
+            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[5]}}</text>
           </view>
         </view>
       </view>

@@ -22,11 +22,25 @@
     "miniprogram": {
       "list": [
         {
+          "name": "赛事编辑",
+          "pathName": "pages/tournament-edit/index",
+          "query": "id=tournament_2026_122091_391",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "成绩录入",
+          "pathName": "pages/tournament-score/index",
+          "query": "id=tournament_2026_122091_391",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "我的",
           "pathName": "pages/mine/index",
           "query": "",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "对位表",
@@ -39,13 +53,6 @@
           "name": "赛事详情",
           "pathName": "pages/tournament-detail/index",
           "query": "id=tournament_2026_122091_391",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "赛事详情",
-          "pathName": "pages/tournament-detail/index?id=tournament_2026_122091_391",
-          "query": "",
           "launchMode": "default",
           "scene": null
         },

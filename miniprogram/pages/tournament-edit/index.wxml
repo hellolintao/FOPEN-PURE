@@ -180,33 +180,28 @@
         <view class="section-title">轮次奖励积分</view>
 
         <view class="form-item">
-          <view class="field-label">第一轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.round_1}}" data-key="round_1" data-section="bonus" bindinput="onInput" />
+          <view class="field-label">第1轮</view>
+          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[1]}}" data-key="1" data-section="bonus" bindinput="onInput" />
         </view>
 
         <view class="form-item">
-          <view class="field-label">第二轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.round_2}}" data-key="round_2" data-section="bonus" bindinput="onInput" />
+          <view class="field-label">第2轮</view>
+          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[2]}}" data-key="2" data-section="bonus" bindinput="onInput" />
         </view>
 
         <view class="form-item">
-          <view class="field-label">四分之一决赛</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.quarter_final}}" data-key="quarter_final" data-section="bonus" bindinput="onInput" />
+          <view class="field-label">第3轮</view>
+          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[3]}}" data-key="3" data-section="bonus" bindinput="onInput" />
         </view>
 
         <view class="form-item">
-          <view class="field-label">半决赛</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.semi_final}}" data-key="semi_final" data-section="bonus" bindinput="onInput" />
+          <view class="field-label">第4轮</view>
+          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[4]}}" data-key="4" data-section="bonus" bindinput="onInput" />
         </view>
 
         <view class="form-item">
-          <view class="field-label">决赛</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.final}}" data-key="final" data-section="bonus" bindinput="onInput" />
-        </view>
-
-        <view class="form-item">
-          <view class="field-label">冠军</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound.champion}}" data-key="champion" data-section="bonus" bindinput="onInput" />
+          <view class="field-label">第5轮</view>
+          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[5]}}" data-key="5" data-section="bonus" bindinput="onInput" />
         </view>
       </view>
     </view>

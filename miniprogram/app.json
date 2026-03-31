@@ -15,7 +15,8 @@
     "pages/member-edit/index",
     "pages/setting/index",
     "pages/edit-profile/index",
-    "pages/tournament-brackets/index"
+    "pages/tournament-brackets/index",
+    "pages/tournament-score/index"
   ],
   "tabBar": {
     "color": "#888",

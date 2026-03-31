@@ -1,0 +1,105 @@
+<view class="score-entry-container">
+  <!-- 赛事信息头部 -->
+  <view class="tournament-header" wx:if="{{tournament}}">
+    <text class="tournament-name">{{tournament.name}}</text>
+    <text class="tournament-info">第{{tournament.config.currentRound || 1}}轮</text>
+  </view>
+
+  <!-- 积分规则 -->
+  <view class="points-rules" wx:if="{{tournament.pointsRules}}">
+    <view class="points-title">积分规则</view>
+    <view class="points-grid">
+      <view class="point-item">
+        <text class="point-label">胜</text>
+        <text class="point-value win">{{tournament.pointsRules.win || 0}}</text>
+      </view>
+      <view class="point-item">
+        <text class="point-label">负</text>
+        <text class="point-value loss">{{tournament.pointsRules.loss || 0}}</text>
+      </view>
+      <view class="point-item">
+        <text class="point-label">弃</text>
+        <text class="point-value walkover">{{tournament.pointsRules.walkover || 0}}</text>
+      </view>
+    </view>
+    <view class="bonus-section" wx:if="{{tournament.pointsRules.bonusByRound}}">
+      <view class="bonus-grid">
+        <view class="bonus-item {{tournament.config.currentRound === 1 ? 'active' : ''}}" wx:if="{{tournament.pointsRules.bonusByRound[1] !== undefined}}">
+          <text class="bonus-label">第1轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound[1]}}</text>
+        </view>
+        <view class="bonus-item {{tournament.config.currentRound === 2 ? 'active' : ''}}" wx:if="{{tournament.pointsRules.bonusByRound[2] !== undefined}}">
+          <text class="bonus-label">第2轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound[2]}}</text>
+        </view>
+        <view class="bonus-item {{tournament.config.currentRound === 3 ? 'active' : ''}}" wx:if="{{tournament.pointsRules.bonusByRound[3] !== undefined}}">
+          <text class="bonus-label">第3轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound[3]}}</text>
+        </view>
+        <view class="bonus-item {{tournament.config.currentRound === 4 ? 'active' : ''}}" wx:if="{{tournament.pointsRules.bonusByRound[4] !== undefined}}">
+          <text class="bonus-label">第4轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound[4]}}</text>
+        </view>
+        <view class="bonus-item {{tournament.config.currentRound === 5 ? 'active' : ''}}" wx:if="{{tournament.pointsRules.bonusByRound[5] !== undefined}}">
+          <text class="bonus-label">第5轮</text>
+          <text class="bonus-value">{{tournament.pointsRules.bonusByRound[5]}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 比赛列表 -->
+  <view class="matches-list" wx:if="{{currentRoundMatches.length > 0}}">
+    <view class="match-card" wx:for="{{currentRoundMatches}}" wx:key="matchId">
+      <view class="match-header">
+        <text class="match-title">{{item.player1.name}} Vs {{item.player2.name}}</text>
+      </view>
+      <view class="match-body">
+        <view class="form-item">
+          <text class="form-label">比赛时间</text>
+          <input
+            class="form-input"
+            type="number"
+            placeholder="请输入比赛时间（分钟）"
+            data-index="{{index}}"
+            bindinput="onDurationChange"
+          />
+        </view>
+
+        <view class="player-names">
+          <text class="player-name left">{{item.player1.name}}</text>
+          <text class="player-name right">{{item.player2.name}}</text>
+        </view>
+
+        <view class="score-control">
+          <view class="score-item">
+            <view class="score-button" bindtap="onScoreDecrease" data-index="{{index}}" data-player="player1">
+              <text>-</text>
+            </view>
+            <text class="score-value">{{matchScores[index].player1 || 0}}</text>
+            <view class="score-button" bindtap="onScoreIncrease" data-index="{{index}}" data-player="player1">
+              <text>+</text>
+            </view>
+          </view>
+          <text class="vs-divider">VS</text>
+          <view class="score-item">
+            <view class="score-button" bindtap="onScoreDecrease" data-index="{{index}}" data-player="player2">
+              <text>-</text>
+            </view>
+            <text class="score-value">{{matchScores[index].player2 || 0}}</text>
+            <view class="score-button" bindtap="onScoreIncrease" data-index="{{index}}" data-player="player2">
+              <text>+</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-section" wx:if="{{currentRoundMatches.length > 0}}">
+    <button class="submit-btn" bindtap="onSubmit">
+      提交成绩
+    </button>
+  </view>
+</view>
