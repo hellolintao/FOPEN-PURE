@@ -24,7 +24,7 @@ exports.main = async (event, context) => {
           name: data.name,
           avatarUrl: data.avatarUrl,
           phone: data.phone || '',
-          status: data.status || '',
+          status: data.status || 'active',
           createTime: now,
           updateTime: now
         }

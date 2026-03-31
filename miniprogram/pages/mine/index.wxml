@@ -1,33 +1,25 @@
 <view class="mine-container">
-  <!-- 顶部用户信息卡片 -->
-  <view class="user-card">
-    <view class="user-avatar-wrapper">
-      <image 
-        class="user-avatar" 
-        src="{{userInfo.avatarUrl}}" 
-        mode="aspectFill"
-      />
-      <view class="avatar-glow"></view>
-    </view>
-    <view class="user-details">
-      <view class="user-name">{{userInfo.name || '欢迎你'}}</view>
-      <view class="user-status">
-        <view class="status-dot"></view>
-        <text>{{isLogin ? '已登录' : '未登录'}}</text>
-      </view>
+  <!-- 用户信息 -->
+  <view class="user-info">
+    <image
+      class="avatar"
+      src="{{userInfo.avatarUrl || 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132'}}"
+      mode="aspectFill"
+    />
+    <view class="user-detail">
+      <text class="user-name">{{userInfo.name || '未登录'}}</text>
+      <text class="user-status">{{isLogin ? '已登录' : '未登录'}}</text>
     </view>
   </view>
 
-  <!-- 未登录时的登录按钮 -->
-  <view wx:if="{{!isLogin}}" class="login-section">
-    <button class="login-btn" bindtap="onLogin">
-      <text class="btn-icon">🔐</text>
-      登录账号
-    </button>
+  <!-- 登录按钮 -->
+  <view wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">
+    <text class="login-icon">🔐</text>
+    <text>微信一键登录</text>
   </view>
 
-  <!-- 统计卡片 -->
-  <view wx:if="{{isLogin}}" class="stats-card">
+  <!-- 统计数据 -->
+  <view wx:if="{{isLogin}}" class="stats-row">
     <view class="stat-item">
       <text class="stat-value">0</text>
       <text class="stat-label">我的比赛</text>
@@ -44,49 +36,45 @@
     </view>
   </view>
 
-  <!-- 功能菜单 -->
-  <view class="menu-section">
-    <view class="menu-card">
-      <view class="menu-item" bindtap="onMyMatch">
-        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-          <text class="menu-icon">🏆</text>
-        </view>
-        <view class="menu-content">
+  <!-- 功能列表 -->
+  <view class="menu-list">
+    <view class="menu-item" bindtap="onMyMatch">
+      <view class="menu-left">
+        <view class="menu-icon my-match-icon">🏆</view>
+        <view class="menu-text">
           <text class="menu-title">我的比赛</text>
           <text class="menu-desc">查看参与的赛事</text>
         </view>
-        <text class="menu-arrow">›</text>
       </view>
+      <text class="menu-arrow">›</text>
+    </view>
 
-      <view class="menu-item" bindtap="onEditProfile">
-        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-          <text class="menu-icon">✏️</text>
-        </view>
-        <view class="menu-content">
+    <view class="menu-item" bindtap="onEditProfile">
+      <view class="menu-left">
+        <view class="menu-icon edit-icon">✏️</view>
+        <view class="menu-text">
           <text class="menu-title">编辑资料</text>
           <text class="menu-desc">完善个人信息</text>
         </view>
-        <text class="menu-arrow">›</text>
       </view>
+      <text class="menu-arrow">›</text>
+    </view>
 
-      <view class="menu-item" bindtap="onSetting">
-        <view class="menu-icon-wrapper" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-          <text class="menu-icon">⚙️</text>
-        </view>
-        <view class="menu-content">
+    <view class="menu-item" bindtap="onSetting">
+      <view class="menu-left">
+        <view class="menu-icon setting-icon">⚙️</view>
+        <view class="menu-text">
           <text class="menu-title">设置</text>
           <text class="menu-desc">偏好和系统设置</text>
         </view>
-        <text class="menu-arrow">›</text>
       </view>
+      <text class="menu-arrow">›</text>
     </view>
   </view>
 
   <!-- 管理入口 -->
-  <view class="manage-section">
-    <button class="manage-btn" bindtap="onManage">
-      <text class="manage-icon">🎯</text>
-      <text>进入管理后台</text>
-    </button>
+  <view class="manage-btn" bindtap="onManage">
+    <text class="manage-icon">🎯</text>
+    <text>进入管理后台</text>
   </view>
 </view>

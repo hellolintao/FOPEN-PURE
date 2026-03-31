@@ -1,0 +1,62 @@
+<view class="edit-profile-container">
+  <!-- 顶部标题 -->
+  <text class="page-title">编辑资料</text>
+
+  <!-- 表单区域 -->
+  <view class="form-section">
+    <!-- 头像区域 -->
+    <view class="form-item">
+      <view class="field-label">
+        <text class="required">*</text>
+        <text>头像</text>
+      </view>
+      <view class="avatar-section" bindtap="onChooseAvatar">
+        <view class="avatar-preview">
+          <image
+            class="avatar-img"
+            src="{{formData.avatarUrl || defaultAvatar}}"
+            mode="aspectFill"
+          />
+          <view class="avatar-hint">点击更换</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 姓名输入 -->
+    <view class="form-item">
+      <view class="field-label">
+        <text class="required">*</text>
+        <text>姓名</text>
+      </view>
+      <input
+        class="dialog-input"
+        placeholder="请输入姓名"
+        value="{{formData.name}}"
+        bindinput="onNameInput"
+        maxlength="20"
+      />
+    </view>
+
+    <!-- 手机号输入 -->
+    <view class="form-item">
+      <view class="field-label">
+        <text class="required"></text>
+        <text>手机号</text>
+      </view>
+      <input
+        class="dialog-input"
+        type="number"
+        placeholder="请输入手机号（选填）"
+        value="{{formData.phone}}"
+        bindinput="onPhoneInput"
+        maxlength="11"
+      />
+    </view>
+  </view>
+
+  <!-- 底部按钮区域 -->
+  <view class="dialog-actions">
+    <button class="dialog-btn cancel" bindtap="onCancel">取消</button>
+    <button class="dialog-btn primary" bindtap="onSave">保存</button>
+  </view>
+</view>

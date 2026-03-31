@@ -1,9 +1,32 @@
 <view class="manage-container">
-  <view class="manage-title">管理中心</view>
-  <view class="manage-list">
-    <view class="manage-item" bindtap="onSeasonManage">赛季管理</view>
-    <view class="manage-item" bindtap="onTournamentManage">赛事管理</view>
-    <view class="manage-item" bindtap="onMatchManage">比赛管理</view>
-    <view class="manage-item" bindtap="onMemberManage">会员管理</view>
+  <view class="manage-header">
+    <text class="manage-title">管理中心</text>
+    <text class="manage-subtitle">选择管理模块</text>
+  </view>
+
+  <view class="manage-grid">
+    <view class="manage-card season-card" bindtap="onSeasonManage">
+      <view class="card-icon">📅</view>
+      <text class="card-title">赛季管理</text>
+      <text class="card-desc">管理赛事赛季</text>
+    </view>
+
+    <view class="manage-card tournament-card" bindtap="onTournamentManage">
+      <view class="card-icon">🏆</view>
+      <text class="card-title">赛事管理</text>
+      <text class="card-desc">管理赛事信息</text>
+    </view>
+
+    <view class="manage-card match-card" bindtap="onMatchManage">
+      <view class="card-icon">⚽</view>
+      <text class="card-title">比赛管理</text>
+      <text class="card-desc">管理比赛数据</text>
+    </view>
+
+    <view class="manage-card member-card" bindtap="onMemberManage">
+      <view class="card-icon">👥</view>
+      <text class="card-title">会员管理</text>
+      <text class="card-desc">管理会员信息</text>
+    </view>
   </view>
 </view>
