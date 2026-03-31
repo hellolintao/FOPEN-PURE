@@ -96,8 +96,21 @@ Page({
   },
 
   onAddPlayer() {
+    const { tournament } = this.data
+    if (!tournament) {
+      wx.showToast({
+        title: '赛事信息加载失败',
+        icon: 'none'
+      })
+      return
+    }
+
+    const pagePath = tournament.type === 'singles'
+      ? '/pages/tournament-add-player/index'
+      : '/pages/tournament-add-players-doubles/index'
+
     wx.navigateTo({
-      url: `/pages/tournament-add-player/index?id=${this.data.tournamentId}`
+      url: `${pagePath}?id=${this.data.tournamentId}`
     });
   },
 

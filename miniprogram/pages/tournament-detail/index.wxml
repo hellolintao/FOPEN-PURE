@@ -123,9 +123,20 @@
       <view wx:else class="players-grid">
         <view class="player-card" wx:for="{{registrations}}" wx:key="_id">
           <view class="player-badge">{{item.seed}}</view>
-          <text class="player-name">{{item.playerName}}</text>
-          <text class="player-partner" wx:if="{{item.type === 'doubles' && item.partnerName}}">{{item.partnerName}}</text>
-          <text class="player-team" wx:if="{{item.type === 'doubles' && item.teamName}}">{{item.teamName}}</text>
+
+          <!-- 单打显示 -->
+          <text class="player-name singles" wx:if="{{tournament.type === 'singles'}}">{{item.playerName}}</text>
+
+          <!-- 双打显示 -->
+          <view wx:if="{{tournament.type === 'doubles'}}" class="doubles-info">
+            <text class="player-name">{{item.teamName || item.playerName}}</text>
+            <view class="players-row">
+              <text class="player-detail">{{item.playerName}}</text>
+              <text class="player-divider">|</text>
+              <text class="player-detail">{{item.partnerName}}</text>
+            </view>
+          </view>
+
           <view class="player-status {{item.status}}">
             {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
           </view>

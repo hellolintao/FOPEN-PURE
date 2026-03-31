@@ -10,6 +10,7 @@
     "pages/tournament-detail/index",
     "pages/tournament-edit/index",
     "pages/tournament-add-player/index",
+    "pages/tournament-add-players-doubles/index",
     "pages/member-manage/index",
     "pages/member-edit/index",
     "pages/setting/index",

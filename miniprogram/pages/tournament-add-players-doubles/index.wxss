@@ -1,0 +1,412 @@
+.tournament-add-players-doubles-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding-bottom: 40rpx;
+}
+
+/* 队伍区域 */
+.teams-section {
+  padding: 20rpx;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.title-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.add-team-btn {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 40rpx;
+  padding: 16rpx 32rpx;
+  color: white;
+  font-size: 26rpx;
+}
+
+.add-team-btn::after {
+  border: none;
+}
+
+.add-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.add-text {
+  line-height: 1;
+}
+
+/* 队伍列表 */
+.teams-list {
+  height: calc(100vh - 300rpx);
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 30rpx;
+  color: #ccc;
+}
+
+.hint-icon {
+  font-size: 100rpx;
+  margin-bottom: 20rpx;
+}
+
+.hint-text {
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+  color: #999;
+}
+
+.hint-desc {
+  font-size: 24rpx;
+  color: #bbb;
+}
+
+.team-item {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.team-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.team-badge {
+  width: 48rpx;
+  height: 48rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 22rpx;
+  font-weight: bold;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.team-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.team-players {
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 16rpx;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.player-info:last-child {
+  margin-bottom: 0;
+}
+
+.player-label {
+  font-size: 24rpx;
+  color: #999;
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.player-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.team-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 64rpx;
+  border-radius: 32rpx;
+  border: none;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.action-btn::after {
+  border: none;
+}
+
+.action-btn.edit {
+  background: #e6f7e6;
+  color: #52c41a;
+}
+
+.action-btn.delete {
+  background: #fff0f0;
+  color: #f56c6c;
+}
+
+/* 编辑弹窗 */
+.edit-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 32rpx 32rpx 0 0;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 40rpx;
+  color: #999;
+  padding: 10rpx;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30rpx;
+}
+
+.form-item {
+  margin-bottom: 30rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.form-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 80rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+}
+
+.picker-value {
+  font-size: 28rpx;
+  color: #333;
+  flex: 1;
+}
+
+.picker-arrow {
+  font-size: 20rpx;
+  color: #999;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 20rpx;
+  padding: 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 40rpx;
+  border: none;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.modal-btn::after {
+  border: none;
+}
+
+.modal-btn.cancel {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* 队员选择弹窗 */
+.selector-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.selector-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 32rpx 32rpx 0 0;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.selector-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.selector-close {
+  font-size: 40rpx;
+  color: #999;
+  padding: 10rpx;
+}
+
+.selector-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20rpx 0;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 30rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.member-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.member-phone {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.select-badge {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #e0e0e0;
+}
+
+.select-badge.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+}
+
+.select-icon {
+  font-size: 24rpx;
+  color: white;
+}
+
+.empty-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 30rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
