@@ -3,6 +3,8 @@ Page({
     tournamentId: '',
     tournament: null,
     registrations: [],
+    brackets: [],
+    totalMatches: 0,
     loading: true
   },
 
@@ -12,6 +14,7 @@ Page({
       this.setData({ tournamentId: id });
       this.loadTournamentDetail();
       this.loadRegistrations();
+      this.loadBrackets();
     }
   },
 
@@ -20,6 +23,7 @@ Page({
     if (this.data.tournamentId) {
       this.loadTournamentDetail();
       this.loadRegistrations();
+      this.loadBrackets();
     }
   },
 
@@ -76,6 +80,31 @@ Page({
     }
   },
 
+  async loadBrackets() {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'tournament-brackets',
+        data: {
+          action: 'getByTournament',
+          tournamentId: this.data.tournamentId
+        }
+      });
+
+      const brackets = result.result.data || [];
+      let totalMatches = 0;
+      brackets.forEach(bracket => {
+        totalMatches += bracket.matches?.length || 0;
+      });
+
+      this.setData({
+        brackets,
+        totalMatches
+      });
+    } catch (err) {
+      console.error('加载对位表失败:', err);
+    }
+  },
+
   getStatusText(status) {
     const statusMap = {
       'upcoming': '待开始',
@@ -115,9 +144,8 @@ Page({
   },
 
   onEditMatchups() {
-    wx.showToast({
-      title: '对位编辑功能开发中',
-      icon: 'none'
+    wx.navigateTo({
+      url: `/pages/tournament-brackets/index?id=${this.data.tournamentId}`
     });
   },
 

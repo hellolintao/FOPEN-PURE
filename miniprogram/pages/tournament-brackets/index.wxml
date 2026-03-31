@@ -1,0 +1,38 @@
+<view class="brackets-container">
+  <!-- 参赛人员/队伍展示 -->
+  <view class="participants-section">
+    <view class="section-header">
+      <text class="section-title">{{tournament.type === 'doubles' ? '参赛队伍' : '参赛人员'}}</text>
+      <text class="section-count">{{registrations.length}}人</text>
+    </view>
+
+    <!-- 单打参赛人员 -->
+    <view wx:if="{{tournament.type === 'singles'}}" class="participants-list">
+      <view class="participant-item" wx:for="{{registrations}}" wx:key="_id">
+        <view class="participant-badge">{{item.seed || '-'}}</view>
+        <text class="participant-name">{{item.playerName}}</text>
+        <view class="participant-status {{item.status}}">
+          {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 双打参赛队伍 -->
+    <view wx:if="{{tournament.type === 'doubles'}}" class="participants-list">
+      <view class="participant-item team" wx:for="{{registrations}}" wx:key="_id">
+        <view class="participant-badge">{{item.seed || '-'}}</view>
+        <view class="team-info">
+          <text class="team-name">{{item.teamName || item.playerName}}</text>
+          <view class="team-members">
+            <text class="member-name">{{item.playerName}}</text>
+            <text class="member-divider">|</text>
+            <text class="member-name">{{item.partnerName}}</text>
+          </view>
+        </view>
+        <view class="participant-status {{item.status}}">
+          {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

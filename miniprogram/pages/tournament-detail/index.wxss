@@ -366,6 +366,19 @@
   min-height: 200rpx;
 }
 
+.brackets-preview {
+  padding: 20rpx 0;
+}
+
+.preview-info {
+  text-align: center;
+}
+
+.preview-text {
+  font-size: 28rpx;
+  color: #666;
+}
+
 /* 删除按钮区域 */
 .delete-section {
   padding: 30rpx;

@@ -149,14 +149,19 @@
   <view class="section-card">
     <view class="card-header">
       <text class="header-title">对位表</text>
-      <button class="header-edit-btn" bindtap="onEditMatchups">
-        <text class="edit-icon">✏️</text>
+      <button class="header-btn" bindtap="onEditMatchups">
+        {{brackets.length > 0 ? '查看' : '创建'}}
       </button>
     </view>
     <view class="matchups-content">
-      <view class="empty-state">
+      <view wx:if="{{brackets.length === 0}}" class="empty-state">
         <text class="empty-icon">📊</text>
         <text class="empty-text">暂无对位信息</text>
+      </view>
+      <view wx:else class="brackets-preview">
+        <view class="preview-info">
+          <text class="preview-text">共{{brackets.length}}轮，{{totalMatches}}场比赛</text>
+        </view>
       </view>
     </view>
   </view>

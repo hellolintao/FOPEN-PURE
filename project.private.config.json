@@ -22,11 +22,18 @@
     "miniprogram": {
       "list": [
         {
-          "name": "赛事详情",
-          "pathName": "pages/tournament-detail/index",
+          "name": "对位表",
+          "pathName": "pages/tournament-brackets/index",
           "query": "id=tournament_2026_122091_391",
           "scene": null,
           "launchMode": "default"
+        },
+        {
+          "name": "赛事详情",
+          "pathName": "pages/tournament-detail/index",
+          "query": "id=tournament_2026_122091_391",
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "赛事详情",
