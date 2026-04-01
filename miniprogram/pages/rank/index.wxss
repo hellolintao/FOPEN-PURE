@@ -1,36 +1,5 @@
-.rank-tabs {
-	display: flex;
-	justify-content: center;
-	margin-bottom: 32rpx;
-	gap: 40rpx;
-}
-.rank-tab {
-	font-size: 32rpx;
-	color: #aaa;
-	padding: 12rpx 40rpx;
-	border-radius: 32rpx;
-	background: #181828;
-	transition: all 0.2s;
-}
-.rank-tab.active {
-	color: #FFFFFF;
-	background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-	font-weight: bold;
-	box-shadow: 0 4rpx 12rpx rgba(124,58,237,0.3);
-}
 .rank-container {
-	background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
-	min-height: 100vh;
 	padding: 40rpx 0;
-}
-.rank-title {
-	font-size: 44rpx;
-	color: #7c3aed;
-	text-align: center;
-	margin-bottom: 32rpx;
-	font-weight: 600;
-	letter-spacing: 2rpx;
-	text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
 }
 .rank-empty {
 	color: #aaa;
@@ -40,20 +9,17 @@
 .rank-item {
 	display: flex;
 	align-items: center;
-	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
+	background: #1a1a2e;
 	border-radius: 16rpx;
 	margin: 20rpx 32rpx;
 	padding: 24rpx 20rpx;
-	box-shadow: 0 4rpx 16rpx rgba(124,58,237,0.1), inset 0 1rpx 0 rgba(255,255,255,0.05);
-	transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .rank-avatar {
 	width: 80rpx;
 	height: 80rpx;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
-	border: 3rpx solid #7c3aed;
-	box-shadow: 0 0 20rpx rgba(124,58,237,0.2);
+	background: #333;
+	border: 2rpx solid #555;
 }
 .rank-info {
 	flex: 1;
@@ -64,10 +30,9 @@
 	color: #FFFFFF;
 	font-weight: bold;
 }
-.rank-meta {
+.rank-points {
 	margin-top: 8rpx;
 	color: #aaa;
 	font-size: 26rpx;
-	display: flex;
-	gap: 32rpx;
 }
+

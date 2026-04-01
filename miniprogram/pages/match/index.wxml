@@ -1,4 +1,13 @@
-<view class="tab-page">
-  <view class="tab-title">赛事</view>
-  <view class="tab-desc">这里展示各类赛事信息和相关内容。</view>
+<view class="match-container">
+  <view wx:if="{{tournaments.length === 0}}" class="match-empty">暂无赛事</view>
+  <block wx:for="{{tournaments}}" wx:key="_id">
+    <view class="match-item" bindtap="onItemTap" data-id="{{item._id}}">
+      <view class="match-name">{{item.name}}</view>
+      <view class="match-meta">
+        <text>类型：{{item.type === 'singles' ? '单打' : '双打'}}</text>
+        <text>时间：{{item.startDate}}</text>
+        <text>地点：{{item.location}}</text>
+      </view>
+    </view>
+  </block>
 </view>

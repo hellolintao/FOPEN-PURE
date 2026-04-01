@@ -243,34 +243,66 @@ Page({
       if (existingData && existingData.length > 0 && existingData[0].matches) {
         matches = validMatchups.map((matchup, index) => {
           const existingMatch = existingData[0].matches[index];
+          const player1Reg = this.data.registrations.find(reg => {
+            const name = this.data.tournament.type === 'doubles'
+              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              : reg.playerName;
+            return name === matchup.player1;
+          });
+          const player2Reg = this.data.registrations.find(reg => {
+            const name = this.data.tournament.type === 'doubles'
+              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              : reg.playerName;
+            return name === matchup.player2;
+          });
+
           return {
             position: index + 1,
             matchId: existingMatch?.matchId || `match_${now}_${index}`,
             player1: {
-              id: existingMatch?.player1?.id || `player_${now}_${index}_1`,
-              name: matchup.player1
+              id: player1Reg?.playerId || existingMatch?.player1?.id || matchup.player1,
+              name: matchup.player1,
+              registrationId: player1Reg?._id
             },
             player2: {
-              id: existingMatch?.player2?.id || `player_${now}_${index}_2`,
-              name: matchup.player2
+              id: player2Reg?.playerId || existingMatch?.player2?.id || matchup.player2,
+              name: matchup.player2,
+              registrationId: player2Reg?._id
             },
             status: existingMatch?.status || 'pending'
           };
         });
       } else {
-        matches = validMatchups.map((matchup, index) => ({
-          position: index + 1,
-          matchId: `match_${now}_${index}`,
-          player1: {
-            id: `player_${now}_${index}_1`,
-            name: matchup.player1
-          },
-          player2: {
-            id: `player_${now}_${index}_2`,
-            name: matchup.player2
-          },
-          status: 'pending'
-        }));
+        matches = validMatchups.map((matchup, index) => {
+          const player1Reg = this.data.registrations.find(reg => {
+            const name = this.data.tournament.type === 'doubles'
+              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              : reg.playerName;
+            return name === matchup.player1;
+          });
+          const player2Reg = this.data.registrations.find(reg => {
+            const name = this.data.tournament.type === 'doubles'
+              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              : reg.playerName;
+            return name === matchup.player2;
+          });
+
+          return {
+            position: index + 1,
+            matchId: `match_${now}_${index}`,
+            player1: {
+              id: player1Reg?.playerId || matchup.player1,
+              name: matchup.player1,
+              registrationId: player1Reg?._id
+            },
+            player2: {
+              id: player2Reg?.playerId || matchup.player2,
+              name: matchup.player2,
+              registrationId: player2Reg?._id
+            },
+            status: 'pending'
+          };
+        });
       }
 
       if (existingData && existingData.length > 0) {

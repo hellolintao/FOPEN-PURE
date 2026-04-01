@@ -22,11 +22,32 @@
     "miniprogram": {
       "list": [
         {
+          "name": "赛事详情只读",
+          "pathName": "pages/tournament-view/index",
+          "query": "id=tournament_2026_122091_391",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "赛事",
+          "pathName": "pages/match/index",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "排名",
+          "pathName": "pages/rank/index",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "轮次结算",
           "pathName": "pages/round-settlement/index",
           "query": "tournamentId=tournament_2026_122091_391&round=1",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "我的比赛",

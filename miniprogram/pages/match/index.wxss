@@ -1,18 +1,28 @@
-.tab-page {
-	padding: 80rpx 0;
-	text-align: center;
-	background: linear-gradient(180deg, #101017 0%, #0d0d14 100%);
-	min-height: 100vh;
+.match-container {
+	padding: 40rpx 0;
 }
-.tab-title {
-	font-size: 44rpx;
-	color: #7c3aed;
-	margin-bottom: 20rpx;
-	font-weight: 600;
-	letter-spacing: 2rpx;
-	text-shadow: 0 2rpx 12rpx rgba(124,58,237,0.3);
-}
-.tab-desc {
+.match-empty {
 	color: #aaa;
-	font-size: 28rpx;
+	text-align: center;
+	margin-top: 80rpx;
 }
+.match-item {
+	background: #1a1a2e;
+	border-radius: 16rpx;
+	margin: 20rpx 32rpx;
+	padding: 24rpx 20rpx;
+}
+.match-name {
+	font-size: 32rpx;
+	color: #FFFFFF;
+	font-weight: bold;
+	margin-bottom: 12rpx;
+}
+.match-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+	color: #aaa;
+	font-size: 26rpx;
+}
+
