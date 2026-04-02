@@ -25,7 +25,7 @@
         <text class="info-value">{{tournament.startDate}}</text>
       </view>
 
-      <view class="info-item">
+      <!-- <view class="info-item">
         <text class="info-label">结束日期</text>
         <text class="info-value">{{tournament.endDate}}</text>
       </view>
@@ -33,7 +33,7 @@
       <view class="info-item">
         <text class="info-label">场地名称</text>
         <text class="info-value">{{tournament.location}}</text>
-      </view>
+      </view> -->
 
       <view class="info-item">
         <text class="info-label">赛事类型</text>
@@ -66,9 +66,14 @@
       </view>
 
       <view class="info-item">
+        <text class="info-label">赛制</text>
+        <text class="info-value">{{tournament.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
+      </view>
+
+      <!-- <view class="info-item">
         <text class="info-label">淘汰类型</text>
         <text class="info-value">{{tournament.config.eliminationType === 'single' ? '单败淘汰' : '双败淘汰'}}</text>
-      </view>
+      </view> -->
 
       <view class="info-item">
         <text class="info-label">当前轮次</text>
@@ -135,16 +140,12 @@
 
       <view wx:else class="player-list">
         <view wx:for="{{registrations}}" wx:key="_id" class="player-item">
-          <view class="player-info">
-            <text class="player-name">{{item.playerName}}</text>
-            <text class="player-seed" wx:if="{{item.seed}}">#{{item.seed}}</text>
-          </view>
-          <view wx:if="{{tournament.type === 'doubles'}}" class="partner-info">
-            <text class="partner-label">队友：</text>
-            <text class="partner-name">{{item.partnerName || '未设置'}}</text>
-          </view>
           <view wx:if="{{item.teamName}}" class="team-info">
             <text class="team-name">{{item.teamName}}</text>
+          </view>
+          <view class="player-info">
+            <text class="player-name">{{item.playerName}} {{item.partnerName}}</text>
+            <text class="player-seed" wx:if="{{item.seed}}">#{{item.seed}}</text>
           </view>
         </view>
       </view>
@@ -182,11 +183,11 @@
                   <text class="player-status {{match.winner === 2 ? 'winner' : ''}}">{{match.player2.name || '待定'}}</text>
                 </view>
               </view>
-              <view class="match-status">
+              <!-- <view class="match-status">
                 <text class="status-badge status-{{match.status}}">
                   {{match.status === 'pending' ? '待开始' : match.status === 'ongoing' ? '进行中' : '已完成'}}
                 </text>
-              </view>
+              </view> -->
             </view>
           </view>
         </view>

@@ -196,10 +196,11 @@ exports.main = async (event, context) => {
         query.push({ loserId: data.loserId })
       }
       if (data && data.playerId) {
-        // 查询包含指定选手的比赛
+        // 查询包含指定选手的比赛（winnerId 或 loserId 中包含该选手id）
+        const playerId = data.playerId
         query.push(_.or([
-          { 'players.0.id': data.playerId },
-          { 'players.1.id': data.playerId }
+          { winnerId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) },
+          { loserId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) }
         ]))
       }
 
@@ -235,9 +236,10 @@ exports.main = async (event, context) => {
         return { errMsg: 'playerId is required' }
       }
 
+      const playerId = data.playerId
       const query = _.or([
-        { 'players.0.id': data.playerId },
-        { 'players.1.id': data.playerId }
+        { winnerId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) },
+        { loserId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) }
       ])
 
       return await collection

@@ -3,7 +3,8 @@
   <view class="participants-section">
     <view class="section-header">
       <text class="section-title">{{tournament.type === 'doubles' ? '参赛队伍' : '参赛人员'}}</text>
-      <text class="section-count">{{registrations.length}}人</text>
+      <!-- <text class="section-count">{{registrations.length}}人</text> -->
+      <view class="manage-btn" catchtap="onManagePlayers">管理</view>
     </view>
 
     <!-- 单打参赛人员 -->

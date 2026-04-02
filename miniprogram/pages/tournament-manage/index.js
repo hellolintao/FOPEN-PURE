@@ -105,4 +105,25 @@ Page({
             url: '/pages/tournament-edit/index'
         })
     },
+    onAddPlayer(e) {
+
+        const id = e.currentTarget.dataset.id
+        const type = e.currentTarget.dataset.type
+        if (type == 'singles') {
+          wx.navigateTo({
+              url: '/pages/tournament-add-player/index?id=' + id
+          })
+        } else {
+          wx.navigateTo({
+            url: '/pages/tournament-add-players-doubles/index?id=' + id
+        })
+        }
+        
+    },
+    onViewBrackets(e) {
+        const id = e.currentTarget.dataset.id
+        wx.navigateTo({
+            url: '/pages/tournament-brackets/index?id=' + id
+        })
+    },
 })

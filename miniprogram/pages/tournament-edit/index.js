@@ -9,6 +9,7 @@ Page({
       endDate: '',
       location: '',
       type: 'singles',
+      format: 'regular',
       description: '',
       config: {
         maxPlayers: 16,
@@ -23,10 +24,10 @@ Page({
         walkover: 50,
         bonusByRound: {
           1: 0,
-          2: 50,
-          3: 100,
-          4: 200,
-          5: 300
+          2: 0,
+          3: 0,
+          4: 0,
+          5: 0
         }
       }
     },
@@ -42,6 +43,12 @@ Page({
     // 轮数选项
     roundsOptions: ['1', '2', '3', '4', '5', '6', '7', '8'],
     roundsIndex: 3,
+    // 赛制选项
+    formatOptions: [
+      { label: '常规赛', value: 'regular' },
+      { label: '淘汰赛', value: 'knockout' }
+    ],
+    formatIndex: 0,
     // 每场比赛人数选项
     playersPerMatchOptions: [
       { label: '2人（单打）', value: 2 },
@@ -105,20 +112,29 @@ Page({
     const seasonIndex = seasonOptions.findIndex(s => s.value === tournament.seasonId)
     const typeIndex = this.data.typeOptions.findIndex(t => t.value === tournament.type)
     const roundsIndex = this.data.roundsOptions.indexOf(tournament.config?.totalRounds?.toString() || '4')
-    const playersPerMatchIndex = this.data.playersPerMatchOptions.findIndex(
-      p => p.value === (tournament.config?.playersPerMatch || 2)
-    )
+    const formatIndex = this.data.formatOptions.findIndex(f => f.value === (tournament.format || 'regular'))
     const eliminationIndex = this.data.eliminationOptions.findIndex(
       e => e.value === (tournament.config?.eliminationType || 'single')
     )
 
+    // 根据赛事类型自动设置每场比赛人数
+    const playersPerMatch = tournament.type === 'doubles' ? 4 : 2
+
     this.setData({
       isEdit: true,
-      tournament,
+      tournament: {
+        ...tournament,
+        format: tournament.format || 'regular',
+        config: {
+          ...tournament.config,
+          playersPerMatch
+        }
+      },
       seasonIndex: seasonIndex >= 0 ? seasonIndex : 0,
       typeIndex: typeIndex >= 0 ? typeIndex : 0,
       roundsIndex: roundsIndex >= 0 ? roundsIndex : 3,
-      playersPerMatchIndex: playersPerMatchIndex >= 0 ? playersPerMatchIndex : 0,
+      formatIndex: formatIndex >= 0 ? formatIndex : 0,
+      playersPerMatchIndex: 0,
       eliminationIndex: eliminationIndex >= 0 ? eliminationIndex : 0
     })
   },
@@ -222,20 +238,29 @@ Page({
       const seasonIndex = seasonOptions.findIndex(s => s.value === tournament.seasonId)
       const typeIndex = this.data.typeOptions.findIndex(t => t.value === tournament.type)
       const roundsIndex = this.data.roundsOptions.indexOf(tournament.config?.totalRounds?.toString() || '4')
-      const playersPerMatchIndex = this.data.playersPerMatchOptions.findIndex(
-        p => p.value === (tournament.config?.playersPerMatch || 2)
-      )
+      const formatIndex = this.data.formatOptions.findIndex(f => f.value === (tournament.format || 'regular'))
       const eliminationIndex = this.data.eliminationOptions.findIndex(
         e => e.value === (tournament.config?.eliminationType || 'single')
       )
 
+      // 根据赛事类型自动设置每场比赛人数
+      const playersPerMatch = tournament.type === 'doubles' ? 4 : 2
+
       this.setData({
         isEdit: true,
-        tournament,
+        tournament: {
+          ...tournament,
+          format: tournament.format || 'regular',
+          config: {
+            ...tournament.config,
+            playersPerMatch
+          }
+        },
         seasonIndex: seasonIndex >= 0 ? seasonIndex : 0,
         typeIndex: typeIndex >= 0 ? typeIndex : 0,
         roundsIndex: roundsIndex >= 0 ? roundsIndex : 3,
-        playersPerMatchIndex: playersPerMatchIndex >= 0 ? playersPerMatchIndex : 0,
+        formatIndex: formatIndex >= 0 ? formatIndex : 0,
+        playersPerMatchIndex: 0,
         eliminationIndex: eliminationIndex >= 0 ? eliminationIndex : 0
       })
     } catch (err) {
@@ -286,9 +311,14 @@ Page({
   // 选择类型
   onPickType(e) {
     const idx = e.detail.value
+    const type = this.data.typeOptions[idx].value
+    // 根据赛事类型自动设置每场比赛人数：双打为4，单打为2
+    const playersPerMatch = type === 'doubles' ? 4 : 2
+
     this.setData({
       typeIndex: idx,
-      'tournament.type': this.data.typeOptions[idx].value
+      'tournament.type': type,
+      'tournament.config.playersPerMatch': playersPerMatch
     })
   },
 
@@ -299,6 +329,28 @@ Page({
     this.setData({
       roundsIndex: idx,
       'tournament.config.totalRounds': rounds
+    })
+  },
+
+  // 选择赛制
+  onPickFormat(e) {
+    const idx = e.detail.value
+    const format = this.data.formatOptions[idx].value
+
+    // 根据赛制自动设置轮次奖励积分
+    let bonusByRound
+    if (format === 'regular') {
+      // 常规赛：所有轮次奖励积分设为0
+      bonusByRound = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    } else {
+      // 淘汰赛：第一轮-第六轮的奖励积分分别是0、50、100、200、300
+      bonusByRound = { 1: 0, 2: 50, 3: 100, 4: 200, 5: 300 }
+    }
+
+    this.setData({
+      formatIndex: idx,
+      'tournament.format': format,
+      'tournament.pointsRules.bonusByRound': bonusByRound
     })
   },
 
@@ -365,18 +417,6 @@ Page({
         wx.showToast({ title: '请选择开始日期', icon: 'none' })
         return false
       }
-      if (!tournament.endDate) {
-        wx.showToast({ title: '请选择结束日期', icon: 'none' })
-        return false
-      }
-      if (new Date(tournament.startDate) > new Date(tournament.endDate)) {
-        wx.showToast({ title: '结束日期不能早于开始日期', icon: 'none' })
-        return false
-      }
-      if (!tournament.location || tournament.location.trim() === '') {
-        wx.showToast({ title: '请输入场地名称', icon: 'none' })
-        return false
-      }
       if (!tournament.type) {
         wx.showToast({ title: '请选择赛事类型', icon: 'none' })
         return false
@@ -391,12 +431,12 @@ Page({
         wx.showToast({ title: '轮数必须在1-8之间', icon: 'none' })
         return false
       }
-      if (!tournament.config.playersPerMatch || ![2, 4].includes(tournament.config.playersPerMatch)) {
-        wx.showToast({ title: '每场比赛人数必须是2或4', icon: 'none' })
+      if (!tournament.format || !['regular', 'knockout'].includes(tournament.format)) {
+        wx.showToast({ title: '请选择赛制', icon: 'none' })
         return false
       }
-      if (!tournament.config.eliminationType) {
-        wx.showToast({ title: '请选择淘汰类型', icon: 'none' })
+      if (!tournament.config.playersPerMatch || ![2, 4].includes(tournament.config.playersPerMatch)) {
+        wx.showToast({ title: '每场比赛人数必须是2或4', icon: 'none' })
         return false
       }
     } else if (currentStep === 3) {
@@ -439,9 +479,10 @@ Page({
       name: tournament.name,
       seasonId: tournament.seasonId,
       startDate: tournament.startDate,
-      endDate: tournament.endDate,
-      location: tournament.location,
+      endDate: '',
+      location: '',
       type: tournament.type,
+      format: tournament.format || 'regular',
       description: tournament.description,
       status: this.data.isEdit ? tournament.status : 'upcoming',
       config: {
@@ -458,10 +499,10 @@ Page({
         walkover: parseInt(tournament.pointsRules && tournament.pointsRules.walkover) || 50,
         bonusByRound: {
           1: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[1]) || 0,
-          2: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[2]) || 50,
-          3: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[3]) || 100,
-          4: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[4]) || 200,
-          5: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[5]) || 300
+          2: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[2]) || 0,
+          3: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[3]) || 0,
+          4: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[4]) || 0,
+          5: parseInt(tournament.pointsRules && tournament.pointsRules.bonusByRound && tournament.pointsRules.bonusByRound[5]) || 0
         }
       }
     }

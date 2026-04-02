@@ -12,9 +12,9 @@
         <!-- 标题和状态 -->
         <view class="card-header">
           <view class="card-name">{{item.name}}</view>
-          <view class="status-badge {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}">
+          <!-- <view class="status-badge {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}">
             {{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' ? '进行中' : '已结束'}}
-          </view>
+          </view> -->
         </view>
 
         <!-- 元信息 -->
@@ -25,39 +25,23 @@
           </view>
           <view class="meta-item">
             <text class="meta-icon">📅</text>
-            <text class="meta-text">{{item.startDate}} ~ {{item.endDate}}</text>
-          </view>
-          <view class="meta-item">
-            <text class="meta-icon">📍</text>
-            <text class="meta-text">{{item.location}}</text>
+            <text class="meta-text">{{item.startDate}}</text>
           </view>
         </view>
 
         <!-- 类型标签 -->
         <view class="card-tags">
-          <view class="tag tag-type">{{item.type}}</view>
-          <view class="tag tag-format">{{item.format || '常规'}}</view>
+          <view class="tag tag-type">{{item.type === 'doubles' ? '双打' : '单打'}}</view>
+          <view class="tag tag-format">{{item.format === 'knockout' ? '淘汰赛' : '常规赛'}}</view>
         </view>
 
         <!-- 描述 -->
         <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
 
-        <!-- 时间轴 -->
-        <view class="status-timeline" catchtap="onStopPropagation">
-          <view class="timeline-item {{item.status === 'upcoming' ? 'active' : ''}} {{item.status !== 'upcoming' ? 'completed' : ''}}">
-            <view class="timeline-dot"></view>
-            <text class="timeline-text">待开始</text>
-            <view class="timeline-line"></view>
-          </view>
-          <view class="timeline-item {{item.status === 'ongoing' ? 'active' : ''}} {{item.status === 'completed' ? 'completed' : ''}}">
-            <view class="timeline-dot"></view>
-            <text class="timeline-text">进行中</text>
-            <view class="timeline-line"></view>
-          </view>
-          <view class="timeline-item {{item.status === 'completed' ? 'active completed' : ''}}">
-            <view class="timeline-dot"></view>
-            <text class="timeline-text">已结束</text>
-          </view>
+        <!-- 操作按钮 -->
+        <view class="card-actions" catchtap="onStopPropagation">
+          <button class="action-btn" catchtap="onAddPlayer" data-id="{{item._id}}" data-type="{{item._type}}">参赛人员</button>
+          <button class="action-btn" catchtap="onViewBrackets" data-id="{{item._id}}" data-type="{{item._type}}">对位表</button>
         </view>
       </view>
     </view>

@@ -69,9 +69,10 @@ Page({
       });
 
       console.log('比赛记录数据:', result.result.data);
-
-      // 格式化时间显示为年月日
-      const records = (result.result.data || []).map(record => {
+      console.log(this.data.params)
+      let records = (result.result.data || [])
+      .filter(record => record.tournamentId === this.data.params.tournamentId )
+      .map(record => {
         let formattedTime = '';
         if (record.matchTime) {
           const date = new Date(record.matchTime);

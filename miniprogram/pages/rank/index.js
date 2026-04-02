@@ -1,94 +1,151 @@
-const db = wx.cloud.database()
-
 Page({
-	data: {
-		rankList: []
-	},
-	onLoad() {
-		this.calculateRank()
-	},
-	async calculateRank() {
-		try {
-			console.log('开始计算排名')
+  data: {
+    pointsMap: {}, // 积分映射表
+    rankList: [] // 排名列表
+  },
 
-			// 1. 获取所有比赛结果
-			const matchResultsRes = await db.collection('match_results')
-				.where({
-					type: 'singles'
-				})
-				.get()
+  onLoad() {
+    this.loadRankData()
+  },
 
-			console.log('比赛结果数量:', matchResultsRes.data.length)
+  // 加载排名数据
+  async loadRankData() {
+    wx.showLoading({ title: '加载中...' })
 
-			// 2. 获取所有赛事（用于获取积分规则）
-			const tournamentsRes = await db.collection('tournaments').get()
-			const tournaments = tournamentsRes.data || []
+    try {
+      // 步骤1: 调用云函数，获取所有比赛结果
+      console.log('【步骤1】开始获取所有比赛记录...')
+      const matchResultsRes = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: {
+          action: 'list',
+          page: 1,
+          pageSize: 1000
+        }
+      })
 
-			// 3. 计算每个选手的积分
-			const playerPoints = {}
+      const matchResults = matchResultsRes.result?.data || []
+      console.log('【步骤1】比赛记录获取成功，共', matchResults.length, '条')
+      console.log('【步骤1】比赛记录详情:', matchResults)
 
-			matchResultsRes.data.forEach(match => {
-				// 找到对应的赛事积分规则
-				const tournament = tournaments.find(t => t._id === match.tournamentId)
-				if (!tournament || !tournament.pointsRules) return
+      // 步骤2: 计算每个用户的积分
+      const pointsMap = this.calculatePointsMap(matchResults)
+      console.log('【步骤2】用户积分映射表:', pointsMap)
 
-				const { win, loss, walkover, bonusByRound } = tournament.pointsRules
+      // 步骤3: 根据键名获取会员信息
+      console.log('【步骤3】开始获取会员信息...')
+      const memberIds = Object.keys(pointsMap)
+      console.log('【步骤3】会员ID列表:', memberIds)
 
-				// 胜者积分
-				if (match.winnerId) {
-					if (!playerPoints[match.winnerId]) {
-						playerPoints[match.winnerId] = 0
-					}
-					playerPoints[match.winnerId] += win || 0
+      // 调用云函数获取会员数据
+      const membersRes = await wx.cloud.callFunction({
+        name: 'members',
+        data: {
+          action: 'list'
+        }
+      })
 
-					// 轮次奖励积分
-					if (bonusByRound && bonusByRound[String(match.round)]) {
-						playerPoints[match.winnerId] += bonusByRound[String(match.round)]
-					}
-				}
+      const allMembers = membersRes.result?.data || []
+      console.log('【步骤3】所有会员数据:', allMembers)
 
-				// 败者积分
-				if (match.loserId) {
-					if (!playerPoints[match.loserId]) {
-						playerPoints[match.loserId] = 0
-					}
-					playerPoints[match.loserId] += loss || 0
-				}
-			})
+      // 构建会员ID到信息的映射
+      const memberMap = {}
+      allMembers.forEach(member => {
+        memberMap[member._id] = member
+      })
 
-			console.log('积分统计:', playerPoints)
+      // 步骤4: 合并会员信息和积分数据
+      console.log('【步骤4】开始合并数据...')
+      const rankList = memberIds.map(id => {
+        const memberInfo = memberMap[id] || {}
+        const pointsInfo = pointsMap[id] || {}
 
-			// 4. 获取有积分的选手信息
-			const memberIds = Object.keys(playerPoints)
-			let members = []
+        return {
+          _id: id,
+          avatarUrl: memberInfo.avatarUrl || '/images/icons/avatar.png',
+          name: memberInfo.name || pointsInfo.name || '未知用户',
+          totalPoints: pointsInfo.totalPoints || 0,
+          winCount: pointsInfo.winCount || 0,
+          lossCount: pointsInfo.lossCount || 0,
+          totalGames: (pointsInfo.winCount || 0) + (pointsInfo.lossCount || 0)
+        }
+      })
 
-			if (memberIds.length > 0) {
-				// 使用 where 查询只获取有积分的选手
-				const membersRes = await db.collection('members')
-					.where({
-						_id: db.command.in(memberIds)
-					})
-					.get()
-				members = membersRes.data || []
-			}
+      // 按积分降序排列
+      rankList.sort((a, b) => b.totalPoints - a.totalPoints)
 
-			// 5. 合并信息和积分
-			const rankList = members.map(member => {
-				return {
-					...member,
-					points: playerPoints[member._id] || 0
-				}
-			})
+      console.log('【步骤4】排名列表:', rankList)
 
-			// 6. 按积分降序排列
-			rankList.sort((a, b) => b.points - a.points)
+      this.setData({
+        pointsMap,
+        rankList
+      })
 
-			console.log('排名结果:', rankList)
+    } catch (err) {
+      console.error('加载排名数据失败:', err)
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
+    } finally {
+      wx.hideLoading()
+    }
+  },
 
-			this.setData({ rankList })
+  // 计算积分映射表
+  calculatePointsMap(matchResults) {
+    const pointsMap = {}
 
-		} catch (err) {
-			console.error('计算排名失败:', err)
-		}
-	}
+    matchResults.forEach(match => {
+      // 将 winnerId 和 loserId 用 "," 分割成数组
+      const winnerIds = (match.winnerId || '').split(',').filter(id => id)
+      const loserIds = (match.loserId || '').split(',').filter(id => id)
+
+      // 处理获胜者
+      winnerIds.forEach(winnerId => {
+        if (!pointsMap[winnerId]) {
+          pointsMap[winnerId] = {
+            name: match.winnerName || winnerId,
+            totalPoints: 0,
+            winCount: 0,
+            lossCount: 0,
+            matches: []
+          }
+        }
+        pointsMap[winnerId].winCount += 1
+        pointsMap[winnerId].totalPoints += match.pointsAwarded?.winner?.total || 0
+        pointsMap[winnerId].matches.push({
+          matchId: match._id,
+          result: 'win',
+          points: match.pointsAwarded?.winner?.total || 0,
+          round: match.round,
+          opponent: match.loserName || '未知'
+        })
+      })
+
+      // 处理失败者
+      loserIds.forEach(loserId => {
+        if (!pointsMap[loserId]) {
+          pointsMap[loserId] = {
+            name: match.loserName || loserId,
+            totalPoints: 0,
+            winCount: 0,
+            lossCount: 0,
+            matches: []
+          }
+        }
+        pointsMap[loserId].lossCount += 1
+        pointsMap[loserId].totalPoints += match.pointsAwarded?.loser?.total || 0
+        pointsMap[loserId].matches.push({
+          matchId: match._id,
+          result: 'loss',
+          points: match.pointsAwarded?.loser?.total || 0,
+          round: match.round,
+          opponent: match.winnerName || '未知'
+        })
+      })
+    })
+
+    return pointsMap
+  }
 })

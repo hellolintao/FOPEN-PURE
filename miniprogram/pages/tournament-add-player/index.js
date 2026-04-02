@@ -218,7 +218,7 @@ Page({
       // 3. 找出需要新增的人员（原来没有的）
       const toAddMembers = selectedMembers.filter(m => !m.registrationId)
 
-      // 4. 添加新的人员
+      // 4. 添加新的人员（顺序执行，避免并发问题）
       if (toAddMembers.length > 0) {
         // 获取当前已有的报名数量，用于计算种子排名
         const countResult = await wx.cloud.callFunction({
@@ -232,8 +232,10 @@ Page({
 
         const existingCount = (countResult.result.data || []).filter(r => !toDeleteIds.includes(r._id)).length
 
-        const addPromises = toAddMembers.map((member, index) => {
-          return wx.cloud.callFunction({
+        // 顺序添加每个成员
+        for (let i = 0; i < toAddMembers.length; i++) {
+          const member = toAddMembers[i]
+          await wx.cloud.callFunction({
             name: 'tournament-registrations',
             data: {
               action: 'add',
@@ -243,14 +245,12 @@ Page({
                 type: tournament.type,
                 playerId: member._id,
                 playerName: member.name,
-                seed: existingCount + index + 1,
+                seed: existingCount + i + 1,
                 status: 'confirmed'
               }
             }
           })
-        })
-
-        await Promise.all(addPromises)
+        }
       }
 
       wx.hideLoading()

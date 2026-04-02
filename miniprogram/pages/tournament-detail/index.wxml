@@ -24,14 +24,14 @@
         <text class="label">时间</text>
         <text class="value">{{tournament.startDate}} 至 {{tournament.endDate}}</text>
       </view>
-      <view class="info-row compact">
+      <!-- <view class="info-row compact">
         <text class="label">场地</text>
         <text class="value">{{tournament.location}}</text>
       </view>
       <view class="info-row compact">
         <text class="label">状态</text>
         <view class="status-badge {{tournament.status}}">{{getStatusText(tournament.status)}}</view>
-      </view>
+      </view> -->
       <view class="info-row compact" wx:if="{{tournament.description}}">
         <text class="label">描述</text>
         <text class="value desc">{{tournament.description}}</text>
@@ -54,9 +54,13 @@
         <text class="value">{{tournament.config.totalRounds || '-'}}轮</text>
       </view>
       <view class="info-row compact">
+        <text class="label">赛制</text>
+        <text class="value">{{tournament.config.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
+      </view>
+      <!-- <view class="info-row compact">
         <text class="label">淘汰类型</text>
         <text class="value">{{tournament.config.eliminationType === 'single' ? '单败淘汰' : '双败淘汰'}}</text>
-      </view>
+      </view> -->
       <view class="info-row compact" wx:if="{{tournament.config.seedPlayers && tournament.config.seedPlayers.length > 0}}">
         <text class="label">种子选手</text>
         <text class="value">{{tournament.config.seedPlayers.join(', ')}}</text>

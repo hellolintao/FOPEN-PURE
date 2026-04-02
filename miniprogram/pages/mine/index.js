@@ -5,7 +5,9 @@ Page({
 			name: ''
 		},
 		isLogin: false,
-		isAdmin: false
+		isAdmin: false,
+		currentMemberId: '',
+		totalPoints: 0
 	},
 	onLoad() {
 		this.checkLogin()
@@ -27,13 +29,61 @@ Page({
 						userInfo: {
 							avatarUrl: user.avatarUrl || '',
 							name: user.name || ''
-						}
+						},
+						currentMemberId: user._id
 					})
+					// 获取积分
+					this.loadUserPoints(user._id)
 				} else {
-					this.setData({ isLogin: false, isAdmin: false })
+					this.setData({ isLogin: false, isAdmin: false, totalPoints: 0 })
 				}
 			}
 		})
+	},
+	// 获取用户积分
+	async loadUserPoints(memberId) {
+		console.log('获取用户积分')
+		if (!memberId) return
+
+		try {
+			const result = await wx.cloud.callFunction({
+				name: 'match-results',
+				data: {
+					action: 'list',
+					data: { playerId: memberId },
+					page: 1,
+					pageSize: 1000
+				}
+			})
+
+			if (result.result && result.result.data) {
+				// 计算总积分（统计用户所有参与的比赛，无论胜负和状态）
+				let totalPoints = 0
+				console.log(result.result)
+				result.result.data.forEach(match => {
+					// 将 winnerId 和 loserId 用 "," 分割成数组
+					const winnerIds = (match.winnerId || '').split(',')
+					const loserIds = (match.loserId || '').split(',')
+					console.log(winnerIds, loserIds)
+					// 检查当前用户是否在获胜者中
+					const isWinner = winnerIds.includes(memberId)
+					// 检查当前用户是否在失败者中
+					const isLoser = loserIds.includes(memberId)
+
+					if (isWinner) {
+						// 获胜者：使用 pointsAwarded
+						totalPoints += match.pointsAwarded.winner.total
+					} else if (isLoser) {
+						// 失败者：使用 loser.total
+						totalPoints += match.pointsAwarded.loser.total
+					}
+				})
+
+				this.setData({ totalPoints })
+			}
+		} catch (err) {
+			console.error('获取积分失败:', err)
+		}
 	},
 	onLogin() {
 		// 显示加载提示
@@ -55,8 +105,11 @@ Page({
 						userInfo: {
 							avatarUrl: user.avatarUrl || 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132',
 							name: user.name || '微信用户'
-						}
+						},
+						currentMemberId: user._id
 					})
+					// 获取积分
+					this.loadUserPoints(user._id)
 					wx.showToast({ title: '登录成功', icon: 'success' })
 				} else {
 					// 未注册，注册会员（使用默认信息）

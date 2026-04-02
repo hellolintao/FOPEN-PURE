@@ -221,6 +221,7 @@ Page({
   },
 
   async doSaveMatchups(validMatchups) {
+    console.log('准备保存对位数据', validMatchups);
     wx.showLoading({
       title: '保存中...'
     });
@@ -260,13 +261,21 @@ Page({
             position: index + 1,
             matchId: existingMatch?.matchId || `match_${now}_${index}`,
             player1: {
-              id: player1Reg?.playerId || existingMatch?.player1?.id || matchup.player1,
-              name: matchup.player1,
+              id: this.data.tournament.type === 'doubles'
+                ? `${player1Reg?.playerId || ''},${player1Reg?.partnerId || ''}`
+                : (player1Reg?.playerId || existingMatch?.player1?.id || matchup.player1),
+              name: this.data.tournament.type === 'doubles'
+                ? `${player1Reg?.teamName || ''}（${player1Reg?.playerName || ''}，${player1Reg?.partnerName || ''}）`
+                : matchup.player1,
               registrationId: player1Reg?._id
             },
             player2: {
-              id: player2Reg?.playerId || existingMatch?.player2?.id || matchup.player2,
-              name: matchup.player2,
+              id: this.data.tournament.type === 'doubles'
+                ? `${player2Reg?.playerId || ''},${player2Reg?.partnerId || ''}`
+                : (player2Reg?.playerId || existingMatch?.player2?.id || matchup.player2),
+              name: this.data.tournament.type === 'doubles'
+                ? `${player2Reg?.teamName || ''}（${player2Reg?.playerName || ''}，${player2Reg?.partnerName || ''}）`
+                : matchup.player2,
               registrationId: player2Reg?._id
             },
             status: existingMatch?.status || 'pending'
@@ -291,20 +300,34 @@ Page({
             position: index + 1,
             matchId: `match_${now}_${index}`,
             player1: {
-              id: player1Reg?.playerId || matchup.player1,
-              name: matchup.player1,
+              id: this.data.tournament.type === 'doubles'
+                ? `${player1Reg?.playerId || ''},${player1Reg?.partnerId || ''}`
+                : (player1Reg?.playerId || matchup.player1),
+              name: this.data.tournament.type === 'doubles'
+                ? `${player1Reg?.teamName || ''}（${player1Reg?.playerName || ''}，${player1Reg?.partnerName || ''}）`
+                : matchup.player1,
               registrationId: player1Reg?._id
             },
             player2: {
-              id: player2Reg?.playerId || matchup.player2,
-              name: matchup.player2,
+              id: this.data.tournament.type === 'doubles'
+                ? `${player2Reg?.playerId || ''},${player2Reg?.partnerId || ''}`
+                : (player2Reg?.playerId || matchup.player2),
+              name: this.data.tournament.type === 'doubles'
+                ? `${player2Reg?.teamName || ''}（${player2Reg?.playerName || ''}，${player2Reg?.partnerName || ''}）`
+                : matchup.player2,
               registrationId: player2Reg?._id
             },
             status: 'pending'
           };
         });
       }
-
+      // console.log('保存数据', {
+      //   tournamentId: this.data.tournamentId,
+      //   round: 1,
+      //   type: this.data.tournament.type,
+      //   matches: matches
+      // })
+      // return 
       if (existingData && existingData.length > 0) {
         await wx.cloud.callFunction({
           name: 'tournament-brackets',
@@ -352,6 +375,13 @@ Page({
   onPullDownRefresh() {
     this.loadData().then(() => {
       wx.stopPullDownRefresh();
+    });
+  },
+
+  onManagePlayers() {
+    const id = this.data.tournamentId;
+    wx.navigateTo({
+      url: '/pages/tournament-add-player/index?id=' + id
     });
   }
 });

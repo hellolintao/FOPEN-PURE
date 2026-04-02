@@ -22,11 +22,46 @@
     "miniprogram": {
       "list": [
         {
+          "name": "双打对位表",
+          "pathName": "pages/tournament-brackets/index",
+          "query": "id=tournament_2026_487520_289",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "轮次结算2",
+          "pathName": "pages/round-settlement/index",
+          "query": "tournamentId=tournament_2026_487520_289",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "赛事详情2",
+          "pathName": "pages/tournament-view/index",
+          "query": "id=tournament_2026_487520_289",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "参赛人员页面",
+          "pathName": "pages/tournament-add-player/index",
+          "query": "id=tournament_2026_548973_049",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "新增赛事",
+          "pathName": "pages/tournament-edit/index",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "赛事详情只读",
           "pathName": "pages/tournament-view/index",
           "query": "id=tournament_2026_122091_391",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "赛事",
@@ -74,13 +109,6 @@
           "name": "我的",
           "pathName": "pages/mine/index",
           "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "对位表",
-          "pathName": "pages/tournament-brackets/index",
-          "query": "id=tournament_2026_122091_391",
           "launchMode": "default",
           "scene": null
         },

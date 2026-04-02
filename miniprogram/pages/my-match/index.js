@@ -29,14 +29,23 @@ Page({
       const db = wx.cloud.database()
       const _ = db.command
 
+      // 查询所有未取消的注册记录，然后在本地筛选
+      // 因为双打情况下，用户可能是 playerId 或 partnerId
       const registrationRes = await db.collection('tournament_registrations')
         .where({
-          playerId: currentUser._id,
           status: _.neq('cancelled')
         })
         .get()
 
-      const registrations = registrationRes.data || []
+      const allRegistrations = registrationRes.data || []
+
+      // 筛选出包含当前用户ID的注册记录（可能是 playerId 或 partnerId）
+      const registrations = allRegistrations.filter(reg => {
+        const isPlayer = reg.playerId === currentUser._id
+        const isPartner = reg.partnerId === currentUser._id
+        return isPlayer || isPartner
+      })
+
       console.log('用户的赛事注册记录:', registrations)
 
       // 如果没有参赛记录，直接返回

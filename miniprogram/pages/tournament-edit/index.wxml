@@ -42,37 +42,16 @@
       </view>
 
       <!-- 日期选择 -->
-      <view class="form-row">
-        <view class="form-item flex-1">
-          <view class="field-label">
-            <text class="required">*</text>开始日期
-          </view>
-          <picker mode="date" value="{{tournament.startDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickStart">
-            <view class="dialog-input picker-input">
-              <text class="picker-text">{{tournament.startDate || '选择日期'}}</text>
-              <text class="picker-arrow">📅</text>
-            </view>
-          </picker>
-        </view>
-        <view class="form-item flex-1">
-          <view class="field-label">
-            <text class="required">*</text>结束日期
-          </view>
-          <picker mode="date" value="{{tournament.endDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickEnd">
-            <view class="dialog-input picker-input">
-              <text class="picker-text">{{tournament.endDate || '选择日期'}}</text>
-              <text class="picker-arrow">📅</text>
-            </view>
-          </picker>
-        </view>
-      </view>
-
-      <!-- 场地名称 -->
       <view class="form-item">
         <view class="field-label">
-          <text class="required">*</text>场地名称
+          <text class="required">*</text>开始日期
         </view>
-        <input class="dialog-input" placeholder="请输入场地名称" value="{{tournament.location}}" data-key="location" bindinput="onInput" />
+        <picker mode="date" value="{{tournament.startDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickStart">
+          <view class="dialog-input picker-input">
+            <text class="picker-text">{{tournament.startDate || '选择日期'}}</text>
+            <text class="picker-arrow">📅</text>
+          </view>
+        </picker>
       </view>
 
       <!-- 赛事类型 -->
@@ -120,27 +99,14 @@
         </picker>
       </view>
 
-      <!-- 每场比赛人数 -->
+      <!-- 赛制 -->
       <view class="form-item">
         <view class="field-label">
-          <text class="required">*</text>每场比赛人数
+          <text class="required">*</text>赛制
         </view>
-        <picker mode="selector" range="{{playersPerMatchOptions}}" range-key="label" value="{{playersPerMatchIndex}}" bindchange="onPickPlayersPerMatch">
+        <picker mode="selector" range="{{formatOptions}}" range-key="label" value="{{formatIndex}}" bindchange="onPickFormat">
           <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.config.playersPerMatch ? playersPerMatchOptions[playersPerMatchIndex].label : '选择人数'}}</text>
-            <text class="picker-arrow">›</text>
-          </view>
-        </picker>
-      </view>
-
-      <!-- 淘汰类型 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>淘汰类型
-        </view>
-        <picker mode="selector" range="{{eliminationOptions}}" range-key="label" value="{{eliminationIndex}}" bindchange="onPickElimination">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.config.eliminationType ? eliminationOptions[eliminationIndex].label : '选择类型'}}</text>
+            <text class="picker-text">{{tournament.format ? formatOptions[formatIndex].label : '选择赛制'}}</text>
             <text class="picker-arrow">›</text>
           </view>
         </picker>

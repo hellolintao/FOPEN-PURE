@@ -12,6 +12,14 @@
     </view>
   </view>
 
+  <!-- 当前积分 -->
+  <view class="stats-row" wx:if="{{isLogin}}">
+    <view class="stat-item">
+      <text class="stat-value">{{totalPoints || 0}}</text>
+      <text class="stat-label">当前积分</text>
+    </view>
+  </view>
+
   <!-- 登录按钮 -->
   <view wx:if="{{!isLogin}}" class="login-btn" bindtap="onLogin">
     <text>微信一键登录</text>

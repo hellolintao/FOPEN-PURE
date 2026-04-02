@@ -20,13 +20,16 @@ Page({
     try {
       this.setData({ loading: true })
 
-      // 获取赛事详情
-      const db = wx.cloud.database()
-      const tournamentRes = await db.collection('tournaments')
-        .doc(this.data.tournamentId)
-        .get()
+      // 1. 获取赛事详情（通过云函数）
+      const tournamentRes = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: {
+          action: 'get',
+          id: this.data.tournamentId
+        }
+      })
 
-      if (!tournamentRes.data) {
+      if (!tournamentRes.result || !tournamentRes.result.data) {
         wx.showToast({
           title: '赛事不存在',
           icon: 'none'
@@ -37,33 +40,38 @@ Page({
         return
       }
 
-      const tournament = tournamentRes.data
+      const tournament = tournamentRes.result.data
 
-      // 获取赛季名称
+      // 2. 获取赛季名称（通过云函数）
       let seasonName = '未设置'
       if (tournament.seasonId) {
-        const seasonRes = await db.collection('seasons')
-          .doc(tournament.seasonId)
-          .get()
+        const seasonRes = await wx.cloud.callFunction({
+          name: 'seasons',
+          data: {
+            action: 'get',
+            id: tournament.seasonId
+          }
+        })
 
-        if (seasonRes.data) {
-          seasonName = seasonRes.data.name
+        if (seasonRes.result && seasonRes.result.data) {
+          seasonName = seasonRes.result.data.name
         }
       }
 
-      // 获取参赛人员
-      const _ = db.command
-      const registrationRes = await db.collection('tournament_registrations')
-        .where({
+      // 3. 获取参赛人员（通过云函数）
+      const registrationRes = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: {
+          action: 'list',
           tournamentId: this.data.tournamentId,
-          status: _.neq('cancelled')
-        })
-        .orderBy('seed', 'asc')
-        .get()
+          page: 1,
+          pageSize: 1000
+        }
+      })
 
-      const registrations = registrationRes.data || []
+      const registrations = registrationRes.result?.data || []
 
-      // 获取对位信息
+      // 4. 获取对位信息（通过云函数）
       const bracketsRes = await wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: {
@@ -72,7 +80,7 @@ Page({
         }
       })
 
-      const brackets = bracketsRes.result.data || []
+      const brackets = bracketsRes.result?.data || []
 
       console.log('赛事详情:', tournament)
       console.log('赛季名称:', seasonName)

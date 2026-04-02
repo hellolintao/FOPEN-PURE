@@ -29,6 +29,18 @@
 .section-count {
   font-size: 24rpx;
   color: #999;
+  margin-left: 16rpx;
+}
+
+.manage-btn {
+  font-size: 24rpx;
+  color: #667eea;
+  background: none;
+}
+
+.manage-btn::after {
+  border: 1rpx solid #667eea;
+  border-radius: 8rpx;
 }
 
 .participants-list {

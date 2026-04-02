@@ -24,11 +24,11 @@ function validateTournament(data) {
   if (!data.type || !['singles', 'doubles'].includes(data.type)) {
     errors.push('赛事类型必须是 singles 或 doubles')
   }
+  if (!data.format || !['regular', 'knockout'].includes(data.format)) {
+    errors.push('赛制必须是 regular(常规赛) 或 knockout(淘汰赛)')
+  }
   if (!data.startDate) {
     errors.push('开始日期不能为空')
-  }
-  if (!data.endDate) {
-    errors.push('结束日期不能为空')
   }
 
   // 日期验证
@@ -87,6 +87,7 @@ exports.main = async (event, context) => {
         seasonId: data.seasonId,
         name: data.name,
         type: data.type,
+        format: data.format || 'regular',
         startDate: data.startDate,
         endDate: data.endDate,
         location: data.location,
@@ -109,10 +110,10 @@ exports.main = async (event, context) => {
           walkover: 50,
           bonusByRound: {
             1: 0,
-            2: 50,
-            3: 100,
-            4: 200,
-            5: 300
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0
           }
         },
 

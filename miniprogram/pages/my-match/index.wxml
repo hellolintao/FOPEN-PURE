@@ -30,16 +30,6 @@
 
       <!-- 卡片内容 -->
       <view class="card-body">
-        <view class="info-row">
-          <text class="info-label">参赛选手：</text>
-          <text class="info-value">{{item.registration.playerName}}</text>
-        </view>
-
-        <!-- 双打显示队友信息 -->
-        <view wx:if="{{item.tournament.type === 'doubles'}}" class="info-row">
-          <text class="info-label">队友：</text>
-          <text class="info-value">{{item.registration.partnerName || '未设置'}}</text>
-        </view>
 
         <!-- 队伍名 -->
         <view wx:if="{{item.registration.teamName}}" class="info-row">
@@ -47,13 +37,18 @@
           <text class="info-value">{{item.registration.teamName}}</text>
         </view>
 
-        <!-- 赛事状态 -->
         <view class="info-row">
+          <text class="info-label">参赛选手：</text>
+          <text class="info-value">{{item.registration.playerName}} {{item.registration.partnerName || ''}}</text>
+        </view>        
+
+        <!-- 赛事状态 -->
+        <!-- <view class="info-row">
           <text class="info-label">状态：</text>
           <text class="info-value status-{{item.tournament.status}}">
             {{item.tournament.status === 'upcoming' ? '待开始' : item.tournament.status === 'ongoing' ? '进行中' : '已结束'}}
           </text>
-        </view>
+        </view> -->
       </view>
     </view>
   </view>
