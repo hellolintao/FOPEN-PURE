@@ -1,87 +1,66 @@
 <view class="tournament-manage-container">
-  <!-- 顶部装饰 -->
-  <view class="header-decoration">
-    <view class="decoration-circle circle-1"></view>
-    <view class="decoration-circle circle-2"></view>
-    <view class="decoration-circle circle-3"></view>
-  </view>
+  <button class="fab-button" bindtap="onAddTournament">
+      添加赛事
+    </button>
+  <block wx:for="{{tournamentList}}" wx:key="_id">
+    <view class="tournament-card" bindtap="onEditTournament" data-id="{{item._id}}">
+      <!-- 卡片左侧装饰条 -->
+      <view class="card-accent {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}"></view>
 
-  <!-- 标题区域 -->
-  <view class="header-section">
-    <view class="title-container">
-      <view class="title-underline"></view>
-    </view>
-  </view>
-
-  <!-- 列表区域 -->
-  <scroll-view class="tournament-list" scroll-y enhanced show-scrollbar="{{false}}">
-    <block wx:for="{{tournamentList}}" wx:key="_id">
-      <view class="tournament-card" bindtap="onEditTournament" data-id="{{item._id}}">
-        <!-- 卡片左侧装饰条 -->
-        <view class="card-accent {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}"></view>
-
-        <!-- 卡片内容 -->
-        <view class="card-content">
-          <!-- 标题和状态 -->
-          <view class="card-header">
-            <view class="card-name">{{item.name}}</view>
-            <view class="status-badge {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}">
-              {{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' ? '进行中' : '已结束'}}
-            </view>
+      <!-- 卡片内容 -->
+      <view class="card-content">
+        <!-- 标题和状态 -->
+        <view class="card-header">
+          <view class="card-name">{{item.name}}</view>
+          <view class="status-badge {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}">
+            {{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' ? '进行中' : '已结束'}}
           </view>
+        </view>
 
-          <!-- 元信息 -->
-          <view class="card-meta">
-            <view class="meta-item">
-              <text class="meta-icon">🏆</text>
-              <text class="meta-text">{{item.seasonName || '未设置赛季'}}</text>
-            </view>
-            <view class="meta-item">
-              <text class="meta-icon">📅</text>
-              <text class="meta-text">{{item.startDate}} ~ {{item.endDate}}</text>
-            </view>
-            <view class="meta-item">
-              <text class="meta-icon">📍</text>
-              <text class="meta-text">{{item.location}}</text>
-            </view>
+        <!-- 元信息 -->
+        <view class="card-meta">
+          <view class="meta-item">
+            <text class="meta-icon">🏆</text>
+            <text class="meta-text">{{item.seasonName || '未设置赛季'}}</text>
           </view>
-
-          <!-- 类型标签 -->
-          <view class="card-tags">
-            <view class="tag tag-type">{{item.type}}</view>
-            <view class="tag tag-format">{{item.format || '常规'}}</view>
+          <view class="meta-item">
+            <text class="meta-icon">📅</text>
+            <text class="meta-text">{{item.startDate}} ~ {{item.endDate}}</text>
           </view>
+          <view class="meta-item">
+            <text class="meta-icon">📍</text>
+            <text class="meta-text">{{item.location}}</text>
+          </view>
+        </view>
 
-          <!-- 描述 -->
-          <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
+        <!-- 类型标签 -->
+        <view class="card-tags">
+          <view class="tag tag-type">{{item.type}}</view>
+          <view class="tag tag-format">{{item.format || '常规'}}</view>
+        </view>
 
-          <!-- 时间轴 -->
-          <view class="status-timeline" catchtap="onStopPropagation">
-            <view class="timeline-item {{item.status === 'upcoming' ? 'active' : ''}} {{item.status !== 'upcoming' ? 'completed' : ''}}">
-              <view class="timeline-dot"></view>
-              <text class="timeline-text">待开始</text>
-              <view class="timeline-line"></view>
-            </view>
-            <view class="timeline-item {{item.status === 'ongoing' ? 'active' : ''}} {{item.status === 'completed' ? 'completed' : ''}}">
-              <view class="timeline-dot"></view>
-              <text class="timeline-text">进行中</text>
-              <view class="timeline-line"></view>
-            </view>
-            <view class="timeline-item {{item.status === 'completed' ? 'active completed' : ''}}">
-              <view class="timeline-dot"></view>
-              <text class="timeline-text">已结束</text>
-            </view>
+        <!-- 描述 -->
+        <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
+
+        <!-- 时间轴 -->
+        <view class="status-timeline" catchtap="onStopPropagation">
+          <view class="timeline-item {{item.status === 'upcoming' ? 'active' : ''}} {{item.status !== 'upcoming' ? 'completed' : ''}}">
+            <view class="timeline-dot"></view>
+            <text class="timeline-text">待开始</text>
+            <view class="timeline-line"></view>
+          </view>
+          <view class="timeline-item {{item.status === 'ongoing' ? 'active' : ''}} {{item.status === 'completed' ? 'completed' : ''}}">
+            <view class="timeline-dot"></view>
+            <text class="timeline-text">进行中</text>
+            <view class="timeline-line"></view>
+          </view>
+          <view class="timeline-item {{item.status === 'completed' ? 'active completed' : ''}}">
+            <view class="timeline-dot"></view>
+            <text class="timeline-text">已结束</text>
           </view>
         </view>
       </view>
-    </block>
-  </scroll-view>
+    </view>
+  </block>
 
-  <!-- 浮动新增按钮 -->
-  <view class="fab-container">
-    <view class="fab-shadow"></view>
-    <button class="fab-button" bindtap="onAddTournament">
-      <text class="fab-icon">+</text>
-    </button>
-  </view>
 </view>

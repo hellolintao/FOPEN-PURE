@@ -1,20 +1,23 @@
 .match-container {
+	background: #FFFFFF;
+	min-height: 100vh;
 	padding: 40rpx 0;
 }
 .match-empty {
-	color: #aaa;
+	color: #999;
 	text-align: center;
 	margin-top: 80rpx;
 }
 .match-item {
-	background: #1a1a2e;
+	background: #FFFFFF;
 	border-radius: 16rpx;
 	margin: 20rpx 32rpx;
 	padding: 24rpx 20rpx;
+	border: 2rpx solid #f0f0f0;
 }
 .match-name {
 	font-size: 32rpx;
-	color: #FFFFFF;
+	color: #000000;
 	font-weight: bold;
 	margin-bottom: 12rpx;
 }
@@ -22,7 +25,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8rpx;
-	color: #aaa;
+	color: #666;
 	font-size: 26rpx;
 }
 
