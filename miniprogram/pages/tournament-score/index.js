@@ -3,18 +3,82 @@ Page({
     tournamentId: '',
     tournament: null,
     brackets: [],
-    currentRoundMatches: [],
+    currentRound: 1,
+    currentMatchId: '',      // 比赛记录ID（用于编辑已有成绩）
+    currentMatch: null,      // 当前编辑的比赛记录数据
+    matchScores: {},         // 多场比赛分数 { index: { player1: 0, player2: 0 } }
+    matchDurations: {},      // 多场比赛时间 { index: '' }
     loading: true,
     userId: ''
   },
 
   onLoad(options) {
-    const { id } = options;
+    const { id, round, tournamentId } = options;
+    
+    if (!tournamentId || !round) {
+      wx.showToast({ title: '参数错误', icon: 'none' });
+      setTimeout(() => wx.navigateBack(), 1500);
+      return;
+    }
+
+    this.setData({ 
+      tournamentId: tournamentId,
+      currentRound: parseInt(round),
+      currentMatchId: id || ''
+    });
+    
+    this.loadTournament();
+    this.loadBrackets();
+    this.loadUserInfo();
+    
+    // 如果有 id，说明是编辑已有成绩，需要加载该比赛记录
     if (id) {
-      this.setData({ tournamentId: id });
-      this.loadTournament();
-      this.loadBrackets();
-      this.loadUserInfo();
+      this.loadMatchRecord(id);
+    }
+  },
+
+  async loadMatchRecord(matchId) {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: {
+          action: 'getById',
+          id: matchId
+        }
+      });
+
+      if (result.result && result.result.data) {
+        const match = result.result.data;
+        // 找到对应比赛的索引
+        const brackets = this.data.brackets;
+        let matchIndex = -1;
+        for (let i = 0; i < brackets.length; i++) {
+          if (brackets[i].player1.id === match.player1.id && brackets[i].player2.id === match.player2.id) {
+            matchIndex = i;
+            break;
+          }
+        }
+
+        if (matchIndex >= 0) {
+          const matchScores = {};
+          const matchDurations = {};
+          matchScores[matchIndex] = {
+            player1: match.scoreDetail?.sets?.[0]?.player1 || 0,
+            player2: match.scoreDetail?.sets?.[0]?.player2 || 0
+          };
+          matchDurations[matchIndex] = match.scoreDetail?.duration || '';
+          
+          this.setData({
+            currentMatch: match,
+            matchScores,
+            matchDurations
+          });
+        } else {
+          this.setData({ currentMatch: match });
+        }
+      }
+    } catch (err) {
+      console.error('加载比赛记录失败:', err);
     }
   },
 
@@ -75,69 +139,53 @@ Page({
       const result = await wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: {
-          action: 'getByTournament',
-          tournamentId: this.data.tournamentId
+          action: 'getByRound',
+          tournamentId: this.data.tournamentId,
+          round: this.data.currentRound
         }
       });
 
-      const brackets = result.result.data || [];
-      const currentRound = this.data.tournament && this.data.tournament.config && this.data.tournament.config.currentRound || 1;
-
-      // 找到当前轮次的对位数据
-      const currentRoundData = brackets.find(item => item.round === currentRound);
+      const bracketData = result.result.data || [];
+      const currentRoundData = bracketData[0];
       const currentRoundMatches = currentRoundData && currentRoundData.matches || [];
 
-      // 初始化比赛时间数据
-      const matchDurations = {};
-      const matchScores = {};
-      currentRoundMatches.forEach((match, index) => {
-        matchDurations[index] = match.duration || '';
-        matchScores[index] = { player1: 0, player2: 0 };
-      });
-
       this.setData({
-        brackets,
-        currentRoundMatches,
-        matchDurations,
-        matchScores
+        brackets: currentRoundMatches,
+        loading: false
       });
     } catch (err) {
       console.error('加载对位表失败:', err);
+      this.setData({ loading: false });
     }
   },
 
   onDurationChange(e) {
     const { index } = e.currentTarget.dataset;
     const value = e.detail.value;
-    this.setData({
-      [`matchDurations[${index}]`]: value
-    });
+    const matchDurations = this.data.matchDurations;
+    matchDurations[index] = value;
+    this.setData({ matchDurations });
   },
 
   onScoreIncrease(e) {
     const { index, player } = e.currentTarget.dataset;
-    const matchScores = this.data.matchScores || {};
+    const matchScores = this.data.matchScores;
     if (!matchScores[index]) {
       matchScores[index] = { player1: 0, player2: 0 };
     }
     matchScores[index][player] = (matchScores[index][player] || 0) + 1;
-    this.setData({
-      [`matchScores[${index}].${player}`]: matchScores[index][player]
-    });
+    this.setData({ matchScores });
   },
 
   onScoreDecrease(e) {
     const { index, player } = e.currentTarget.dataset;
-    const matchScores = this.data.matchScores || {};
+    const matchScores = this.data.matchScores;
     if (!matchScores[index]) {
       matchScores[index] = { player1: 0, player2: 0 };
     }
-    const currentValue = matchScores[index][player] || 0;
-    if (currentValue > 0) {
-      matchScores[index][player] = currentValue - 1;
-      this.setData({
-        [`matchScores[${index}].${player}`]: matchScores[index][player]
-      });
+    if (matchScores[index][player] > 0) {
+      matchScores[index][player] = matchScores[index][player] - 1;
+      this.setData({ matchScores });
     }
   },
 
@@ -149,23 +197,23 @@ Page({
       confirmText: '确认提交',
       success: res => {
         if (res.confirm) {
-          this.submitScores();
+          this.submitScore();
         }
       }
     });
   },
 
-  async submitScores() {
+  async submitScore() {
     wx.showLoading({ title: '提交中...' });
 
-    const { tournament, currentRoundMatches, matchDurations, matchScores } = this.data;
+    const { tournament, currentRound, brackets, matchScores, matchDurations } = this.data;
 
     try {
-      // 遍历所有比赛，保存成绩
-      for (let i = 0; i < currentRoundMatches.length; i++) {
-        const match = currentRoundMatches[i];
-        const score1 = matchScores[i].player1 || 0;
-        const score2 = matchScores[i].player2 || 0;
+      // 遍历所有比赛，提交成绩
+      for (let i = 0; i < brackets.length; i++) {
+        const match = brackets[i];
+        const score1 = (matchScores[i] && matchScores[i].player1) || 0;
+        const score2 = (matchScores[i] && matchScores[i].player2) || 0;
         const duration = matchDurations[i] || '';
 
         // 判断获胜者
@@ -176,7 +224,6 @@ Page({
         let pointsAwarded = null;
         if (winnerId && loserId) {
           const { pointsRules } = tournament;
-          const currentRound = tournament.config.currentRound || 1;
           const bonusPoints = (pointsRules.bonusByRound && pointsRules.bonusByRound[currentRound]) || 0;
 
           pointsAwarded = {
@@ -196,7 +243,7 @@ Page({
         // 准备比赛数据
         const matchData = {
           tournamentId: this.data.tournamentId,
-          round: tournament.config.currentRound || 1,
+          round: currentRound,
           type: tournament.type,
           players: [
             {
@@ -234,7 +281,7 @@ Page({
           data: {
             action: 'list',
             tournamentId: this.data.tournamentId,
-            round: tournament.config.currentRound || 1
+            round: currentRound
           }
         });
 
@@ -244,9 +291,8 @@ Page({
           item.players[1].id === match.player2.id
         );
 
-        // 根据是否已存在决定使用 update 还是 add
+        // 根据是否已存在决定是更新还是新增
         if (existMatch && existMatch._id) {
-          // 已存在，更新记录
           await wx.cloud.callFunction({
             name: 'match-results',
             data: {
@@ -256,7 +302,6 @@ Page({
             }
           });
         } else {
-          // 不存在，新增记录
           await wx.cloud.callFunction({
             name: 'match-results',
             data: {
@@ -275,7 +320,7 @@ Page({
 
       setTimeout(() => {
         wx.redirectTo({
-          url: `/pages/round-settlement/index?tournamentId=${this.data.tournamentId}&round=${tournament.config.currentRound || 1}`
+          url: `/pages/round-settlement/index?tournamentId=${this.data.tournamentId}&round=${currentRound}`
         });
       }, 1500);
 

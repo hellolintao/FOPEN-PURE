@@ -22,11 +22,32 @@
     "miniprogram": {
       "list": [
         {
+          "name": "管理中心",
+          "pathName": "pages/manage/index",
+          "query": "",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "单打成绩录入",
+          "pathName": "pages/tournament-detail/index",
+          "query": "id=tournament_2026_777914_601",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "单打对位表",
+          "pathName": "pages/tournament-brackets/index",
+          "query": "id=tournament_2026_777914_601",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "对位表管理1",
           "pathName": "pages/tournament-brackets/index",
           "query": "id=tournament_2026_105525_171",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "双打对位表",

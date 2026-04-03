@@ -7,7 +7,9 @@ Page({
     loading: true,
     currentRound: 1,
     currentMatchIndex: -1,
-    currentPosition: ''
+    currentPosition: '',
+    actionSheetShow: false,
+    actionSheetItems: []
   },
 
   onLoad(options) {
@@ -162,16 +164,34 @@ Page({
       }
     });
 
-    wx.showActionSheet({
-      itemList: ['清空选择', ...playerNames],
-      success: (res) => {
-        if (res.tapIndex === 0) {
-          this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, '');
-        } else {
-          const selectedName = playerNames[res.tapIndex - 1];
-          this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, selectedName);
-        }
+    // 设置选项列表，添加清空选择选项
+    this.setData({
+      actionSheetItems: ['清空选择', ...playerNames],
+      actionSheetShow: true
+    });
+  },
+
+  onActionSheetSelect(e) {
+    const { index } = e.detail;
+    const playerNames = this.data.registrations.map(reg => {
+      if (this.data.tournament.type === 'doubles') {
+        return `${reg.teamName}-${reg.playerName}/${reg.partnerName}`;
+      } else {
+        return reg.playerName;
       }
+    });
+
+    if (index === 0) {
+      this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, '');
+    } else {
+      const selectedName = playerNames[index - 1];
+      this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, selectedName);
+    }
+  },
+
+  onActionSheetClose() {
+    this.setData({
+      actionSheetShow: false
     });
   },
 

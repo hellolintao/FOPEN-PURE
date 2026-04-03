@@ -155,6 +155,13 @@ Page({
     });
   },
 
+  onEnterRoundScore(e) {
+    const { round, id, tournamentid } = e.currentTarget.dataset;
+    wx.navigateTo({
+      url: `/pages/tournament-score/index?id=${id}&round=${round}&tournamentId=${tournamentid}`
+    });
+  },
+
   onDelete() {
     wx.showModal({
       title: '确认删除',

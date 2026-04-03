@@ -1,0 +1,18 @@
+<view class="action-sheet-mask {{visible ? 'show' : ''}}" bindtap="onMaskTap">
+  <view class="action-sheet-content">
+    <view class="action-sheet-title" wx:if="{{title}}">{{title}}</view>
+    <view class="action-sheet-list">
+      <view 
+        class="action-sheet-item {{(index === itemList.length - 1) ? 'last' : ''}}" 
+        wx:for="{{itemList}}" 
+        wx:key="index"
+        bindtap="onItemTap"
+        data-index="{{index}}">
+        <text>{{item}}</text>
+      </view>
+    </view>
+    <view class="action-sheet-cancel" bindtap="onClose">
+      <text>取消</text>
+    </view>
+  </view>
+</view>

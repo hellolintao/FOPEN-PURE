@@ -127,6 +127,14 @@ exports.main = async (event, context) => {
       return await collection.doc(_id || id).get()
     }
 
+    case 'getById': {
+      // 获取单场比赛（通过ID）
+      if (!id && !_id) {
+        return { errMsg: 'id is required' }
+      }
+      return await collection.doc(id || _id).get()
+    }
+
     case 'update': {
       console.log('收到更新比赛数据:', JSON.stringify(data, null, 2))
 

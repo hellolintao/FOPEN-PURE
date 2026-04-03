@@ -6,7 +6,7 @@
       <view class="match-meta">
         <text>类型：{{item.type === 'singles' ? '单打' : '双打'}}</text>
         <text>时间：{{item.startDate}}</text>
-        <text>地点：{{item.location}}</text>
+        <text>赛制：{{item.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
       </view>
     </view>
   </block>

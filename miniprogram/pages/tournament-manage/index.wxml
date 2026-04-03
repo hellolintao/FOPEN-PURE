@@ -40,8 +40,8 @@
 
         <!-- 操作按钮 -->
         <view class="card-actions" catchtap="onStopPropagation">
-          <button class="action-btn" catchtap="onAddPlayer" data-id="{{item._id}}" data-type="{{item._type}}">参赛人员</button>
-          <button class="action-btn" catchtap="onViewBrackets" data-id="{{item._id}}" data-type="{{item._type}}">对位表</button>
+          <button class="action-btn" catchtap="onAddPlayer" data-id="{{item._id}}" data-type="{{item.type}}">参赛人员</button>
+          <button class="action-btn" catchtap="onViewBrackets" data-id="{{item._id}}" data-type="{{item.type}}">对位表</button>
         </view>
       </view>
     </view>

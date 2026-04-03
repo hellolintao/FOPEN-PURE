@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "对位表管理",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "custom-action-sheet": "/components/custom-action-sheet/index"
+  }
 }

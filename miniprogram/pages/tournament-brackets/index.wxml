@@ -85,4 +85,12 @@
       <text>增加下一轮</text>
     </view>
   </view>
+
+  <!-- 自定义选择选手弹窗 -->
+  <custom-action-sheet 
+    show="{{actionSheetShow}}" 
+    itemList="{{actionSheetItems}}"
+    bind:select="onActionSheetSelect"
+    bind:close="onActionSheetClose" 
+  />
 </view>
