@@ -3,7 +3,6 @@
   <view class="participants-section">
     <view class="section-header">
       <text class="section-title">{{tournament.type === 'doubles' ? '参赛队伍' : '参赛人员'}}</text>
-      <!-- <text class="section-count">{{registrations.length}}人</text> -->
       <view class="manage-btn" catchtap="onManagePlayers">管理</view>
     </view>
 
@@ -37,31 +36,53 @@
     </view>
   </view>
 
-  <!-- 第一轮对位 -->
-  <view class="brackets-section">
-    <view class="section-header">
-      <text class="section-title">第一轮对位</text>
-      <text class="section-count">{{matchups.length}}场</text>
-    </view>
+  <!-- 轮次对位卡片 -->
+  <block wx:for="{{rounds}}" wx:key="round">
+    <view class="brackets-section">
+      <view class="section-header">
+        <text class="section-title">第{{item.round}}轮对位</text>
+        <text class="section-status {{item.modified ? 'modified' : (item.saved ? 'saved' : '')}}">{{item.modified ? '已编辑' : (item.saved ? '已保存' : '')}}</text>
+      </view>
 
-    <view class="matchups-list">
-      <view class="matchup-item" wx:for="{{matchups}}" wx:key="index">
-        <view class="matchup-player left" bindtap="onSelectPlayer" data-match-index="{{index}}" data-position="player1">
-          <text class="player-name {{item.player1 ? '' : 'placeholder'}}">{{item.player1 || '点击选择'}}</text>
-        </view>
-        <view class="matchup-divider">Vs</view>
-        <view class="matchup-player right" bindtap="onSelectPlayer" data-match-index="{{index}}" data-position="player2">
-          <text class="player-name {{item.player2 ? '' : 'placeholder'}}">{{item.player2 || '点击选择'}}</text>
+      <view class="matchups-list">
+        <view class="matchup-item" wx:for="{{item.matchups}}" wx:for-item="matchup" wx:key="index">
+          <view class="matchup-player left" bindtap="onSelectPlayer" data-round="{{item.round}}" data-match-index="{{index}}" data-position="player1">
+            <text class="player-name {{matchup.player1 ? '' : 'placeholder'}}">{{matchup.player1 || '点击选择'}}</text>
+          </view>
+          <view class="matchup-divider">Vs</view>
+          <view class="matchup-player right" bindtap="onSelectPlayer" data-round="{{item.round}}" data-match-index="{{index}}" data-position="player2">
+            <text class="player-name {{matchup.player2 ? '' : 'placeholder'}}">{{matchup.player2 || '点击选择'}}</text>
+          </view>
+          <view class="matchup-delete" catchtap="onDeleteMatchup" data-round="{{item.round}}" data-index="{{index}}">
+            <text class="delete-icon">×</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <view class="random-btn" bindtap="onRandomMatchups">
-      <text>随机对位</text>
-    </view>
+      <view class="btn-group">
+        <view class="add-matchup-btn" bindtap="onAddMatchup" data-round="{{item.round}}">
+          <text>增加对位</text>
+        </view>
 
-    <view class="save-btn" bindtap="onSaveMatchups">
-      <text>保存</text>
+        <view class="random-btn" bindtap="onRandomMatchups" data-round="{{item.round}}">
+          <text>随机对位</text>
+        </view>
+
+        <view class="save-btn" bindtap="onSaveMatchups" data-round="{{item.round}}">
+          <text>保存</text>
+        </view>
+      </view>
+      
+    </view>
+  </block>
+
+  <!-- 操作按钮 -->
+  <view class="action-btns">
+    <view class="delete-btn" bindtap="onDeleteLastRound" wx:if="{{rounds.length > 0}}">
+      <text>删除上一轮</text>
+    </view>
+    <view class="add-round-btn" bindtap="onAddRound" wx:if="{{rounds.length < 5}}">
+      <text>增加下一轮</text>
     </view>
   </view>
 </view>

@@ -3,8 +3,9 @@ Page({
     tournamentId: '',
     tournament: null,
     registrations: [],
-    matchups: [],
+    rounds: [], // 轮次数据 [{ round: 1, matchups: [...] }]
     loading: true,
+    currentRound: 1,
     currentMatchIndex: -1,
     currentPosition: ''
   },
@@ -77,6 +78,7 @@ Page({
 
   async loadBrackets() {
     try {
+      // 加载第一轮数据
       const result = await wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: {
@@ -88,50 +90,73 @@ Page({
 
       const existingBrackets = result.result.data;
 
-      if (existingBrackets && existingBrackets.length > 0) {
-        const matchups = existingBrackets[0].matches.map(match => ({
-          player1: match.player1?.name || '',
-          player2: match.player2?.name || ''
-        }));
-        this.setData({ matchups });
+      if (existingBrackets && existingBrackets.length > 0 && existingBrackets[0].matches) {
+        // 有数据，加载所有轮次
+        const rounds = []
+        for (let i = 1; i <= 5; i++) {
+          const roundResult = await wx.cloud.callFunction({
+            name: 'tournament-brackets',
+            data: {
+              action: 'getByRound',
+              tournamentId: this.data.tournamentId,
+              round: i
+            }
+          })
+
+          const roundData = roundResult.result.data
+          if (roundData && roundData.length > 0 && roundData[0].matches) {
+            const matchups = roundData[0].matches.map(match => ({
+              player1: match.player1?.name || '',
+              player2: match.player2?.name || ''
+            }))
+            rounds.push({ round: i, matchups, saved: true, bracketId: roundData[0]._id })
+          } else if (i === 1) {
+            // 第一轮没有数据，生成空对位
+            rounds.push({ round: i, matchups: this.generateEmptyMatchups(), saved: false })
+          } else {
+            break
+          }
+        }
+
+        this.setData({ rounds })
       } else {
-        this.generateMatchups();
+        // 没有数据，初始化第一轮
+        const rounds = [{ round: 1, matchups: this.generateEmptyMatchups(), saved: false }]
+        this.setData({ rounds })
       }
     } catch (err) {
       console.error('加载对位表失败:', err);
-      this.generateMatchups();
+      // 初始化第一轮
+      const rounds = [{ round: 1, matchups: this.generateEmptyMatchups(), saved: false }]
+      this.setData({ rounds })
     }
   },
 
-  generateMatchups() {
+  generateEmptyMatchups() {
     const { registrations } = this.data;
     const matchups = [];
 
     for (let i = 0; i < registrations.length; i += 2) {
-      const player1 = registrations[i];
-      const player2 = registrations[i + 1];
-
-      if (player1) {
-        matchups.push({
-          player1: '',
-          player2: ''
-        });
-      }
+      matchups.push({
+        player1: '',
+        player2: ''
+      });
     }
 
-    this.setData({ matchups });
+    return matchups;
   },
 
   onSelectPlayer(e) {
-    const { matchIndex, position } = e.currentTarget.dataset;
+    const { round, matchIndex, position } = e.currentTarget.dataset;
     this.setData({
+      currentRound: parseInt(round),
       currentMatchIndex: parseInt(matchIndex),
       currentPosition: position
     });
 
     const playerNames = this.data.registrations.map(reg => {
       if (this.data.tournament.type === 'doubles') {
-        return reg.teamName || `${reg.playerName}/${reg.partnerName}`;
+        return `${reg.teamName}-${reg.playerName}/${reg.partnerName}`;
       } else {
         return reg.playerName;
       }
@@ -141,22 +166,53 @@ Page({
       itemList: ['清空选择', ...playerNames],
       success: (res) => {
         if (res.tapIndex === 0) {
-          this.updateMatchupPlayer(this.data.currentMatchIndex, this.data.currentPosition, '');
+          this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, '');
         } else {
           const selectedName = playerNames[res.tapIndex - 1];
-          this.updateMatchupPlayer(this.data.currentMatchIndex, this.data.currentPosition, selectedName);
+          this.updateMatchupPlayer(this.data.currentRound, this.data.currentMatchIndex, this.data.currentPosition, selectedName);
         }
       }
     });
   },
 
-  updateMatchupPlayer(matchIndex, position, playerName) {
-    const matchups = this.data.matchups;
-    matchups[matchIndex][position] = playerName;
-    this.setData({ matchups });
+  updateMatchupPlayer(round, matchIndex, position, playerName) {
+    const rounds = this.data.rounds;
+    const roundIndex = rounds.findIndex(r => r.round === round);
+    if (roundIndex !== -1) {
+      rounds[roundIndex].matchups[matchIndex][position] = playerName;
+      rounds[roundIndex].modified = true;
+      this.setData({ rounds });
+    }
   },
 
-  onRandomMatchups() {
+  onDeleteMatchup(e) {
+    const { round, index } = e.currentTarget.dataset;
+    const rounds = this.data.rounds;
+    const roundIndex = rounds.findIndex(r => r.round === parseInt(round));
+
+    if (roundIndex !== -1) {
+      rounds[roundIndex].matchups.splice(parseInt(index), 1);
+      rounds[roundIndex].saved = false;
+      rounds[roundIndex].modified = true;
+      this.setData({ rounds });
+    }
+  },
+
+  onAddMatchup(e) {
+    const round = parseInt(e.currentTarget.dataset.round);
+    const rounds = this.data.rounds;
+    const roundIndex = rounds.findIndex(r => r.round === round);
+
+    if (roundIndex !== -1) {
+      rounds[roundIndex].matchups.push({ player1: '', player2: '' });
+      rounds[roundIndex].modified = true;
+      this.setData({ rounds });
+    }
+  },
+
+  onRandomMatchups(e) {
+    const round = parseInt(e.currentTarget.dataset.round);
+
     if (this.data.registrations.length < 2) {
       wx.showToast({
         title: '参赛人数不足',
@@ -167,7 +223,8 @@ Page({
 
     const playerNames = this.data.registrations.map(reg => {
       if (this.data.tournament.type === 'doubles') {
-        return reg.teamName || `${reg.playerName}/${reg.partnerName}`;
+        return `${reg.teamName || ''}-${reg.playerName || ''}/${reg.partnerName || ''}`;
+        // return reg.teamName || `${reg.playerName}/${reg.partnerName}`;
       } else {
         return reg.playerName;
       }
@@ -187,7 +244,14 @@ Page({
       });
     }
 
-    this.setData({ matchups });
+    // 更新指定轮次的数据
+    const rounds = this.data.rounds;
+    const roundIndex = rounds.findIndex(r => r.round === round);
+    if (roundIndex !== -1) {
+      rounds[roundIndex].matchups = matchups;
+      rounds[roundIndex].modified = true;
+      this.setData({ rounds });
+    }
 
     wx.showToast({
       title: '随机对位成功',
@@ -195,8 +259,107 @@ Page({
     });
   },
 
-  async onSaveMatchups() {
-    const validMatchups = this.data.matchups.filter(m => m.player1 && m.player2);
+  onAddRound() {
+    const rounds = this.data.rounds;
+    const nextRound = rounds.length + 1;
+
+    if (nextRound > 5) {
+      wx.showToast({
+        title: '最多支持5轮',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 计算下一轮的场次数（上一轮的一半）
+    // const index = rounds.length - 1 < 0 ? 0 : rounds.length - 1;
+    const lastRoundMatchups = rounds[rounds.length - 1]?.matchups || [];
+    const nextMatchCount = Math.ceil(lastRoundMatchups.length / 2) || 1;
+
+    const nextMatchups = [];
+    for (let i = 0; i < nextMatchCount; i++) {
+      nextMatchups.push({
+        player1: '',
+        player2: ''
+      });
+    }
+
+    rounds.push({ round: nextRound, matchups: nextMatchups, saved: false });
+    this.setData({ rounds });
+
+  },
+
+  async onDeleteLastRound() {
+    const rounds = this.data.rounds;
+
+    // if (rounds.length <= 1) {
+    //   wx.showToast({
+    //     title: '至少保留一轮',
+    //     icon: 'none'
+    //   });
+    //   return;
+    // }
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除最后一轮对位信息吗？',
+      confirmText: '删除',
+      cancelText: '取消',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (res.confirm) {
+          await this.doDeleteLastRound();
+        }
+      }
+    });
+  },
+
+  async doDeleteLastRound() {
+    const rounds = this.data.rounds;
+    const lastRound = rounds[rounds.length - 1];
+
+    wx.showLoading({
+      title: '删除中...'
+    });
+
+    try {
+      // 如果该轮次已保存到数据库，先删除数据库记录
+      if (lastRound.bracketId) {
+        await wx.cloud.callFunction({
+          name: 'tournament-brackets',
+          data: {
+            action: 'delete',
+            id: lastRound.bracketId
+          }
+        });
+      }
+
+      // 从本地删除最后一轮
+      rounds.pop();
+      this.setData({ rounds });
+
+      wx.hideLoading();
+      wx.showToast({
+        title: '删除成功',
+        icon: 'success'
+      });
+    } catch (err) {
+      wx.hideLoading();
+      console.error('删除失败:', err);
+      wx.showToast({
+        title: '删除失败',
+        icon: 'none'
+      });
+    }
+  },
+
+  async onSaveMatchups(e) {
+    const round = parseInt(e.currentTarget.dataset.round);
+    const rounds = this.data.rounds;
+    const roundIndex = rounds.findIndex(r => r.round === round);
+    const matchups = rounds[roundIndex]?.matchups || [];
+
+    const validMatchups = matchups.filter(m => m.player1 && m.player2);
 
     if (validMatchups.length === 0) {
       wx.showToast({
@@ -205,23 +368,11 @@ Page({
       });
       return;
     }
-
-    wx.showModal({
-      title: '确认保存',
-      content: '确定要保存当前对位配置吗？此操作将覆盖之前的对位数据。',
-      confirmText: '确定',
-      cancelText: '取消',
-      confirmColor: '#667eea',
-      success: (res) => {
-        if (res.confirm) {
-          this.doSaveMatchups(validMatchups);
-        }
-      }
-    });
+    this.doSaveMatchups(round, validMatchups);
   },
 
-  async doSaveMatchups(validMatchups) {
-    console.log('准备保存对位数据', validMatchups);
+  async doSaveMatchups(round, validMatchups) {
+    console.log(`准备保存第${round}轮对位数据`, validMatchups);
     wx.showLoading({
       title: '保存中...'
     });
@@ -232,7 +383,7 @@ Page({
         data: {
           action: 'getByRound',
           tournamentId: this.data.tournamentId,
-          round: 1
+          round: round
         }
       });
 
@@ -240,23 +391,26 @@ Page({
       const now = Date.now();
 
       let matches;
-
       if (existingData && existingData.length > 0 && existingData[0].matches) {
+        console.log('存在对位数据', '\n', validMatchups, '\n', existingData)
         matches = validMatchups.map((matchup, index) => {
           const existingMatch = existingData[0].matches[index];
+          console.log('前置信息', existingMatch)
+
           const player1Reg = this.data.registrations.find(reg => {
             const name = this.data.tournament.type === 'doubles'
-              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              ? `${reg.teamName}-${reg.playerName}/${reg.partnerName}`
               : reg.playerName;
             return name === matchup.player1;
           });
+
           const player2Reg = this.data.registrations.find(reg => {
             const name = this.data.tournament.type === 'doubles'
-              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              ? `${reg.teamName}-${reg.playerName}/${reg.partnerName}`
               : reg.playerName;
             return name === matchup.player2;
           });
-
+          console.log('对比结果', player1Reg, player2Reg)
           return {
             position: index + 1,
             matchId: existingMatch?.matchId || `match_${now}_${index}`,
@@ -265,7 +419,7 @@ Page({
                 ? `${player1Reg?.playerId || ''},${player1Reg?.partnerId || ''}`
                 : (player1Reg?.playerId || existingMatch?.player1?.id || matchup.player1),
               name: this.data.tournament.type === 'doubles'
-                ? `${player1Reg?.teamName || ''}（${player1Reg?.playerName || ''}，${player1Reg?.partnerName || ''}）`
+                ? `${player1Reg?.teamName || ''}-${player1Reg?.playerName || ''}/${player1Reg?.partnerName || ''}`
                 : matchup.player1,
               registrationId: player1Reg?._id
             },
@@ -274,7 +428,7 @@ Page({
                 ? `${player2Reg?.playerId || ''},${player2Reg?.partnerId || ''}`
                 : (player2Reg?.playerId || existingMatch?.player2?.id || matchup.player2),
               name: this.data.tournament.type === 'doubles'
-                ? `${player2Reg?.teamName || ''}（${player2Reg?.playerName || ''}，${player2Reg?.partnerName || ''}）`
+                ? `${player2Reg?.teamName || ''}-${player2Reg?.playerName || ''}/${player2Reg?.partnerName || ''}`
                 : matchup.player2,
               registrationId: player2Reg?._id
             },
@@ -285,13 +439,15 @@ Page({
         matches = validMatchups.map((matchup, index) => {
           const player1Reg = this.data.registrations.find(reg => {
             const name = this.data.tournament.type === 'doubles'
-              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              // ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              ? `${reg.teamName || ''}-${reg.playerName || ''}/${reg.partnerName || ''}`
               : reg.playerName;
             return name === matchup.player1;
           });
           const player2Reg = this.data.registrations.find(reg => {
             const name = this.data.tournament.type === 'doubles'
-              ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              // ? (reg.teamName || `${reg.playerName}/${reg.partnerName}`)
+              ? `${reg.teamName || ''}-${reg.playerName || ''}/${reg.partnerName || ''}`
               : reg.playerName;
             return name === matchup.player2;
           });
@@ -304,7 +460,7 @@ Page({
                 ? `${player1Reg?.playerId || ''},${player1Reg?.partnerId || ''}`
                 : (player1Reg?.playerId || matchup.player1),
               name: this.data.tournament.type === 'doubles'
-                ? `${player1Reg?.teamName || ''}（${player1Reg?.playerName || ''}，${player1Reg?.partnerName || ''}）`
+                ? `${player1Reg?.teamName || ''}-${player1Reg?.playerName || ''}/${player1Reg?.partnerName || ''}`
                 : matchup.player1,
               registrationId: player1Reg?._id
             },
@@ -313,7 +469,7 @@ Page({
                 ? `${player2Reg?.playerId || ''},${player2Reg?.partnerId || ''}`
                 : (player2Reg?.playerId || matchup.player2),
               name: this.data.tournament.type === 'doubles'
-                ? `${player2Reg?.teamName || ''}（${player2Reg?.playerName || ''}，${player2Reg?.partnerName || ''}）`
+                ? `${player2Reg?.teamName || ''}-${player2Reg?.playerName || ''}/${player2Reg?.partnerName || ''}`
                 : matchup.player2,
               registrationId: player2Reg?._id
             },
@@ -321,14 +477,17 @@ Page({
           };
         });
       }
-      // console.log('保存数据', {
-      //   tournamentId: this.data.tournamentId,
-      //   round: 1,
-      //   type: this.data.tournament.type,
-      //   matches: matches
-      // })
-      // return 
+
+      let savedBracketId;
       if (existingData && existingData.length > 0) {
+        wx.hideLoading();
+        console.log('这里提交保存数据', '\n', {
+          tournamentId: this.data.tournamentId,
+          round: round,
+          type: this.data.tournament.type,
+          matches: matches
+        })
+        // return
         await wx.cloud.callFunction({
           name: 'tournament-brackets',
           data: {
@@ -336,28 +495,41 @@ Page({
             id: existingData[0]._id,
             data: {
               tournamentId: this.data.tournamentId,
-              round: 1,
+              round: round,
               type: this.data.tournament.type,
               matches: matches
             }
           }
         });
+        savedBracketId = existingData[0]._id;
       } else {
-        await wx.cloud.callFunction({
+        const addResult = await wx.cloud.callFunction({
           name: 'tournament-brackets',
           data: {
             action: 'add',
             data: {
               tournamentId: this.data.tournamentId,
-              round: 1,
+              round: round,
               type: this.data.tournament.type,
               matches: matches
             }
           }
         });
+        savedBracketId = addResult.result?._id;
       }
 
       wx.hideLoading();
+
+      // 更新该轮次的 saved 状态和 bracketId
+      const rounds = this.data.rounds;
+      const roundIndex = rounds.findIndex(r => r.round === round);
+      if (roundIndex !== -1) {
+        rounds[roundIndex].saved = true;
+        rounds[roundIndex].modified = false;
+        rounds[roundIndex].bracketId = savedBracketId;
+        this.setData({ rounds });
+      }
+
       wx.showToast({
         title: '保存成功',
         icon: 'success'
@@ -379,9 +551,13 @@ Page({
   },
 
   onManagePlayers() {
-    const id = this.data.tournamentId;
+    const pagePath = this.data.tournament.type === 'singles'
+      ? '/pages/tournament-add-player/index'
+      : '/pages/tournament-add-players-doubles/index'
+    const id = this.data.tournamentId
     wx.navigateTo({
-      url: '/pages/tournament-add-player/index?id=' + id
+      url: `${pagePath}?id=${id}`
     });
-  }
+  },
+  
 });
