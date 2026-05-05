@@ -1,0 +1,138 @@
+<view class="tournament-add-players-doubles-container">
+  <!-- 已报名队伍区域 -->
+  <view class="teams-section">
+    <view class="section-header">
+      <view class="header-title">
+        <text class="title-icon">🏆</text>
+        <text>已报名队伍 ({{teams.length}}支)</text>
+      </view>
+      <button class="add-team-btn" bindtap="onAddTeam">
+        <text class="add-icon">+</text>
+        <text class="add-text">添加队伍</text>
+      </button>
+    </view>
+
+    <scroll-view class="teams-list" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{teams.length === 0}}" class="empty-hint">
+        <text class="hint-icon">📋</text>
+        <text class="hint-text">暂无报名队伍</text>
+        <text class="hint-desc">点击"添加队伍"按钮开始</text>
+      </view>
+
+      <view class="team-item" wx:for="{{teams}}" wx:key="_id">
+        <view class="team-header">
+          <view class="team-badge">{{item.seed}}</view>
+          <text class="team-name">{{item.teamName}}</text>
+        </view>
+        <view class="team-players">
+          <view class="player-info">
+            <text class="player-label">队员1:</text>
+            <text class="player-name">{{item.player1.name}}</text>
+          </view>
+          <view class="player-info">
+            <text class="player-label">队员2:</text>
+            <text class="player-name">{{item.player2.name}}</text>
+          </view>
+        </view>
+        <view class="team-actions">
+          <button class="action-btn edit" bindtap="onEditTeam" data-team="{{item}}">编辑</button>
+          <button class="action-btn delete" bindtap="onDeleteTeam" data-team="{{item}}">删除</button>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 编辑队伍弹窗 -->
+  <view class="edit-modal" wx:if="{{editingTeam}}">
+    <view class="modal-mask" bindtap="onCloseEdit"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">{{editingTeam._id ? '编辑队伍' : '添加队伍'}}</text>
+        <text class="modal-close" bindtap="onCloseEdit">✕</text>
+      </view>
+
+      <view class="modal-body">
+        <!-- 队伍名称 -->
+        <view class="form-item">
+          <text class="form-label">队伍名称</text>
+          <input
+            class="form-input"
+            placeholder="请输入队伍名称"
+            value="{{editingTeam.teamName}}"
+            bindinput="onTeamNameInput"
+          />
+        </view>
+
+        <!-- 队员1 -->
+        <view class="form-item">
+          <text class="form-label">队员1</text>
+          <view class="form-picker" bindtap="onSelectPlayer1Selector">
+            <text class="picker-value">{{editingTeam.player1 ? editingTeam.player1.name : '请选择队员1'}}</text>
+            <text class="picker-arrow">▼</text>
+          </view>
+        </view>
+
+        <!-- 队员2 -->
+        <view class="form-item">
+          <text class="form-label">队员2</text>
+          <view class="form-picker" bindtap="onSelectPlayer2Selector">
+            <text class="picker-value">{{editingTeam.player2 ? editingTeam.player2.name : '请选择队员2'}}</text>
+            <text class="picker-arrow">▼</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 队员选择弹窗 -->
+      <view class="selector-modal" wx:if="{{showPlayerSelector}}">
+        <view class="modal-mask" bindtap="onClosePlayerSelector"></view>
+        <view class="selector-content">
+          <view class="selector-header">
+            <text class="selector-title">选择队员</text>
+            <text class="selector-close" bindtap="onClosePlayerSelector">✕</text>
+          </view>
+
+          <!-- 搜索框 -->
+          <view class="search-bar">
+            <text class="search-icon">🔍</text>
+            <input
+              class="search-input"
+              placeholder="搜索会员姓名或手机号"
+              value="{{searchKeyword}}"
+              bindinput="onSearchInput"
+              confirm-type="search"
+              bindconfirm="onSearch"
+            />
+            <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">✕</view>
+          </view>
+
+          <!-- 会员列表 -->
+          <scroll-view class="selector-list" scroll-y enhanced show-scrollbar="{{false}}">
+            <view wx:if="{{filteredMemberList.length === 0}}" class="empty-list">
+              <text class="empty-text">{{searchKeyword ? '未找到相关会员' : '暂无会员数据'}}</text>
+            </view>
+
+            <view class="member-item"
+              wx:for="{{filteredMemberList}}"
+              wx:key="_id"
+              bindtap="onSelectMember"
+              data-member="{{item}}"
+              data-type="{{selectingPlayerType}}">
+              <view class="member-info">
+                <text class="member-name">{{item.name}}</text>
+                <text class="member-phone">{{item.phone || '未填写手机号'}}</text>
+              </view>
+              <view class="select-badge {{isMemberSelectedForType(item._id) ? 'selected' : ''}}">
+                <text class="select-icon">{{isMemberSelectedForType(item._id) ? '✓' : ''}}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <view class="modal-footer">
+        <button class="modal-btn cancel" bindtap="onCloseEdit">取消</button>
+        <button class="modal-btn confirm" bindtap="onSaveTeam">确定</button>
+      </view>
+    </view>
+  </view>
+</view>

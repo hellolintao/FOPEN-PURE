@@ -1,0 +1,69 @@
+<view class="manage-container">
+  <view class="manage-grid">
+    <view class="manage-card" bindtap="onSeasonManage">
+      <text class="card-title">赛季管理</text>
+    </view>
+
+    <view class="manage-card" bindtap="onTournamentManage">
+      <text class="card-title">赛事管理</text>
+    </view>
+
+    <view class="manage-card" bindtap="onMemberManage">
+      <text class="card-title">会员管理</text>
+    </view>
+  </view>
+
+  <!-- 对位表列表 -->
+  <view class="brackets-section">
+
+    <view wx:if="{{loading}}" class="loading-state">
+      <text>加载中...</text>
+    </view>
+
+
+    <view wx:else class="brackets-list">
+      <view 
+        class="bracket-card" 
+        wx:for="{{bracketsList}}" 
+        wx:key="_id"
+        bindtap="onBracketTap"
+        data-tournamentid="{{item.tournamentId}}"
+        data-bracketid="{{item._id}}"
+        data-round="{{item.round}}">
+        
+        <!-- 卡片头部 -->
+        <view class="bracket-header">
+          <view class="bracket-info">
+            <text class="bracket-tournament">{{tournamentsMap[item.tournamentId].name || '未知赛事'}}</text>
+            <text class="bracket-tip">点击录入成绩</text>
+          </view>
+          
+        </view>
+
+        <!-- 比赛列表 -->
+        <view class="matches-list">
+          <view class="match-item {{match.status}}" wx:for="{{item.matches}}" wx:key="matchId">
+            <view class="match-players">
+              <text class="player">
+                {{item.player1.name || '待定'}}
+              </text>
+              <text class="vs">Vs</text>
+              <text class="player">
+                {{item.player2.name || '待定'}}
+              </text>
+            </view>
+            <!-- <view class="match-status-tag {{match.status}}">
+              {{match.status === 'completed' ? '已完成' : match.status === 'ongoing' ? '进行中' : '待开始'}}
+            </view> -->
+          </view>
+        </view>
+
+        <!-- 卡片底部 -->
+        <view class="bracket-footer">
+          <view class="bracket-round">第{{item.round}}轮</view>
+          <text class="bracket-time">{{item.updateTime ? item.updateTime : item.createTime}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

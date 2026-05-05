@@ -1,16 +1,67 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/example/index"
+    "pages/home/index",
+    "pages/match/index",
+    "pages/rank/index",
+    "pages/mine/index",
+    "pages/manage/index",
+    "pages/season-manage/index",
+    "pages/tournament-manage/index",
+    "pages/tournament-detail/index",
+    "pages/tournament-edit/index",
+    "pages/tournament-add-player/index",
+    "pages/tournament-add-players-doubles/index",
+    "pages/member-manage/index",
+    "pages/member-edit/index",
+    "pages/setting/index",
+    "pages/edit-profile/index",
+    "pages/tournament-brackets/index",
+    "pages/tournament-score/index",
+    "pages/round-settlement/index",
+    "pages/my-match/index",
+    "pages/tournament-view/index"
   ],
+  "tabBar": {
+    "color": "#888",
+    "selectedColor": "#7c3aed",
+    "backgroundColor": "#101017",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/match/index",
+        "text": "赛事",
+        "iconPath": "images/icons/goods.png",
+        "selectedIconPath": "images/icons/goods-active.png"
+      },
+      {
+        "pagePath": "pages/rank/index",
+        "text": "排名",
+        "iconPath": "images/icons/business.png",
+        "selectedIconPath": "images/icons/business-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "images/icons/usercenter.png",
+        "selectedIconPath": "images/icons/usercenter-active.png"
+      }
+    ]
+  },
   "window": {
-    "backgroundColor": "#F6F6F6",
+    "backgroundColor": "#0d0d14",
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#F6F6F6",
-    "navigationBarTitleText": "云开发 QuickStart",
-    "navigationBarTextStyle": "black"
+    "navigationBarBackgroundColor": "#101017",
+    "navigationBarTitleText": "Fuopen",
+    "navigationBarTextStyle": "white"
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "__usePrivacyCheck__": true
 }

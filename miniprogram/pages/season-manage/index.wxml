@@ -1,0 +1,64 @@
+<view class="season-manage-container">
+  <block wx:for="{{seasonList}}" wx:key="_id">
+    <view class="season-item">
+      <view class="season-info">
+        <view class="season-name">{{item.name}}</view>
+        <view class="season-meta">
+          <text>状态：{{item.status === 'active' ? '进行中' : '已结束'}}</text>
+          <text>时间：{{item.startDate}} ~ {{item.endDate}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="season-actions-row">
+      <button class="season-btn delete" bindtap="onDeleteSeason" data-id="{{item._id}}">删除</button>
+      <button wx:if="{{item.status === 'active'}}" class="season-btn edit" bindtap="onEditSeason" data-id="{{item._id}}">编辑</button>
+    </view>
+  </block>
+  <view class="add-btn-bar">
+    <button class="add-btn" bindtap="onAddSeason">新增赛季</button>
+  </view>
+  <view wx:if="{{showAddDialog}}" class="dialog-mask">
+    <view class="dialog">
+      <view class="dialog-title">新增赛季</view>
+      <input class="dialog-input" placeholder="赛季名称" value="{{newSeason.name}}" bindinput="onInputName" />
+      <picker mode="date" value="{{newSeason.startDate}}" bindchange="onPickStartDate">
+        <view class="dialog-input picker">
+          <text class="{{newSeason.startDate ? '' : 'placeholder'}}">{{newSeason.startDate || '选择开始日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+      <picker mode="date" value="{{newSeason.endDate}}" bindchange="onPickEndDate">
+        <view class="dialog-input picker">
+          <text class="{{newSeason.endDate ? '' : 'placeholder'}}">{{newSeason.endDate || '选择结束日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+      <view class="dialog-actions">
+        <button class="dialog-btn" bindtap="onCancelAdd">取消</button>
+        <button class="dialog-btn primary" bindtap="onConfirmAdd">确定</button>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{showEditDialog}}" class="dialog-mask">
+    <view class="dialog">
+      <view class="dialog-title">编辑赛季</view>
+      <input class="dialog-input" placeholder="赛季名称" value="{{editSeason.name}}" bindinput="onEditInputName" />
+      <picker mode="date" value="{{editSeason.startDate}}" bindchange="onEditPickStartDate">
+        <view class="dialog-input picker">
+          <text class="{{editSeason.startDate ? '' : 'placeholder'}}">{{editSeason.startDate || '选择开始日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+      <picker mode="date" value="{{editSeason.endDate}}" bindchange="onEditPickEndDate">
+        <view class="dialog-input picker">
+          <text class="{{editSeason.endDate ? '' : 'placeholder'}}">{{editSeason.endDate || '选择结束日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+      <view class="dialog-actions">
+        <button class="dialog-btn" bindtap="onCancelEdit">取消</button>
+        <button class="dialog-btn primary" bindtap="onConfirmEdit">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

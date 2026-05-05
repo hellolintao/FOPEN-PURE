@@ -56,5 +56,5 @@
 
 .install_tip_detail_button_primary {
   background-color: #07C160;
-  color: #fff;
+  color: #FFFFFF;
 }

@@ -1,0 +1,200 @@
+.member-manage-container {
+  background: #f7f7f7;
+  min-height: 100vh;
+  padding: 40rpx 0;
+  padding-bottom: 20rpx;
+}
+
+.member-title {
+  font-size: 44rpx;
+  color: #333333;
+  text-align: center;
+  margin-bottom: 32rpx;
+  font-weight: 600;
+}
+
+/* 搜索栏 */
+.search-bar {
+  padding: 0 40rpx 24rpx 40rpx;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 8rpx;
+  padding: 16rpx 24rpx;
+}
+
+.search-input {
+  flex: 1;
+  color: #333333;
+  font-size: 28rpx;
+}
+
+.clear-btn {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  color: #999999;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 40rpx 32rpx 40rpx;
+}
+
+.filter-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  background: #ffffff;
+  border-radius: 8rpx;
+  color: #999999;
+  font-size: 26rpx;
+  font-weight: 400;
+}
+
+.filter-item.active {
+  background: #333333;
+  color: #ffffff;
+}
+
+/* 会员列表 */
+.member-list {
+  padding: 0 32rpx;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 8rpx;
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+}
+
+.member-item:active {
+  background: #f5f5f5;
+}
+
+.member-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 2rpx solid #e0e0e0;
+  margin-right: 24rpx;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-placeholder {
+  font-size: 48rpx;
+  color: #999999;
+  font-weight: 500;
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 32rpx;
+  color: #333333;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-phone {
+  font-size: 26rpx;
+  color: #999999;
+  margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-meta {
+  font-size: 24rpx;
+  color: #cccccc;
+}
+
+.join-time {
+  display: block;
+}
+
+.member-status {
+  padding: 8rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.member-status.active {
+  background: #333333;
+  color: #ffffff;
+}
+
+.member-status.inactive {
+  background: #f5f5f5;
+  color: #999999;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999999;
+}
+
+/* 加载更多 */
+.load-more {
+  padding: 32rpx 0;
+  text-align: center;
+}
+
+.loading-text, .no-more-text {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.no-more {
+  color: #999999;
+}

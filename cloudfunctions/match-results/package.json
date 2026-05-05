@@ -1,0 +1,9 @@
+{
+  "name": "match-results",
+  "version": "1.0.0",
+  "description": "比赛详细数据管理",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

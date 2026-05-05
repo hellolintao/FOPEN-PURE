@@ -1,0 +1,65 @@
+<view class="container">
+  <view class="page-header">
+    <view class="header-item">
+      <text class="header-label">赛季：</text>
+      <text class="header-value">{{seasonName || '-'}}</text>
+    </view>
+    <view class="header-item">
+      <text class="header-label">赛事：</text>
+      <text class="header-value">{{tournament.name || '-'}}</text>
+    </view>
+    <view class="header-item">
+      <text class="header-label">轮次：</text>
+      <text class="header-value">第{{round}}轮</text>
+    </view>
+    <view class="header-item points-rules">
+      <text class="header-label">积分规则：</text>
+      <view class="points-rules-content">
+        <view class="rule-base">
+          <text>胜{{tournament.pointsRules.win}} / 负{{tournament.pointsRules.loss}}</text>
+        </view>
+        <view class="bonus-rules">
+          <text wx:for="{{tournament.pointsRules.bonusByRound}}" wx:for-item="bonus" wx:for-index="roundNum" wx:key="roundNum" class="bonus-tag">
+            R{{roundNum}}:{{bonus}}
+          </text>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view class="match-list">
+    <view class="match-card" wx:for="{{matchRecords}}" wx:key="_id">
+      <view class="match-header">
+        <text class="players">{{item.players[0].name}} Vs {{item.players[1].name}}</text>
+        <text class="match-time">{{item.matchTime}}</text>
+      </view>
+      <view class="match-body">
+        <view class="score-detail">
+          <text class="score-label">比分：</text>
+          <text class="score-value">{{item.score}}</text>
+          <text class="duration-label">比赛时间：</text>
+          <text class="duration-value">{{item.scoreDetail.duration ? item.scoreDetail.duration + '分钟' : '-'}}</text>
+        </view>
+        <view class="winner-info">
+          <text class="result-label">获胜：</text>
+          <text class="result-value winner">{{item.players[0].isWinner ? item.players[0].name : item.players[1].name}}</text>
+        </view>
+        <view class="loser-info">
+          <text class="result-label">落败：</text>
+          <text class="result-value loser">{{item.players[0].isWinner ? item.players[1].name : item.players[0].name}}</text>
+        </view>
+        <view class="points-section">
+          <view class="points-item winner">
+            <text class="points-player">{{item.players[0].isWinner ? item.players[0].name : item.players[1].name}}</text>
+            <text class="points-value">+{{item.pointsAwarded.winner.total}}</text>
+            <text class="points-detail">(基础{{item.pointsAwarded.winner.basePoints}} + 轮次奖励{{item.pointsAwarded.winner.bonusPoints}})</text>
+          </view>
+          <view class="points-item loser">
+            <text class="points-player">{{item.players[0].isWinner ? item.players[1].name : item.players[0].name}}</text>
+            <text class="points-value">+{{item.pointsAwarded.loser.total}}</text>
+            <text class="points-detail">(基础{{item.pointsAwarded.loser.basePoints}})</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

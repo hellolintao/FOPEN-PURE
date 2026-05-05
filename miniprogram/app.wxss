@@ -4,10 +4,11 @@
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
-} 
+}
 
 button {
   background: initial;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button:focus{
@@ -20,8 +21,9 @@ button::after{
 
 
 page {
-  background: #f6f6f6;
+  background: #0d0d14;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }

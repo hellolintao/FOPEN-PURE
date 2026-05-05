@@ -1,0 +1,74 @@
+<view class="tournament-add-player-container">
+  <!-- 已报名人员区域 -->
+  <view class="registered-section">
+    <view class="section-header">
+      <text class="section-title">已报名人员 ({{selectedMembers.length}})</text>
+      <text class="section-hint">点击移除</text>
+    </view>
+
+    <view class="list-wrapper">
+      <scroll-view class="registered-list" scroll-y>
+        <view wx:if="{{selectedMembers.length === 0}}" class="empty-hint">
+          <text class="empty-text">暂无报名人员</text>
+        </view>
+
+        <view class="registered-item" wx:for="{{selectedMembers}}" wx:key="_id" bindtap="onRemoveMember" data-member="{{item}}">
+          <view class="member-avatar-placeholder">{{item.name.charAt(0) || '?'}}</view>
+          <text class="member-name">{{item.name}}</text>
+          <text class="remove-icon">×</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 会员列表区域 -->
+  <view class="member-list-section">
+    <view class="section-header">
+      <text class="section-title">会员列表</text>
+    </view>
+
+    <!-- 搜索框 -->
+    <view class="search-bar">
+      <input
+        class="search-input"
+        placeholder="搜索会员姓名或手机号"
+        value="{{searchKeyword}}"
+        bindinput="onSearchInput"
+        confirm-type="search"
+        bindconfirm="onSearch"
+      />
+      <text class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">×</text>
+    </view>
+
+    <!-- 会员列表 -->
+    <view class="list-wrapper">
+      <scroll-view class="member-list" scroll-y>
+        <view wx:if="{{memberList.length === 0 && !loading}}" class="empty-list">
+          <text class="empty-text">{{searchKeyword ? '未找到相关会员' : '暂无会员数据'}}</text>
+        </view>
+
+        <view wx:if="{{loading}}" class="loading">
+          <text class="loading-text">加载中...</text>
+        </view>
+
+        <view class="member-item" wx:for="{{memberList}}" wx:key="_id" bindtap="onSelectMember" data-member="{{item}}">
+          <view class="member-avatar-placeholder">{{item.name.charAt(0) || '?'}}</view>
+          <view class="member-info">
+            <text class="member-name-text">{{item.name}}</text>
+            <text class="member-phone">{{item.phone || '未填写手机号'}}</text>
+          </view>
+          <view class="select-badge {{isMemberSelected(item._id) ? 'selected' : ''}}">
+            <text class="select-icon">{{isMemberSelected(item._id) ? '✓' : '+'}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 底部按钮 -->
+  <view class="footer-actions">
+    <button class="submit-btn" bindtap="onSubmit" disabled="{{selectedMembers.length === 0}}">
+      确认添加 ({{selectedMembers.length}})
+    </button>
+  </view>
+</view>

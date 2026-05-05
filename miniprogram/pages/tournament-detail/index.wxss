@@ -1,0 +1,526 @@
+.tournament-detail-container {
+  min-height: 100vh;
+  background: #f7f7f7;
+  padding-bottom: 180rpx;
+}
+
+/* 卡片样式 */
+.section-card {
+  background: #ffffff;
+  margin: 20rpx 30rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 30rpx;
+  background: #ffffff;
+  color: #333333;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.header-title {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.header-edit-btn {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8rpx;
+  width: 56rpx;
+  height: 56rpx;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-edit-btn::after {
+  border: none;
+}
+
+.edit-icon {
+  font-size: 28rpx;
+  line-height: 1;
+  color: #666666;
+}
+
+.header-btn {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8rpx;
+  padding: 12rpx 28rpx;
+  color: #333333;
+  font-size: 26rpx;
+  font-weight: 400;
+}
+
+.header-btn::after {
+  border: none;
+}
+
+.header-btn.add {
+  background: #333333;
+  color: #ffffff;
+}
+
+/* 信息内容 */
+.info-content {
+  padding: 20rpx 0;
+}
+
+.info-row.compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12rpx 30rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.info-row.compact:last-child {
+  border-bottom: none;
+}
+
+.info-row.compact .label {
+  color: #999999;
+  font-size: 24rpx;
+  min-width: 90rpx;
+  flex-shrink: 0;
+}
+
+.info-row.compact .value {
+  color: #333333;
+  font-size: 24rpx;
+  text-align: right;
+  flex: 1;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.info-row.compact .value.desc {
+  line-height: 1.6;
+}
+
+/* 分隔线 */
+.info-divider {
+  padding: 8rpx 30rpx 4rpx;
+  background: #f9f9f9;
+  color: #333333;
+  font-size: 22rpx;
+  font-weight: 500;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 积分网格 */
+.points-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+  padding: 12rpx 30rpx;
+}
+
+.point-item {
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 16rpx 12rpx;
+  text-align: center;
+}
+
+.point-label {
+  display: block;
+  color: #999999;
+  font-size: 20rpx;
+  margin-bottom: 8rpx;
+}
+
+.point-value {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 500;
+  color: #333333;
+}
+
+.point-value.win {
+  color: #333333;
+}
+
+.point-value.loss {
+  color: #333333;
+}
+
+.point-value.walkover {
+  color: #333333;
+}
+
+/* 轮次奖励 */
+.bonus-section {
+  padding: 12rpx 30rpx;
+}
+
+.bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+}
+
+.bonus-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 14rpx 12rpx;
+}
+
+.bonus-label {
+  color: #999999;
+  font-size: 20rpx;
+  margin-bottom: 6rpx;
+}
+
+.bonus-value {
+  color: #333333;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+/* 状态徽章 */
+.status-badge {
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: white;
+  font-weight: 400;
+}
+
+.status-badge.upcoming {
+  background: #f5f5f5;
+  color: #666666;
+}
+
+.status-badge.ongoing {
+  background: #333333;
+  color: #ffffff;
+}
+
+.status-badge.completed {
+  background: #f5f5f5;
+  color: #999999;
+}
+
+/* 参赛人员 */
+.players-content {
+  padding: 20rpx;
+  min-height: 200rpx;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 30rpx;
+  color: #999999;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+/* 9宫格布局 */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+}
+
+.player-card {
+  position: relative;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 24rpx 16rpx 20rpx;
+  text-align: center;
+}
+
+.player-badge {
+  position: absolute;
+  top: -8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44rpx;
+  height: 44rpx;
+  background: #333333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.player-name {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-name.singles {
+  font-size: 28rpx;
+  margin-top: 4rpx;
+}
+
+/* 双打信息容器 */
+.doubles-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.doubles-info .player-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.players-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.player-detail {
+  font-size: 22rpx;
+  color: #666666;
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-divider {
+  font-size: 20rpx;
+  color: #cccccc;
+}
+
+.player-partner {
+  display: block;
+  font-size: 22rpx;
+  color: #666666;
+  margin-bottom: 4rpx;
+}
+
+.player-team {
+  display: block;
+  font-size: 20rpx;
+  color: #999999;
+  margin-bottom: 12rpx;
+}
+
+.player-status {
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  font-weight: 400;
+}
+
+.player-status.confirmed {
+  background: #f5f5f5;
+  color: #333333;
+}
+
+.player-status.registered {
+  background: #f5f5f5;
+  color: #666666;
+}
+
+.player-status.withdrew {
+  background: #f5f5f5;
+  color: #999999;
+}
+
+/* 对位表 */
+.matchups-content {
+  padding: 20rpx 0;
+  min-height: 200rpx;
+}
+
+.brackets-preview {
+  padding: 20rpx 0;
+}
+
+.preview-info {
+  text-align: center;
+}
+
+.preview-text {
+  font-size: 28rpx;
+  color: #666666;
+}
+
+.brackets-list {
+  padding: 20rpx 0;
+}
+
+.round-section {
+  margin-bottom: 30rpx;
+}
+
+.round-section:last-child {
+  margin-bottom: 0;
+}
+
+.round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10rpx 20rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.round-title {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.round-action {
+  font-size: 26rpx;
+  color: #1890ff;
+}
+
+.round-matches {
+  padding: 0 10rpx;
+}
+
+.round-match {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.round-match:last-child {
+  margin-bottom: 0;
+}
+
+.match-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.match-player:first-child {
+  justify-content: flex-end;
+  padding-right: 10rpx;
+}
+
+.match-player:last-child {
+  justify-content: flex-start;
+  padding-left: 10rpx;
+}
+
+.match-divider {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #333333;
+  color: white;
+  border-radius: 50%;
+  font-size: 20rpx;
+  font-weight: 500;
+  margin: 0 10rpx;
+  flex-shrink: 0;
+}
+
+.match-status {
+  padding: 6rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+
+.match-status.pending {
+  background: #f5f5f5;
+  color: #666666;
+}
+
+.match-status.ongoing {
+  background: #f5f5f5;
+  color: #333333;
+}
+
+.match-status.completed {
+  background: #f5f5f5;
+  color: #333333;
+}
+
+.enter-score-btn {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: #333333;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 删除按钮区域 */
+.delete-section {
+  padding: 30rpx;
+}
+
+.delete-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  padding: 30rpx;
+  color: #999999;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.delete-btn::after {
+  border: none;
+}
+
+.delete-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.delete-text {
+  line-height: 1;
+}
