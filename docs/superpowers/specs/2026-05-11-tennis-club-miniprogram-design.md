@@ -184,6 +184,8 @@ FOPEN 是一个**业余网球俱乐部内部使用的微信小程序**。当前�
 {
   // 沿用：_id, tournamentId, round, winnerId, loserId, winnerName, loserName,
   //       pointsAwarded, createTime
++ playerIds: ["member_aaa", "member_bbb"],  // 参赛者 id 列表（单打 2 / 双打 4），
++                                            // 生成签表/对局表时即写入，用于校验录分权限
 + status: "pending",         // 'pending' | 'confirmed' | 'disputed'
 + submissions: [             // 提交记录，1-2 条为主
 +   {
@@ -195,7 +197,7 @@ FOPEN 是一个**业余网球俱乐部内部使用的微信小程序**。当前�
 +   }
 + ],
 + confirmedAt: Date,
-+ confirmedBy: null,         // 仲裁时填 admin _id
++ confirmedBy: null,         // 管理员录入/仲裁时填 admin._id；双方一致自动确认则为 null
 + disputeReason: "",
 + courtId: "c2",             // 排程后填
 + scheduledStart: Date,      // 排程后填
@@ -345,8 +347,8 @@ else if role === 'player':
 - 常规赛：胜方 +win 分，负方 +loss 分
 - 淘汰赛：胜方 +win 分 + bonusByRound[round]，负方 +loss 分（不进下一轮则止步该轮，不加额外 bonus）
 - **积分有效期**（**计算时过滤，不在写入时打标**）：
-  - 常规赛积分：仅当前赛季（seasonId 当前自然年内）有效
-  - 淘汰赛积分：滚动 365 天有效（从 match createTime 起算）
+  - 常规赛积分：仅在产生它的 `seasonId` 内有效；新赛季开始即归零。本俱乐部按自然年定赛季（一年一季），等效于"当年内有效"。
+  - 淘汰赛积分：滚动 365 天有效（从 `match.createTime` 起算），跨赛季继承。
 
 #### weekly-star（定时任务）
 
@@ -391,11 +393,11 @@ async function requireAdmin(context) {
 
 | 页面 | 状态 | 备注 |
 |---|---|---|
-| `pages/home/index` | ✏️ 重写 | 含 hero + upcoming match + quick actions + stats |
+| `pages/home/index` | ✏️ 重写 | 含 hero + upcoming match + quick actions + stats。**管理员与会员看到的内容一致**——管理员的额外操作（创建/确认）放在专用"管理"tab 内。 |
 | `pages/match/index`（赛事 tab） | ✏️ 改造 | Upcoming/Ongoing/Completed tabs + hero 卡 + 列表 |
 | `pages/rank/index`（排行 tab） | ✏️ 重写 | Singles/Doubles tabs + 每周之星 hero + 列表 |
 | `pages/mine/index`（我的 tab） | ✏️ 改造 | 头像+UTR+ 我的近期比赛 + 设置入口 |
-| `pages/manage/index`（管理 tab，仅 admin） | ✏️ 改造 | 待确认结果 / 待安排赛事 / 会员管理 等入口 |
+| `pages/manage/index`（管理 tab，仅 admin） | ✏️ 改造 | 仪表盘：待确认结果队列（pending + disputed）/ 待排程赛事 / 会员管理 / 赛季管理 等入口 |
 | `pages/tournament-detail/index` | ✏️ 微改 | 套用新视觉 |
 | `pages/tournament-edit/index` | ✏️ 大改 | 含新场地+时段格子 UI |
 | `pages/tournament-brackets/index` | ✏️ 微改 | 套用新视觉 |
