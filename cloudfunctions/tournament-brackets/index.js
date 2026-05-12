@@ -263,7 +263,8 @@ exports.main = async (event, context) => {
         matches[matchIndex] = {
           ...matches[matchIndex],
           status: data.status,
-          scheduledTime: data.scheduledTime || matches[matchIndex].scheduledTime,
+          scheduledStart: data.scheduledStart || data.scheduledTime || matches[matchIndex].scheduledStart || matches[matchIndex].scheduledTime,
+          scheduledSlotId: data.scheduledSlotId || matches[matchIndex].scheduledSlotId,
           courtId: data.courtId || matches[matchIndex].courtId
         }
 

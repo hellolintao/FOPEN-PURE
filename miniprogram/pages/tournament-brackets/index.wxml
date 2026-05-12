@@ -1,4 +1,3 @@
-<wxs src="./format.wxs" module="fmt" />
 <view class="brackets-container">
   <!-- 自动排程入口 -->
   <view class="scheduler-bar" wx:if="{{tournament}}">
@@ -87,9 +86,9 @@
             </view>
           </view>
           <view class="match-schedule" wx:if="{{matchup.courtId}}">
-            <text class="schedule-time">{{fmt.formatScheduleTime(matchup.scheduledStart)}}</text>
+            <text class="schedule-time">{{matchup.scheduleTimeLabel}}</text>
             <text class="schedule-divider">·</text>
-            <text class="schedule-court">{{fmt.courtName(matchup.courtId, tournament.courtTimeGrid.courts)}}</text>
+            <text class="schedule-court">{{matchup.courtName}}</text>
           </view>
           <view class="match-schedule unscheduled" wx:elif="{{matchup.player1 && matchup.player2}}">
             <text class="schedule-text">未排程</text>

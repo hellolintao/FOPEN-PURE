@@ -9,6 +9,12 @@ function formatSlotLabel(iso) {
   return `${month}-${day} ${hour}:${minute}`;
 }
 
+function getCourtName(courtId, courts) {
+  if (!courtId) return '';
+  const court = (courts || []).find(c => c.courtId === courtId);
+  return (court && court.name) || courtId;
+}
+
 Page({
   data: {
     tournamentId: '',
@@ -123,6 +129,7 @@ Page({
           const roundData = roundResult.result.data
           if (roundData && roundData.length > 0 && roundData[0].matches) {
             const matchups = roundData[0].matches.map(match => {
+              const courts = this.data.tournament?.courtTimeGrid?.courts || []
               const matchup = {
                 player1: match.player1?.name || '',
                 player2: match.player2?.name || '',
@@ -130,7 +137,9 @@ Page({
                 courtId: match.courtId || '',
                 scheduledStart: match.scheduledStart || '',
                 scheduledSlotId: match.scheduledSlotId || '',
-                status: match.status || 'pending'
+                status: match.status || 'pending',
+                scheduleTimeLabel: formatSlotLabel(match.scheduledStart || match.scheduledTime || ''),
+                courtName: getCourtName(match.courtId || '', courts)
               }
               if (!matchup.courtId && matchup.player1 && matchup.player2) {
                 unscheduled.push({
@@ -340,7 +349,8 @@ Page({
           data: {
             status: 'pending',
             courtId: choice.courtId,
-            scheduledTime: choice.scheduledStart
+            scheduledStart: choice.scheduledStart,
+            scheduledSlotId: choice.slotId
           }
         }
       });
