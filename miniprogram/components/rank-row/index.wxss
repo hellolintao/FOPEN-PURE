@@ -1,0 +1,30 @@
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: #fff;
+  border-radius: var(--radius-md);
+  border: 1rpx solid var(--color-border);
+}
+.rank-row.highlight {
+  background: var(--color-lime);
+  border-color: var(--color-lime);
+}
+.rank-num {
+  font-size: 32rpx;
+  font-weight: 800;
+  width: 48rpx;
+  text-align: center;
+}
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+}
+.info .name {
+  font-weight: 600;
+  font-size: var(--font-title-size);
+}
+.trend-up { color: var(--color-success); font-weight: 600; }
+.trend-down { color: var(--color-danger); font-weight: 600; }
