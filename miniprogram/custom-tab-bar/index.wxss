@@ -1,7 +1,7 @@
 .tab-bar {
   display: flex;
   height: 120rpx;
-  background: #fff;
+  background: var(--color-bg, #101017);
   border-top: 1rpx solid var(--color-border);
   padding-bottom: env(safe-area-inset-bottom);
   position: fixed;
@@ -17,15 +17,20 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
-  color: var(--color-muted);
+  color: #888;
 }
 .tab.on {
-  color: var(--color-ink);
+  color: var(--color-lime, #BEE645);
   font-weight: 700;
 }
 .tab-icon {
-  font-size: 36rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 .tab-text {
   font-size: 22rpx;
+}
+.tab-text-on {
+  color: var(--color-ink);
+  font-weight: 700;
 }
