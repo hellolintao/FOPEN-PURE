@@ -6,7 +6,7 @@
 
 | 编号 | 文件 | 内容 | 应用时间 |
 |---|---|---|---|
-| 001 | 001-add-new-fields.js | 给 members / tournaments / match_results 补 Phase 1 新字段默认值 | 待应用 |
+| 001 | 001-add-new-fields.js | 给 members / tournaments / match_results 补 Phase 1 新字段默认值 | 2026-05-12（members 80 / tournaments 2 / match_results 3） |
 
 ## 应用方式
 
