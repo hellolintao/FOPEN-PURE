@@ -68,11 +68,9 @@ Page({
 					const isLoser = loserIds.includes(memberId)
 
 					if (isWinner) {
-						// 获胜者：使用 pointsAwarded
-						totalPoints += match.pointsAwarded.winner.total
+						totalPoints += match.pointsAwarded?.winner?.total ?? 0
 					} else if (isLoser) {
-						// 失败者：使用 loser.total
-						totalPoints += match.pointsAwarded.loser.total
+						totalPoints += match.pointsAwarded?.loser?.total ?? 0
 					}
 				})
 
