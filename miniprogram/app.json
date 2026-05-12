@@ -22,6 +22,7 @@
     "pages/tournament-view/index"
   ],
   "tabBar": {
+    "custom": true,
     "color": "#888",
     "selectedColor": "#7c3aed",
     "backgroundColor": "#101017",
@@ -36,6 +37,12 @@
       {
         "pagePath": "pages/match/index",
         "text": "赛事",
+        "iconPath": "images/icons/goods.png",
+        "selectedIconPath": "images/icons/goods-active.png"
+      },
+      {
+        "pagePath": "pages/manage/index",
+        "text": "管理",
         "iconPath": "images/icons/goods.png",
         "selectedIconPath": "images/icons/goods-active.png"
       },
