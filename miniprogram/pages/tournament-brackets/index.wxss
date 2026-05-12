@@ -4,6 +4,147 @@
   padding-bottom: 40rpx;
 }
 
+/* 自动排程入口 */
+.scheduler-bar {
+  margin: 20rpx 30rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scheduler-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.scheduler-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.scheduler-sub {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.scheduler-sub.warn {
+  color: #fa8c16;
+}
+
+.scheduler-btn {
+  padding: 18rpx 36rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.scheduler-btn.disabled {
+  opacity: 0.6;
+}
+
+/* 未排程警告条 */
+.warn-banner {
+  margin: 20rpx 30rpx;
+  padding: 24rpx;
+  background: #fff7e6;
+  border: 1rpx solid #fa8c16;
+  border-radius: 16rpx;
+}
+
+.warn-banner-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fa8c16;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.unsched-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.unsched-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f5e0c5;
+}
+
+.unsched-meta {
+  font-size: 22rpx;
+  color: #999;
+  min-width: 80rpx;
+}
+
+.unsched-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #333;
+  padding: 0 16rpx;
+}
+
+.unsched-btn {
+  padding: 10rpx 20rpx;
+  background: #fff;
+  border: 1rpx solid #fa8c16;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #fa8c16;
+}
+
+.warn-banner-tip {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 每场比赛的排程信息 */
+.match-schedule {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8rpx;
+  padding: 6rpx 12rpx;
+  background: #eef4ff;
+  border-radius: 8rpx;
+}
+
+.match-schedule.unscheduled {
+  background: #fff1f0;
+}
+
+.schedule-time {
+  font-size: 22rpx;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.schedule-divider {
+  font-size: 22rpx;
+  color: #ccc;
+}
+
+.schedule-court {
+  font-size: 22rpx;
+  color: #555;
+}
+
+.schedule-text {
+  font-size: 22rpx;
+  color: #ff4d4f;
+}
+
 /* 参赛人员区域 */
 .participants-section {
   margin: 20rpx 30rpx;
@@ -200,13 +341,18 @@
 
 .matchup-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   padding: 24rpx 20rpx;
   background: #f9f9f9;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
-  /* flex-direction: column; */
+}
+
+.matchup-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .matchup-player {

@@ -1,0 +1,47 @@
+var TWO = function(n) {
+  n = n < 10 ? ('0' + n) : ('' + n);
+  return n;
+};
+
+// 输入 ISO 字符串或 Date，输出 "MM-DD HH:mm"。空值返回 ''。
+var formatScheduleTime = function(value) {
+  if (!value) return '';
+  var s = '';
+  if (typeof value === 'string') s = value;
+  else if (typeof value === 'number') s = '' + value;
+  else if (value && value.toJSON) s = value.toJSON();
+  else return '';
+
+  // ISO: 2026-05-25T08:00:00+08:00
+  var idx = s.indexOf('T');
+  if (idx < 0) return s;
+  var datePart = s.substring(0, idx);
+  var timePart = s.substring(idx + 1);
+
+  var dp = datePart.split('-');
+  if (dp.length < 3) return s;
+  var month = dp[1];
+  var day = dp[2];
+
+  var tp = timePart.split(':');
+  if (tp.length < 2) return month + '-' + day;
+  var hour = tp[0];
+  var minute = tp[1];
+
+  return month + '-' + day + ' ' + hour + ':' + minute;
+};
+
+// 输入 courtId（'c1'）+ tournament.courtTimeGrid.courts，返回 court name；找不到返回 courtId
+var courtName = function(courtId, courts) {
+  if (!courtId) return '';
+  if (!courts || !courts.length) return courtId;
+  for (var i = 0; i < courts.length; i++) {
+    if (courts[i].courtId === courtId) return courts[i].name || courtId;
+  }
+  return courtId;
+};
+
+module.exports = {
+  formatScheduleTime: formatScheduleTime,
+  courtName: courtName
+};

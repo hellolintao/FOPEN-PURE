@@ -1,15 +1,29 @@
+function formatSlotLabel(iso) {
+  if (!iso || typeof iso !== 'string') return '';
+  const idx = iso.indexOf('T');
+  if (idx < 0) return iso;
+  const datePart = iso.substring(0, idx);
+  const timePart = iso.substring(idx + 1);
+  const [, month, day] = datePart.split('-');
+  const [hour, minute] = timePart.split(':');
+  return `${month}-${day} ${hour}:${minute}`;
+}
+
 Page({
   data: {
     tournamentId: '',
     tournament: null,
     registrations: [],
-    rounds: [], // 轮次数据 [{ round: 1, matchups: [...] }]
+    rounds: [], // 轮次数据 [{ round, matchups: [{ player1, player2, matchId, courtId, scheduledStart, scheduledSlotId, status }] }]
+    unscheduledMatches: [], // 自动排程后未排上的 match 列表
     loading: true,
+    scheduling: false,
     currentRound: 1,
     currentMatchIndex: -1,
     currentPosition: '',
     actionSheetShow: false,
-    actionSheetItems: []
+    actionSheetItems: [],
+    actionSheetContext: 'player' // 'player' | 'manualAssign'
   },
 
   onLoad(options) {
@@ -95,6 +109,7 @@ Page({
       if (existingBrackets && existingBrackets.length > 0 && existingBrackets[0].matches) {
         // 有数据，加载所有轮次
         const rounds = []
+        const unscheduled = []
         for (let i = 1; i <= 5; i++) {
           const roundResult = await wx.cloud.callFunction({
             name: 'tournament-brackets',
@@ -107,10 +122,26 @@ Page({
 
           const roundData = roundResult.result.data
           if (roundData && roundData.length > 0 && roundData[0].matches) {
-            const matchups = roundData[0].matches.map(match => ({
-              player1: match.player1?.name || '',
-              player2: match.player2?.name || ''
-            }))
+            const matchups = roundData[0].matches.map(match => {
+              const matchup = {
+                player1: match.player1?.name || '',
+                player2: match.player2?.name || '',
+                matchId: match.matchId || '',
+                courtId: match.courtId || '',
+                scheduledStart: match.scheduledStart || '',
+                scheduledSlotId: match.scheduledSlotId || '',
+                status: match.status || 'pending'
+              }
+              if (!matchup.courtId && matchup.player1 && matchup.player2) {
+                unscheduled.push({
+                  round: i,
+                  matchId: matchup.matchId,
+                  player1: matchup.player1,
+                  player2: matchup.player2
+                })
+              }
+              return matchup
+            })
             rounds.push({ round: i, matchups, saved: true, bracketId: roundData[0]._id })
           } else if (i === 1) {
             // 第一轮没有数据，生成空对位
@@ -120,7 +151,7 @@ Page({
           }
         }
 
-        this.setData({ rounds })
+        this.setData({ rounds, unscheduledMatches: unscheduled })
       } else {
         // 没有数据，初始化第一轮
         const rounds = [{ round: 1, matchups: this.generateEmptyMatchups(), saved: false }]
@@ -141,11 +172,72 @@ Page({
     for (let i = 0; i < registrations.length; i += 2) {
       matchups.push({
         player1: '',
-        player2: ''
+        player2: '',
+        matchId: '',
+        courtId: '',
+        scheduledStart: '',
+        scheduledSlotId: '',
+        status: 'pending'
       });
     }
 
     return matchups;
+  },
+
+  async onAutoSchedule() {
+    if (this.data.scheduling) return;
+    const { tournament, tournamentId } = this.data;
+    if (!tournament) return;
+    const grid = tournament.courtTimeGrid;
+    if (!grid || !grid.slots || grid.slots.length === 0) {
+      wx.showToast({ title: '请先在赛事编辑里配置场地/时段', icon: 'none' });
+      return;
+    }
+    if (!this.data.registrations || this.data.registrations.length < 2) {
+      wx.showToast({ title: '参赛人数不足', icon: 'none' });
+      return;
+    }
+
+    const confirm = await new Promise((resolve) => {
+      wx.showModal({
+        title: '自动排程',
+        content: '将按 (场地 × 时段) 自动分配比赛，已有比赛结果（如胜方）保留，未排上的会在下方列出。继续？',
+        confirmText: '开始排程',
+        cancelText: '取消',
+        success: (res) => resolve(!!res.confirm)
+      });
+    });
+    if (!confirm) return;
+
+    this.setData({ scheduling: true });
+    wx.showLoading({ title: '排程中...' });
+    try {
+      const callRes = await wx.cloud.callFunction({
+        name: 'scheduler-engine',
+        data: { action: 'schedule', tournamentId }
+      });
+      const result = callRes && callRes.result;
+      wx.hideLoading();
+      if (!result || result.success === false) {
+        const message = (result && result.error && result.error.message) || '排程失败';
+        wx.showModal({ title: '排程失败', content: message, showCancel: false });
+        return;
+      }
+
+      const { scheduledCount, unscheduledCount } = result.data || {};
+      wx.showToast({
+        title: `已排程 ${scheduledCount}，未排 ${unscheduledCount}`,
+        icon: 'none',
+        duration: 2200
+      });
+      await this.loadBrackets();
+    } catch (err) {
+      wx.hideLoading();
+      console.error('自动排程异常', err);
+      wx.showModal({ title: '排程异常', content: err.message || String(err), showCancel: false });
+    } finally {
+      this.setData({ scheduling: false });
+    }
   },
 
   onSelectPlayer(e) {
@@ -173,6 +265,10 @@ Page({
 
   onActionSheetSelect(e) {
     const { index } = e.detail;
+    if (this.data.actionSheetContext === 'manualAssign') {
+      this._handleManualAssignSelection(index);
+      return;
+    }
     const playerNames = this.data.registrations.map(reg => {
       if (this.data.tournament.type === 'doubles') {
         return `${reg.teamName}-${reg.playerName}/${reg.partnerName}`;
@@ -189,9 +285,83 @@ Page({
     }
   },
 
+  onManualAssign(e) {
+    const { matchId, round } = e.currentTarget.dataset;
+    const tournament = this.data.tournament;
+    const grid = tournament && tournament.courtTimeGrid;
+    if (!grid || !grid.slots || grid.slots.length === 0) {
+      wx.showToast({ title: '未配置场地/时段', icon: 'none' });
+      return;
+    }
+    const options = [];
+    grid.slots.forEach(slot => {
+      const courts = slot.availableCourtIds || [];
+      courts.forEach(courtId => {
+        const courtName = (grid.courts || []).find(c => c.courtId === courtId)?.name || courtId;
+        options.push({
+          slotId: slot.slotId,
+          courtId,
+          scheduledStart: slot.start,
+          label: `${formatSlotLabel(slot.start)} · ${courtName}`
+        });
+      });
+    });
+    if (options.length === 0) {
+      wx.showToast({ title: '无可用格子', icon: 'none' });
+      return;
+    }
+    this._manualAssignTarget = { matchId, round: parseInt(round, 10), options };
+    this.setData({
+      actionSheetContext: 'manualAssign',
+      actionSheetItems: options.map(o => o.label),
+      actionSheetShow: true
+    });
+  },
+
+  async _handleManualAssignSelection(index) {
+    const target = this._manualAssignTarget;
+    this.setData({ actionSheetShow: false, actionSheetContext: 'player' });
+    if (!target || index < 0 || index >= target.options.length) return;
+    const choice = target.options[index];
+    const rounds = this.data.rounds;
+    const roundObj = rounds.find(r => r.round === target.round);
+    if (!roundObj || !roundObj.bracketId) {
+      wx.showToast({ title: '签表尚未保存', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '指派中...' });
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-brackets',
+        data: {
+          action: 'updateMatchStatus',
+          id: roundObj.bracketId,
+          matchId: target.matchId,
+          data: {
+            status: 'pending',
+            courtId: choice.courtId,
+            scheduledTime: choice.scheduledStart
+          }
+        }
+      });
+      wx.hideLoading();
+      if (res && res.result && res.result.errMsg && /failed|error/i.test(res.result.errMsg)) {
+        wx.showModal({ title: '指派失败', content: res.result.errMsg, showCancel: false });
+        return;
+      }
+      wx.showToast({ title: '已指派', icon: 'success' });
+      await this.loadBrackets();
+    } catch (err) {
+      wx.hideLoading();
+      console.error('手动指派失败', err);
+      wx.showModal({ title: '指派异常', content: err.message || String(err), showCancel: false });
+    }
+  },
+
   onActionSheetClose() {
     this.setData({
-      actionSheetShow: false
+      actionSheetShow: false,
+      actionSheetContext: 'player'
     });
   },
 
@@ -388,7 +558,34 @@ Page({
       });
       return;
     }
+    // 把当前显示的所有 matchup（含排程字段）一起传给 doSaveMatchups
+    // 用 matchId 索引，保存时合并保留 court / scheduledStart / scheduledSlotId
     this.doSaveMatchups(round, validMatchups);
+  },
+
+  /**
+   * 把现有 bracket 的 match 按多 key 合并到新 match 上。
+   * 优先 matchId 匹配，其次 position 兜底。
+   * 合并字段：courtId / scheduledStart / scheduledSlotId / winner / score。
+   */
+  _mergeScheduleFields(newMatch, existingMatch) {
+    if (!existingMatch) return newMatch;
+    const merged = { ...newMatch };
+    if (existingMatch.courtId) merged.courtId = existingMatch.courtId;
+    if (existingMatch.scheduledStart) merged.scheduledStart = existingMatch.scheduledStart;
+    if (existingMatch.scheduledSlotId) merged.scheduledSlotId = existingMatch.scheduledSlotId;
+    if (existingMatch.winner !== undefined) merged.winner = existingMatch.winner;
+    if (existingMatch.score !== undefined) merged.score = existingMatch.score;
+    return merged;
+  },
+
+  _findExistingMatch(existingMatches, candidate, fallbackIndex) {
+    if (!Array.isArray(existingMatches) || existingMatches.length === 0) return null;
+    if (candidate.matchId) {
+      const byId = existingMatches.find(m => m.matchId && m.matchId === candidate.matchId);
+      if (byId) return byId;
+    }
+    return existingMatches[fallbackIndex] || null;
   },
 
   async doSaveMatchups(round, validMatchups) {
@@ -412,10 +609,9 @@ Page({
 
       let matches;
       if (existingData && existingData.length > 0 && existingData[0].matches) {
-        console.log('存在对位数据', '\n', validMatchups, '\n', existingData)
+        const existingMatches = existingData[0].matches;
         matches = validMatchups.map((matchup, index) => {
-          const existingMatch = existingData[0].matches[index];
-          console.log('前置信息', existingMatch)
+          const existingMatch = this._findExistingMatch(existingMatches, matchup, index);
 
           const player1Reg = this.data.registrations.find(reg => {
             const name = this.data.tournament.type === 'doubles'
@@ -430,10 +626,10 @@ Page({
               : reg.playerName;
             return name === matchup.player2;
           });
-          console.log('对比结果', player1Reg, player2Reg)
-          return {
+
+          const baseMatch = {
             position: index + 1,
-            matchId: existingMatch?.matchId || `match_${now}_${index}`,
+            matchId: existingMatch?.matchId || matchup.matchId || `match_${now}_${index}`,
             player1: {
               id: this.data.tournament.type === 'doubles'
                 ? `${player1Reg?.playerId || ''},${player1Reg?.partnerId || ''}`
@@ -454,6 +650,7 @@ Page({
             },
             status: existingMatch?.status || 'pending'
           };
+          return this._mergeScheduleFields(baseMatch, existingMatch);
         });
       } else {
         matches = validMatchups.map((matchup, index) => {
