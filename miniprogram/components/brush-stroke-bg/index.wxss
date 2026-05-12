@@ -1,0 +1,16 @@
+.brush-stroke {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.stroke-svg {
+  width: 200%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: right center;
+  opacity: 0.6;
+  transform: rotate(-8deg);
+}
