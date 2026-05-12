@@ -16,6 +16,20 @@
 
 ---
 
+## 2026-05-12 执行决策（修订原 plan）
+
+> 原 plan 与 DB schema、现有 brackets 页面、双打能力存在 6 处冲突。本次执行按以下决策推进，老 plan 中冲突段落以本节为准。
+
+- **触发策略 = C**：创建赛事时**不**自动触发 scheduler。改为在签表页（`tournament-brackets`）顶部加「自动排程」按钮，admin 手动触发。避免创建流程因排程失败被牵连。
+- **保存策略 = B（合并）**：手动保存签表时，按 `matchId` 合并保留每场已有的 `courtId / scheduledStart / scheduledSlotId`，避免 admin 编辑后丢排程。
+- **双打约束**：`isPlayerFree` / `hasRestBetween` 必须把双方 partnerId 全部纳入（同一玩家不能同时在两块场地）。
+- **算法数据结构对齐 DB schema**：match 内部一律使用 `{matchId, round, position, type, player1:{id,name,registrationId}, player2:{id,name,registrationId}, courtId, scheduledSlotId, scheduledStart, status:'pending'}`，废弃原 plan 的 `playerIds/playerNames` 扁平结构。
+- **落库幂等**：scheduler-engine 不直接 `db.add`。先调 `tournament-brackets:getByRound` 查存在否，再走 `tournament-brackets:add` 或 `:update`。**不许 `.catch(()=>{})` 静默吞错**。
+- **种子布签修正**：标准 single-elim 布签 1 号 vs N 号要在不同半区**只在决赛碰面**，不是 Round 1 直接对打。原 plan Task 5 测试断言与算法不一致，本次按真正标准实现：`standardBracketOrder` 输出 `[1, N, ...]` 是 indices，第 1 场 = `(ordered[0], ordered[1])` 应该是 `seed1 vs seedN`，最后一场 = `(ordered[N-2], ordered[N-1])`。要让 1 与 N 在不同半区，得用「上下半区拼接」法而不是原 plan 的递归 interleave。
+- **WXML**：不能用 `|` 过滤器，时间格式化走 WXS 或 js 预计算字段。
+
+---
+
 ## File Structure
 
 ```
