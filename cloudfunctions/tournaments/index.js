@@ -1,5 +1,6 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
+const { validateCourtTimeGrid } = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
@@ -61,6 +62,14 @@ function validateTournament(data) {
     }
   }
 
+  // courtTimeGrid 校验
+  if (data.courtTimeGrid) {
+    const gridResult = validateCourtTimeGrid(data.courtTimeGrid)
+    if (!gridResult.valid) {
+      errors.push(...gridResult.errors)
+    }
+  }
+
   return errors
 }
 
@@ -116,6 +125,8 @@ exports.main = async (event, context) => {
             5: 0
           }
         },
+
+        courtTimeGrid: data.courtTimeGrid || null,
 
         createTime: now,
         updateTime: now
