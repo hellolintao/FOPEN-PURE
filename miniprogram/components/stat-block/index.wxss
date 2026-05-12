@@ -1,0 +1,10 @@
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+.stat-block .text-stat {
+  font-size: 48rpx;
+}
