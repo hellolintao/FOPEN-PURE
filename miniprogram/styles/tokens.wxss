@@ -1,0 +1,70 @@
+/* miniprogram/styles/tokens.wxss
+ * 全局设计 token。所有页面/组件都通过这些变量取值，
+ * 严禁直接写硬编码颜色。
+ */
+
+page {
+  /* ===== 色板 ===== */
+  --color-lime: #BEE645;
+  --color-lime-soft: #DDF099;
+  --color-ink: #0A0A0A;
+  --color-ink-2: #1F1F23;
+  --color-bg: #FFFFFF;
+  --color-bg-2: #FAFAFA;
+  --color-bg-3: #F3F4F6;
+  --color-muted: #6B7280;
+  --color-muted-2: #9CA3AF;
+  --color-border: #E5E7EB;
+  --color-danger: #DC2626;
+  --color-warn: #F59E0B;
+  --color-success: #16A34A;
+
+  /* ===== 间距 ===== */
+  --space-1: 4rpx;
+  --space-2: 8rpx;
+  --space-3: 12rpx;
+  --space-4: 16rpx;
+  --space-5: 24rpx;
+  --space-6: 32rpx;
+  --space-7: 48rpx;
+  --space-8: 64rpx;
+
+  /* ===== 圆角 ===== */
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  --radius-pill: 999rpx;
+
+  /* ===== 字号 / 字重 ===== */
+  --font-display-size: 56rpx;
+  --font-display-weight: 900;
+
+  --font-h1-size: 40rpx;
+  --font-h1-weight: 800;
+
+  --font-h2-size: 32rpx;
+  --font-h2-weight: 700;
+
+  --font-title-size: 28rpx;
+  --font-title-weight: 600;
+
+  --font-body-size: 26rpx;
+  --font-body-weight: 400;
+
+  --font-label-size: 22rpx;
+  --font-label-weight: 600;
+
+  --font-meta-size: 20rpx;
+  --font-meta-weight: 400;
+
+  --font-stat-size: 64rpx;
+  --font-stat-weight: 900;
+
+  /* ===== 阴影 ===== */
+  --shadow-card: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  --shadow-lifted: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+
+  /* ===== 动画 ===== */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
