@@ -1,183 +1,169 @@
-<view class="tournament-edit-container">
-  <!-- 步骤指示器 -->
-  <view class="steps-indicator">
-    <view class="step-item {{currentStep >= 1 ? 'active' : ''}} {{currentStep > 1 ? 'completed' : ''}}" data-step="1">
-      <view class="step-number">{{currentStep > 1 ? '✓' : '1'}}</view>
-      <view class="step-label">基本信息</view>
-    </view>
-    <view class="step-line {{currentStep > 1 ? 'active' : ''}}"></view>
-    <view class="step-item {{currentStep >= 2 ? 'active' : ''}} {{currentStep > 2 ? 'completed' : ''}}" data-step="2">
-      <view class="step-number">{{currentStep > 2 ? '✓' : '2'}}</view>
-      <view class="step-label">赛事配置</view>
-    </view>
-    <view class="step-line {{currentStep > 2 ? 'active' : ''}}"></view>
-    <view class="step-item {{currentStep >= 3 ? 'active' : ''}}">
-      <view class="step-number">3</view>
-      <view class="step-label">积分规则</view>
-    </view>
+<view class="page">
+  <view class="topbar">
+    <text class="text-label">第 {{currentStep}}/{{totalSteps}} 步</text>
+    <text class="text-h2">{{stepTitles[currentStep - 1]}}</text>
   </view>
 
-  <!-- 第一步：基本信息 -->
-  <view class="step-content" wx:if="{{currentStep === 1}}">
-    <view class="form-section">
-      <!-- 赛事名称 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>赛事名称
-        </view>
-        <input class="dialog-input" placeholder="请输入赛事名称" value="{{tournament.name}}" data-key="name" bindinput="onInput" />
-      </view>
+  <!-- Step 1: 基本信息 -->
+  <view wx:if="{{currentStep === 1}}" class="step-body">
+    <view class="form-row">
+      <text class="text-label">赛事名称</text>
+      <input class="form-input" placeholder="例：2026春季公开赛" value="{{tournament.name}}" bindinput="onInputName" />
+    </view>
 
-      <!-- 所属赛季 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>所属赛季
+    <view class="form-row">
+      <text class="text-label">所属赛季</text>
+      <picker mode="selector" range="{{seasonOptions}}" range-key="label" value="{{seasonIndex}}" bindchange="onPickSeason">
+        <view class="form-input picker-row">
+          <text>{{seasonOptions.length > 0 ? seasonOptions[seasonIndex].label : '选择所属赛季'}}</text>
+          <text class="picker-arrow">›</text>
         </view>
-        <picker mode="selector" range="{{seasonOptions}}" range-key="label" value="{{seasonIndex}}" bindchange="onPickSeason">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{seasonOptions.length > 0 ? seasonOptions[seasonIndex].label : '选择所属赛季'}}</text>
-            <text class="picker-arrow">›</text>
-          </view>
-        </picker>
-      </view>
+      </picker>
+    </view>
 
-      <!-- 日期选择 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>开始日期
-        </view>
+    <view class="form-row form-row-2col">
+      <view class="form-col">
+        <text class="text-label">开始日期</text>
         <picker mode="date" value="{{tournament.startDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickStart">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.startDate || '选择日期'}}</text>
-            <text class="picker-arrow">📅</text>
-          </view>
+          <view class="form-input">{{tournament.startDate || '选择日期'}}</view>
         </picker>
       </view>
+      <view class="form-col">
+        <text class="text-label">结束日期</text>
+        <picker mode="date" value="{{tournament.endDate}}" start="2000-01-01" end="2100-12-31" bindchange="onPickEnd">
+          <view class="form-input">{{tournament.endDate || '选择日期'}}</view>
+        </picker>
+      </view>
+    </view>
 
-      <!-- 赛事类型 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>赛事类型
-        </view>
+    <view class="form-row form-row-2col">
+      <view class="form-col">
+        <text class="text-label">赛事类型</text>
         <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onPickType">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.type ? typeOptions[typeIndex].label : '选择类型'}}</text>
+          <view class="form-input picker-row">
+            <text>{{typeOptions[typeIndex].label}}</text>
             <text class="picker-arrow">›</text>
           </view>
         </picker>
       </view>
-
-      <!-- 描述 -->
-      <view class="form-item">
-        <view class="field-label">赛事描述</view>
-        <textarea class="dialog-textarea" placeholder="请输入赛事描述（选填）" value="{{tournament.description}}" data-key="description" bindinput="onInput" />
-      </view>
-    </view>
-  </view>
-
-  <!-- 第二步：赛事配置 -->
-  <view class="step-content" wx:if="{{currentStep === 2}}">
-    <view class="form-section">
-      <!-- 最大参赛人数 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>最大参赛人数
-        </view>
-        <input class="dialog-input" type="number" placeholder="请输入最大参赛人数" value="{{tournament.config.maxPlayers}}" data-key="maxPlayers" data-section="config" bindinput="onInput" />
-      </view>
-
-      <!-- 总轮数 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>总轮数
-        </view>
-        <picker mode="selector" range="{{roundsOptions}}" value="{{roundsIndex}}" bindchange="onPickRounds">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.config.totalRounds ? roundsOptions[roundsIndex] : '选择轮数'}}</text>
-            <text class="picker-arrow">›</text>
-          </view>
-        </picker>
-      </view>
-
-      <!-- 赛制 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>赛制
-        </view>
+      <view class="form-col">
+        <text class="text-label">赛制</text>
         <picker mode="selector" range="{{formatOptions}}" range-key="label" value="{{formatIndex}}" bindchange="onPickFormat">
-          <view class="dialog-input picker-input">
-            <text class="picker-text">{{tournament.format ? formatOptions[formatIndex].label : '选择赛制'}}</text>
+          <view class="form-input picker-row">
+            <text>{{formatOptions[formatIndex].label}}</text>
             <text class="picker-arrow">›</text>
           </view>
         </picker>
       </view>
     </view>
+
+    <view class="form-row">
+      <text class="text-label">地点（可选）</text>
+      <input class="form-input" placeholder="例：上海网球中心" value="{{tournament.location}}" bindinput="onInputLocation" />
+    </view>
+
+    <view class="form-row">
+      <text class="text-label">描述（可选）</text>
+      <textarea class="form-textarea" placeholder="赛事简介" value="{{tournament.description}}" bindinput="onInputDescription" />
+    </view>
   </view>
 
-  <!-- 第三步：积分规则 -->
-  <view class="step-content" wx:if="{{currentStep === 3}}">
-    <view class="form-section">
-      <!-- 胜利积分 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>胜利积分
-        </view>
-        <input class="dialog-input" type="number" placeholder="请输入胜利积分" value="{{tournament.pointsRules.win}}" data-key="win" data-section="pointsRules" bindinput="onInput" />
+  <!-- Step 2: 场地时段 -->
+  <view wx:if="{{currentStep === 2}}" class="step-body">
+    <court-grid
+      initial-grid="{{tournament.courtTimeGrid}}"
+      match-date="{{tournament.startDate}}"
+      bind:change="onGridChange"
+    />
+  </view>
+
+  <!-- Step 3: 积分规则 -->
+  <view wx:if="{{currentStep === 3}}" class="step-body">
+    <view class="form-row form-row-2col">
+      <view class="form-col">
+        <text class="text-label">胜利积分</text>
+        <input class="form-input" type="number" value="{{tournament.pointsRules.win}}" data-field="win" bindinput="onPointsInput" />
       </view>
-
-      <!-- 失败积分 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>失败积分
-        </view>
-        <input class="dialog-input" type="number" placeholder="请输入失败积分" value="{{tournament.pointsRules.loss}}" data-key="loss" data-section="pointsRules" bindinput="onInput" />
+      <view class="form-col">
+        <text class="text-label">失败积分</text>
+        <input class="form-input" type="number" value="{{tournament.pointsRules.loss}}" data-field="loss" bindinput="onPointsInput" />
       </view>
+    </view>
+    <view class="form-row">
+      <text class="text-label">弃权积分</text>
+      <input class="form-input" type="number" value="{{tournament.pointsRules.walkover}}" data-field="walkover" bindinput="onPointsInput" />
+    </view>
 
-      <!-- 弃权积分 -->
-      <view class="form-item">
-        <view class="field-label">
-          <text class="required">*</text>弃权积分
-        </view>
-        <input class="dialog-input" type="number" placeholder="请输入弃权积分" value="{{tournament.pointsRules.walkover}}" data-key="walkover" data-section="pointsRules" bindinput="onInput" />
+    <view wx:if="{{tournament.format === 'knockout'}}" class="form-row">
+      <text class="text-label">轮次奖励积分</text>
+      <view class="bonus-row">
+        <text class="bonus-label">第1轮</text>
+        <input class="form-input bonus-input" type="number" value="{{tournament.pointsRules.bonusByRound[1]}}" data-round="1" bindinput="onBonusInput" />
       </view>
-
-      <!-- 轮次奖励积分 -->
-      <view class="bonus-section">
-        <view class="section-title">轮次奖励积分</view>
-
-        <view class="form-item">
-          <view class="field-label">第1轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[1]}}" data-key="1" data-section="bonus" bindinput="onInput" />
-        </view>
-
-        <view class="form-item">
-          <view class="field-label">第2轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[2]}}" data-key="2" data-section="bonus" bindinput="onInput" />
-        </view>
-
-        <view class="form-item">
-          <view class="field-label">第3轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[3]}}" data-key="3" data-section="bonus" bindinput="onInput" />
-        </view>
-
-        <view class="form-item">
-          <view class="field-label">第4轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[4]}}" data-key="4" data-section="bonus" bindinput="onInput" />
-        </view>
-
-        <view class="form-item">
-          <view class="field-label">第5轮</view>
-          <input class="dialog-input" type="number" placeholder="轮次奖励" value="{{tournament.pointsRules.bonusByRound[5]}}" data-key="5" data-section="bonus" bindinput="onInput" />
-        </view>
+      <view class="bonus-row">
+        <text class="bonus-label">第2轮</text>
+        <input class="form-input bonus-input" type="number" value="{{tournament.pointsRules.bonusByRound[2]}}" data-round="2" bindinput="onBonusInput" />
+      </view>
+      <view class="bonus-row">
+        <text class="bonus-label">第3轮</text>
+        <input class="form-input bonus-input" type="number" value="{{tournament.pointsRules.bonusByRound[3]}}" data-round="3" bindinput="onBonusInput" />
+      </view>
+      <view class="bonus-row">
+        <text class="bonus-label">第4轮</text>
+        <input class="form-input bonus-input" type="number" value="{{tournament.pointsRules.bonusByRound[4]}}" data-round="4" bindinput="onBonusInput" />
+      </view>
+      <view class="bonus-row">
+        <text class="bonus-label">第5轮</text>
+        <input class="form-input bonus-input" type="number" value="{{tournament.pointsRules.bonusByRound[5]}}" data-round="5" bindinput="onBonusInput" />
       </view>
     </view>
   </view>
 
-  <!-- 底部按钮 -->
-  <view class="dialog-actions">
-    <button class="dialog-btn cancel" bindtap="onCancel">取消</button>
-    <button class="dialog-btn prev" wx:if="{{currentStep > 1}}" bindtap="onPrevStep">上一步</button>
-    <button class="dialog-btn primary" wx:if="{{currentStep < 3}}" bindtap="onNextStep">下一步</button>
-    <button class="dialog-btn submit" wx:if="{{currentStep === 3}}" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认新增'}}</button>
+  <!-- Step 4: 选手 -->
+  <view wx:if="{{currentStep === 4}}" class="step-body">
+    <text class="text-meta">已选 {{selectedPlayerIds.length}} 人</text>
+    <view class="player-picker">
+      <view
+        wx:for="{{allMembers}}" wx:key="_id"
+        class="player-pick-row {{selectedPlayerMap[item._id] ? 'on' : ''}}"
+        data-id="{{item._id}}"
+        bindtap="onTogglePlayer"
+      >
+        <image src="{{item.avatarUrl || '/images/icons/avatar.png'}}" class="avatar" />
+        <text class="player-name">{{item.name}}</text>
+        <view class="check">{{selectedPlayerMap[item._id] ? '✓' : ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Step 5: 确认 -->
+  <view wx:if="{{currentStep === 5}}" class="step-body">
+    <view class="summary-card">
+      <text class="text-label">赛事</text>
+      <text class="text-title">{{tournament.name}}</text>
+      <text class="text-meta">{{tournament.type === 'singles' ? '单打' : '双打'}} · {{tournament.format === 'regular' ? '常规赛' : '淘汰赛'}}</text>
+    </view>
+    <view class="summary-card">
+      <text class="text-label">时间</text>
+      <text class="text-body">{{tournament.startDate}}{{tournament.endDate ? ' ~ ' + tournament.endDate : ''}}</text>
+    </view>
+    <view class="summary-card">
+      <text class="text-label">场地与时段</text>
+      <text class="text-body">{{tournament.courtTimeGrid.courts.length}} 个场地，{{tournament.courtTimeGrid.slots.length}} 个档点</text>
+    </view>
+    <view class="summary-card">
+      <text class="text-label">选手</text>
+      <text class="text-body">{{selectedPlayerIds.length}} 人</text>
+    </view>
+    <view class="summary-card">
+      <text class="text-label">积分</text>
+      <text class="text-body">胜 {{tournament.pointsRules.win}} / 负 {{tournament.pointsRules.loss}} / 弃权 {{tournament.pointsRules.walkover}}</text>
+    </view>
+  </view>
+
+  <!-- 底栏 -->
+  <view class="footer">
+    <button class="cta-secondary footer-btn" bindtap="onPrevStep">{{currentStep === 1 ? '取消' : '上一步'}}</button>
+    <button class="cta-primary footer-btn" bindtap="onNextStep">{{currentStep === totalSteps ? (isEdit ? '保存' : '提交') : '下一步'}}</button>
   </view>
 </view>

@@ -1,0 +1,118 @@
+.court-grid {
+  padding: var(--space-4);
+  background: var(--color-bg-2);
+  border-radius: var(--radius-lg);
+}
+.court-grid .header {
+  margin-bottom: var(--space-4);
+}
+.court-grid .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+}
+.courts-section { margin-bottom: var(--space-5); }
+.courts-list { margin-top: var(--space-3); }
+.court-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: #fff;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  border: 1rpx solid var(--color-border);
+}
+.court-name-input {
+  flex: 1;
+  font-size: var(--font-body-size);
+}
+.court-remove {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-size: 36rpx;
+}
+.cta-block {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+.time-section { margin-bottom: var(--space-5); }
+.time-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: #fff;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  border: 1rpx solid var(--color-border);
+}
+.time-pick {
+  background: var(--color-bg-3);
+  padding: 8rpx 16rpx;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-body-size);
+}
+.time-dash { color: var(--color-muted); }
+.time-remove {
+  margin-left: auto;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-size: 36rpx;
+}
+.grid-section { margin-top: var(--space-5); }
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  background: var(--color-bg-3);
+  padding: 4rpx;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+}
+.grid-row {
+  display: flex;
+  gap: 2rpx;
+}
+.grid-time-cell {
+  width: 100rpx;
+  font-size: var(--font-meta-size);
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+  height: 56rpx;
+}
+.grid-court-cell {
+  flex: 1;
+  font-size: var(--font-label-size);
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+.grid-cell {
+  flex: 1;
+  height: 56rpx;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.grid-cell.on {
+  background: var(--color-lime);
+}
