@@ -19,6 +19,8 @@
 | `phone` | String | 否 | 联系电话 |
 | `status` | String | 否 | 会员状态，默认为 'active' |
 | `admin` | Boolean | 否 | 是否为管理员，默认为 false |
+| `playStyle` | String | 否 | 打法风格枚举：baseliner/serve-volleyer/all-court/counter-puncher/aggressive-baseliner |
+| `playStyleNote` | String | 否 | 打法备注，最多 100 字 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
@@ -102,8 +104,32 @@
 | `pointsRules.loss` | Number | 是 | 失败积分 |
 | `pointsRules.walkover` | Number | 是 | 弃权积分 |
 | `pointsRules.bonusByRound` | Object | 是 | 轮次奖励积分，键为轮次，值为积分 |
+| `courtTimeGrid` | Object | 否 | 场地×时段矩阵，结构见下面"courtTimeGrid 结构"小节 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
+
+### courtTimeGrid 结构
+
+```json
+{
+  "matchDuration": 20,
+  "courts": [
+    { "courtId": "c1", "name": "1号场" }
+  ],
+  "slots": [
+    {
+      "slotId": "s_20260525_0800",
+      "start": "2026-05-25T08:00:00+08:00",
+      "end":   "2026-05-25T08:20:00+08:00",
+      "availableCourtIds": ["c1"]
+    }
+  ]
+}
+```
+
+- `matchDuration` 固定为 20 分钟
+- `slots` 粒度为 20 分钟一档
+- 未被任何比赛排到的 `(slot, court)` 在前端显示为"自由拉球"
 
 ### 数据示例
 
@@ -303,8 +329,33 @@
 | `loserId` | String | 否 | 失败者ID |
 | `score` | String | 否 | 比分，格式如 "6-4, 6-3" |
 | `points` | Number | 否 | 获得积分 |
+| `resultStatus` | String | 是 | 'pending' \| 'confirmed' \| 'disputed'，结果对账状态 |
+| `submissions` | Array | 否 | 提交记录列表，结构见下"submissions 子结构"小节 |
+| `confirmedAt` | Date | 否 | 自动/仲裁 confirmed 时间 |
+| `confirmedBy` | String | 否 | 管理员仲裁时填 admin._id；双方一致 auto-confirm 时为 null |
+| `disputeReason` | String | 否 | disputed 状态时的描述 |
+| `courtId` | String | 否 | 排程后填 |
+| `scheduledStart` | Date | 否 | 排程后填 |
+| `scheduledSlotId` | String | 否 | 排程后填 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
+
+### submissions 子结构
+
+```json
+[
+  {
+    "submittedBy": "member_xxx",
+    "role": "admin",
+    "winnerIds": "member_xxx",
+    "score": "6-3, 6-4",
+    "submittedAt": "2026-05-25T10:30:00.000Z"
+  }
+]
+```
+- `role`: 'admin' (管理员录入，立即 confirmed) / 'player' (玩家提交，等对账)
+- `winnerIds`: 单人 id，双打用逗号分隔多 id
+- `score`: 纯文本存档，不解析
 
 ### 数据示例
 
