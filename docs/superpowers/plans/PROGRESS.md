@@ -5,14 +5,14 @@
 ## 总进度
 
 ```
-[░░░░░░░░░░░░░░░░░░░░░░░░] 0/6 Phase 完成
+[████░░░░░░░░░░░░░░░░░░░░] 1/6 Phase 完成
 ```
 
 ## Phase 状态
 
 | # | Phase | 状态 | 开始时间 | 完成时间 | commit hash | 关键备忘 |
 |---|---|---|---|---|---|---|
-| 01 | Phase 1 · Foundation | ⬜ 待开始 | — | — | — | — |
+| 01 | Phase 1 · Foundation | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 756682a | 迁移 members 80 / tournaments 2 / match_results 3 条；3 个云函数加 Jest（4×3=12 测试全绿） |
 | 02 | Phase 3 · Create Tournament | ⬜ 待开始 | — | — | — | — |
 | 03 | Phase 4 · Scheduler | ⬜ 待开始 | — | — | — | — |
 | 04 | Phase 2 · Browse UI | ⬜ 待开始 | — | — | — | — |
@@ -25,13 +25,22 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`01-phase-1-foundation.md`
+**👉 下一个 Phase**：`02-phase-3-create-tournament.md`
 
 打开该文件，从 "Task 1" 开始按步骤执行。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-12 · Phase 1 完成
+- 全部 12 个 Task 完成，最终 commit `756682a`
+- 数据库迁移：members 80 条、tournaments 2 条、match_results 3 条
+- 3 个云函数（members / tournaments / match-results）接入 Jest，共 12 个测试全绿
+- 设计 token / base / utilities 三个 wxss 上线，app.wxss 切换浅底主题
+- 顺手清理：`project.private.config.json` 加入 .gitignore 并停止跟踪（commit `59f5d5e`）
+- 已知遗留：`cloudfunctions/tournaments/node_modules/` 历史上被入库，本期未处理（npm install 会产生 diff 噪声）；建议下个 Phase 用 `git rm --cached -r` 清掉
+- `uploadCloudFunction.sh` 文件已损坏（单行无 shebang、变量未定义、不接受函数名参数），云函数上传当前需要在微信开发者工具里手动右键上传
 
 ### 2026-05-12
 - 文档一致性修复：根 README 改为项目入口；spec / DATABASE_SCHEMA / plans README 对齐字段命名与执行说明
