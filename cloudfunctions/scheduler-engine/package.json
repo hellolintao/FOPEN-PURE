@@ -1,0 +1,26 @@
+{
+  "name": "scheduler-engine",
+  "version": "1.0.0",
+  "description": "FOPEN 自动排程引擎：把比赛分配到 (courtId, slotId) 空格",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "lib/**/*.js"
+    ]
+  }
+}
