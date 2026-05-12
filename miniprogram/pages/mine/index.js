@@ -42,7 +42,6 @@ Page({
 	},
 	// 获取用户积分
 	async loadUserPoints(memberId) {
-		console.log('获取用户积分')
 		if (!memberId) return
 
 		try {
@@ -59,12 +58,10 @@ Page({
 			if (result.result && result.result.data) {
 				// 计算总积分（统计用户所有参与的比赛，无论胜负和状态）
 				let totalPoints = 0
-				console.log(result.result)
 				result.result.data.forEach(match => {
 					// 将 winnerId 和 loserId 用 "," 分割成数组
 					const winnerIds = (match.winnerId || '').split(',')
 					const loserIds = (match.loserId || '').split(',')
-					console.log(winnerIds, loserIds)
 					// 检查当前用户是否在获胜者中
 					const isWinner = winnerIds.includes(memberId)
 					// 检查当前用户是否在失败者中
