@@ -90,6 +90,39 @@
   margin-top: var(--space-3);
 }
 
+.pair-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-bg-2);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.pair-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44rpx;
+}
+
+.pair-seed {
+  width: 56rpx;
+  color: var(--color-muted);
+  font-size: var(--font-meta-size);
+}
+
+.pair-name {
+  flex: 1;
+  font-size: var(--font-body-size);
+  font-weight: 600;
+}
+
+.pair-separator {
+  color: var(--color-muted);
+}
+
 .player-pick-row {
   display: flex;
   align-items: center;

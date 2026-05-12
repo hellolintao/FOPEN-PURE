@@ -107,8 +107,15 @@ exports.main = async (event, context) => {
         loserId: data.loserId || null,
         pointsAwarded: data.pointsAwarded || null,
         status: data.status || 'pending',
+        resultStatus: data.resultStatus || 'pending',
+        submissions: Array.isArray(data.submissions) ? data.submissions : [],
+        confirmedAt: data.confirmedAt || null,
+        confirmedBy: data.confirmedBy || null,
+        disputeReason: data.disputeReason || '',
         matchTime: data.matchTime || null,
         courtId: data.courtId || null,
+        scheduledStart: data.scheduledStart || null,
+        scheduledSlotId: data.scheduledSlotId || '',
         createTime: now,
         updateTime: now
       }

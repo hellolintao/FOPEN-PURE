@@ -122,6 +122,15 @@
   <!-- Step 4: 选手 -->
   <view wx:if="{{currentStep === 4}}" class="step-body">
     <text class="text-meta">已选 {{selectedPlayerIds.length}} 人</text>
+    <view wx:if="{{tournament.type === 'doubles' && selectedPairPreviews.length > 0}}" class="pair-preview">
+      <text class="text-label">双打配对（按选择顺序）</text>
+      <view wx:for="{{selectedPairPreviews}}" wx:key="index" class="pair-row">
+        <text class="pair-seed">#{{item.index}}</text>
+        <text class="pair-name">{{item.player1}}</text>
+        <text class="pair-separator">/</text>
+        <text class="pair-name">{{item.player2}}</text>
+      </view>
+    </view>
     <view class="player-picker">
       <view
         wx:for="{{allMembers}}" wx:key="_id"

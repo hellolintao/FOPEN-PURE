@@ -58,7 +58,9 @@ Page({
 
     allMembers: [],
     selectedPlayerIds: [],
-    selectedPlayerMap: {}
+    selectedPlayerMap: {},
+    existingRegistrations: [],
+    selectedPairPreviews: []
   },
 
   onLoad(options) {
@@ -108,7 +110,11 @@ Page({
         name: 'members',
         data: { action: 'list', pageSize: 200 }
       })
-      this.setData({ allMembers: res.result.data || [] })
+      const allMembers = res.result.data || []
+      this.setData({
+        allMembers,
+        selectedPairPreviews: this._buildSelectedPairPreviews(this.data.selectedPlayerIds, allMembers)
+      })
     } catch (err) {
       console.error('加载会员失败', err)
       wx.showToast({ title: '加载会员失败', icon: 'none' })
@@ -198,7 +204,13 @@ Page({
         name: 'tournament-registrations',
         data: { action: 'list', tournamentId, pageSize: 200, pageNum: 1 }
       })
-      const selectedPlayerIds = (res.result.data || []).map(r => r.playerId)
+      const registrations = res.result.data || []
+      const selectedPlayerIds = []
+      registrations.forEach(r => {
+        if (r.playerId) selectedPlayerIds.push(r.playerId)
+        if (r.type === 'doubles' && r.partnerId) selectedPlayerIds.push(r.partnerId)
+      })
+      this.setData({ existingRegistrations: registrations })
       this._setSelectedPlayers(selectedPlayerIds)
     } catch (err) {
       console.warn('加载报名列表失败（忽略）', err)
@@ -206,8 +218,32 @@ Page({
   },
 
   _setSelectedPlayers(ids) {
-    const selectedPlayerMap = ids.reduce((m, id) => { m[id] = true; return m }, {})
-    this.setData({ selectedPlayerIds: ids, selectedPlayerMap })
+    const uniqueIds = []
+    ids.forEach(id => {
+      if (id && uniqueIds.indexOf(id) === -1) uniqueIds.push(id)
+    })
+    const selectedPlayerMap = uniqueIds.reduce((m, id) => { m[id] = true; return m }, {})
+    this.setData({
+      selectedPlayerIds: uniqueIds,
+      selectedPlayerMap,
+      selectedPairPreviews: this._buildSelectedPairPreviews(uniqueIds)
+    })
+  },
+
+  _buildSelectedPairPreviews(ids, members = this.data.allMembers) {
+    const nameOf = id => {
+      const member = members.find(m => m._id === id)
+      return member ? member.name : '未加载'
+    }
+    const pairs = []
+    for (let i = 0; i < ids.length; i += 2) {
+      pairs.push({
+        index: Math.floor(i / 2) + 1,
+        player1: nameOf(ids[i]),
+        player2: ids[i + 1] ? nameOf(ids[i + 1]) : '待选择'
+      })
+    }
+    return pairs
   },
 
   onInputName(e) {
@@ -237,7 +273,10 @@ Page({
     this.setData({
       typeIndex: idx,
       'tournament.type': type,
-      'tournament.config.playersPerMatch': playersPerMatch
+      'tournament.config.playersPerMatch': playersPerMatch,
+      selectedPlayerIds: [],
+      selectedPlayerMap: {},
+      selectedPairPreviews: []
     })
   },
 
@@ -349,10 +388,15 @@ Page({
         wx.showToast({ title: '至少选 2 人', icon: 'none' })
         return false
       }
+      if (tournament.config && tournament.config.maxPlayers && selectedPlayerIds.length > tournament.config.maxPlayers) {
+        wx.showToast({ title: `最多选 ${tournament.config.maxPlayers} 人`, icon: 'none' })
+        return false
+      }
       if (tournament.type === 'doubles' && selectedPlayerIds.length % 2 !== 0) {
         wx.showToast({ title: '双打需要偶数人', icon: 'none' })
         return false
       }
+      if (!this._buildRegistrationPayloads('__preview__')) return false
       return true
     }
 
@@ -363,6 +407,11 @@ Page({
     wx.showLoading({ title: this.data.isEdit ? '保存中' : '提交中' })
     try {
       const submitData = this._buildSubmitData()
+      const previewRegistrations = this._buildRegistrationPayloads('__preview__')
+      if (!previewRegistrations) {
+        wx.hideLoading()
+        return
+      }
 
       let tournamentId = this.data.tournament._id
       if (this.data.isEdit && tournamentId) {
@@ -384,13 +433,8 @@ Page({
         tournamentId = res.result._id || (res.result.data && res.result.data._id)
       }
 
-      if (!this.data.isEdit && tournamentId) {
-        for (const playerId of this.data.selectedPlayerIds) {
-          await wx.cloud.callFunction({
-            name: 'tournament-registrations',
-            data: { action: 'add', data: { tournamentId, playerId } }
-          })
-        }
+      if (tournamentId) {
+        await this._syncRegistrations(tournamentId)
       }
 
       wx.hideLoading()
@@ -406,6 +450,99 @@ Page({
       wx.hideLoading()
       console.error('提交失败', err)
       wx.showToast({ title: err.message || '提交失败', icon: 'none' })
+    }
+  },
+
+  _findMemberById(id) {
+    return this.data.allMembers.find(m => m._id === id)
+  },
+
+  _buildRegistrationPayloads(tournamentId) {
+    const { selectedPlayerIds, tournament } = this.data
+    const base = {
+      tournamentId,
+      seasonId: tournament.seasonId,
+      type: tournament.type,
+      status: 'confirmed'
+    }
+
+    if (tournament.type === 'doubles') {
+      if (selectedPlayerIds.length % 2 !== 0) {
+        wx.showToast({ title: '双打需要偶数人', icon: 'none' })
+        return null
+      }
+
+      const teams = []
+      for (let i = 0; i < selectedPlayerIds.length; i += 2) {
+        const p1 = this._findMemberById(selectedPlayerIds[i])
+        const p2 = this._findMemberById(selectedPlayerIds[i + 1])
+        if (!p1 || !p2) {
+          wx.showToast({ title: '选手信息未加载完整', icon: 'none' })
+          return null
+        }
+        teams.push({
+          ...base,
+          playerId: p1._id,
+          playerName: p1.name,
+          partnerId: p2._id,
+          partnerName: p2.name,
+          teamName: `${p1.name} / ${p2.name}`,
+          seed: teams.length + 1
+        })
+      }
+      return teams
+    }
+
+    const players = []
+    for (let i = 0; i < selectedPlayerIds.length; i++) {
+      const member = this._findMemberById(selectedPlayerIds[i])
+      if (!member) {
+        wx.showToast({ title: '选手信息未加载完整', icon: 'none' })
+        return null
+      }
+      players.push({
+        ...base,
+        playerId: member._id,
+        playerName: member.name,
+        seed: i + 1
+      })
+    }
+    return players
+  },
+
+  async _syncRegistrations(tournamentId) {
+    const currentRes = await wx.cloud.callFunction({
+      name: 'tournament-registrations',
+      data: { action: 'list', tournamentId, pageSize: 200, pageNum: 1 }
+    })
+    const currentRegistrations = currentRes.result.data || []
+    for (const registration of currentRegistrations) {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'delete', id: registration._id }
+      })
+      this._assertRegistrationResult(res, '删除旧报名失败')
+    }
+
+    const registrations = this._buildRegistrationPayloads(tournamentId)
+    if (!registrations) throw new Error('报名数据不完整')
+    for (const registration of registrations) {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'add', data: registration }
+      })
+      this._assertRegistrationResult(res, '新增报名失败')
+    }
+
+    this.setData({ existingRegistrations: registrations })
+  },
+
+  _assertRegistrationResult(res, fallbackMessage) {
+    if (res && res.result && res.result.errMsg) {
+      const detail = res.result.errors && res.result.errors.length
+        ? res.result.errors.join('；')
+        : res.result.errMsg
+      throw new Error(`${fallbackMessage}：${detail}`)
     }
   },
 
