@@ -1,7 +1,6 @@
 Page({
   data: {
     currentMember: null,
-    upcomingMatch: null,
     myStats: { matches: 0, wins: 0, winRate: 0 },
     isAdmin: false
   },
@@ -31,6 +30,7 @@ Page({
       });
     } catch (err) {
       console.error('[home] loadHome stats error', err);
+      wx.showToast({ title: '数据加载失败', icon: 'none', duration: 2000 });
     }
   },
 
