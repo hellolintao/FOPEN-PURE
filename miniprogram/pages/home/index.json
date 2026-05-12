@@ -1,3 +1,7 @@
 {
+  "usingComponents": {
+    "stat-block": "/components/stat-block/index",
+    "brush-stroke-bg": "/components/brush-stroke-bg/index"
+  },
   "navigationBarTitleText": "首页"
 }

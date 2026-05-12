@@ -1,3 +1,43 @@
-<view class="home-container">
-  <view class="home-title">FOPEN</view>
+<view class="home-page">
+  <view class="greeting">
+    <view class="avatar-row">
+      <image class="user-avatar" src="{{currentMember.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <view>
+        <text class="text-h2">你好，{{currentMember.name || '球友'}}</text>
+        <text class="text-meta">FOPEN 网球俱乐部</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="hero">
+    <brush-stroke-bg></brush-stroke-bg>
+    <text class="text-display hero-text">PLAY.&#10;COMPETE.&#10;IMPROVE.</text>
+  </view>
+
+  <view class="section">
+    <text class="text-label">QUICK ACTIONS</text>
+    <view class="actions-grid">
+      <view class="action-tile" bindtap="onQuickAction" data-action="match">
+        <text class="action-text">赛事</text>
+      </view>
+      <view class="action-tile" bindtap="onQuickAction" data-action="rank">
+        <text class="action-text">排行</text>
+      </view>
+      <view class="action-tile" bindtap="onQuickAction" data-action="my-match">
+        <text class="action-text">我的比赛</text>
+      </view>
+      <view wx:if="{{isAdmin}}" class="action-tile action-tile-admin" bindtap="onQuickAction" data-action="create">
+        <text class="action-text">创建赛事</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="text-label">MY STATS</text>
+    <view class="stats-grid">
+      <stat-block value="{{myStats.matches}}" label="MATCHES"></stat-block>
+      <stat-block value="{{myStats.wins}}" label="WINS"></stat-block>
+      <stat-block value="{{myStats.winRate + '%'}}" label="WIN RATE"></stat-block>
+    </view>
+  </view>
 </view>

@@ -1,13 +1,63 @@
-.home-container {
-	background: #FFFFFF;
-	min-height: 100vh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+.home-page {
+  padding: var(--space-5);
+  padding-bottom: 160rpx;
 }
-.home-title {
-	font-size: 48rpx;
-	color: #000000;
-	font-weight: bold;
+.greeting {
+  margin-bottom: var(--space-5);
 }
-
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.user-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+}
+.hero {
+  position: relative;
+  padding: var(--space-6) var(--space-5);
+  background: var(--color-lime);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-5);
+}
+.hero-text {
+  position: relative;
+  z-index: 1;
+  white-space: pre-line;
+  font-size: 56rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+}
+.section {
+  margin-bottom: var(--space-5);
+}
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.action-tile {
+  background: var(--color-bg-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+.action-tile-admin {
+  background: var(--color-lime);
+}
+.action-text {
+  font-weight: 600;
+  font-size: 24rpx;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  background: var(--color-bg-2);
+  border-radius: var(--radius-md);
+}
