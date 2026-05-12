@@ -1,33 +1,40 @@
-<view class="rank-container">
-  <view wx:if="{{rankList.length === 0}}" class="rank-empty">
-    <text>暂无数据</text>
+<view class="rank-page">
+  <view class="header">
+    <text class="text-h1">RANKINGS</text>
   </view>
 
-  <view class="rank-list">
-    <view class="rank-item" wx:for="{{rankList}}" wx:key="_id">
-      <!-- 排名序号 -->
-      <view class="rank-number">{{index + 1}}</view>
+  <view class="tabs">
+    <view
+      class="chip {{activeTab === 'singles' ? 'chip-active' : ''}}"
+      data-tab="singles" bindtap="onTabChange"
+    >SINGLES</view>
+    <view
+      class="chip {{activeTab === 'doubles' ? 'chip-active' : ''}}"
+      data-tab="doubles" bindtap="onTabChange"
+    >DOUBLES</view>
+  </view>
 
-      <!-- 头像 -->
-      <image class="rank-avatar" src="{{item.avatarUrl}}"></image>
+  <view wx:if="{{rankList[0]}}" class="card-hero">
+    <text class="text-label">RANK #1</text>
+    <text class="text-h2">{{rankList[0].name}}</text>
+    <text class="text-meta">{{rankList[0].totalPoints}} 分</text>
+  </view>
 
-      <!-- 用户信息 -->
-      <view class="rank-info">
-        <view class="rank-name">{{item.name}}</view>
-        <view class="rank-stats">
-          <text class="stat-item">{{item.totalGames}}场</text>
-          <text class="stat-divider">|</text>
-          <text class="stat-item win">{{item.winCount}}胜</text>
-          <text class="stat-divider">|</text>
-          <text class="stat-item loss">{{item.lossCount}}负</text>
-        </view>
-      </view>
+  <view class="list">
+    <rank-row
+      wx:for="{{rankList}}" wx:key="_id"
+      wx:if="{{index > 0}}"
+      rank="{{index + 1}}"
+      name="{{item.name}}"
+      avatar-url="{{item.avatarUrl}}"
+      utr="{{item.totalPoints + ''}}"
+      player-id="{{item._id}}"
+      highlight="{{currentMember && item._id === currentMember._id}}"
+      bind:tap="onPlayerTap"
+    />
+  </view>
 
-      <!-- 积分 -->
-      <view class="rank-points">
-        <text class="points-value">{{item.totalPoints}}</text>
-        <text class="points-label">积分</text>
-      </view>
-    </view>
+  <view wx:if="{{rankList.length === 0}}" class="empty-state">
+    <text class="text-meta">暂无排名数据</text>
   </view>
 </view>
