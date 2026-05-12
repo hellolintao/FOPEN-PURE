@@ -1,5 +1,6 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
+const { validateResultSubmission } = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
@@ -349,6 +350,30 @@ exports.main = async (event, context) => {
           ...tournamentStats
         }
       }
+    }
+
+    case 'submit-result': {
+      // 玩家/管理员提交比分；完整对账状态机在 Phase 5 实现，本期仅记录提交。
+      const v = validateResultSubmission(data || {})
+      if (!v.valid) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
+      }
+      if (!data.matchId) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: 'matchId 不能为空' } }
+      }
+      const match = await collection.doc(data.matchId).get()
+      const submissions = (match.data.submissions || []).filter(s => s.submittedBy !== data.submittedBy)
+      submissions.push({
+        submittedBy: data.submittedBy,
+        role: data.role,
+        winnerIds: data.winnerIds,
+        score: data.score || '',
+        submittedAt: db.serverDate()
+      })
+      await collection.doc(data.matchId).update({
+        data: { submissions, resultStatus: 'pending', updateTime: now }
+      })
+      return { success: true, data: { resultStatus: 'pending' } }
     }
 
     default:
