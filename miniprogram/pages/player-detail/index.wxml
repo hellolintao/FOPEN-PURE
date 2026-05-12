@@ -1,0 +1,46 @@
+<view class="player-page">
+  <view wx:if="{{player}}">
+    <view class="hero-row">
+      <image class="big-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <view class="player-info">
+        <text class="text-h1">{{player.name}}</text>
+        <text class="text-meta">{{player.playStyle || '打法未知'}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{player.playStyleNote}}" class="card section">
+      <text class="text-label">关于</text>
+      <text class="text-body">{{player.playStyleNote}}</text>
+    </view>
+
+    <view wx:if="{{stats}}" class="section">
+      <text class="text-label">SINGLES</text>
+      <view class="stats-grid">
+        <stat-block value="{{stats.singles.winCount + stats.singles.lossCount}}" label="MATCHES"></stat-block>
+        <stat-block value="{{stats.singles.winCount}}" label="WINS"></stat-block>
+        <stat-block value="{{stats.singles.totalPoints}}" label="POINTS"></stat-block>
+      </view>
+    </view>
+
+    <view wx:if="{{stats}}" class="section">
+      <text class="text-label">DOUBLES</text>
+      <view class="stats-grid">
+        <stat-block value="{{stats.doubles.winCount + stats.doubles.lossCount}}" label="MATCHES"></stat-block>
+        <stat-block value="{{stats.doubles.winCount}}" label="WINS"></stat-block>
+        <stat-block value="{{stats.doubles.totalPoints}}" label="POINTS"></stat-block>
+      </view>
+    </view>
+
+    <view wx:if="{{recent.length > 0}}" class="section">
+      <text class="text-label">RECENT MATCHES</text>
+      <view wx:for="{{recent}}" wx:key="_id" class="recent-item">
+        <text class="text-body">第 {{item.round}} 轮</text>
+        <text class="text-meta">{{item.resultStatus}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{!player}}" class="empty-state">
+    <text class="text-meta">球员信息不存在</text>
+  </view>
+</view>

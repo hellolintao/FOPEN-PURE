@@ -19,7 +19,8 @@
     "pages/tournament-score/index",
     "pages/round-settlement/index",
     "pages/my-match/index",
-    "pages/tournament-view/index"
+    "pages/tournament-view/index",
+    "pages/player-detail/index"
   ],
   "tabBar": {
     "custom": true,

@@ -1,0 +1,46 @@
+.player-page {
+  padding: var(--space-5);
+  padding-bottom: 160rpx;
+}
+.hero-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.big-avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid var(--color-lime);
+  flex-shrink: 0;
+}
+.player-info {
+  flex: 1;
+}
+.section {
+  margin-top: var(--space-5);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  background: var(--color-bg-2);
+  border-radius: var(--radius-md);
+}
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+.card {
+  background: var(--color-bg-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) 0;
+}

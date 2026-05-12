@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "stat-block": "/components/stat-block/index"
+  },
+  "navigationBarTitleText": "球员详情"
+}

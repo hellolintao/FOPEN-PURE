@@ -115,6 +115,12 @@ exports.main = async (event, context) => {
       }
       return await collection.doc(_id).remove()
     }
+    case 'getById': {
+      if (!_id) {
+        return { success: false, error: { code: 'MISSING_PARAM', message: '_id is required' } };
+      }
+      return await collection.doc(_id).get();
+    }
     default:
       return { errMsg: 'invalid action' }
   }
