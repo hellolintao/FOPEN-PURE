@@ -1,29 +1,12 @@
-/**app.wxss**/
+/* app.wxss — 全局入口，仅做 import 与最基本兜底 */
+@import "/styles/tokens.wxss";
+@import "/styles/base.wxss";
+@import "/styles/utilities.wxss";
+
+/* 旧版兼容：保留 .container 类供未重写的页面用 */
 .container {
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
-}
-
-button {
-  background: initial;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-button:focus{
-  outline: 0;
-}
-
-button::after{
-  border: none;
-}
-
-
-page {
-  background: #0d0d14;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
