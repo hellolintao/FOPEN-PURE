@@ -1,5 +1,6 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
+const { validateMemberData } = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
@@ -13,6 +14,10 @@ exports.main = async (event, context) => {
   switch (action) {
     case 'add': {
       // 新增会员，openid唯一
+      const v = validateMemberData(data || {})
+      if (!v.valid) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
+      }
       const exist = await collection.where({ openid }).get()
       if (exist.data && exist.data.length > 0) {
         return { errMsg: 'already registered', data: exist.data[0] }
@@ -26,6 +31,8 @@ exports.main = async (event, context) => {
           phone: data.phone || '',
           status: data.status || 'active',
           admin: data.admin || false,
+          playStyle: data.playStyle || '',
+          playStyleNote: data.playStyleNote || '',
           createTime: now,
           updateTime: now
         }
@@ -37,6 +44,10 @@ exports.main = async (event, context) => {
     }
     case 'update': {
       // 更新会员信息 by openid
+      const v = validateMemberData(data || {})
+      if (!v.valid) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
+      }
       const now = db.serverDate()
       return await collection.where({ openid }).update({
         data: {
@@ -84,6 +95,10 @@ exports.main = async (event, context) => {
       // 根据_id更新会员信息
       if (!_id) {
         return { errMsg: '_id is required' }
+      }
+      const v = validateMemberData(data || {})
+      if (!v.valid) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
       const now = db.serverDate()
       return await collection.doc(_id).update({
