@@ -1,12 +1,27 @@
-# 云开发 quickstart
+# FOPEN 小程序
 
-这是云开发的快速启动指引，其中演示了如何上手使用云开发的三大基础能力：
+FOPEN 是一个网球俱乐部内部使用的微信小程序，技术栈为微信小程序原生前端（WXML/WXSS/JS）+ 微信云开发云函数 + 云数据库。
 
-- 数据库：一个既可在小程序前端操作，也能在云函数中读写的 JSON 文档型数据库
-- 文件存储：在小程序前端直接上传/下载云端文件，在云开发控制台可视化管理
-- 云函数：在云端运行的代码，微信私有协议天然鉴权，开发者只需编写业务逻辑代码
+## 项目文档入口
 
-## 参考文档
+- 实施计划入口：[docs/superpowers/plans/README.md](docs/superpowers/plans/README.md)
+- 当前进度日志：[docs/superpowers/plans/PROGRESS.md](docs/superpowers/plans/PROGRESS.md)
+- 产品与技术规格：[docs/superpowers/specs/2026-05-11-tennis-club-miniprogram-design.md](docs/superpowers/specs/2026-05-11-tennis-club-miniprogram-design.md)
+- 当前数据库说明：[cloudfunctions/DATABASE_SCHEMA.md](cloudfunctions/DATABASE_SCHEMA.md)
 
-- [云开发文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloud/basis/getting-started.html)
+## 当前状态
 
+superpowers 文档已经完成规格与 6 个 Phase 的拆分，但实施进度仍是 `0/6`。继续开发前先阅读计划入口和进度日志，确认当前应该从哪个 Phase 开始。
+
+## 快速命令
+
+```bash
+# 查看当前状态
+git status && git log --oneline -10
+
+# 上传单个云函数
+bash uploadCloudFunction.sh <函数名>
+
+# 跑云函数测试
+cd cloudfunctions/<函数名> && npm test
+```

@@ -1,6 +1,6 @@
 # Phase 6 · 每周之星 + 视觉打磨 + 微交互 · Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans（推荐 inline 执行，多为视觉打磨小任务）。Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。此 Phase 多为视觉与微交互打磨，建议连续执行并做整体验收。
 
 **Goal:** 让产品到达上线水准——每周之星定时任务 + 全局微交互 + 装饰元素 + 各种小细节修补。
 

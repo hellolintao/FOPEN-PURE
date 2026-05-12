@@ -89,7 +89,8 @@
 | `startDate` | String | 是 | 开始日期，格式：YYYY-MM-DD |
 | `endDate` | String | 是 | 结束日期，格式：YYYY-MM-DD |
 | `location` | String | 是 | 场地名称 |
-| `status` | String | 否 | 赛事状态，'upcoming'（待开始）、'ongoing'（进行中）、'ended'（已结束） |
+| `format` | String | 否 | 赛制，'regular'（常规赛）或 'knockout'（淘汰赛），默认为 'regular' |
+| `status` | String | 否 | 赛事状态，'upcoming'（待开始）、'ongoing'（进行中）、'completed'（已结束） |
 | `description` | String | 否 | 赛事描述 |
 | `config.maxPlayers` | Number | 是 | 最大参赛人数，范围：2-64 |
 | `config.currentRound` | Number | 是 | 当前轮次 |
@@ -112,6 +113,7 @@
   "seasonId": "season_2024",
   "name": "第一届公开赛",
   "type": "singles",
+  "format": "regular",
   "startDate": "2024-01-15",
   "endDate": "2024-01-20",
   "location": "体育中心1号场",

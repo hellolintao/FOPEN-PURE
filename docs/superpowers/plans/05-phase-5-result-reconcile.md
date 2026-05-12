@@ -1,6 +1,6 @@
 # Phase 5 · 录分对账 + 仲裁 + 积分计算 · Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推荐子代理执行）。Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。状态机任务适合先用纯函数 TDD 锁定行为，再接云函数和页面。
 
 **Goal:** 实现完整的录分对账闭环——玩家提交、双方比对自动确认、不一致进入管理员仲裁、确认后触发 points-engine 计算积分。
 

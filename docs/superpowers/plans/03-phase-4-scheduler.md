@@ -1,6 +1,6 @@
 # Phase 4 · 自动排程引擎 + 签表/对局表 · Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推荐子代理执行）。Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。算法任务相对独立，可并行拆给不同执行上下文跑 TDD，但最终需要统一验收。
 
 **Goal:** 实现自动排程引擎（避同人冲突 + 均衡休息），让每场比赛被分配到 `(courtId, slotId)`；同时生成常规赛/淘汰赛的对局表 / 签表。
 

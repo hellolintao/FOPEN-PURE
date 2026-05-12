@@ -1,7 +1,7 @@
 # FOPEN 网球俱乐部小程序 · 设计规范（Design Spec）
 
 **日期**：2026-05-11
-**作者**：Xiaole Liao（UX 设计师 / 产品负责人） · Claude（协作）
+**作者**：Xiaole Liao（UX 设计师 / 产品负责人） · AI 协作
 **状态**：草案 v1.0
 **前置文件**：`cloudfunctions/DATABASE_SCHEMA.md`（朋友写的现有数据库 schema）
 
@@ -154,8 +154,10 @@ FOPEN 是一个**业余网球俱乐部内部使用的微信小程序**。当前�
 
 ```diff
 {
-  // 沿用：_id, seasonId, name, type, startDate, endDate, location, status,
+  // 沿用：_id, seasonId, name, type, format, startDate, endDate, location, status,
   //       description, config, pointsRules, createTime, updateTime
+  // status: 'upcoming' | 'ongoing' | 'completed'
+  // format: 'regular' | 'knockout'
 - // 移除：config.totalRounds 改为可由生成签表/对局表时推导（保留也行，不强求）
 + courtTimeGrid: {
 +   matchDuration: 20,            // 单场分钟数，固定 20
@@ -183,10 +185,11 @@ FOPEN 是一个**业余网球俱乐部内部使用的微信小程序**。当前�
 ```diff
 {
   // 沿用：_id, tournamentId, round, winnerId, loserId, winnerName, loserName,
-  //       pointsAwarded, createTime
+  //       pointsAwarded, status, createTime
+  // status 保留为比赛生命周期：'pending' | 'ongoing' | 'completed' | 'cancelled'
 + playerIds: ["member_aaa", "member_bbb"],  // 参赛者 id 列表（单打 2 / 双打 4），
 +                                            // 生成签表/对局表时即写入，用于校验录分权限
-+ status: "pending",         // 'pending' | 'confirmed' | 'disputed'
++ resultStatus: "pending",   // 'pending' | 'confirmed' | 'disputed'，结果确认状态
 + submissions: [             // 提交记录，1-2 条为主
 +   {
 +     submittedBy: "member_xxxxx",
@@ -248,7 +251,7 @@ FOPEN 是一个**业余网球俱乐部内部使用的微信小程序**。当前�
 | 集合 | 索引 | 用途 |
 |---|---|---|
 | `match-results` | `tournamentId` | 拉某赛事所有结果 |
-| `match-results` | `(status, createTime DESC)` | 管理员仲裁队列分页 |
+| `match-results` | `(resultStatus, createTime DESC)` | 管理员仲裁队列分页 |
 | `match-results` | `(winnerId, createTime DESC)` 和 `(loserId, createTime DESC)` | 玩家详情页的"近期比赛" |
 | `tournament_brackets` | `(tournamentId, round)` | 拉某赛事某轮签表 |
 | `tournament_registrations` | `(tournamentId, playerId)` | 报名校验、查个人参赛 |
@@ -314,27 +317,27 @@ return { scheduled: [...], unscheduled: [...] }
 
 ```
 match = loadMatch(matchId)
-if match.status === 'confirmed': throw RESULT_ALREADY_CONFIRMED
+if match.resultStatus === 'confirmed': throw RESULT_ALREADY_CONFIRMED
 if role === 'admin':
     // 管理员录入或仲裁，直接确认
     finalize(match, winnerIds, submitterId, score)
     triggerPointsEngine(match)
-    return { status: 'confirmed' }
+    return { resultStatus: 'confirmed' }
 else if role === 'player':
-    if submitterId not in match.players: throw PERMISSION_DENIED
+    if submitterId not in match.playerIds: throw PERMISSION_DENIED
     if has existing submission from same submitter: update it
     else: append to submissions
     if submissions.length >= 2:
         if all winnerIds agree:
             finalize(match, winnerIds, null, score)
             triggerPointsEngine(match)
-            return { status: 'confirmed' }
+            return { resultStatus: 'confirmed' }
         else:
-            match.status = 'disputed'
-            return { status: 'disputed' }
+            match.resultStatus = 'disputed'
+            return { resultStatus: 'disputed' }
     else:
-        match.status = 'pending'
-        return { status: 'pending' }
+        match.resultStatus = 'pending'
+        return { resultStatus: 'pending' }
 ```
 
 #### points-engine

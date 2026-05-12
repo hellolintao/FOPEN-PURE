@@ -1,6 +1,6 @@
 # Phase 1 · 数据模型迁移 + 设计系统 tokens · Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。云函数与迁移任务建议用独立上下文做 TDD；执行前必须先对照当前仓库代码，不要机械复制片段。
 
 **Goal:** 为整个项目铺好基础——CSS 设计 token 全局可用 + 数据库新字段就位，后续所有 Phase 都基于此。
 
@@ -67,7 +67,7 @@ mkdir -p miniprogram/styles
 
 - [ ] **Step 1.2 写 tokens.wxss**
 
-完整内容（直接复制）：
+参考实现（执行时先对照当前 `app.wxss` 与页面样式，再按需调整）：
 
 ```css
 /* miniprogram/styles/tokens.wxss

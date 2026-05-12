@@ -1,6 +1,6 @@
 # Phase 3 · 创建赛事改造（含 20min 时间格子 UI）· Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans（推荐 inline 模式，因为多个 UI 任务需要在同一上下文里看到统一效果）。Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。此 Phase 多个 UI 任务强相关，建议在同一上下文内连续实现与验收。
 
 **Goal:** 管理员能用新的多步表单（含时间×场地格子 UI）完整创建一场新赛事，数据落库到 `courtTimeGrid`。
 

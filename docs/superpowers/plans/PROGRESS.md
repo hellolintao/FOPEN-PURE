@@ -33,6 +33,12 @@
 
 ## 执行日志（按时间倒序）
 
+### 2026-05-12
+- 文档一致性修复：根 README 改为项目入口；spec / DATABASE_SCHEMA / plans README 对齐字段命名与执行说明
+- 明确 `match_results.status` 保留为比赛生命周期；结果确认状态统一使用 `resultStatus`
+- 明确赛事结束态使用当前代码里的 `completed`，不再使用 `ended`
+- 明确 `tournaments.format` 是现有字段：`regular` / `knockout`
+
 ### 2026-05-11
 - 设计规范完成（superpowers:brainstorming 流程）
 - 6 个 Phase plan 完成（superpowers:writing-plans 流程）
@@ -44,7 +50,10 @@
 
 > 实施过程中如果做出任何**偏离 spec** 的决定，记到这里，下个对话能看到。
 
-（暂无）
+- `match_results.status` 保留为比赛生命周期：`pending` / `ongoing` / `completed` / `cancelled`。
+- 结果对账状态统一使用 `match_results.resultStatus`：`pending` / `confirmed` / `disputed`。
+- 赛事状态统一使用当前代码中的 `upcoming` / `ongoing` / `completed`，不再使用 `ended`。
+- `tournaments.format` 为现有字段，取值 `regular` / `knockout`，后续 points / scheduler 逻辑以它区分常规赛与淘汰赛。
 
 ---
 

@@ -1,6 +1,6 @@
 # Phase 2 · 首页 + 排行榜 + 玩家详情 · Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推荐子代理执行）。Steps use checkbox (`- [ ]`) syntax for tracking.
+> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。页面和组件可并行拆分，但最终需要统一视觉与数据联调。
 
 **Goal:** 让用户看到美观、有冲击力的浏览体验——首页 hero、排行榜（单/双打 + 每周之星）、玩家详情页。
 

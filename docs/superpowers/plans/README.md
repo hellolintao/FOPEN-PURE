@@ -10,11 +10,11 @@
 
 ## 新对话开始时怎么做
 
-**在新对话的第一句话告诉 Claude**：
+**在新对话的第一句话告诉执行 agent**：
 
 > 我要继续 FOPEN 小程序的实施。请读 docs/superpowers/plans/README.md 和 PROGRESS.md，告诉我当前在哪个 Phase，下一步要做什么。
 
-Claude 会：
+执行 agent 会：
 1. 读 README（本文件）→ 了解整体节奏
 2. 读 PROGRESS.md → 知道已完成的 Phase 与 commit hash
 3. 找到当前要做的 Phase 的 plan 文件 → 按任务清单执行
@@ -24,11 +24,11 @@ Claude 会：
 | 步骤 | 谁做 | 做什么 |
 |---|---|---|
 | 1 | 用户 | 在新对话粘贴上面那句话 |
-| 2 | Claude | 读 README + PROGRESS + 当前 Phase plan |
-| 3 | Claude | 按 plan 任务逐个执行（每步先写测试、再实现、再跑通） |
+| 2 | 执行 agent | 读 README + PROGRESS + 当前 Phase plan |
+| 3 | 执行 agent | 按 plan 任务逐个执行（每步先写测试、再实现、再跑通） |
 | 4 | 用户 | 验证产出 |
-| 5 | 用户 | 用户喊"提交"后 Claude 才 git commit |
-| 6 | Claude | 更新 PROGRESS.md 记录 commit hash + 完成时间 |
+| 5 | 用户 | 用户喊"提交"后执行 agent 才 git commit |
+| 6 | 执行 agent | 更新 PROGRESS.md 记录 commit hash + 完成时间 |
 | 7 | 用户 | 关闭对话；准备好开下一个 Phase 时回到步骤 1 |
 
 **绝不允许**：
@@ -60,6 +60,12 @@ Claude 会：
 - **TDD**：每个云函数任务必须先写 Jest 测试再实现
 - **覆盖率**：80% 起步，核心算法（scheduler/reconcile/points）≥ 90%
 - **不引入 node_modules 到 miniprogram/**（`project.config.json` 已禁用）
+
+## 执行注意
+
+- Phase plan 里的代码片段是目标实现草案，执行时必须先对照当前仓库代码，再按现状调整。
+- 数据字段以 spec 与 `cloudfunctions/DATABASE_SCHEMA.md` 的最新定义为准；如发生冲突，先修文档再写实现。
+- `PROGRESS.md` 只记录已完成并通过验证的 Phase，不要因为文档修订而改成已完成。
 
 ## 当前状态
 
