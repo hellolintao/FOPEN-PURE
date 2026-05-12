@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████░░░░░░░░░░░░░░░░] 2/6 Phase 完成
+[████████████░░░░░░░░░░░░] 3/6 Phase 完成
 ```
 
 ## Phase 状态
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|---|
 | 01 | Phase 1 · Foundation | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 756682a | 迁移 members 80 / tournaments 2 / match_results 3 条；3 个云函数加 Jest（4×3=12 测试全绿） |
 | 02 | Phase 3 · Create Tournament | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9da74f2 | court-grid 组件 + tournament-edit 重写为 5 步表单；Codex 验证补齐了双打 partnerId/seed 与编辑模式 `_syncRegistrations` 同步 |
-| 03 | Phase 4 · Scheduler | ⬜ 待开始 | — | — | — | — |
+| 03 | Phase 4 · Scheduler | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9941d79 | scheduler-engine 上线（44 单测全绿，Lines 100%/Stmts 95%）；触发策略改为 C（签表页按钮）+ 保存合并 B + 双打 partnerId 入约束；plan 顶部记录 6 处修订 |
 | 04 | Phase 2 · Browse UI | ⬜ 待开始 | — | — | — | — |
 | 05 | Phase 5 · Result Reconcile | ⬜ 待开始 | — | — | — | — |
 | 06 | Phase 6 · Polish | ⬜ 待开始 | — | — | — | — |
@@ -25,13 +25,38 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`03-phase-4-scheduler.md`
+**👉 下一个 Phase**：`04-phase-2-browse-ui.md`
 
 打开该文件，从 "Task 1" 开始按步骤执行。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-12 · Phase 4 完成
+- 新建 `cloudfunctions/scheduler-engine/` 云函数：
+  - `lib/constraints.js` 约束（含 collectMatchPlayerIds / isPlayerFree / isMatchFreeOfConflicts / hasRestBetween / matchHasRestBetween），双打把 4 个 playerId 全部计入
+  - `lib/greedy.js` 贪心排程，输出对齐 `tournament_brackets.matches[*]` schema（`player1/player2` 对象 + `courtId/scheduledStart/scheduledSlotId/status`）
+  - `lib/pairing/round-robin.js` 常规赛配对（单/双打）
+  - `lib/pairing/knockout-bracket.js` 单败签表（标准 seeding，1 vs N 在 R1 不同对、补 BYE、R2+ 用 TBD 占位）
+  - `index.js` action=schedule|preview，落库走 `tournament-brackets:add/update`（不绕 validator），upsert 时保留旧 winner/score
+  - 单测：44 例全绿；Lines 100% / Stmts 95.13% / Branches 81.6%
+- 签表页 `tournament-brackets`：
+  - 顶部加「自动排程」按钮（策略 C，不在创建赛事流程里触发）
+  - 每场比赛卡片用 WXS 展示 `时段 · 场地`，未排程标红
+  - 顶部 unscheduled 警告条 + 每条「手动指派」按钮（弹 actionsheet 选 `(slot, court)`）
+  - 保存合并（策略 B）：手动改完保存时按 matchId/position 保留 courtId/scheduledStart/scheduledSlotId/winner/score
+- 关键 plan 修订（落入 `03-phase-4-scheduler.md` 顶部「2026-05-12 执行决策」节）：
+  - 触发 = C：签表页手动按钮（避免创建流程被排程失败拖累）
+  - 保存 = B：merge 保留排程字段
+  - 双打 partnerId 必须计入冲突 + 休息约束
+  - 算法内部数据结构对齐 DB schema（不用扁平 playerIds）
+  - 不再 `.catch(()=>{})` 静默吞错；落库改 upsert
+  - 修正 Task 5 测试断言（原 plan 自己打自己脸）
+- 已知遗留：
+  - `cloudfunctions/scheduler-engine/node_modules/` 同 `tournaments/` 一样会随 npm install 入库；如需清理用 `git rm --cached -r`
+  - 云函数尚未上传到云端（需 admin 在 WeChat DevTools 里上传或 `FOPEN_CLOUD_ENV=... bash uploadCloudFunction.sh scheduler-engine`）
+  - `tournament-brackets:updateMatchStatus` 现有 action 用 `scheduledTime`，scheduler-engine 写的是 `scheduledStart`，未来要统一字段名（暂不影响功能）
 
 ### 2026-05-12 · Phase 3 完成
 - 新建 `miniprogram/components/court-grid/`（208 行 js）：场地增删 / 时段大块编辑（自动切 20min 档）/ 格子矩阵点选 / 序列化与反序列化
