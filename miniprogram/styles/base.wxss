@@ -1,0 +1,45 @@
+/* miniprogram/styles/base.wxss
+ * 全局基础样式：重置 + 默认字体
+ */
+
+page {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family:
+    "PingFang SC",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    "Microsoft YaHei",
+    sans-serif;
+  font-size: var(--font-body-size);
+  line-height: 1.5;
+}
+
+view, text, input, textarea, button {
+  box-sizing: border-box;
+}
+
+button {
+  background: initial;
+  padding: 0;
+  margin: 0;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button:focus,
+button:active {
+  outline: 0;
+}
+
+button::after {
+  border: none;
+}
+
+image {
+  display: block;
+}
