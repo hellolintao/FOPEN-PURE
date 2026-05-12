@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████░░░░░░░░░░░░░░░░░░░░] 1/6 Phase 完成
+[████████░░░░░░░░░░░░░░░░] 2/6 Phase 完成
 ```
 
 ## Phase 状态
@@ -13,7 +13,7 @@
 | # | Phase | 状态 | 开始时间 | 完成时间 | commit hash | 关键备忘 |
 |---|---|---|---|---|---|---|
 | 01 | Phase 1 · Foundation | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 756682a | 迁移 members 80 / tournaments 2 / match_results 3 条；3 个云函数加 Jest（4×3=12 测试全绿） |
-| 02 | Phase 3 · Create Tournament | ⬜ 待开始 | — | — | — | — |
+| 02 | Phase 3 · Create Tournament | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9da74f2 | court-grid 组件 + tournament-edit 重写为 5 步表单；Codex 验证补齐了双打 partnerId/seed 与编辑模式 `_syncRegistrations` 同步 |
 | 03 | Phase 4 · Scheduler | ⬜ 待开始 | — | — | — | — |
 | 04 | Phase 2 · Browse UI | ⬜ 待开始 | — | — | — | — |
 | 05 | Phase 5 · Result Reconcile | ⬜ 待开始 | — | — | — | — |
@@ -25,13 +25,30 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`02-phase-3-create-tournament.md`
+**👉 下一个 Phase**：`03-phase-4-scheduler.md`
 
 打开该文件，从 "Task 1" 开始按步骤执行。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-12 · Phase 3 完成
+- 新建 `miniprogram/components/court-grid/`（208 行 js）：场地增删 / 时段大块编辑（自动切 20min 档）/ 格子矩阵点选 / 序列化与反序列化
+- 重写 `miniprogram/pages/tournament-edit/` 为 5 步表单：基本信息 / 场地时段 / 积分规则 / 选手 / 确认提交
+- 用户决策：放弃当前 config UI（maxPlayers / playersPerMatch / eliminationType），云函数默认值兜底；playersPerMatch 仍由 type 自动推导
+- 偏离 plan 的修正：
+  - `tournaments:update` 用 `id` 而非 `_id`（与现网云函数一致）
+  - WXML 用预计算的 `selectedPlayerMap[id]` 替代 `.indexOf/.includes`（兼容旧基础库）
+  - `tournament-registrations:listByTournament` 不存在，改用 `list` + `tournamentId` 过滤
+- Codex 验证补全（commit `9da74f2`）：
+  - 双打报名需 `partnerId/partnerName/teamName/seed`，未传则云函数 validation failed
+  - 编辑模式改选手不持久化 → 新增 `_syncRegistrations`：先全删旧报名再批量 add，create / edit 同一路径
+  - 新增双打配对预览 UI（按选择顺序两两成 `#N A/B`）
+  - 切换 type 时重置选手；编辑模式 hydrate doubles partnerId
+  - `_assertRegistrationResult` 显式抛出云函数的 errMsg，避免静默失败
+- 顺带修复：`uploadCloudFunction.sh` 已修复（commit `b6936bf`），脚本会在 cli 出错时返回非 0；Phase 1 遗留的"需手动右键上传"问题解除
+- 已知遗留：`cloudfunctions/tournaments/node_modules/` drift 在 commit `3dd507c` 里被一并提交（不影响功能）；`_syncRegistrations` 删-再-加不是事务，中途失败会留下部分报名，可重试修复
 
 ### 2026-05-12 · Phase 1 完成
 - 全部 12 个 Task 完成，最终 commit `756682a`
