@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████░░░░░░░░░░░░] 3/6 Phase 完成
+[████████████████░░░░░░░░] 4/6 Phase 完成
 ```
 
 ## Phase 状态
@@ -15,7 +15,7 @@
 | 01 | Phase 1 · Foundation | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 756682a | 迁移 members 80 / tournaments 2 / match_results 3 条；3 个云函数加 Jest（4×3=12 测试全绿） |
 | 02 | Phase 3 · Create Tournament | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9da74f2 | court-grid 组件 + tournament-edit 重写为 5 步表单；Codex 验证补齐了双打 partnerId/seed 与编辑模式 `_syncRegistrations` 同步 |
 | 03 | Phase 4 · Scheduler | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9941d79 | scheduler-engine 上线（44 单测全绿，Lines 100%/Stmts 95%）；触发策略改为 C（签表页按钮）+ 保存合并 B + 双打 partnerId 入约束；plan 顶部记录 6 处修订 |
-| 04 | Phase 2 · Browse UI | ⬜ 待开始 | — | — | — | — |
+| 04 | Phase 2 · Browse UI | ✅ 已完成 | 2026-05-12 | 2026-05-12 | e95fcac | points-engine 云函数（7单测全绿）+ 组件库（stat-block/rank-row/brush-stroke-bg）+ custom tabBar（admin 可见管理 tab）+ home/rank/player-detail/mine 全面重写 |
 | 05 | Phase 5 · Result Reconcile | ⬜ 待开始 | — | — | — | — |
 | 06 | Phase 6 · Polish | ⬜ 待开始 | — | — | — | — |
 
@@ -25,13 +25,29 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`04-phase-2-browse-ui.md`
+**👉 下一个 Phase**：`05-phase-5-result-reconcile.md`
 
 打开该文件，从 "Task 1" 开始按步骤执行。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-12 · Phase 2 完成
+- 新建 `cloudfunctions/points-engine/` 云函数：
+  - `lib/calculate.js` 积分计算（calculatePoints / isPointValid，7 单测全绿）
+  - `index.js` action=rankList|playerStats|recalculateMatch，全部带 try/catch 错误处理
+- 新建组件库：
+  - `miniprogram/components/stat-block/` 数字统计展示
+  - `miniprogram/components/rank-row/` 排名条目（头像 + 名字 + 积分 + 涨跌趋势）
+  - `miniprogram/components/brush-stroke-bg/` SVG 装饰背景
+- 新建 `miniprogram/custom-tab-bar/` 自定义 tabBar：管理员可见第 5 个"管理"tab；用 pagePath 作为选中键；图标用图片资源
+- 更新 `miniprogram/app.js`：globalData 加 isAdmin / currentMember；refreshIdentity 在 cloud init 后调用
+- 重写 `miniprogram/pages/home/`：hero 板块 + quick actions + 个人 stat 三格
+- 重写 `miniprogram/pages/rank/`：单/双打 tab + #1 hero 卡 + rank-row 列表 + 空态
+- 新建 `miniprogram/pages/player-detail/`：并行拉 members.getById + points-engine.playerStats，单/双打各 3 格 + 近期比赛列表
+- 改造 `miniprogram/pages/mine/`：hero card + action 按钮，保留原有登录/积分逻辑
+- `cloudfunctions/members/index.js` 新增 getById action（with _id null guard）
 
 ### 2026-05-12 · Phase 4 完成
 - 新建 `cloudfunctions/scheduler-engine/` 云函数：
