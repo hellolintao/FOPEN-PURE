@@ -23,8 +23,23 @@ if [[ ! -x "$CLI_PATH" ]]; then
   exit 1
 fi
 
+OUTPUT_FILE="$(mktemp)"
+trap 'rm -f "$OUTPUT_FILE"' EXIT
+
+set +e
 "$CLI_PATH" cloud functions deploy \
   --project "$PROJECT_PATH" \
   --env "$ENV_ID" \
   --names "$FUNCTION_NAME" \
-  --remote-npm-install
+  --remote-npm-install 2>&1 | tee "$OUTPUT_FILE"
+CLI_STATUS=${PIPESTATUS[0]}
+set -e
+
+if [[ "$CLI_STATUS" -ne 0 ]]; then
+  exit "$CLI_STATUS"
+fi
+
+if grep -Eq '\[error\]' "$OUTPUT_FILE"; then
+  echo "WeChat DevTools CLI reported an error." >&2
+  exit 1
+fi
