@@ -32,7 +32,8 @@ Page({
                 pageSize: this.data.pageSize
             },
             success: res => {
-                const list = res.result.data || []
+                // Phase 7: list now returns { success, data: { tournaments: [...] } }
+                const list = (res.result.data && res.result.data.tournaments) || []
                 const total = res.result.total || 0
 
                 this.setData({
