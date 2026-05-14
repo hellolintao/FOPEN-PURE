@@ -63,6 +63,122 @@ function validateRegistration(data, isUpdate = false) {
   return errors
 }
 
+// ---------------------------------------------------------------------------
+// Action: bulkSet — 幂等批量设置赛事报名名单 (Phase 7 Task 3)
+// ---------------------------------------------------------------------------
+
+async function handleBulkSet(event) {
+  const { tournamentId, registrations } = event
+
+  // 1. Validate required args
+  if (!tournamentId) {
+    return {
+      success: false,
+      error: { code: 'INVALID_ARG', message: 'tournamentId 不能为空' }
+    }
+  }
+  if (!Array.isArray(registrations)) {
+    return {
+      success: false,
+      error: { code: 'INVALID_ARG', message: 'registrations 必须是数组' }
+    }
+  }
+
+  // 2. Read the tournament doc
+  let tournament
+  try {
+    const tournamentRes = await db.collection('tournaments').doc(tournamentId).get()
+    tournament = tournamentRes.data
+  } catch (e) {
+    return {
+      success: false,
+      error: { code: 'NOT_FOUND', message: tournamentId }
+    }
+  }
+  if (!tournament) {
+    return {
+      success: false,
+      error: { code: 'NOT_FOUND', message: tournamentId }
+    }
+  }
+
+  // 3. Validate ALL entries and assemble docs BEFORE any DB writes
+  const errors = []
+  const docs = registrations.map((r, i) => {
+    const entryErrors = []
+
+    if (!r.playerId) entryErrors.push(`[${i}] playerId 不能为空`)
+    if (!r.playerName || r.playerName.trim() === '') entryErrors.push(`[${i}] playerName 不能为空`)
+    if (tournament.type === 'doubles' && !r.partnerId) {
+      entryErrors.push(`[${i}] doubles 赛事需要 partnerId`)
+    }
+
+    errors.push(...entryErrors)
+
+    return {
+      _id: generateRegistrationId(tournamentId, i),
+      tournamentId,
+      seasonId: tournament.seasonId,
+      type: tournament.type,
+      playerId: r.playerId,
+      playerName: r.playerName,
+      partnerId: r.partnerId || null,
+      partnerName: r.partnerName || null,
+      teamName: r.teamName || null,
+      seed: r.seed || (i + 1),
+      registrationStatus: 'confirmed',
+      createTime: db.serverDate()
+    }
+  })
+
+  // 4. If any validation errors, return without touching DB
+  if (errors.length > 0) {
+    return {
+      success: false,
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: errors.join('; '),
+        errors
+      }
+    }
+  }
+
+  // 5. Delete old registrations, then write new ones
+  try {
+    const existingRes = await db.collection('tournament_registrations')
+      .where({ tournamentId })
+      .get()
+    const existing = existingRes.data || []
+    await Promise.all(
+      existing.map(doc => db.collection('tournament_registrations').doc(doc._id).remove())
+    )
+  } catch (e) {
+    console.error('bulkSet: 删除旧报名失败', e)
+    return {
+      success: false,
+      error: { code: 'DB_ERROR', message: '删除旧报名失败' }
+    }
+  }
+
+  try {
+    await Promise.all(
+      docs.map(doc => db.collection('tournament_registrations').add({ data: doc }))
+    )
+  } catch (e) {
+    console.error('bulkSet: 写入新报名失败', e)
+    return {
+      success: false,
+      error: { code: 'DB_ERROR', message: '写入新报名失败' }
+    }
+  }
+
+  return { success: true, data: { count: docs.length } }
+}
+
+// ---------------------------------------------------------------------------
+// Main entry
+// ---------------------------------------------------------------------------
+
 exports.main = async (event, context) => {
   const { action, data, id, tournamentId, seasonId } = event
 
@@ -301,6 +417,9 @@ exports.main = async (event, context) => {
           seed
         }
       }
+
+      case 'bulkSet':
+        return await handleBulkSet(event)
 
       default: {
         return {
