@@ -165,10 +165,13 @@ async function actionUpdate(event) {
 
   const now = db.serverDate()
 
-  // Determine isDraft from existing status or incoming status
-  const status = data.status
-  const isDraft = status === 'draft'
-  const errors = validateTournament(data, { isDraft })
+  // Fetch the current doc and merge with incoming data so partial updates
+  // are validated against the full document state (spec: Phase 7 Task 2).
+  const cur = await collection.doc(id).get().catch(() => null)
+  if (!cur || !cur.data) return fail('NOT_FOUND', id)
+  const merged = { ...cur.data, ...data }
+  const isDraft = (data.status || merged.status) === 'draft'
+  const errors = validateTournament(merged, { isDraft })
   if (errors.length > 0) {
     return fail('VALIDATION_ERROR', '数据校验失败', errors)
   }
