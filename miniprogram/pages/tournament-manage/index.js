@@ -34,7 +34,7 @@ Page({
             success: res => {
                 // Phase 7: list now returns { success, data: { tournaments: [...] } }
                 const list = (res.result.data && res.result.data.tournaments) || []
-                const total = res.result.total || 0
+                const total = res.result?.data?.total || 0
 
                 this.setData({
                     tournamentList: this.data.page === 1 ? list : [...this.data.tournamentList, ...list],

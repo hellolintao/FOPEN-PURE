@@ -148,7 +148,8 @@ async function actionCreate(event) {
 
   try {
     await collection.add({ data: doc })
-    return ok({ id: tournamentId, tournament: doc })
+    const { createdByOpenid: _omit, ...publicDoc } = doc
+    return ok({ id: tournamentId, tournament: publicDoc })
   } catch (e) {
     console.error('create tournament failed:', e)
     return fail('DB_ERROR', '数据库写入失败')
@@ -168,7 +169,7 @@ async function actionUpdate(event) {
   // Fetch the current doc and merge with incoming data so partial updates
   // are validated against the full document state (spec: Phase 7 Task 2).
   const cur = await collection.doc(id).get().catch(() => null)
-  if (!cur || !cur.data) return fail('NOT_FOUND', id)
+  if (!cur || !cur.data) return fail('NOT_FOUND', '赛事不存在')
   const merged = { ...cur.data, ...data }
   const isDraft = (data.status || merged.status) === 'draft'
   const errors = validateTournament(merged, { isDraft })
@@ -194,51 +195,65 @@ async function actionUpdate(event) {
 async function actionList(event) {
   const { page = 1, pageSize = 10, keyword, status, statusNot, createdBy, ids, data: extraData } = event
 
-  // NOTE: Return shape is { success: true, data: { tournaments: [...] } }
+  // NOTE: Return shape is { success: true, data: { tournaments: [...], total: N } }
   // This replaces the old { data: [...] } shape.
   // The only existing caller (tournament-manage/index.js) has been updated to
   // read result.data.tournaments. New wizard pages can rely on result.data.tournaments.
-  const query = []
-  if (keyword) {
-    query.push({ name: db.RegExp({ regexp: keyword, options: 'i' }) })
-  }
-  if (status) {
-    query.push({ status })
-  }
-  if (statusNot) {
-    query.push({ status: _.neq(statusNot) })
-  }
-  if (createdBy) {
-    query.push({ createdBy })
-  }
-  if (ids && Array.isArray(ids) && ids.length > 0) {
-    query.push({ _id: _.in(ids) })
-  }
-  if (extraData && extraData.type) {
-    query.push({ type: extraData.type })
-  }
-  if (extraData && extraData.seasonId) {
-    query.push({ seasonId: extraData.seasonId })
-  }
+  try {
+    const query = []
+    if (keyword) {
+      query.push({ name: db.RegExp({ regexp: keyword, options: 'i' }) })
+    }
+    if (status) {
+      query.push({ status })
+    }
+    if (statusNot) {
+      query.push({ status: _.neq(statusNot) })
+    }
+    if (createdBy) {
+      query.push({ createdBy })
+    }
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      query.push({ _id: _.in(ids) })
+    }
+    if (extraData && extraData.type) {
+      query.push({ type: extraData.type })
+    }
+    if (extraData && extraData.seasonId) {
+      query.push({ seasonId: extraData.seasonId })
+    }
 
-  const tournamentsRes = await collection
-    .where(query.length ? _.and(query) : {})
-    .orderBy('startDate', 'desc')
-    .skip((page - 1) * pageSize)
-    .limit(pageSize)
-    .get()
-  const tournaments = tournamentsRes.data || []
+    const whereClause = query.length ? _.and(query) : {}
 
-  // Aggregate seasonName
-  const seasonIds = [...new Set(tournaments.map(t => t.seasonId).filter(Boolean))]
-  let seasonMap = {}
-  if (seasonIds.length > 0) {
-    const seasonsRes = await db.collection('seasons').where({ '_id': _.in(seasonIds) }).get()
-    ;(seasonsRes.data || []).forEach(s => { seasonMap[s['_id']] = s.name })
+    const [tournamentsRes, countRes] = await Promise.all([
+      collection
+        .where(whereClause)
+        .orderBy('startDate', 'desc')
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .get(),
+      collection.where(whereClause).count()
+    ])
+    const tournaments = tournamentsRes.data || []
+    const total = countRes.total || 0
+
+    // Aggregate seasonName
+    const seasonIds = [...new Set(tournaments.map(t => t.seasonId).filter(Boolean))]
+    const seasonMap = seasonIds.length > 0
+      ? await db.collection('seasons').where({ '_id': _.in(seasonIds) }).get().then(
+          res => (res.data || []).reduce(
+            (acc, s) => ({ ...acc, [s._id]: s.name }),
+            {}
+          )
+        )
+      : {}
+    const enriched = tournaments.map(t => ({ ...t, seasonName: seasonMap[t.seasonId] || '-' }))
+
+    return { success: true, data: { tournaments: enriched, total } }
+  } catch (e) {
+    console.error('[tournaments.list] error', e)
+    return fail('INTERNAL', e.message)
   }
-  const enriched = tournaments.map(t => ({ ...t, seasonName: seasonMap[t.seasonId] || '-' }))
-
-  return { success: true, data: { tournaments: enriched } }
 }
 
 // ---------------------------------------------------------------------------
@@ -247,9 +262,11 @@ async function actionList(event) {
 
 async function actionLastPointsRules(event) {
   const { format, type } = event
-  const query = { status: 'completed' }
-  if (format) query.format = format
-  if (type) query.type = type
+  const query = {
+    status: 'completed',
+    ...(format && { format }),
+    ...(type && { type })
+  }
 
   try {
     const res = await collection
