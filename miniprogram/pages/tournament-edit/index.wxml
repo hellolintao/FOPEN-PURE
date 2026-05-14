@@ -126,6 +126,7 @@
     title="{{picker.title}}"
     members="{{picker.members}}"
     required-count="{{picker.requiredCount}}"
+    max-count="{{picker.maxCount}}"
     exclude-ids="{{picker.excludeIds}}"
     bindconfirm="onPickerConfirm"
     bindcancel="onPickerCancel"

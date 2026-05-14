@@ -18,6 +18,6 @@
         <text wx:if="{{item.selected}}" class="picker-tick">✓</text>
       </view>
     </scroll-view>
-    <button class="picker-confirm" bindtap="onConfirm">确认 ({{selected.length}}/{{requiredCount}})</button>
+    <button class="picker-confirm" bindtap="onConfirm">{{confirmLabel}}</button>
   </view>
 </view>

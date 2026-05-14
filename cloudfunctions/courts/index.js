@@ -2,7 +2,16 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const collection = db.collection('courts')
+const COLLECTION_NAME = 'courts'
+const collection = db.collection(COLLECTION_NAME)
+
+async function ensureCollection() {
+  try {
+    await db.createCollection(COLLECTION_NAME)
+  } catch (e) {
+    // -501001 / "already exists" 等错误忽略；其他权限错误也吞掉，让真实操作再报
+  }
+}
 
 function fail(code, message) {
   return { success: false, error: { code, message } }
@@ -17,15 +26,24 @@ function generateCourtId() {
 }
 
 async function handleList() {
-  const res = await collection
-    .where({ enabled: true })
-    .orderBy('createTime', 'asc')
-    .get()
-  return ok({ courts: res.data || [] })
+  try {
+    const res = await collection
+      .where({ enabled: true })
+      .orderBy('createTime', 'asc')
+      .get()
+    return ok({ courts: res.data || [] })
+  } catch (e) {
+    // 集合不存在等错误下也返回空列表
+    if (e && (e.errCode === -502005 || /not exist/i.test(e.errMsg || ''))) {
+      return ok({ courts: [] })
+    }
+    throw e
+  }
 }
 
 async function handleCreate({ name, location }) {
   if (!name || !String(name).trim()) return fail('INVALID_ARG', 'name 必填')
+  await ensureCollection()
   const _id = generateCourtId()
   const now = db.serverDate()
   const doc = {

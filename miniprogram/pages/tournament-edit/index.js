@@ -30,6 +30,7 @@ Page({
       show: false,
       title: '选择球员',
       requiredCount: 1,
+      maxCount: 0,
       excludeIds: [],
       members: []
     }
@@ -312,15 +313,26 @@ Page({
 
   onAddPlayer() {
     const isDoubles = this.data.form.type === 'doubles'
+    const remaining = this._remainingPlayerSlots()
     this.setData({
       picker: {
         show: true,
-        title: isDoubles ? '选择 2 位组队队员' : '选择球员',
+        title: isDoubles ? '选择 2 位组队队员' : '选择球员（可多选）',
         requiredCount: isDoubles ? 2 : 1,
+        maxCount: isDoubles ? 0 : Math.max(1, remaining),
         excludeIds: this._collectExcludedMemberIds(),
         members: this.data.members
       }
     })
+  },
+
+  _remainingPlayerSlots() {
+    if (this.data.form.format === 'knockout') {
+      const cap = this.data.form.maxPlayers || 8
+      return Math.max(1, cap - this.data.selectedPlayers.length)
+    }
+    // 常规赛无硬上限，给一个宽松的窗口
+    return 32
   },
 
   _collectExcludedMemberIds() {
@@ -337,7 +349,7 @@ Page({
     const isDoubles = this.data.form.type === 'doubles'
     const findMember = id => this.data.members.find(m => m._id === id)
 
-    let next
+    let toAdd = []
     if (isDoubles) {
       if (memberIds.length !== 2) return
       const m1 = findMember(memberIds[0])
@@ -346,7 +358,7 @@ Page({
         wx.showToast({ title: '会员信息缺失', icon: 'none' })
         return
       }
-      next = [...this.data.selectedPlayers, {
+      toAdd = [{
         playerId: m1._id,
         playerName: m1.name,
         partnerId: m2._id,
@@ -354,20 +366,19 @@ Page({
         teamName: `${m1.name} / ${m2.name}`
       }]
     } else {
-      if (memberIds.length !== 1) return
-      const m = findMember(memberIds[0])
-      if (!m) {
+      if (memberIds.length < 1) return
+      memberIds.forEach(id => {
+        const m = findMember(id)
+        if (m) toAdd.push({ playerId: m._id, playerName: m.name })
+      })
+      if (toAdd.length === 0) {
         wx.showToast({ title: '会员信息缺失', icon: 'none' })
         return
       }
-      next = [...this.data.selectedPlayers, {
-        playerId: m._id,
-        playerName: m.name
-      }]
     }
 
     this.setData({
-      selectedPlayers: next,
+      selectedPlayers: [...this.data.selectedPlayers, ...toAdd],
       'picker.show': false
     })
   },
