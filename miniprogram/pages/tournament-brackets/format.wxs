@@ -31,7 +31,7 @@ var formatScheduleTime = function(value) {
   return month + '-' + day + ' ' + hour + ':' + minute;
 };
 
-// 输入 courtId（'c1'）+ tournament.courtTimeGrid.courts，返回 court name；找不到返回 courtId
+// 输入 courtId（'c1'）+ schedulePlan.courts 数组，返回 court name；找不到返回 courtId
 var courtName = function(courtId, courts) {
   if (!courtId) return '';
   if (!courts || !courts.length) return courtId;

@@ -5,6 +5,7 @@ Page({
     seasonName: '',
     registrations: [],
     brackets: [],
+    decoratedCourts: [],
     loading: true
   },
 
@@ -82,16 +83,29 @@ Page({
 
       const brackets = bracketsRes.result?.data || []
 
-      console.log('赛事详情:', tournament)
-      console.log('赛季名称:', seasonName)
-      console.log('参赛人员:', registrations)
-      console.log('对位信息:', brackets)
+      // 5. 获取自由拉球记录（通过云函数）
+      let freePlays = []
+      try {
+        const fpRes = await wx.cloud.callFunction({
+          name: 'free-plays',
+          data: { action: 'list', tournamentId: this.data.tournamentId }
+        })
+        freePlays = (fpRes.result && fpRes.result.success && fpRes.result.data && fpRes.result.data.items) || []
+      } catch (fpErr) {
+        console.warn('加载自由拉球失败:', fpErr)
+      }
+
+      // 6. 按 schedulePlan.courts 分组首轮比赛
+      const r1Bracket = brackets.find(b => b.round === 1)
+      const r1Matches = (r1Bracket && r1Bracket.matches) || []
+      const decoratedCourts = this._decorate(tournament.schedulePlan, r1Matches, freePlays)
 
       this.setData({
         tournament,
         seasonName,
         registrations,
         brackets,
+        decoratedCourts,
         loading: false
       })
     } catch (err) {
@@ -102,6 +116,16 @@ Page({
       })
       this.setData({ loading: false })
     }
+  },
+
+  _decorate(schedulePlan, r1Matches, freePlays) {
+    if (!schedulePlan || !Array.isArray(schedulePlan.courts)) return []
+    return schedulePlan.courts.map(c => ({
+      ...c,
+      matches: r1Matches.filter(m => m.courtId === c.courtId),
+      freePlays: freePlays.filter(fp => fp.courtId === c.courtId),
+      slotCount: (c.slots || []).length
+    }))
   },
 
   onViewRoundSettlement() {

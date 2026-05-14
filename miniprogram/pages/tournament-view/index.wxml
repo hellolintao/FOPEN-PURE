@@ -151,21 +151,50 @@
       </view>
     </view>
 
-    <!-- 对位信息卡片 -->
+    <!-- 首轮排程卡片（按场地分组） -->
     <view class="section-card">
       <view class="section-title-with-action">
-        <text class="section-title">对位信息</text>
+        <text class="section-title">首轮排程</text>
         <view class="detail-btn" bindtap="onViewRoundSettlement">
           <text>详情</text>
         </view>
       </view>
 
-      <view wx:if="{{brackets.length === 0}}" class="empty-tip">
-        <text>暂无对位信息</text>
+      <view wx:if="{{decoratedCourts.length === 0}}" class="empty-tip">
+        <text>尚未配置排程</text>
       </view>
 
-      <view wx:else class="brackets-list">
-        <view wx:for="{{brackets}}" wx:key="_id" class="bracket-item">
+      <view wx:else class="courts-list">
+        <view wx:for="{{decoratedCourts}}" wx:for-item="court" wx:key="courtId" class="court-block">
+          <view class="court-head">
+            <text class="court-title">{{court.name}}</text>
+            <text class="court-meta">{{court.slotCount}} 个时段</text>
+          </view>
+
+          <view wx:if="{{court.matches.length === 0 && court.freePlays.length === 0}}" class="court-empty">
+            <text>无比赛</text>
+          </view>
+
+          <view wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId" class="court-match-row">
+            <text class="court-player">{{m.player1 ? m.player1.name : '—'}}</text>
+            <text class="court-vs">VS</text>
+            <text class="court-player">{{m.player2 ? m.player2.name : '—'}}</text>
+            <text class="court-chip chip-{{m.resultStatus}}">{{m.bye ? '轮空' : m.resultStatus}}</text>
+          </view>
+
+          <view wx:for="{{court.freePlays}}" wx:for-item="fp" wx:key="_id" class="court-match-row court-freeplay">
+            <text>自由拉球</text>
+            <text class="court-meta">{{fp.playerIds.length}} 人</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 后续轮次（只读列表） -->
+    <view class="section-card" wx:if="{{brackets.length > 1}}">
+      <view class="section-title">后续轮次</view>
+      <view class="brackets-list">
+        <view wx:for="{{brackets}}" wx:key="_id" class="bracket-item" wx:if="{{item.round > 1}}">
           <view class="bracket-header">
             <text class="bracket-title">第{{item.round}}轮</text>
           </view>
@@ -183,11 +212,6 @@
                   <text class="player-status {{match.winner === 2 ? 'winner' : ''}}">{{match.player2.name || '待定'}}</text>
                 </view>
               </view>
-              <!-- <view class="match-status">
-                <text class="status-badge status-{{match.status}}">
-                  {{match.status === 'pending' ? '待开始' : match.status === 'ongoing' ? '进行中' : '已完成'}}
-                </text>
-              </view> -->
             </view>
           </view>
         </view>

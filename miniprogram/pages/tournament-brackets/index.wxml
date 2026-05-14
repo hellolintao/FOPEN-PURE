@@ -1,133 +1,45 @@
-<view class="brackets-container">
-  <!-- 自动排程入口 -->
-  <view class="scheduler-bar" wx:if="{{tournament}}">
-    <view class="scheduler-info">
-      <text class="scheduler-title">自动排程</text>
-      <text class="scheduler-sub" wx:if="{{tournament.courtTimeGrid && tournament.courtTimeGrid.slots}}">{{tournament.courtTimeGrid.courts.length}} 场地 · {{tournament.courtTimeGrid.slots.length}} 时段</text>
-      <text class="scheduler-sub warn" wx:else>尚未配置场地/时段</text>
+<view wx:if="{{loading}}" class="loading">加载中...</view>
+
+<view wx:elif="{{tournament}}" class="brackets">
+  <view class="head">
+    <text class="title">{{tournament.name}} · 首轮排程</text>
+    <button
+      wx:if="{{tournament.status === 'draft' || tournament.status === 'upcoming'}}"
+      size="mini"
+      bindtap="onEditSchedule">
+      编辑排程
+    </button>
+  </view>
+
+  <view wx:if="{{decoratedCourts.length === 0}}" class="empty text-meta">尚未配置排程</view>
+
+  <view wx:for="{{decoratedCourts}}" wx:for-item="court" wx:key="courtId" class="court-block">
+    <view class="court-head">
+      <text class="court-title">{{court.name}}</text>
+      <text class="court-time text-meta">{{court.slotCount}} 个时段</text>
     </view>
-    <view class="scheduler-btn {{scheduling ? 'disabled' : ''}}" catchtap="onAutoSchedule">
-      <text>{{scheduling ? '排程中...' : '自动排程'}}</text>
+
+    <view wx:if="{{court.matches.length === 0 && court.freePlays.length === 0}}" class="empty text-meta">无比赛</view>
+
+    <view wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId" class="match-row">
+      <text class="player">{{m.player1 ? m.player1.name : '—'}}</text>
+      <text class="vs">VS</text>
+      <text class="player">{{m.player2 ? m.player2.name : '—'}}</text>
+      <text class="status-chip status-{{m.resultStatus}}">{{m.bye ? '轮空' : m.resultStatus}}</text>
+    </view>
+
+    <view wx:for="{{court.freePlays}}" wx:for-item="fp" wx:key="_id" class="match-row freeplay">
+      <text>自由拉球</text>
+      <text class="text-meta">{{fp.playerIds.length}} 人</text>
     </view>
   </view>
 
-  <!-- 未排程警告条 -->
-  <view class="warn-banner" wx:if="{{unscheduledMatches.length > 0}}">
-    <text class="warn-banner-title">⚠ {{unscheduledMatches.length}} 场未排程</text>
-    <view class="unsched-list">
-      <view class="unsched-item" wx:for="{{unscheduledMatches}}" wx:key="matchId">
-        <text class="unsched-meta">第 {{item.round}} 轮</text>
-        <text class="unsched-text">{{item.player1}} vs {{item.player2}}</text>
-        <view class="unsched-btn" catchtap="onManualAssign" data-match-id="{{item.matchId}}" data-round="{{item.round}}">
-          <text>手动指派</text>
-        </view>
-      </view>
-    </view>
-    <text class="warn-banner-tip">建议：增加场地/时段、减少轮数，或对上面比赛逐场手动指派</text>
-  </view>
-
-  <!-- 参赛人员/队伍展示 -->
-  <view class="participants-section">
-    <view class="section-header">
-      <text class="section-title">{{tournament.type === 'doubles' ? '参赛队伍' : '参赛人员'}}</text>
-      <view class="manage-btn" catchtap="onManagePlayers">管理</view>
-    </view>
-
-    <!-- 单打参赛人员 -->
-    <view wx:if="{{tournament.type === 'singles'}}" class="participants-grid">
-      <view class="participant-card" wx:for="{{registrations}}" wx:key="_id">
-        <view class="participant-badge">{{item.seed || '-'}}</view>
-        <text class="participant-name">{{item.playerName}}</text>
-        <view class="participant-status {{item.status}}">
-          {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
-        </view>
-      </view>
-    </view>
-
-    <!-- 双打参赛队伍 -->
-    <view wx:if="{{tournament.type === 'doubles'}}" class="participants-grid">
-      <view class="participant-card team" wx:for="{{registrations}}" wx:key="_id">
-        <view class="participant-badge">{{item.seed || '-'}}</view>
-        <view class="team-info">
-          <text class="team-name">{{item.teamName || item.playerName}}</text>
-          <view class="team-members">
-            <text class="member-name">{{item.playerName}}</text>
-            <text class="member-divider">|</text>
-            <text class="member-name">{{item.partnerName}}</text>
-          </view>
-        </view>
-        <view class="participant-status {{item.status}}">
-          {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
-        </view>
-      </view>
+  <view wx:for="{{laterRounds}}" wx:for-item="b" wx:key="round" class="later-block">
+    <text class="later-title">第 {{b.round}} 轮（待半决/决赛安排）</text>
+    <view wx:for="{{b.matches}}" wx:for-item="m" wx:key="matchId" class="match-row gray">
+      <text class="player">{{m.player1 ? m.player1.name : '—'}}</text>
+      <text class="vs">VS</text>
+      <text class="player">{{m.player2 ? m.player2.name : '—'}}</text>
     </view>
   </view>
-
-  <!-- 轮次对位卡片 -->
-  <block wx:for="{{rounds}}" wx:key="round">
-    <view class="brackets-section">
-      <view class="section-header">
-        <text class="section-title">第{{item.round}}轮对位</text>
-        <text class="section-status {{item.modified ? 'modified' : (item.saved ? 'saved' : '')}}">{{item.modified ? '已编辑' : (item.saved ? '已保存' : '')}}</text>
-      </view>
-
-      <view class="matchups-list">
-        <view class="matchup-item" wx:for="{{item.matchups}}" wx:for-item="matchup" wx:key="index">
-          <view class="matchup-main">
-            <view class="matchup-player left" bindtap="onSelectPlayer" data-round="{{item.round}}" data-match-index="{{index}}" data-position="player1">
-              <text class="player-name {{matchup.player1 ? '' : 'placeholder'}}">{{matchup.player1 || '点击选择'}}</text>
-            </view>
-            <view class="matchup-divider">Vs</view>
-            <view class="matchup-player right" bindtap="onSelectPlayer" data-round="{{item.round}}" data-match-index="{{index}}" data-position="player2">
-              <text class="player-name {{matchup.player2 ? '' : 'placeholder'}}">{{matchup.player2 || '点击选择'}}</text>
-            </view>
-            <view class="matchup-delete" catchtap="onDeleteMatchup" data-round="{{item.round}}" data-index="{{index}}">
-              <text class="delete-icon">×</text>
-            </view>
-          </view>
-          <view class="match-schedule" wx:if="{{matchup.courtId}}">
-            <text class="schedule-time">{{matchup.scheduleTimeLabel}}</text>
-            <text class="schedule-divider">·</text>
-            <text class="schedule-court">{{matchup.courtName}}</text>
-          </view>
-          <view class="match-schedule unscheduled" wx:elif="{{matchup.player1 && matchup.player2}}">
-            <text class="schedule-text">未排程</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="btn-group">
-        <view class="add-matchup-btn" bindtap="onAddMatchup" data-round="{{item.round}}">
-          <text>增加对位</text>
-        </view>
-
-        <view class="random-btn" bindtap="onRandomMatchups" data-round="{{item.round}}">
-          <text>随机对位</text>
-        </view>
-
-        <view class="save-btn" bindtap="onSaveMatchups" data-round="{{item.round}}">
-          <text>保存</text>
-        </view>
-      </view>
-
-    </view>
-  </block>
-
-  <!-- 操作按钮 -->
-  <view class="action-btns">
-    <view class="delete-btn" bindtap="onDeleteLastRound" wx:if="{{rounds.length > 0}}">
-      <text>删除上一轮</text>
-    </view>
-    <view class="add-round-btn" bindtap="onAddRound" wx:if="{{rounds.length < 5}}">
-      <text>增加下一轮</text>
-    </view>
-  </view>
-
-  <!-- 自定义选择选手弹窗 -->
-  <custom-action-sheet
-    show="{{actionSheetShow}}"
-    itemList="{{actionSheetItems}}"
-    bind:select="onActionSheetSelect"
-    bind:close="onActionSheetClose"
-  />
 </view>

@@ -287,3 +287,81 @@
   color: #52c41a;
   background: #f6ffed;
 }
+
+/* ========== 首轮排程 — 按场地分组 ========== */
+.courts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.court-block {
+  background: #f3f4f6;
+  padding: 20rpx;
+  border-radius: 16rpx;
+}
+
+.court-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.court-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.court-meta {
+  font-size: 22rpx;
+  color: #6b7280;
+}
+
+.court-empty {
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+.court-match-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx dashed #e5e7eb;
+}
+
+.court-match-row.court-freeplay {
+  background: rgba(0,0,0,0.02);
+  padding-left: 8rpx;
+  padding-right: 8rpx;
+  border-radius: 8rpx;
+}
+
+.court-player {
+  flex: 1;
+  padding: 4rpx 8rpx;
+  background: #ffffff;
+  border-radius: 6rpx;
+  font-size: 26rpx;
+  color: #333333;
+}
+
+.court-vs {
+  font-size: 22rpx;
+  color: #9ca3af;
+}
+
+.court-chip {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.chip-pending { background: #fef3c7; color: #92400e; }
+.chip-submitted { background: #dbeafe; color: #1e40af; }
+.chip-confirmed { background: #d1fae5; color: #065f46; }
+.chip-disputed { background: #fee2e2; color: #991b1b; }

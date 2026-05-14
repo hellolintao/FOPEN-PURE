@@ -1,7 +1,4 @@
 {
-  "navigationBarTitleText": "对位表管理",
-  "enablePullDownRefresh": true,
-  "usingComponents": {
-    "custom-action-sheet": "/components/custom-action-sheet/index"
-  }
+  "navigationBarTitleText": "比赛对阵",
+  "usingComponents": {}
 }
