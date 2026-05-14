@@ -25,7 +25,14 @@ Page({
       placement: { champion: 100, runnerUp: 60, semifinal: 30, quarterfinal: 10, participation: 5 }
     },
     members: [],
-    availableCourts: []
+    availableCourts: [],
+    picker: {
+      show: false,
+      title: '选择球员',
+      requiredCount: 1,
+      excludeIds: [],
+      members: []
+    }
   },
 
   async onLoad(options) {
@@ -304,10 +311,108 @@ Page({
   },
 
   onAddPlayer() {
-    const url = this.data.form.type === 'doubles'
-      ? `/pages/tournament-add-players-doubles/index?tournamentId=${this.data.tournamentId || ''}&pickerMode=1`
-      : `/pages/tournament-add-player/index?tournamentId=${this.data.tournamentId || ''}&pickerMode=1`
-    wx.navigateTo({ url })
+    const isDoubles = this.data.form.type === 'doubles'
+    this.setData({
+      picker: {
+        show: true,
+        title: isDoubles ? '选择 2 位组队队员' : '选择球员',
+        requiredCount: isDoubles ? 2 : 1,
+        excludeIds: this._collectExcludedMemberIds(),
+        members: this.data.members
+      }
+    })
+  },
+
+  _collectExcludedMemberIds() {
+    const ids = []
+    this.data.selectedPlayers.forEach(p => {
+      if (p.playerId) ids.push(p.playerId)
+      if (p.partnerId) ids.push(p.partnerId)
+    })
+    return ids
+  },
+
+  onPickerConfirm(e) {
+    const memberIds = (e.detail && e.detail.memberIds) || []
+    const isDoubles = this.data.form.type === 'doubles'
+    const findMember = id => this.data.members.find(m => m._id === id)
+
+    let next
+    if (isDoubles) {
+      if (memberIds.length !== 2) return
+      const m1 = findMember(memberIds[0])
+      const m2 = findMember(memberIds[1])
+      if (!m1 || !m2) {
+        wx.showToast({ title: '会员信息缺失', icon: 'none' })
+        return
+      }
+      next = [...this.data.selectedPlayers, {
+        playerId: m1._id,
+        playerName: m1.name,
+        partnerId: m2._id,
+        partnerName: m2.name,
+        teamName: `${m1.name} / ${m2.name}`
+      }]
+    } else {
+      if (memberIds.length !== 1) return
+      const m = findMember(memberIds[0])
+      if (!m) {
+        wx.showToast({ title: '会员信息缺失', icon: 'none' })
+        return
+      }
+      next = [...this.data.selectedPlayers, {
+        playerId: m._id,
+        playerName: m.name
+      }]
+    }
+
+    this.setData({
+      selectedPlayers: next,
+      'picker.show': false
+    })
+  },
+
+  onPickerCancel() {
+    this.setData({ 'picker.show': false })
+  },
+
+  async onAddCourt() {
+    const result = await new Promise(resolve => {
+      wx.showModal({
+        title: '添加球场',
+        editable: true,
+        placeholderText: '球场名称（如：1 号场）',
+        success: res => resolve(res),
+        fail: () => resolve({ confirm: false, content: '' })
+      })
+    })
+    if (!result.confirm) return
+    const name = (result.content || '').trim()
+    if (!name) {
+      wx.showToast({ title: '请输入名称', icon: 'none' })
+      return
+    }
+    wx.showLoading({ title: '添加中' })
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'courts',
+        data: { action: 'create', name }
+      })
+      wx.hideLoading()
+      if (!(r.result && r.result.success)) {
+        const msg = (r.result && r.result.error && r.result.error.message) || '添加失败'
+        wx.showToast({ title: msg, icon: 'none' })
+        return
+      }
+      const c = await wx.cloud.callFunction({ name: 'courts', data: { action: 'list' } })
+      const courts = unpackList(c, ['courts'])
+      this.setData({ availableCourts: courts })
+      wx.showToast({ title: '已添加', icon: 'success' })
+    } catch (e) {
+      wx.hideLoading()
+      console.error('onAddCourt', e)
+      wx.showToast({ title: '添加失败', icon: 'none' })
+    }
   },
 
   onLogin() {

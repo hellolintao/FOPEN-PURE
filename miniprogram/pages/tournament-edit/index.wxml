@@ -61,7 +61,10 @@
       <button size="mini" bindtap="onAddPlayer">+ 添加球员</button>
     </view>
     <view class="card">
-      <view class="card-head"><text class="card-title">球场与时间</text></view>
+      <view class="card-head">
+        <text class="card-title">球场与时间</text>
+        <button size="mini" bindtap="onAddCourt">+ 添加球场</button>
+      </view>
       <court-grid
         value="{{ { slotMinutes: 30, courts: schedulePlanCourts } }}"
         tournament-date="{{form.startDate}}"
@@ -117,4 +120,14 @@
     <button class="back" bindtap="onBack">{{step === 1 ? '取消' : '上一步'}}</button>
     <button class="next" bindtap="onNext">{{step < 4 ? '下一步' : '创建赛事'}}</button>
   </view>
+
+  <player-picker-sheet
+    show="{{picker.show}}"
+    title="{{picker.title}}"
+    members="{{picker.members}}"
+    required-count="{{picker.requiredCount}}"
+    exclude-ids="{{picker.excludeIds}}"
+    bindconfirm="onPickerConfirm"
+    bindcancel="onPickerCancel"
+  />
 </view>
