@@ -2,7 +2,7 @@
 
 **日期**：2026-05-13
 **作者**：xiaole.liao + AI 协作（superpowers:brainstorming）
-**状态**：草案 v1.0 → 待复核
+**状态**：草案 v1.1 → 已按 2026-05-14 plan review 修订
 **前置文件**：
 - `docs/superpowers/specs/2026-05-11-tennis-club-miniprogram-design.md`（v1 总规范）
 - `docs/superpowers/plans/PROGRESS.md`（执行日志，含本规范审查记录）
@@ -39,6 +39,7 @@
 {
   // 不变：_id, seasonId, name, location, startDate, endDate,
   //       status, description, createTime, updateTime
+  createdBy, createdByOpenid,             // draft 恢复入口权限；status='draft' 必填
 
   type: 'singles' | 'doubles',          // 精简，只剩两种
   format: 'knockout' | 'regular',        // 精简，只剩两种
@@ -72,18 +73,22 @@
 }
 ```
 
-### 2.2 `match-results`（统一 `pointsAwarded` 结构）
+### 2.2 `match_results`（由 `match-results` 云函数维护，统一 `pointsAwarded` 结构）
 
 ```js
 {
-  // 不变：tournamentId, round, winnerId, loserId, winnerName, loserName,
-  //       playerIds, scheduledStart, createTime
+  // 不变：tournamentId, winnerId, loserId, winnerName, loserName,
+  //       playerIds, createTime
 
   // 新增冗余字段（写入时由 match-results 云函数从 tournament 读取拷贝）：
   seasonId,                 // tournament.seasonId 的冗余，供排行榜按赛季过滤
   tournamentType,           // tournament.type ('singles' | 'doubles')，供排行榜按类别过滤
 
   matchKind: 'bracket' | 'regularRound' | 'extra',  // 自由拉球不进此表
+  sourceMatchId,             // bracket matchId / regular matchId / extra matchId，用于和排程队列对齐
+  round, position,            // bracket 推进 / 改分回滚必须依赖真实 position
+  courtId, queueOrder,       // 来自 schedulePlan.queues，后续轮未排程时可为 null
+  player1, player2,          // 对阵双方；双打时一方是一支 team（含 partnerId/partnerName/teamName）
   score: { sets: [{ a: 4, b: 2 }], tiebreak: '7-5' | null },
   resultStatus: 'pending' | 'submitted' | 'confirmed',  // 简化掉 disputed
   confirmedBy: 'memberId' | null,
@@ -99,7 +104,19 @@
 }
 ```
 
-双打时 `pointsAwarded.entries` 包含 4 条（胜方 2 人 × win，负方 2 人 × loss）。
+数据库集合名固定使用 `match_results`（下划线）；云函数目录 / action 调用名仍是 `match-results`（短横线）。双打时 `pointsAwarded.entries` 包含 4 条（胜方 2 人 × win，负方 2 人 × loss）。
+
+双打对阵中的 `player1/player2` 表示两支队伍（来自 `tournament_registrations` 的一条 registration），结构沿用：
+```js
+{ id, name, partnerId, partnerName, teamName, registrationId }
+```
+同时冗余扁平 `playerIds`：
+```js
+playerIds: ['m_a', 'm_b', 'm_c', 'm_d']
+```
+用于 `my-match` 查询、录分权限判断和积分 entries 展开。单打 `playerIds` 为 2 人。
+
+单淘汰保存 R1 时，必须同步为 R2+ skeleton bracket 创建 `match_results` 占位行：`player1/player2=null`、`courtId/queueOrder=null`、`resultStatus='pending'`。确认首轮并推进 bracket slot 时，同步更新下一轮占位 result 行的 `player1/player2/playerIds`，否则半决/决赛无法进入录分页。
 
 ### 2.3 `tournament_brackets`（BYE 字段 + 排程引用）
 
@@ -129,6 +146,22 @@ matches: [
 
 索引：`(tournamentId, courtId, queueOrder)`。不参与积分；不进待确认队列；级联删除（赛事 status='cancelled' 时）。
 
+#### `courts`
+
+```js
+{
+  _id,
+  courtId,                  // 可与 _id 相同；前端 schedulePlan.courts 引用它
+  name,
+  location,
+  enabled: true,
+  createTime,
+  updateTime
+}
+```
+
+云函数 `courts` 至少支持 `list / create / update`。`+ 新增场地` 写入本集合，后续赛事复用。
+
 #### `tournament_points`（赛事级 placement 积分）
 
 ```js
@@ -139,7 +172,9 @@ matches: [
   tournamentType,           // 冗余，供按类别过滤
   points: 100,
   rank: 'champion' | 'runnerUp' | 'semifinal' | 'quarterfinal' | 'participation',
-  awardedAt: Date
+  awardedAt: Date,
+  createTime: Date,          // 用于分页聚合游标
+  updateTime: Date
 }
 ```
 
@@ -156,10 +191,12 @@ if (process.env.FOPEN_CLEANUP_CONFIRM !== process.env.FOPEN_CLOUD_ENV) {
   process.exit(1)
 }
 console.log(`>>> 即将清空 cloud env: ${process.env.FOPEN_CLOUD_ENV}`)
-console.log(`>>> 集合：tournaments / tournament_brackets / tournament_registrations / match-results / tournament_points / free_plays`)
+console.log(`>>> 集合：tournaments / tournament_brackets / tournament_registrations / match_results / tournament_points / free_plays`)
 console.log(`>>> 5 秒后开始，Ctrl-C 取消...`)
 await sleep(5000)
 ```
+
+清库同时需要同步更新 `cloudfunctions/DATABASE_SCHEMA.md`：删除 `courtTimeGrid` 作为新流程依赖，新增 `schedulePlan / free_plays / tournament_points / courts / match_results.position` 描述。
 
 ---
 
@@ -214,16 +251,17 @@ await sleep(5000)
 ### 3.5 持久化顺序（草稿即落库）
 
 ```
-Step 1 「下一步」 → tournaments.create({ status: 'draft', ...step1 }) → 拿到 tournamentId
+Step 1 「下一步」 → tournaments.create({ status: 'draft', ...step1 }) → 写 createdBy → 拿到 tournamentId
 Step 2 「下一步」 → tournaments.update(tournamentId, { schedulePlan.courts/slots })
                   + tournament-registrations.bulkSet(tournamentId, playerIds)
-Step 3 「下一步」 → tournament-brackets.generate({ tournamentId })
+Step 3 「下一步」 → tournament-brackets.saveInitialMatches({ tournamentId, matches })
                   + tournament-brackets.saveSchedule({ tournamentId, queues })
-                  + free-plays.bulkSet({ tournamentId, items })  // 如果有
+                  + match-results.bulkUpsertScheduledMatches({ tournamentId, matches, queues })
+                  + free-plays.bulkSet({ tournamentId, items })  // 如果有；整体覆盖该赛事自由拉球
 Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, status: 'upcoming' })
 ```
 
-`status='draft'` 赛事不进任何列表（home/rank/manage/my-match/tournament-manage 全过滤），仅创建者本人可见草稿入口（继续 wizard）。回退 step 2 改选手时弹警告"已生成的对阵将重置"，确认后 `tournament-brackets.regenerate`。
+`status='draft'` 赛事不进任何列表（home/rank/manage/my-match/tournament-manage 全过滤），仅 `createdBy` 对应的创建者本人可见草稿入口（继续 wizard）。回退 step 2 改选手时弹警告"已生成的对阵将重置"，确认后清空本赛事 `tournament_brackets / match_results / free_plays` 草稿排程数据，再回到 step 3 重新生成。
 
 ---
 
@@ -240,6 +278,8 @@ Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, st
 3. 跑 `assignToCourts(matches, courts)`：**顺序填满场地**（court[0] 填满到容量再到 court[1]...），每 30min slot = 1 场比赛
 4. setData 渲染，不写后端
 5. 用户在 step 3 内编辑（拖顺序/换场地/换人/加自由拉球/加场次），点"下一步"时一次性 `saveSchedule` 落库
+
+> 关键约束：Step 3 保存时以后端校验 + 落库为主，不再二次随机生成对阵。前端传入最终 `matches + queues`；后端只校验参赛者、BYE、场地容量、重复选手和 matchId 一致性，避免保存阶段生成出与用户看到的排程不同的签表。
 
 ### 4.2 视觉结构
 
@@ -274,9 +314,11 @@ Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, st
 | 换人 | 点选手名 → 弹 `<player-picker-sheet>` 选另一玩家 |
 | 删除 | ✕ → bracket 场次不可删（按钮置灰）；自由拉球/添加场次可删 |
 | 重新随机 | 顶部 `重新随机安排` 按钮 → 弹确认 → 重跑 §4.1，丢弃手动调整 |
-| `+ 自由拉球` | 弹层选 2/4 人（不限俱乐部任何会员） → 插当前 court 队列末尾 |
-| `+ 添加场次` | 仅常规赛可点；弹层选 2/4 人（须在 playerIds 内）→ 写 `match-results.matchKind='extra'` |
+| `+ 自由拉球` | 弹层选 2/4 人（不限俱乐部任何会员） → 插当前 court 队列末尾，只写 `free_plays` |
+| `+ 添加场次` | 仅常规赛可点；弹层选 2/4 人（须在 playerIds 内）→ 插当前 court 队列末尾，保存时写 `match_results.matchKind='extra'` |
 | 保存 | step 3 → step 4 切换时落库 |
+
+选择器统一使用 `requiredCount` 表达选择数量：换人 `requiredCount=1`；单打自由拉球/添加场次 `requiredCount=2`；双打自由拉球/添加场次 `requiredCount=4`。双打对阵存储按“队伍 vs 队伍”，但弹层交互仍按 4 位会员选人；保存前组装成 `player1/player2` 两个 team 对象，并冗余 flattened `playerIds`。
 
 ### 4.4 选手切换范围
 
@@ -292,7 +334,7 @@ Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, st
 
 ### 4.6 边界
 
-- 球员奇数 / BYE / 无 court slot → 内联提示但不阻断
+- 球员奇数 / BYE → 内联提示但不阻断；无可用 court slot 时停留在 step 2，继续按钮置灰
 - 一个场地连续 slot 头部展示 `19:00–21:00`（首尾合并），不连续段以"+"拼
 
 ---
@@ -309,6 +351,8 @@ Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, st
 | `manage` "待确认比分"队列 | 同上 |
 | `my-match` "可录分比赛" | 同上（含 matchId 锚点） |
 
+`tournament-score` 拉场次优先调用 `match-results.listByTournament({ tournamentId })`，统一返回 `{ success, data: { results } }`；旧 `list` action 保留兼容但不作为新页面主协议。
+
 ### 5.2 权限模型
 
 | 角色 | 录分（pending → submitted） | 修改 submitted | 一键确认 | 修改 confirmed |
@@ -317,6 +361,8 @@ Step 4 「创建赛事」 → tournaments.update(tournamentId, { pointsRules, st
 | 管理员 | ✅ | ✅ | ✅ 一次确认全部 submitted | ✅ 立即生效（含二次确认） |
 
 未登录用户禁入。
+
+普通会员只能提交 `pending/submitted` 行；`confirmed` 行只能由管理员通过二次确认改分入口处理，不能被普通提交覆盖回 `submitted`。
 
 ### 5.3 状态机
 
@@ -406,7 +452,7 @@ cloudfunctions/
 ```js
 async function onConfirm(match, ruleWinLoss):
   const entries = buildAwardEntries(match, ruleWinLoss, tournament.type)  // 双打展开为 4 条
-  await db.collection('match-results').doc(matchId).update({
+  await db.collection('match_results').doc(matchId).update({
     pointsAwarded: { source: 'match', entries },           // 先清空（update 直接覆盖整对象）
     resultStatus: 'confirmed', confirmedBy, confirmedAt
   })
@@ -428,11 +474,10 @@ function advance(match):
     .doc(...).update({ [`matches.${idx}.${nextSlot}`]: match.winner })
 ```
 
-**BYE 自动晋级**（bracket 生成时立即处理）：
+**BYE 自动晋级**（保存初始 bracket 时立即处理）：
 
 ```js
-function generateBracket(playerIds):
-  // 补 BYE 到最近 2 的幂
+function saveInitialMatches(matches):
   for (match of round1Matches where player2.id === 'BYE'):
     match.winner = match.player1
     match.status = 'walkover'
@@ -451,7 +496,17 @@ if (match.isFinal && match.resultStatus === 'confirmed'):
   await Promise.all(entries.map(e =>
     db.collection('tournament_points')
       .doc(`${tournamentId}_${e.memberId}_placement`)
-      .set({ tournamentId, memberId: e.memberId, points: e.points, rank: e.rank, awardedAt })
+      .set({
+        tournamentId,
+        memberId: e.memberId,
+        seasonId: tournament.seasonId,
+        tournamentType: tournament.type,
+        points: e.points,
+        rank: e.rank,
+        awardedAt,
+        createTime: awardedAt,
+        updateTime: awardedAt
+      })
   ))
 ```
 
@@ -508,7 +563,7 @@ async function rankAggregate({ seasonId, type, pageSize = 100 }):
           { createTime: last.createTime, _id: db.command.gt(last._id) }
         )
       : {}
-    const page = await db.collection('match-results')
+    const page = await db.collection('match_results')
       .where({ seasonId, resultStatus: 'confirmed', tournamentType: type, ...cursorFilter })
       .orderBy('createTime', 'asc').orderBy('_id', 'asc')
       .limit(pageSize).get()
@@ -560,12 +615,21 @@ async function rankAggregate({ seasonId, type, pageSize = 100 }):
 | 函数 | 操作 |
 |---|---|
 | `tournaments` | 改 `create` 支持 `status: 'draft'`；改字段 `schedulePlan` 替换 `courtTimeGrid`；新 `pointsRules` 双子树结构 |
+| `courts` | 🆕 `list / create / update`，供 Step 2 选择与新增场地 |
 | `tournament-registrations` | 新增 `bulkSet(tournamentId, playerIds)` |
-| `tournament-brackets` | 改 `generate`（BYE 推进 + 公式）；新 `regenerate`（仅 draft 可用，先删旧 bracket 再 generate）/ `saveSchedule / addFreePlay / addExtraMatch / reorderQueue`；旧 actions（`add/update/getByTournament/getByRound/updateMatchScore/updateMatchStatus`）保留兼容老前端调用 |
-| `match-results` | 改 confirm 编排：读旧 → 比对 winner → 推进 bracket → require 本地 `lib/award` 写 entries；新 `confirmAll(tournamentId)` |
+| `tournament-brackets` | 新 `saveInitialMatches`（保存前端最终 matches，不再二次随机）/ `saveSchedule / regenerateDraft`；改 `generate` 为兼容 wrapper；旧 actions（`add/update/getByTournament/getByRound/updateMatchScore/updateMatchStatus`）保留兼容老前端调用 |
+| `match-results` | 新 `bulkUpsertScheduledMatches / listByTournament / listByPlayer`；改 confirm 编排：读旧 → 比对 winner → 推进 bracket + 下一轮 result 占位行 → require 本地 `lib/award` 写 entries；新 `confirmAll(tournamentId)` |
 | `points-engine` | 新增 `recompute / rankAggregate`；保留 `rankList / playerStats / recalculateMatch` 兼容 wrapper |
 | `scheduler-engine` | **不删，标 @deprecated**；保留 44 单测；其中算法迁到 `tournament-brackets/lib/pairing/` |
-| `free-plays` | 🆕 `create / list({ tournamentId }) / remove(id)` |
+| `free-plays` | 🆕 `bulkSet / create / list({ tournamentId }) / remove(id)` |
+
+`match-results.bulkUpsertScheduledMatches` 落库规则：
+- 输入为 Step 3 最终 `matches + queues`，先按 `sourceMatchId` 幂等 upsert。
+- 为 bracket / regularRound / extra 创建或更新 `match_results` 行，写入 `seasonId / tournamentType / matchKind / sourceMatchId / round / position / player1 / player2 / playerIds / courtId / queueOrder / resultStatus='pending'`。
+- R2+ skeleton bracket 也要创建占位 `match_results` 行，`player1/player2/courtId/queueOrder` 可为 null，用于录分页显示“未开打”和后续推进更新。
+- BYE 场次写 `resultStatus='confirmed'`、`winner=player1`、`pointsAwarded.entries=[]`，但不进入排程队列和录分页。
+- 对本赛事 draft 中已存在但本次 payload 不再出现的 `match_results` 行做删除，避免回退 step 2 后残留旧场次。
+- 不处理 `free_plays`；自由拉球由 `free-plays.bulkSet` 整体覆盖。
 
 ### 7.4 跨云函数代码共享
 
@@ -574,7 +638,7 @@ async function rankAggregate({ seasonId, type, pageSize = 100 }):
 采用 **vendored 复制**：
 - 源：`cloudfunctions/_shared/award.js`（不入任何云函数包）
 - 副本：`cloudfunctions/match-results/lib/award.js` + `cloudfunctions/points-engine/lib/award.js`
-- 同步：`scripts/sync-shared-libs.sh` 在 pre-commit + CI 跑 hash 比对，不一致就 fail
+- 同步：`scripts/sync-shared-libs.sh` 在 pre-commit + CI 跑 hash 比对，不一致就 fail。前端 mirror（`bracket-generator.js / scheduler-mirror.js / score-rule.js`）若参与 hash 比对，必须 CommonJS 原样复制，不做 ES module 改写。
 
 不引入 npm workspaces / link。
 
@@ -584,7 +648,7 @@ async function rankAggregate({ seasonId, type, pageSize = 100 }):
 ```js
 // 云函数内分页拉 + JS 端 reduce（微信云数据库无 groupBy）
 async function submittedQueue():
-  const rows = await pagedFetch('match-results', { resultStatus: 'submitted' }, pageSize=100)
+  const rows = await pagedFetch('match_results', { resultStatus: 'submitted' }, pageSize=100)
   const grouped = rows.reduce((acc, m) => {
     acc[m.tournamentId] = (acc[m.tournamentId] || 0) + 1
     return acc
@@ -594,7 +658,7 @@ async function submittedQueue():
 ```
 
 **my-match "可录分比赛"**：
-- 数据源：`match-results.where({ playerIds: db.command.in([myId]), resultStatus: db.command.neq('confirmed') })`
+- 数据源：`match_results.where({ playerIds: db.command.in([myId]), resultStatus: db.command.neq('confirmed') })`
 - 双打因 playerIds 是数组形式，自然涵盖 partnerId
 - 每行：赛事名 · 对手 · 状态 chip · 跳转
 
@@ -764,7 +828,7 @@ admin 进入 wizard step 3 → 退出 → 再次进入 tournament-manage 看到 
 
 | # | 问题 | 决策 |
 |---|---|---|
-| 1 | wizard 回退 step 2 改选手 → bracket 重置 | **是**。弹警告，确认后 `regenerate` |
+| 1 | wizard 回退 step 2 改选手 → bracket 重置 | **是**。弹警告，确认后清空草稿排程并回 step 3 重新生成 |
 | 2 | 拖拽第一版做不做真拖 | **不做**，actionsheet 改场地 + 上下箭头改顺序 |
 | 3 | confirmed 行 admin 改分要不要二次确认 | **要**。保存时弹二次确认；winner 翻盘时显警告"将清空后续轮次结果与名次积分" |
 | 4 | `tournament-score` 路径名要不要改 | **不改**，复用现有路径 |
@@ -780,9 +844,10 @@ admin 进入 wizard step 3 → 退出 → 再次进入 tournament-manage 看到 
 - `cleanup-test-data.js` 脚本 + 一次执行清库
 - `tournaments` 云函数支持 draft 模型 + 新字段
 - `tournament-registrations.bulkSet`
-- `tournament-brackets` 重写 generate（BYE + 推进公式）+ 新 actions
+- `tournament-brackets.saveInitialMatches / saveSchedule / regenerateDraft`（BYE + 推进公式）+ 兼容旧 actions
+- `match-results.bulkUpsertScheduledMatches`，从排程生成 `match_results` 可录分行
 - `scheduler-engine` 标 @deprecated，pairing lib 迁到 `tournament-brackets/lib/pairing/`
-- `free-plays` 云函数
+- `free-plays` 云函数（含 `bulkSet`）
 - `<court-grid>` 重写为 30min 多选格
 - `<schedule-board>` 新建
 - `<player-picker-sheet>` 新建
