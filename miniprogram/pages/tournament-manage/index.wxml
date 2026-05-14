@@ -2,6 +2,16 @@
   <button class="fab-button" bindtap="onAddTournament">
       添加赛事
     </button>
+
+  <!-- 我的草稿 -->
+  <view wx:if="{{drafts.length > 0}}" class="drafts-block">
+    <text class="block-title">我的草稿</text>
+    <view wx:for="{{drafts}}" wx:key="_id" class="draft-row" bindtap="onResumeDraft" data-id="{{item._id}}">
+      <text class="draft-name">{{item.name || '未命名'}}</text>
+      <text class="text-meta">{{item.startDate || '—'}}</text>
+    </view>
+  </view>
+
   <block wx:for="{{tournamentList}}" wx:key="_id">
     <view class="tournament-card" bindtap="onEditTournament" data-id="{{item._id}}">
       <!-- 卡片左侧装饰条 -->

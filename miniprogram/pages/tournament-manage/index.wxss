@@ -265,3 +265,33 @@
 .action-btn::after {
   border: none;
 }
+
+/* ========== 草稿块 ========== */
+.drafts-block {
+  background: #fef3c7;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  margin: 16rpx;
+}
+
+.block-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.draft-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx dashed #fde68a;
+}
+
+.draft-name {
+  font-weight: 500;
+}
+
+.text-meta {
+  font-size: 24rpx;
+  color: #999999;
+}

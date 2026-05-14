@@ -1,70 +1,93 @@
+const app = getApp()
+
 Page({
     data: {
+        drafts: [],
         tournamentList: [],
         page: 1,
         pageSize: 10,
         loading: false,
         hasMore: true
     },
+
     onLoad() {
-        this.getTournamentList()
+        this.refresh()
     },
+
     onShow() {
-        this.setData({
-            page: 1,
-            tournamentList: [],
-            hasMore: true
-        })
-        this.getTournamentList()
+        this.refresh()
     },
-    getTournamentList() {
-        if (this.data.loading || !this.data.hasMore) {
+
+    async refresh() {
+        this.setData({ page: 1, tournamentList: [], drafts: [], hasMore: true })
+        await Promise.all([this.loadDrafts(), this.loadPublic()])
+    },
+
+    async loadDrafts() {
+        const me = app.globalData && app.globalData.currentMember
+        if (!me || !me._id) {
+            this.setData({ drafts: [] })
             return
         }
-
-        this.setData({ loading: true })
-
-        wx.cloud.callFunction({
-            name: 'tournaments',
-            data: {
-                action: 'list',
-                page: this.data.page,
-                pageSize: this.data.pageSize
-            },
-            success: res => {
-                // Phase 7: list now returns { success, data: { tournaments: [...] } }
-                const list = (res.result.data && res.result.data.tournaments) || []
-                const total = res.result?.data?.total || 0
-
-                this.setData({
-                    tournamentList: this.data.page === 1 ? list : [...this.data.tournamentList, ...list],
-                    hasMore: this.data.tournamentList.length + list.length < total,
-                    loading: false
-                })
-            },
-            fail: () => {
-                this.setData({ loading: false })
-                wx.showToast({
-                    title: '加载失败',
-                    icon: 'none'
-                })
-            }
-        })
-    },
-    onReachBottom() {
-        if (!this.data.loading && this.data.hasMore) {
-            this.setData({
-                page: this.data.page + 1
+        try {
+            const r = await wx.cloud.callFunction({
+                name: 'tournaments',
+                data: { action: 'list', status: 'draft', createdBy: me._id, pageSize: 50 }
             })
-            this.getTournamentList()
+            const drafts = (r.result && r.result.success && r.result.data && r.result.data.tournaments) || []
+            this.setData({ drafts })
+        } catch (e) {
+            console.error('loadDrafts', e)
         }
     },
+
+    async loadPublic() {
+        if (this.data.loading || !this.data.hasMore) return
+        this.setData({ loading: true })
+        try {
+            const r = await wx.cloud.callFunction({
+                name: 'tournaments',
+                data: {
+                    action: 'list',
+                    statusNot: 'draft',
+                    page: this.data.page,
+                    pageSize: this.data.pageSize
+                }
+            })
+            const list = (r.result && r.result.data && r.result.data.tournaments) || []
+            const total = (r.result && r.result.data && r.result.data.total) || 0
+            const tournamentList = this.data.page === 1 ? list : [...this.data.tournamentList, ...list]
+            this.setData({
+                tournamentList,
+                hasMore: tournamentList.length < total,
+                loading: false
+            })
+        } catch (e) {
+            console.error('loadPublic', e)
+            this.setData({ loading: false })
+            wx.showToast({ title: '加载失败', icon: 'none' })
+        }
+    },
+
+    onReachBottom() {
+        if (!this.data.loading && this.data.hasMore) {
+            this.setData({ page: this.data.page + 1 })
+            this.loadPublic()
+        }
+    },
+
+    onResumeDraft(e) {
+        const id = e.currentTarget.dataset.id
+        wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
+    },
+
     onEditTournament(e) {
         const id = e.currentTarget.dataset.id
         wx.navigateTo({
             url: '/pages/tournament-detail/index?id=' + id
         })
     },
+
     onSetStatus(e) {
         const { id, status } = e.currentTarget.dataset
         wx.showModal({
@@ -85,7 +108,7 @@ Page({
                                 tournamentList: [],
                                 hasMore: true
                             })
-                            this.getTournamentList()
+                            this.loadPublic()
                         },
                         fail: () => {
                             wx.showToast({
@@ -98,29 +121,31 @@ Page({
             }
         })
     },
+
     onStopPropagation() {
         // 阻止事件冒泡
     },
+
     onAddTournament() {
         wx.navigateTo({
             url: '/pages/tournament-edit/index'
         })
     },
-    onAddPlayer(e) {
 
+    onAddPlayer(e) {
         const id = e.currentTarget.dataset.id
         const type = e.currentTarget.dataset.type
         if (type == 'singles') {
-          wx.navigateTo({
-              url: '/pages/tournament-add-player/index?id=' + id
-          })
+            wx.navigateTo({
+                url: '/pages/tournament-add-player/index?id=' + id
+            })
         } else {
-          wx.navigateTo({
-            url: '/pages/tournament-add-players-doubles/index?id=' + id
-        })
+            wx.navigateTo({
+                url: '/pages/tournament-add-players-doubles/index?id=' + id
+            })
         }
-        
     },
+
     onViewBrackets(e) {
         const id = e.currentTarget.dataset.id
         wx.navigateTo({

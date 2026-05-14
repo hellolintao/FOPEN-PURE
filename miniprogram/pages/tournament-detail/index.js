@@ -1,3 +1,5 @@
+const app = getApp()
+
 Page({
   data: {
     tournamentId: '',
@@ -5,7 +7,8 @@ Page({
     registrations: [],
     brackets: [],
     totalMatches: 0,
-    loading: true
+    loading: true,
+    isAdmin: false
   },
 
   onLoad(options) {
@@ -37,8 +40,11 @@ Page({
         .get();
 
       if (result.data) {
+        const me = app.globalData && app.globalData.currentMember
+        const isAdmin = !!(me && result.data.createdBy && result.data.createdBy === me._id)
         this.setData({
           tournament: result.data,
+          isAdmin,
           loading: false
         });
       } else {
@@ -194,6 +200,16 @@ Page({
         }
       }
     });
+  },
+
+  onResumeDraft() {
+    const id = this.data.tournament && this.data.tournament._id
+    if (id) wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
+  },
+
+  onEditTournament() {
+    const id = this.data.tournament && this.data.tournament._id
+    if (id) wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
   },
 
   onPullDownRefresh() {

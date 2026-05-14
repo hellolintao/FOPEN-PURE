@@ -3,7 +3,8 @@
   <view class="section-card">
     <view class="card-header">
       <text class="header-title">赛事信息</text>
-      <button class="header-edit-btn" bindtap="onEdit">
+      <button wx:if="{{tournament.status === 'draft' && isAdmin}}" class="header-btn add" bindtap="onResumeDraft">继续创建</button>
+      <button wx:elif="{{tournament.status !== 'draft' && isAdmin}}" class="header-edit-btn" bindtap="onEdit">
         <text class="edit-icon">✏️</text>
       </button>
     </view>
