@@ -52,32 +52,27 @@
 
       <view class="info-item">
         <text class="info-label">最大参赛人数</text>
-        <text class="info-value">{{tournament.config.maxPlayers}}</text>
+        <text class="info-value">{{tournamentDisplay.maxPlayers}}</text>
       </view>
 
       <view class="info-item">
         <text class="info-label">总轮数</text>
-        <text class="info-value">{{tournament.config.totalRounds}}</text>
+        <text class="info-value">{{tournamentDisplay.totalRounds}}</text>
       </view>
 
       <view class="info-item">
         <text class="info-label">每场比赛人数</text>
-        <text class="info-value">{{tournament.config.playersPerMatch}}</text>
+        <text class="info-value">{{tournamentDisplay.playersPerMatch}}</text>
       </view>
 
       <view class="info-item">
         <text class="info-label">赛制</text>
-        <text class="info-value">{{tournament.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
+        <text class="info-value">{{tournamentDisplay.formatText}}</text>
       </view>
-
-      <!-- <view class="info-item">
-        <text class="info-label">淘汰类型</text>
-        <text class="info-value">{{tournament.config.eliminationType === 'single' ? '单败淘汰' : '双败淘汰'}}</text>
-      </view> -->
 
       <view class="info-item">
         <text class="info-label">当前轮次</text>
-        <text class="info-value">第{{tournament.config.currentRound || 1}}轮</text>
+        <text class="info-value">第{{tournamentDisplay.currentRound}}轮</text>
       </view>
     </view>
 
@@ -85,47 +80,36 @@
     <view class="section-card">
       <view class="section-title">积分规则</view>
 
-      <view class="info-item">
+      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
         <text class="info-label">胜利积分</text>
-        <text class="info-value">{{tournament.pointsRules.win}}</text>
+        <text class="info-value">{{tournamentDisplay.win || 0}}</text>
       </view>
 
-      <view class="info-item">
+      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
         <text class="info-label">失败积分</text>
-        <text class="info-value">{{tournament.pointsRules.loss}}</text>
+        <text class="info-value">{{tournamentDisplay.loss || 0}}</text>
       </view>
 
-      <view class="info-item">
+      <view class="info-item" wx:if="{{tournamentDisplay.walkover !== undefined}}">
         <text class="info-label">弃权积分</text>
-        <text class="info-value">{{tournament.pointsRules.walkover}}</text>
+        <text class="info-value">{{tournamentDisplay.walkover || 0}}</text>
       </view>
 
-      <view class="bonus-list">
+      <view class="bonus-list" wx:if="{{tournamentDisplay.pointsMode === 'placement'}}">
+        <view class="section-subtitle">名次积分</view>
+
+        <view class="info-item" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
+          <text class="info-label">{{item.label}}</text>
+          <text class="info-value">{{item.value}}</text>
+        </view>
+      </view>
+
+      <view class="bonus-list" wx:if="{{tournamentDisplay.bonusRows.length > 0}}">
         <view class="section-subtitle">轮次奖励积分</view>
 
-        <view class="info-item">
-          <text class="info-label">第1轮</text>
-          <text class="info-value">{{tournament.pointsRules.bonusByRound[1] || 0}}</text>
-        </view>
-
-        <view class="info-item">
-          <text class="info-label">第2轮</text>
-          <text class="info-value">{{tournament.pointsRules.bonusByRound[2] || 0}}</text>
-        </view>
-
-        <view class="info-item">
-          <text class="info-label">第3轮</text>
-          <text class="info-value">{{tournament.pointsRules.bonusByRound[3] || 0}}</text>
-        </view>
-
-        <view class="info-item">
-          <text class="info-label">第4轮</text>
-          <text class="info-value">{{tournament.pointsRules.bonusByRound[4] || 0}}</text>
-        </view>
-
-        <view class="info-item">
-          <text class="info-label">第5轮</text>
-          <text class="info-value">{{tournament.pointsRules.bonusByRound[5] || 0}}</text>
+        <view class="info-item" wx:for="{{tournamentDisplay.bonusRows}}" wx:key="label">
+          <text class="info-label">{{item.label}}</text>
+          <text class="info-value">{{item.value}}</text>
         </view>
       </view>
     </view>
@@ -176,9 +160,9 @@
           </view>
 
           <view wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId" class="court-match-row">
-            <text class="court-player">{{m.player1 ? m.player1.name : '—'}}</text>
+            <text class="court-player">{{m.__player1Name}}</text>
             <text class="court-vs">VS</text>
-            <text class="court-player">{{m.player2 ? m.player2.name : '—'}}</text>
+            <text class="court-player">{{m.__player2Name}}</text>
             <text class="court-chip chip-{{m.resultStatus}}">{{m.bye ? '轮空' : m.resultStatus}}</text>
           </view>
 
@@ -205,11 +189,11 @@
               </view>
               <view class="match-content">
                 <view class="match-player">
-                  <text class="player-status {{match.winner === 1 ? 'winner' : ''}}">{{match.player1.name || '待定'}}</text>
+                  <text class="player-status {{match.winner === 1 ? 'winner' : ''}}">{{match.__player1Name}}</text>
                 </view>
                 <text class="vs-text">VS</text>
                 <view class="match-player">
-                  <text class="player-status {{match.winner === 2 ? 'winner' : ''}}">{{match.player2.name || '待定'}}</text>
+                  <text class="player-status {{match.winner === 2 ? 'winner' : ''}}">{{match.__player2Name}}</text>
                 </view>
               </view>
             </view>

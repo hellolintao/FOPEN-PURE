@@ -32,7 +32,14 @@ Page({
       const bRes = await wx.cloud.callFunction({
         name: 'tournament-brackets', data: { action: 'getByTournament', tournamentId: this.data.tournamentId }
       })
-      const allBrackets = (bRes.result && bRes.result.data) || []
+      const allBrackets = ((bRes.result && bRes.result.data) || []).map(bracket => ({
+        ...bracket,
+        matches: (bracket.matches || []).map(match => ({
+          ...match,
+          __player1Name: playerLabel(match.player1),
+          __player2Name: playerLabel(match.player2)
+        }))
+      }))
       const r1Bracket = allBrackets.find(b => b.round === 1)
       const r1Matches = (r1Bracket && r1Bracket.matches) || []
       const laterRounds = allBrackets
@@ -78,3 +85,9 @@ Page({
     wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}` })
   }
 })
+
+function playerLabel(player) {
+  if (!player) return '待定'
+  if (player.name) return player.partnerName ? `${player.name} / ${player.partnerName}` : player.name
+  return '待定'
+}

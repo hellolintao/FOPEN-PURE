@@ -236,12 +236,10 @@ Page({
       return wx.showToast({ title: msg, icon: 'none' })
     }
 
-    if (this.data.freePlays.length > 0) {
-      await wx.cloud.callFunction({
-        name: 'free-plays',
-        data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
-      })
-    }
+    await wx.cloud.callFunction({
+      name: 'free-plays',
+      data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
+    })
     this.setData({ step: 4 })
   },
 

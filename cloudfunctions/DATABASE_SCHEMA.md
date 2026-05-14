@@ -1,6 +1,6 @@
 # 数据库集合文档
 
-本文档详细说明了 Fuopen 小程序使用的 6 个数据库集合及其字段说明。
+本文档详细说明了 Fuopen 小程序使用的数据库集合及其字段说明。
 
 ---
 
@@ -78,95 +78,68 @@
 
 ## 3. tournaments（赛事表）
 
-存储赛事的完整信息，包括配置和积分规则。
+存储赛事的基本信息、草稿归属、排程计划和积分规则。Phase 7 新创建流程使用 `schedulePlan`，旧 `courtTimeGrid` 仅作为历史兼容字段保留。
 
 ### 字段说明
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| `_id` | String | 否 | 主键，系统自动生成或自定义，格式：tournament_{year}_{timestamp}_{random} |
-| `seasonId` | String | 否 | 所属赛季ID |
+| `_id` | String | 否 | 主键，格式：tournament_{year}_{timestamp}_{random} |
+| `seasonId` | String | 是 | 所属赛季ID |
 | `name` | String | 是 | 赛事名称 |
-| `type` | String | 是 | 赛事类型，'singles'（单打）或 'doubles'（双打） |
+| `type` | String | 是 | 赛事类型：`singles` / `doubles` |
+| `format` | String | 是 | 赛制：`regular` / `knockout` |
 | `startDate` | String | 是 | 开始日期，格式：YYYY-MM-DD |
-| `endDate` | String | 是 | 结束日期，格式：YYYY-MM-DD |
-| `location` | String | 是 | 场地名称 |
-| `format` | String | 否 | 赛制，'regular'（常规赛）或 'knockout'（淘汰赛），默认为 'regular' |
-| `status` | String | 否 | 赛事状态，'upcoming'（待开始）、'ongoing'（进行中）、'completed'（已结束） |
+| `endDate` | String | 否 | 结束日期，格式：YYYY-MM-DD |
+| `location` | String | 否 | 地点说明 |
+| `status` | String | 是 | `draft` / `upcoming` / `ongoing` / `completed` |
 | `description` | String | 否 | 赛事描述 |
-| `config.maxPlayers` | Number | 是 | 最大参赛人数，范围：2-64 |
-| `config.currentRound` | Number | 是 | 当前轮次 |
-| `config.totalRounds` | Number | 是 | 总轮数，范围：1-8 |
-| `config.playersPerMatch` | Number | 是 | 每场比赛人数，2（单打）或 4（双打） |
-| `config.eliminationType` | String | 是 | 淘汰类型，'single'（单败）或 'double'（双败） |
-| `config.seedPlayers` | Array | 否 | 种子选手ID列表 |
-| `pointsRules.win` | Number | 是 | 胜利积分 |
-| `pointsRules.loss` | Number | 是 | 失败积分 |
-| `pointsRules.walkover` | Number | 是 | 弃权积分 |
-| `pointsRules.bonusByRound` | Object | 是 | 轮次奖励积分，键为轮次，值为积分 |
-| `courtTimeGrid` | Object | 否 | 场地×时段矩阵，结构见下面"courtTimeGrid 结构"小节 |
+| `maxPlayers` | Number | 否 | 淘汰赛最大参赛人数 |
+| `schedulePlan` | Object | 非 draft 必填 | 30 分钟粒度场地排程，结构见下 |
+| `pointsRules` | Object | 非 draft 必填 | Phase 7 积分规则，结构见下 |
+| `createdBy` | String | draft 必填 | 创建者 member._id，用于“我的草稿”过滤 |
+| `createdByOpenid` | String | 否 | 创建者 OPENID，仅后端使用 |
+| `courtTimeGrid` | Object | 否 | 旧 20 分钟排程字段，仅历史兼容 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
-### courtTimeGrid 结构
+### schedulePlan 结构
 
 ```json
 {
-  "matchDuration": 20,
+  "slotMinutes": 30,
   "courts": [
-    { "courtId": "c1", "name": "1号场" }
-  ],
-  "slots": [
     {
-      "slotId": "s_20260525_0800",
-      "start": "2026-05-25T08:00:00+08:00",
-      "end":   "2026-05-25T08:20:00+08:00",
-      "availableCourtIds": ["c1"]
+      "courtId": "court_001",
+      "name": "1号场",
+      "location": "A区",
+      "slots": ["2026-05-25T08:00", "2026-05-25T08:30"]
+    }
+  ],
+  "queues": [
+    {
+      "courtId": "court_001",
+      "items": [
+        { "kind": "match", "matchId": "match_r1_p1_x", "sourceMatchId": "match_r1_p1_x", "order": 0 },
+        { "kind": "freePlay", "matchId": "fp_001", "freePlayId": "fp_001", "order": 1 }
+      ]
     }
   ]
 }
 ```
 
-- `matchDuration` 固定为 20 分钟
-- `slots` 粒度为 20 分钟一档
-- 未被任何比赛排到的 `(slot, court)` 在前端显示为"自由拉球"
-
-### 数据示例
+### pointsRules 结构
 
 ```json
 {
-  "_id": "tournament_2024_1704067200_123",
-  "seasonId": "season_2024",
-  "name": "第一届公开赛",
-  "type": "singles",
-  "format": "regular",
-  "startDate": "2024-01-15",
-  "endDate": "2024-01-20",
-  "location": "体育中心1号场",
-  "status": "upcoming",
-  "description": "欢迎参加第一届公开赛",
-  "config": {
-    "maxPlayers": 16,
-    "currentRound": 1,
-    "totalRounds": 4,
-    "playersPerMatch": 2,
-    "eliminationType": "single",
-    "seedPlayers": []
-  },
-  "pointsRules": {
-    "win": 100,
-    "loss": 20,
-    "walkover": 50,
-    "bonusByRound": {
-      "1": 0,
-      "2": 50,
-      "3": 100,
-      "4": 200,
-      "5": 300
-    }
-  },
-  "createTime": "2024-01-01T00:00:00.000Z",
-  "updateTime": "2024-01-01T00:00:00.000Z"
+  "winLoss": { "win": 10, "loss": 0 },
+  "placement": {
+    "champion": 100,
+    "runnerUp": 60,
+    "semifinal": 30,
+    "quarterfinal": 10,
+    "participation": 5
+  }
 }
 ```
 
@@ -190,7 +163,8 @@
 | `partnerName` | String | 否 | 双打时的搭档姓名 |
 | `teamName` | String | 否 | 双打时的队伍名称 |
 | `seed` | Number | 否 | 种子排名，范围：1-64 |
-| `status` | String | 否 | 报名状态，'registered'（已报名）、'confirmed'（已确认）、'withdrew'（已退赛） |
+| `registrationStatus` | String | 否 | Phase 7 报名状态：`confirmed` / `withdrew`，bulkSet 默认 `confirmed` |
+| `status` | String | 否 | 旧报名状态字段，历史兼容 |
 | `registerTime` | String | 是 | 报名时间 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 否 | 更新时间 |
@@ -209,7 +183,7 @@
   "partnerName": "",
   "teamName": "",
   "seed": 1,
-  "status": "registered",
+  "registrationStatus": "confirmed",
   "registerTime": "2024-01-01T00:00:00.000Z",
   "createTime": "2024-01-01T00:00:00.000Z",
   "updateTime": "2024-01-01T00:00:00.000Z"
@@ -230,7 +204,7 @@
   "partnerName": "李四",
   "teamName": "飞跃队",
   "seed": 2,
-  "status": "registered",
+  "registrationStatus": "confirmed",
   "registerTime": "2024-01-01T00:00:00.000Z",
   "createTime": "2024-01-01T00:00:00.000Z",
   "updateTime": "2024-01-01T00:00:00.000Z"
@@ -254,16 +228,20 @@
 | `matches` | Array | 是 | 比赛列表 |
 | `matches[].matchId` | String | 是 | 比赛ID，格式：match_{tournamentId}_r{round}_m{position} |
 | `matches[].position` | Number | 是 | 场次位置 |
-| `matches[].player1` | Object | 是 | 选手1信息 |
+| `matches[].player1` | Object | 否 | 选手1信息；R2+ 占位可为 null |
 | `matches[].player1.id` | String | 是 | 选手1的ID或报名ID |
 | `matches[].player1.name` | String | 是 | 选手1的姓名 |
 | `matches[].player1.registrationId` | String | 否 | 选手1的报名ID |
-| `matches[].player2` | Object | 是 | 选手2信息 |
+| `matches[].player2` | Object | 否 | 选手2信息；R2+ 占位可为 null，BYE 为 `{ id: "BYE", name: "BYE" }` |
 | `matches[].player2.id` | String | 是 | 选手2的ID或报名ID |
 | `matches[].player2.name` | String | 是 | 选手2的姓名 |
 | `matches[].player2.registrationId` | String | 否 | 选手2的报名ID |
-| `matches[].winner` | Number | 否 | 获胜方，1（选手1获胜）或 2（选手2获胜） |
+| `matches[].bye` | Boolean | 否 | 是否轮空 |
+| `matches[].winner` | Object | 否 | Phase 7 后为获胜方对象；旧数据可能为 1 / 2 |
 | `matches[].status` | String | 否 | 比赛状态，'pending'（待开始）、'ongoing'（进行中）、'completed'（已完成） |
+| `matches[].resultStatus` | String | 否 | 结果状态：`pending` / `confirmed` / `disputed` |
+| `matches[].courtId` | String | 否 | 首轮排程场地 |
+| `matches[].queueOrder` | Number | 否 | 首轮场地队列顺序 |
 | `nextRoundMatches` | Array | 否 | 下一轮对位映射 |
 | `nextRoundMatches[].nextMatchPosition` | Number | 是 | 下一轮比赛的场次位置 |
 | `nextRoundMatches[].fromMatchPositions` | Array | 是 | 来源比赛的场次位置列表 |
@@ -317,26 +295,29 @@
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| `_id` | String | 否 | 主键，系统自动生成，格式：match_{timestamp}_r{round}_m{index} |
+| `_id` | String | 否 | 主键，Phase 7 格式：result_{tournamentIdWithoutPrefix}_{sourceMatchId} |
 | `tournamentId` | String | 是 | 所属赛事ID |
+| `seasonId` | String | 是 | 所属赛季ID |
+| `tournamentType` | String | 是 | 赛事类型：`singles` / `doubles` |
+| `matchKind` | String | 是 | `bracket` / `regularRound` / `extra` |
+| `sourceMatchId` | String | 是 | 对应 tournament_brackets.matches[].matchId |
 | `round` | Number | 是 | 轮次 |
-| `type` | String | 是 | 比赛类型，'singles'（单打）或 'doubles'（双打） |
-| `players` | Array | 是 | 选手列表，固定2个元素 |
-| `players[].id` | String | 是 | 选手ID |
-| `players[].name` | String | 是 | 选手姓名 |
-| `status` | String | 是 | 比赛状态，'pending'（待开始）、'ongoing'（进行中）、'completed'（已完成）、'cancelled'（已取消） |
+| `position` | Number | 是 | 轮内场次位置 |
+| `player1` | Object | 否 | 选手/队伍 1；R2+ 占位可为 null |
+| `player2` | Object | 否 | 选手/队伍 2；R2+ 占位可为 null |
+| `playerIds` | Array | 是 | 参赛 member._id 列表，双打包含 4 人，BYE 跳过 |
+| `courtId` | String | 否 | 首轮排程场地 |
+| `queueOrder` | Number | 否 | 首轮场地队列顺序 |
+| `resultStatus` | String | 是 | `pending` / `confirmed` / `disputed` |
+| `winner` | Object | 否 | 获胜方对象 |
 | `winnerId` | String | 否 | 获胜者ID |
 | `loserId` | String | 否 | 失败者ID |
 | `score` | String | 否 | 比分，格式如 "6-4, 6-3" |
-| `points` | Number | 否 | 获得积分 |
-| `resultStatus` | String | 是 | 'pending' \| 'confirmed' \| 'disputed'，结果对账状态 |
+| `pointsAwarded` | Object | 否 | 积分发放快照；BYE 自动 confirmed 时 entries 为空 |
 | `submissions` | Array | 否 | 提交记录列表，结构见下"submissions 子结构"小节 |
 | `confirmedAt` | Date | 否 | 自动/仲裁 confirmed 时间 |
 | `confirmedBy` | String | 否 | 管理员仲裁时填 admin._id；双方一致 auto-confirm 时为 null |
 | `disputeReason` | String | 否 | disputed 状态时的描述 |
-| `courtId` | String | 否 | 排程后填 |
-| `scheduledStart` | Date | 否 | 排程后填 |
-| `scheduledSlotId` | String | 否 | 排程后填 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
@@ -361,29 +342,61 @@
 
 ```json
 {
-  "_id": "match_1704067200_123_r1_m001",
-  "tournamentId": "tournament_2024_1704067200_123",
+  "_id": "result_2026_123456_001_match_r1_p1_1700000000000_0",
+  "tournamentId": "tournament_2026_123456_001",
+  "seasonId": "season_2026",
+  "tournamentType": "singles",
+  "matchKind": "bracket",
+  "sourceMatchId": "match_r1_p1_1700000000000_0",
   "round": 1,
-  "type": "singles",
-  "players": [
-    {
-      "id": "member_xxxxx",
-      "name": "张三"
-    },
-    {
-      "id": "member_yyyyy",
-      "name": "李四"
-    }
-  ],
-  "status": "completed",
+  "position": 1,
+  "player1": { "id": "member_xxxxx", "name": "张三" },
+  "player2": { "id": "member_yyyyy", "name": "李四" },
+  "playerIds": ["member_xxxxx", "member_yyyyy"],
+  "courtId": "court_001",
+  "queueOrder": 0,
+  "resultStatus": "confirmed",
+  "winner": { "id": "member_xxxxx", "name": "张三" },
   "winnerId": "member_xxxxx",
   "loserId": "member_yyyyy",
   "score": "6-4, 6-3",
-  "points": 100,
+  "pointsAwarded": { "source": "match", "entries": [] },
   "createTime": "2024-01-01T00:00:00.000Z",
   "updateTime": "2024-01-01T00:00:00.000Z"
 }
 ```
+
+---
+
+## 7. courts（球场字典）
+
+存储俱乐部可选球场。创建赛事时 `court-grid` 从该集合读取 enabled 球场。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `_id` | String | 否 | 主键，格式：court_{timestamp}_{random} |
+| `courtId` | String | 是 | 与 `_id` 一致，用于前端排程引用 |
+| `name` | String | 是 | 球场名称 |
+| `location` | String | 否 | 场地位置说明 |
+| `enabled` | Boolean | 是 | 是否可选 |
+| `createTime` | Date | 是 | 创建时间 |
+| `updateTime` | Date | 是 | 更新时间 |
+
+---
+
+## 8. free_plays（自由拉球）
+
+存储创建排程时手动插入的自由拉球队列项，不参与 bracket 晋级；是否参与积分由 Phase 8 决定。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `_id` | String | 否 | 主键，格式：fp_{tournament}_{court}_{order}_{timestamp} |
+| `tournamentId` | String | 是 | 所属赛事ID |
+| `courtId` | String | 是 | 所属球场 |
+| `queueOrder` | Number | 是 | 在该球场队列中的顺序 |
+| `playerIds` | Array | 是 | 参与球员 member._id 列表，单打 2 人，双打 4 人 |
+| `createdBy` | String | 否 | 创建者 member._id |
+| `createTime` | Date | 是 | 创建时间 |
 
 ---
 
@@ -401,7 +414,11 @@ tournaments (赛事)
     ├─→ tournament_brackets (对位表)
     │       ↓ 1:N
     │       └─→ match_results (比赛结果)
-    └─→ match_results (比赛结果)
+    ├─→ match_results (比赛结果)
+    └─→ free_plays (自由拉球)
+
+courts (球场字典)
+    └─→ tournaments.schedulePlan.courts[].courtId
 ```
 
 ## 注意事项

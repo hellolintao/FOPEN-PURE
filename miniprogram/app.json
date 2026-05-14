@@ -22,6 +22,7 @@
     "pages/tournament-view/index",
     "pages/player-detail/index"
   ],
+  "subPackages": [],
   "tabBar": {
     "custom": true,
     "color": "#888",

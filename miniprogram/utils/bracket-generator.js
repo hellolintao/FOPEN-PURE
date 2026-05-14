@@ -1,7 +1,3 @@
-// Phase 7 vendored copy of cloudfunctions/tournament-brackets/lib/generator.js
-// Keep CommonJS module.exports for Phase 8 sync-shared-libs.sh hash compatibility.
-// Do NOT convert to ES module — small program supports CommonJS require.
-
 const INSUFFICIENT_PLAYERS = 'INSUFFICIENT_PLAYERS'
 
 function finalRoundOf(slots) {
@@ -39,6 +35,10 @@ function generateKnockoutR1(registrations) {
   const byeCount = slots - shuffled.length
   const BYE = { playerId: 'BYE', playerName: 'BYE', registrationId: null }
 
+  // Build slot array: interleave BYEs evenly so each BYE pairs with a real player.
+  // Strategy: place players in even indices, BYEs in odd indices of the last byeCount pairs.
+  // Simpler: build pairs list directly — first (slots/2 - byeCount) pairs are player vs player,
+  // last byeCount pairs are player vs BYE.
   const pairs = []
   let pi = 0
   const regularPairs = slots / 2 - byeCount

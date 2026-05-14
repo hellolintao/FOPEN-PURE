@@ -7,16 +7,15 @@
     <input class="picker-search" placeholder="搜索姓名" bindinput="onSearch" value="{{keyword}}" />
     <scroll-view scroll-y class="picker-list">
       <view
-        wx:for="{{members}}"
+        wx:for="{{memberRows}}"
         wx:key="_id"
-        wx:if="{{!keyword || item.name.indexOf(keyword) >= 0}}"
-        class="picker-row {{selected.indexOf(item._id) >= 0 ? 'sel' : ''}} {{excludeIds.indexOf(item._id) >= 0 ? 'disabled' : ''}}"
+        class="picker-row {{item.selected ? 'sel' : ''}} {{item.disabled ? 'disabled' : ''}}"
         data-id="{{item._id}}"
         bindtap="onTap"
       >
         <image class="picker-avatar" src="{{item.avatarUrl}}" />
         <text class="picker-name">{{item.name}}</text>
-        <text wx:if="{{selected.indexOf(item._id) >= 0}}" class="picker-tick">✓</text>
+        <text wx:if="{{item.selected}}" class="picker-tick">✓</text>
       </view>
     </scroll-view>
     <button class="picker-confirm" bindtap="onConfirm">确认 ({{selected.length}}/{{requiredCount}})</button>

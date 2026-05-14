@@ -72,15 +72,14 @@
 7. ✅ `player-picker-sheet` 用 `requiredCount: 1|2|4`
 8. ✅ 前端 utils mirror 保留 CommonJS module.exports（不改 ES module）
 9. ✅ Task 14 pickerMode=1 接 `app.globalData.lastSelectedPlayers` + `onShow` 回传
-10. ✅ DATABASE_SCHEMA.md 同步更新（待 Task 17 一并落库 — 本期 PROGRESS 更新中）
+10. ✅ DATABASE_SCHEMA.md 同步更新（2026-05-14 复核修正：schedulePlan / pointsRules / free_plays / courts / match_results.position / registrationStatus 已补齐）
 
 **已知遗留 / Phase 8 起步前需注意：**
 - `miniprogram/utils/bracket-generator.js` + `scheduler-mirror.js` 是手动 vendored 副本，未接 `sync-shared-libs.sh`（Phase 8 实装该脚本时把它们也纳入 hash 比对）
 - `tournament-add-players-doubles` 的 pickerMode=1 多支队伍累积模式已加 WXML 确认按钮，但 UX 较简陋
 - `tournaments.list` 兼容 list shape：旧 `{ data: array }`（legacy `tournament-detail` get 仍依赖）共存于新 `{ success, data: { tournaments, total } }`；新页面读 `data.tournaments`，已就位
 - legacy `tournament-edit` 旧入口已不存在；老 `add / update` action 保留为兼容 wrapper（无新页面调用）
-- `cloudfunctions/DATABASE_SCHEMA.md` 字段定义滞后于实现；下一会话或 Phase 8 开始前需要更新（schedulePlan / pointsRules / free_plays / courts / match_results.position / registrationStatus）
-- 云函数尚未上传到云端：`tournaments / tournament-registrations / tournament-brackets / match-results / free-plays / courts / scheduler-engine` 需在微信开发者工具里手动上传或脚本上传
+- 云函数已于 2026-05-14 通过微信开发者工具 GUI 上传到 `cloud1-0gthnke69a09f52a`：`tournaments / tournament-registrations / tournament-brackets / match-results / free-plays / courts / scheduler-engine`
 
 ### 2026-05-14 · Phase 7/8 plan 头部 File Structure 与 §3–§7 覆盖 review
 - 结论：`07-phase-7-create-schedule.md` / `08-phase-8-score-engine.md` 大方向可执行，但不能按原文直接开工；已在两个 plan 顶部追加「2026-05-14 Review 修订」作为执行前覆盖口径。

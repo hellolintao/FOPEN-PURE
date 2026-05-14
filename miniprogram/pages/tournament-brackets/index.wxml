@@ -22,9 +22,9 @@
     <view wx:if="{{court.matches.length === 0 && court.freePlays.length === 0}}" class="empty text-meta">无比赛</view>
 
     <view wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId" class="match-row">
-      <text class="player">{{m.player1 ? m.player1.name : '—'}}</text>
+      <text class="player">{{m.__player1Name}}</text>
       <text class="vs">VS</text>
-      <text class="player">{{m.player2 ? m.player2.name : '—'}}</text>
+      <text class="player">{{m.__player2Name}}</text>
       <text class="status-chip status-{{m.resultStatus}}">{{m.bye ? '轮空' : m.resultStatus}}</text>
     </view>
 
@@ -37,9 +37,9 @@
   <view wx:for="{{laterRounds}}" wx:for-item="b" wx:key="round" class="later-block">
     <text class="later-title">第 {{b.round}} 轮（待半决/决赛安排）</text>
     <view wx:for="{{b.matches}}" wx:for-item="m" wx:key="matchId" class="match-row gray">
-      <text class="player">{{m.player1 ? m.player1.name : '—'}}</text>
+      <text class="player">{{m.__player1Name}}</text>
       <text class="vs">VS</text>
-      <text class="player">{{m.player2 ? m.player2.name : '—'}}</text>
+      <text class="player">{{m.__player2Name}}</text>
     </view>
   </view>
 </view>

@@ -7,6 +7,7 @@ Page({
     registrations: [],
     brackets: [],
     totalMatches: 0,
+    tournamentDisplay: null,
     loading: true,
     isAdmin: false
   },
@@ -41,9 +42,11 @@ Page({
 
       if (result.data) {
         const me = app.globalData && app.globalData.currentMember
-        const isAdmin = !!(me && result.data.createdBy && result.data.createdBy === me._id)
+        const isCreator = !!(me && result.data.createdBy && result.data.createdBy === me._id)
+        const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
         this.setData({
           tournament: result.data,
+          tournamentDisplay: buildTournamentDisplay(result.data),
           isAdmin,
           loading: false
         });
@@ -78,9 +81,15 @@ Page({
         .orderBy('seed', 'asc')
         .get();
 
-      this.setData({
-        registrations: result.data || []
-      });
+      const registrations = (result.data || []).map(reg => {
+        const status = reg.registrationStatus || reg.status || 'registered'
+        return {
+          ...reg,
+          displayStatus: status,
+          displayStatusText: status === 'confirmed' ? '已确认' : status === 'withdrew' ? '已退赛' : '已报名'
+        }
+      })
+      this.setData({ registrations });
     } catch (err) {
       console.error('加载参赛人员失败:', err);
     }
@@ -96,7 +105,14 @@ Page({
         }
       });
 
-      const brackets = result.result.data || [];
+      const brackets = (result.result.data || []).map(bracket => ({
+        ...bracket,
+        matches: (bracket.matches || []).map(match => ({
+          ...match,
+          __player1Name: playerLabel(match.player1),
+          __player2Name: playerLabel(match.player2)
+        }))
+      }));
       let totalMatches = 0;
       brackets.forEach(bracket => {
         totalMatches += bracket.matches?.length || 0;
@@ -220,3 +236,50 @@ Page({
     });
   }
 });
+
+function buildTournamentDisplay(tournament) {
+  const config = tournament.config || {}
+  const pointsRules = tournament.pointsRules || {}
+  const placement = pointsRules.placement || {}
+  const winLoss = pointsRules.winLoss || {}
+  const legacyBonus = pointsRules.bonusByRound || {}
+  const hasPlacement = Object.keys(placement).length > 0
+  const hasWinLoss = Object.keys(winLoss).length > 0
+
+  const bonusRows = [1, 2, 3, 4, 5]
+    .filter(round => legacyBonus[round] !== undefined || legacyBonus[String(round)] !== undefined)
+    .map(round => ({
+      label: `第${round}轮`,
+      value: legacyBonus[round] !== undefined ? legacyBonus[round] : legacyBonus[String(round)]
+    }))
+
+  const placementRows = [
+    { label: '冠军', value: placement.champion },
+    { label: '亚军', value: placement.runnerUp },
+    { label: '四强', value: placement.semifinal },
+    { label: '八强', value: placement.quarterfinal },
+    { label: '参赛', value: placement.participation }
+  ].filter(row => row.value !== undefined)
+
+  return {
+    maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
+    playersPerMatch: config.playersPerMatch || (tournament.type === 'doubles' ? 4 : 2),
+    currentRound: config.currentRound || 1,
+    totalRounds: config.totalRounds || '-',
+    formatText: tournament.format === 'knockout' ? '淘汰赛' : '常规赛',
+    hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
+    seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
+    pointsMode: hasPlacement ? 'placement' : (hasWinLoss ? 'winLoss' : 'legacy'),
+    win: hasWinLoss ? winLoss.win : pointsRules.win,
+    loss: hasWinLoss ? winLoss.loss : pointsRules.loss,
+    walkover: pointsRules.walkover,
+    placementRows,
+    bonusRows
+  }
+}
+
+function playerLabel(player) {
+  if (!player) return '待定'
+  if (player.name) return player.partnerName ? `${player.name} / ${player.partnerName}` : player.name
+  return '待定'
+}

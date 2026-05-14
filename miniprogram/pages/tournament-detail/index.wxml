@@ -40,68 +40,56 @@
       <view class="info-divider">配置</view>
       <view class="info-row compact">
         <text class="label">最大人数</text>
-        <text class="value">{{tournament.config.maxPlayers || '-'}}人</text>
+        <text class="value">{{tournamentDisplay.maxPlayers}}人</text>
       </view>
       <view class="info-row compact">
         <text class="label">每场人数</text>
-        <text class="value">{{tournament.config.playersPerMatch || '-'}}人</text>
+        <text class="value">{{tournamentDisplay.playersPerMatch}}人</text>
       </view>
       <view class="info-row compact">
         <text class="label">当前轮次</text>
-        <text class="value">第{{tournament.config.currentRound || 1}}轮</text>
+        <text class="value">第{{tournamentDisplay.currentRound}}轮</text>
       </view>
       <view class="info-row compact">
         <text class="label">总轮数</text>
-        <text class="value">{{tournament.config.totalRounds || '-'}}轮</text>
+        <text class="value">{{tournamentDisplay.totalRounds}}轮</text>
       </view>
       <view class="info-row compact">
         <text class="label">赛制</text>
-        <text class="value">{{tournament.config.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
+        <text class="value">{{tournamentDisplay.formatText}}</text>
       </view>
-      <!-- <view class="info-row compact">
-        <text class="label">淘汰类型</text>
-        <text class="value">{{tournament.config.eliminationType === 'single' ? '单败淘汰' : '双败淘汰'}}</text>
-      </view> -->
-      <view class="info-row compact" wx:if="{{tournament.config.seedPlayers && tournament.config.seedPlayers.length > 0}}">
+      <view class="info-row compact" wx:if="{{tournamentDisplay.hasSeedPlayers}}">
         <text class="label">种子选手</text>
-        <text class="value">{{tournament.config.seedPlayers.join(', ')}}</text>
+        <text class="value">{{tournamentDisplay.seedPlayersText}}</text>
       </view>
       <view class="info-divider">积分规则</view>
-      <view class="points-grid">
+      <view class="points-grid" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
         <view class="point-item">
           <text class="point-label">胜</text>
-          <text class="point-value win">{{tournament.pointsRules.win || 0}}</text>
+          <text class="point-value win">{{tournamentDisplay.win || 0}}</text>
         </view>
         <view class="point-item">
           <text class="point-label">负</text>
-          <text class="point-value loss">{{tournament.pointsRules.loss || 0}}</text>
+          <text class="point-value loss">{{tournamentDisplay.loss || 0}}</text>
         </view>
-        <view class="point-item">
+        <view class="point-item" wx:if="{{tournamentDisplay.walkover !== undefined}}">
           <text class="point-label">弃</text>
-          <text class="point-value walkover">{{tournament.pointsRules.walkover || 0}}</text>
+          <text class="point-value walkover">{{tournamentDisplay.walkover || 0}}</text>
         </view>
       </view>
-      <view class="bonus-section" wx:if="{{tournament.pointsRules.bonusByRound}}">
+      <view class="bonus-section" wx:if="{{tournamentDisplay.pointsMode === 'placement'}}">
         <view class="bonus-grid">
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[1] !== undefined}}">
-            <text class="bonus-label">第1轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[1]}}</text>
+          <view class="bonus-item" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
+            <text class="bonus-label">{{item.label}}</text>
+            <text class="bonus-value">{{item.value}}</text>
           </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[2] !== undefined}}">
-            <text class="bonus-label">第2轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[2]}}</text>
-          </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[3] !== undefined}}">
-            <text class="bonus-label">第3轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[3]}}</text>
-          </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[4] !== undefined}}">
-            <text class="bonus-label">第4轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[4]}}</text>
-          </view>
-          <view class="bonus-item" wx:if="{{tournament.pointsRules.bonusByRound[5] !== undefined}}">
-            <text class="bonus-label">第5轮</text>
-            <text class="bonus-value">{{tournament.pointsRules.bonusByRound[5]}}</text>
+        </view>
+      </view>
+      <view class="bonus-section" wx:if="{{tournamentDisplay.bonusRows.length > 0}}">
+        <view class="bonus-grid">
+          <view class="bonus-item" wx:for="{{tournamentDisplay.bonusRows}}" wx:key="label">
+            <text class="bonus-label">{{item.label}}</text>
+            <text class="bonus-value">{{item.value}}</text>
           </view>
         </view>
       </view>
@@ -138,8 +126,8 @@
             </view>
           </view>
 
-          <view class="player-status {{item.status}}">
-            {{item.status === 'confirmed' ? '已确认' : item.status === 'withdrew' ? '已退赛' : '已报名'}}
+          <view class="player-status {{item.displayStatus}}">
+            {{item.displayStatusText}}
           </view>
         </view>
       </view>
@@ -173,11 +161,11 @@
           <view class="round-matches">
             <view class="round-match" wx:for="{{item.matches}}" wx:for-item="match" wx:key="matchId">
               <view class="match-player">
-                <text class="player-name">{{match.player1.name}}</text>
+                <text class="player-name">{{match.__player1Name}}</text>
               </view>
               <view class="match-divider">Vs</view>
               <view class="match-player">
-                <text class="player-name">{{match.player2.name}}</text>
+                <text class="player-name">{{match.__player2Name}}</text>
               </view>
               <!-- <view class="match-status {{match.status}}">
                 {{match.status === 'pending' ? '待开始' : match.status === 'ongoing' ? '进行中' : '已完成'}}
