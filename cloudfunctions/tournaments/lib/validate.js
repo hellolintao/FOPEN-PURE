@@ -41,7 +41,7 @@ function validateCourtTimeGrid(grid) {
 function validateSchedulePlan(sp) {
   const errors = [];
   if (!sp || typeof sp !== 'object') return ['schedulePlan 必填'];
-  if (sp.slotMinutes !== 30) errors.push('schedulePlan.slotMinutes 必须固定为 30');
+  if (sp.slotMinutes !== 20) errors.push('schedulePlan.slotMinutes 必须固定为 20');
   if (!Array.isArray(sp.courts) || sp.courts.length === 0) {
     errors.push('schedulePlan.courts 不能为空');
   } else {

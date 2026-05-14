@@ -1,22 +1,26 @@
-<view class="court-grid">
-  <view wx:for="{{courtRows}}" wx:key="courtId" class="court-row">
-    <view class="court-head" bindtap="onToggleCourt" data-court-id="{{item.courtId}}">
-      <view class="court-check {{item.selected ? 'checked' : ''}}"></view>
+<view class="timetable" wx:if="{{availableCourts.length > 0}}">
+  <view class="row header">
+    <view class="time-col">时间</view>
+    <view wx:for="{{availableCourts}}" wx:key="courtId" class="court-col head">
       <text class="court-name">{{item.name}}</text>
-      <text class="court-loc text-meta">{{item.location}}</text>
-    </view>
-    <view wx:if="{{item.selected}}" class="slot-grid">
-      <view
-        wx:for="{{item.slots}}"
-        wx:for-item="t"
-        wx:for-index="ti"
-        wx:key="time"
-        class="slot-cell {{t.picked ? 'picked' : ''}}"
-        bindtap="onToggleSlot"
-        data-court-id="{{item.courtId}}"
-        data-time="{{t.time}}"
-      >{{t.time}}</view>
+      <text wx:if="{{item.location}}" class="court-loc">{{item.location}}</text>
     </view>
   </view>
-  <view wx:if="{{courtRows.length === 0}}" class="empty text-meta">暂无可选球场，请联系管理员添加</view>
+  <view wx:for="{{rows}}" wx:for-item="row" wx:key="hour" class="row">
+    <view class="time-col">{{row.hour}}</view>
+    <view
+      wx:for="{{row.cells}}"
+      wx:for-item="cell"
+      wx:key="courtId"
+      class="court-col"
+    >
+      <view
+        class="cell {{cell.picked ? 'picked' : ''}}"
+        bindtap="onCellTap"
+        data-court-id="{{cell.courtId}}"
+        data-hour="{{row.hour}}"
+      ></view>
+    </view>
+  </view>
 </view>
+<view wx:else class="empty">暂无可选球场，请先「+ 添加球场」</view>

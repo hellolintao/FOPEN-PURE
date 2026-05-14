@@ -181,7 +181,7 @@ Page({
     }
 
     const schedulePlan = {
-      slotMinutes: 30,
+      slotMinutes: 20,
       courts: this.data.schedulePlanCourts,
       queues: this.data.queues || []
     }

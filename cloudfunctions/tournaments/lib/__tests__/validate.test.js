@@ -67,16 +67,17 @@ describe('validateCourtTimeGrid (extra coverage)', () => {
 
 // New tests for validateSchedulePlan
 describe('validateSchedulePlan', () => {
-  test('合法：30min slotMinutes，1 场地 2 slot → returns []', () => {
+  test('合法：20min slotMinutes，1 场地 3 slot → returns []', () => {
     const errors = validateSchedulePlan({
-      slotMinutes: 30,
+      slotMinutes: 20,
       courts: [
         {
           courtId: 'c1',
           name: '1号场地',
           slots: [
-            { slotId: 's1', start: '08:00', end: '08:30' },
-            { slotId: 's2', start: '08:30', end: '09:00' }
+            { slotId: 's1', start: '08:00', end: '08:20' },
+            { slotId: 's2', start: '08:20', end: '08:40' },
+            { slotId: 's3', start: '08:40', end: '09:00' }
           ]
         }
       ]
@@ -84,23 +85,23 @@ describe('validateSchedulePlan', () => {
     expect(errors).toEqual([]);
   });
 
-  test('非法：slotMinutes ≠ 30 → returns array containing 必须固定为 30', () => {
+  test('非法：slotMinutes ≠ 20 → returns array containing 必须固定为 20', () => {
     const errors = validateSchedulePlan({
-      slotMinutes: 20,
+      slotMinutes: 30,
       courts: [
         {
           courtId: 'c1',
           name: '1号场地',
-          slots: [{ slotId: 's1', start: '08:00', end: '08:20' }]
+          slots: [{ slotId: 's1', start: '08:00', end: '08:30' }]
         }
       ]
     });
-    expect(errors).toContain('schedulePlan.slotMinutes 必须固定为 30');
+    expect(errors).toContain('schedulePlan.slotMinutes 必须固定为 20');
   });
 
   test('非法：courts 为空 → returns array containing courts 不能为空', () => {
     const errors = validateSchedulePlan({
-      slotMinutes: 30,
+      slotMinutes: 20,
       courts: []
     });
     expect(errors).toContain('schedulePlan.courts 不能为空');
@@ -108,7 +109,7 @@ describe('validateSchedulePlan', () => {
 
   test('非法：某 court.slots 为空 → some error matches /slots 不能为空/', () => {
     const errors = validateSchedulePlan({
-      slotMinutes: 30,
+      slotMinutes: 20,
       courts: [
         { courtId: 'c1', name: '1号场地', slots: [] }
       ]
@@ -118,10 +119,10 @@ describe('validateSchedulePlan', () => {
 
   test('非法：courtId 重复 → returns array containing courtId 重复', () => {
     const errors = validateSchedulePlan({
-      slotMinutes: 30,
+      slotMinutes: 20,
       courts: [
-        { courtId: 'c1', name: '1号场地', slots: [{ slotId: 's1', start: '08:00', end: '08:30' }] },
-        { courtId: 'c1', name: '2号场地', slots: [{ slotId: 's2', start: '08:00', end: '08:30' }] }
+        { courtId: 'c1', name: '1号场地', slots: [{ slotId: 's1', start: '08:00', end: '08:20' }] },
+        { courtId: 'c1', name: '2号场地', slots: [{ slotId: 's2', start: '08:00', end: '08:20' }] }
       ]
     });
     expect(errors).toContain('schedulePlan.courts.courtId 重复');
