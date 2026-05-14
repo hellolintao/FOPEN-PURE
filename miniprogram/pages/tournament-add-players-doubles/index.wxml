@@ -11,6 +11,13 @@
         <text class="add-text">添加队伍</text>
       </button>
     </view>
+    <button
+      wx:if="{{pickerMode === '1' && teams.length > 0}}"
+      class="add-team-btn"
+      style="margin: 16rpx; background: #2563eb; color: #fff;"
+      bindtap="onConfirmPickerMode">
+      确认选择 ({{teams.length}} 支队伍)
+    </button>
 
     <scroll-view class="teams-list" scroll-y enhanced show-scrollbar="{{false}}">
       <view wx:if="{{teams.length === 0}}" class="empty-hint">
