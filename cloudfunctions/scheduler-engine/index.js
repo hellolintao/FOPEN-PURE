@@ -1,5 +1,10 @@
 'use strict';
 
+// @deprecated since Phase 7
+// 算法已迁移到 cloudfunctions/tournament-brackets/lib/{generator,scheduler,pairing}
+// 当前文件保留是为了让 Phase 1-4 单测继续可跑（44 例）。Phase 8 完成后再下线。
+console.warn('[scheduler-engine] @deprecated — 请使用 tournament-brackets/lib');
+
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
