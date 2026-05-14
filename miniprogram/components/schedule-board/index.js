@@ -134,16 +134,9 @@ Component({
     },
 
     onAddFreePlay(e) {
+      // 自由拉球不需要选择球员，直接添加占位行
       const courtId = e.currentTarget.dataset.courtId
-      const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
-      this.setData({
-        pickerShow: true,
-        pickerCtx: { kind: 'addFreePlay', courtId },
-        pickerRequiredCount: isDoubles ? 4 : 2,
-        pickerExclude: [],
-        pickerMembers: this.properties.members || [],
-        pickerTitle: '选择自由拉球球员'
-      })
+      this.applyAddFreePlay({ courtId }, [])
     },
 
     onAddExtra(e) {
@@ -259,7 +252,7 @@ Component({
       const q = queues.find(x => x.courtId === courtId); if (!q) return
       const fpId = `fp_${courtId}_${Date.now()}`
       q.items.push({ kind: 'freePlay', matchId: fpId, freePlayId: fpId, order: q.items.length })
-      const freePlays = [...this.data.freePlays, { _id: fpId, courtId, queueOrder: q.items.length - 1, playerIds: memberIds }]
+      const freePlays = [...this.data.freePlays, { _id: fpId, courtId, queueOrder: q.items.length - 1, playerIds: memberIds || [] }]
       this.emitChange({ queues, freePlays })
     },
 

@@ -221,33 +221,40 @@ Page({
       name: 'tournament-brackets',
       data: { action: 'saveInitialMatches', tournamentId: tid, matches: this.data.matches }
     })
-    if (!(r1.result && r1.result.success)) {
-      const msg = (r1.result && r1.result.error && r1.result.error.message) || '保存对阵失败'
-      return wx.showToast({ title: msg, icon: 'none' })
+    if (!_isSuccess(r1)) {
+      console.error('[commitStep3] saveInitialMatches failed', r1 && r1.result)
+      return wx.showToast({ title: _errMsg(r1, '保存对阵失败'), icon: 'none' })
     }
 
     const r2 = await wx.cloud.callFunction({
       name: 'tournament-brackets',
       data: { action: 'saveSchedule', tournamentId: tid, queues: this.data.queues }
     })
-    if (!(r2.result && r2.result.success)) {
-      const msg = (r2.result && r2.result.error && r2.result.error.message) || '保存排程失败'
-      return wx.showToast({ title: msg, icon: 'none' })
+    if (!_isSuccess(r2)) {
+      console.error('[commitStep3] saveSchedule failed', r2 && r2.result)
+      return wx.showToast({ title: _errMsg(r2, '保存排程失败'), icon: 'none' })
     }
 
     const r3 = await wx.cloud.callFunction({
       name: 'match-results',
       data: { action: 'bulkUpsertScheduledMatches', tournamentId: tid, matches: this.data.matches, queues: this.data.queues }
     })
-    if (!(r3.result && r3.result.success)) {
-      const msg = (r3.result && r3.result.error && r3.result.error.message) || '生成录分行失败'
-      return wx.showToast({ title: msg, icon: 'none' })
+    if (!_isSuccess(r3)) {
+      console.error('[commitStep3] bulkUpsertScheduledMatches failed', r3 && r3.result)
+      return wx.showToast({ title: _errMsg(r3, '生成录分行失败'), icon: 'none' })
     }
 
-    await wx.cloud.callFunction({
-      name: 'free-plays',
-      data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
-    })
+    if (this.data.freePlays.length > 0) {
+      const r4 = await wx.cloud.callFunction({
+        name: 'free-plays',
+        data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
+      })
+      if (!_isSuccess(r4)) {
+        console.error('[commitStep3] free-plays.bulkSet failed', r4 && r4.result)
+        // 自由拉球失败不阻塞主流程，仅提示
+        wx.showToast({ title: _errMsg(r4, '保存自由拉球失败'), icon: 'none' })
+      }
+    }
     this.setData({ step: 4 })
   },
 
@@ -468,6 +475,22 @@ Page({
       || `season_${year}`
   }
 })
+
+function _isSuccess(res) {
+  return !!(res && res.result && res.result.success === true)
+}
+
+function _errMsg(res, fallback) {
+  const r = res && res.result
+  if (!r) return fallback
+  if (r.error) {
+    if (typeof r.error === 'string') return r.error
+    if (r.error.message) return r.error.message
+    if (r.error.errMsg) return r.error.errMsg
+  }
+  if (r.errMsg) return r.errMsg
+  return fallback
+}
 
 function unpackList(res, dataFields) {
   if (!res || !res.result) return []
