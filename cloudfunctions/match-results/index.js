@@ -6,6 +6,20 @@ const db = cloud.database()
 const _ = db.command
 const collection = db.collection('match_results')
 
+// 收集选手 ID（兼容 singles/doubles，跳过 BYE）
+function collectPlayerIds(m, type) {
+  const ids = []
+  const push = obj => {
+    if (obj && obj.id && obj.id !== 'BYE') {
+      ids.push(obj.id)
+      if (type === 'doubles' && obj.partnerId) ids.push(obj.partnerId)
+    }
+  }
+  push(m.player1)
+  push(m.player2)
+  return ids
+}
+
 // 生成比赛ID
 function generateMatchId(tournamentId, round, matchIndex) {
   return `match_${tournamentId.split('_')[1]}_${tournamentId.split('_')[2]}_r${round}_m${matchIndex}`
@@ -58,6 +72,144 @@ function validateMatchResult(data) {
   }
 
   return errors
+}
+
+// Phase 7 Task 9 – bulk upsert scheduled match_results (R1 payload + R2+ skeletons)
+async function handleBulkUpsert({ tournamentId, matches, queues }) {
+  try {
+    if (!tournamentId) {
+      return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
+    }
+    if (!Array.isArray(matches)) {
+      return { success: false, error: { code: 'INVALID_ARG', message: 'matches 必须是数组' } }
+    }
+
+    const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+    const tournament = tournamentRes && tournamentRes.data
+    if (!tournament) {
+      return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+    }
+
+    // Build queueMap: matchId → { courtId, queueOrder }
+    const queueMap = new Map()
+    for (const q of (queues || [])) {
+      if (!Array.isArray(q.items)) continue
+      for (const item of q.items) {
+        if (item.kind === 'match') {
+          queueMap.set(item.matchId, { courtId: q.courtId, queueOrder: item.order })
+        }
+      }
+    }
+
+    const seen = new Set()
+    const now = db.serverDate()
+    const prefix = tournamentId.replace('tournament_', '')
+
+    // 1. Upsert R1 payload matches
+    for (const m of matches) {
+      const docId = `result_${prefix}_${m.matchId}`
+      seen.add(docId)
+      const isBye = m.bye === true
+      const q = queueMap.get(m.matchId)
+      const playerIds = collectPlayerIds(m, tournament.type)
+
+      const doc = {
+        _id: docId,
+        tournamentId,
+        seasonId: tournament.seasonId,
+        tournamentType: tournament.type,
+        matchKind: m.matchKind || 'bracket',
+        sourceMatchId: m.matchId,
+        round: m.round,
+        position: m.position,
+        player1: m.player1,
+        player2: m.player2,
+        playerIds,
+        courtId: isBye ? null : (q ? q.courtId : null),
+        queueOrder: isBye ? null : (q ? q.queueOrder : null),
+        score: null,
+        resultStatus: isBye ? 'confirmed' : 'pending',
+        winner: isBye ? m.winner : null,
+        winnerId: isBye && m.winner ? m.winner.id : null,
+        loserId: null,
+        confirmedBy: null,
+        confirmedAt: null,
+        pointsAwarded: isBye ? { source: 'match', entries: [] } : null,
+        updateTime: now
+      }
+
+      const existingRes = await collection.doc(docId).get().catch(() => null)
+      const existing = existingRes && existingRes.data
+      if (existing) {
+        await collection.doc(docId).update({
+          data: { ...doc, createTime: existing.createTime }
+        })
+      } else {
+        await collection.add({ data: { ...doc, createTime: now } })
+      }
+    }
+
+    // 2. Pre-create R2+ skeleton match_results from tournament_brackets
+    const skeletonRes = await db.collection('tournament_brackets')
+      .where({ tournamentId, round: _.gt(1) })
+      .get()
+      .catch(() => ({ data: [] }))
+    for (const bracket of (skeletonRes.data || [])) {
+      for (const m of (bracket.matches || [])) {
+        const docId = `result_${prefix}_${m.matchId}`
+        if (seen.has(docId)) continue
+        seen.add(docId)
+        const playerIds = collectPlayerIds(m, tournament.type)
+        const doc = {
+          _id: docId,
+          tournamentId,
+          seasonId: tournament.seasonId,
+          tournamentType: tournament.type,
+          matchKind: 'bracket',
+          sourceMatchId: m.matchId,
+          round: m.round,
+          position: m.position,
+          player1: m.player1 || null,
+          player2: m.player2 || null,
+          playerIds,
+          courtId: null,
+          queueOrder: null,
+          score: null,
+          resultStatus: 'pending',
+          winner: m.winner || null,
+          winnerId: m.winner ? m.winner.id : null,
+          loserId: null,
+          confirmedBy: null,
+          confirmedAt: null,
+          pointsAwarded: null,
+          updateTime: now
+        }
+        const existingRes = await collection.doc(docId).get().catch(() => null)
+        const existing = existingRes && existingRes.data
+        if (existing) {
+          await collection.doc(docId).update({ data: { ...doc, createTime: existing.createTime } })
+        } else {
+          await collection.add({ data: { ...doc, createTime: now } })
+        }
+      }
+    }
+
+    // 3. Delete orphan rows (this tournament, bracket/regularRound/extra kinds, not in seen)
+    const orphanRes = await collection.where({
+      tournamentId,
+      matchKind: _.in(['bracket', 'regularRound', 'extra'])
+    }).get().catch(() => ({ data: [] }))
+    for (const doc of (orphanRes.data || [])) {
+      if (!seen.has(doc._id)) {
+        await collection.doc(doc._id).remove().catch(() => null)
+      }
+    }
+
+    return { success: true, data: { count: seen.size } }
+  } catch (e) {
+    console.error('[match-results.bulkUpsertScheduledMatches] error', e)
+    return { success: false, error: { code: 'INTERNAL', message: e.message } }
+  }
 }
 
 exports.main = async (event, context) => {
@@ -382,6 +534,9 @@ exports.main = async (event, context) => {
       })
       return { success: true, data: { resultStatus: 'pending' } }
     }
+
+    case 'bulkUpsertScheduledMatches':
+      return await handleBulkUpsert(event)
 
     default:
       return { errMsg: 'invalid action' }
