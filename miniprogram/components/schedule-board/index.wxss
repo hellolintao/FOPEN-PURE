@@ -1,0 +1,17 @@
+.board { display: flex; flex-direction: column; gap: var(--space-4, 24rpx); }
+.board-regen { align-self: flex-end; }
+.board-help { margin-bottom: var(--space-2, 12rpx); }
+.court-block { background: var(--color-bg-soft, #f3f4f6); border-radius: var(--radius-lg, 24rpx); padding: var(--space-3, 16rpx); }
+.court-head { display: flex; justify-content: space-between; margin-bottom: var(--space-2, 12rpx); }
+.court-title { font-weight: 600; }
+.court-time { color: var(--color-text-muted, #6b7280); }
+.row { display: flex; align-items: center; gap: var(--space-2, 12rpx); padding: var(--space-2, 12rpx) 0; border-bottom: 1rpx dashed var(--color-border, #e5e7eb); }
+.row-handle { color: var(--color-text-muted, #9ca3af); padding: 0 8rpx; }
+.row-body { flex: 1; display: flex; align-items: center; gap: var(--space-2, 12rpx); }
+.player { padding: 4rpx 12rpx; border-radius: 6rpx; background: #fff; }
+.vs { color: var(--color-text-muted, #9ca3af); }
+.row-del { color: var(--color-danger, #dc2626); padding: 0 8rpx; }
+.row-del.disabled { color: var(--color-text-muted, #9ca3af); opacity: 0.4; }
+.court-actions { display: flex; gap: var(--space-2, 12rpx); margin-top: var(--space-2, 12rpx); }
+.court-actions button { flex: 1; }
+.empty { padding: var(--space-2, 12rpx); text-align: center; }

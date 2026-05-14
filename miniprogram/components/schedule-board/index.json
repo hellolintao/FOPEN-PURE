@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "player-picker-sheet": "../player-picker-sheet/index"
+  }
+}

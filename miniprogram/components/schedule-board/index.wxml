@@ -1,0 +1,63 @@
+<view class="board">
+  <button class="board-regen" size="mini" bindtap="onRegenerate">重新随机安排</button>
+  <view class="board-help text-meta">点选手切换；长按 ⋮⋮ 调顺序或换场地</view>
+
+  <block wx:for="{{decoratedCourts}}" wx:for-item="court" wx:key="courtId">
+    <view class="court-block">
+      <view class="court-head">
+        <text class="court-title">{{court.name}}</text>
+        <text class="court-time text-meta">{{court.slotsLabel}}</text>
+      </view>
+      <view class="court-queue">
+        <block wx:for="{{decoratedQueues}}" wx:for-item="q" wx:key="courtId">
+          <block wx:if="{{q.courtId === court.courtId}}">
+            <view
+              wx:for="{{q.items}}"
+              wx:for-item="it"
+              wx:key="matchId"
+              class="row row-{{it.__rowKind}}"
+            >
+              <view class="row-handle"
+                    bindlongpress="onTapItem"
+                    data-court-id="{{q.courtId}}"
+                    data-match-id="{{it.matchId}}"
+                    data-kind="{{it.__rowKind}}">⋮⋮</view>
+              <view class="row-body">
+                <block wx:if="{{it.kind === 'match'}}">
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{it.matchId}}" data-slot="player1">{{it.__player1Label}}</text>
+                  <text class="vs">VS</text>
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{it.matchId}}" data-slot="player2">{{it.__player2Label}}</text>
+                </block>
+                <block wx:if="{{it.kind === 'freePlay'}}">
+                  <text class="player">自由拉球</text>
+                  <text class="vs">·</text>
+                  <text class="player">{{it.__playersLabel}}</text>
+                </block>
+              </view>
+              <text class="row-del {{it.__rowKind === 'bracket' ? 'disabled' : ''}}"
+                    catchtap="onTapDelete"
+                    data-court-id="{{q.courtId}}"
+                    data-match-id="{{it.matchId}}"
+                    data-kind="{{it.__rowKind}}">✕</text>
+            </view>
+          </block>
+        </block>
+        <view wx:if="{{!court.__hasAnyRow}}" class="empty text-meta">无比赛</view>
+      </view>
+      <view class="court-actions">
+        <button size="mini" bindtap="onAddFreePlay" data-court-id="{{court.courtId}}">+ 自由拉球</button>
+        <button size="mini" bindtap="onAddExtra" data-court-id="{{court.courtId}}" disabled="{{tournament.format !== 'regular'}}">+ 添加场次</button>
+      </view>
+    </view>
+  </block>
+
+  <player-picker-sheet
+    show="{{pickerShow}}"
+    members="{{pickerMembers}}"
+    required-count="{{pickerRequiredCount}}"
+    exclude-ids="{{pickerExclude}}"
+    title="{{pickerTitle}}"
+    bindconfirm="onPickerConfirm"
+    bindcancel="onPickerCancel"
+  />
+</view>
