@@ -1,76 +1,22 @@
 <view class="court-grid">
-  <view class="header flex-between">
-    <text class="text-label">场地与时段</text>
-  </view>
-
-  <view class="courts-section">
-    <text class="text-meta">场地列表</text>
-    <view class="courts-list">
-      <view wx:for="{{courts}}" wx:key="courtId" class="court-row">
-        <input
-          class="court-name-input"
-          value="{{item.name}}"
-          data-index="{{index}}"
-          bindinput="onEditCourtName"
-        />
-        <view
-          class="court-remove"
-          data-court-id="{{item.courtId}}"
-          bindtap="onRemoveCourt"
-        >×</view>
-      </view>
+  <view wx:for="{{availableCourts}}" wx:key="courtId" class="court-row">
+    <view class="court-head" bindtap="onToggleCourt" data-court-id="{{item.courtId}}">
+      <view class="court-check {{selectedCourtIds.indexOf(item.courtId) >= 0 ? 'checked' : ''}}"></view>
+      <text class="court-name">{{item.name}}</text>
+      <text class="court-loc text-meta">{{item.location}}</text>
     </view>
-    <button class="cta-secondary cta-block" bindtap="onAddCourt">+ 添加场地</button>
-  </view>
-
-  <view class="time-section">
-    <text class="text-meta">时段</text>
-    <view wx:for="{{timeRanges}}" wx:key="index" class="time-row">
-      <picker
-        mode="time"
-        value="{{item.start}}"
-        data-index="{{index}}"
-        data-field="start"
-        bindchange="onTimeRangeChange"
-      >
-        <view class="time-pick">{{item.start}}</view>
-      </picker>
-      <text class="time-dash"> – </text>
-      <picker
-        mode="time"
-        value="{{item.end}}"
-        data-index="{{index}}"
-        data-field="end"
-        bindchange="onTimeRangeChange"
-      >
-        <view class="time-pick">{{item.end}}</view>
-      </picker>
+    <view wx:if="{{selectedCourtIds.indexOf(item.courtId) >= 0}}" class="slot-grid">
       <view
-        class="time-remove"
-        data-index="{{index}}"
-        bindtap="onRemoveTimeRange"
-      >×</view>
-    </view>
-    <button class="cta-secondary cta-block" bindtap="onAddTimeRange">+ 添加时段</button>
-  </view>
-
-  <view class="grid-section" wx:if="{{courts.length > 0 && slotTimes.length > 0}}">
-    <text class="text-meta">点格子切换可用</text>
-    <view class="grid">
-      <view class="grid-row grid-head">
-        <view class="grid-time-cell"></view>
-        <view wx:for="{{courts}}" wx:key="courtId" class="grid-court-cell">{{item.name}}</view>
-      </view>
-      <view wx:for="{{slotTimes}}" wx:for-item="t" wx:key="*this" class="grid-row">
-        <view class="grid-time-cell">{{t}}</view>
-        <view
-          wx:for="{{courts}}" wx:for-item="c" wx:key="courtId"
-          class="grid-cell {{grid[t][c.courtId] ? 'on' : ''}}"
-          data-time="{{t}}"
-          data-court-id="{{c.courtId}}"
-          bindtap="onToggleCell"
-        ></view>
-      </view>
+        wx:for="{{slotTimes}}"
+        wx:for-item="t"
+        wx:for-index="ti"
+        wx:key="*this"
+        class="slot-cell {{(pickedByCourt[item.courtId] || []).indexOf(t) >= 0 ? 'picked' : ''}}"
+        bindtap="onToggleSlot"
+        data-court-id="{{item.courtId}}"
+        data-time="{{t}}"
+      >{{t}}</view>
     </view>
   </view>
+  <view wx:if="{{availableCourts.length === 0}}" class="empty text-meta">暂无可选球场，请联系管理员添加</view>
 </view>
