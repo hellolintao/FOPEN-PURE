@@ -1,0 +1,10 @@
+{
+  "name": "fopen-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local maintenance scripts for FOPEN-PURE",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.10.0"
+  }
+}

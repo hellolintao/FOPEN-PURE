@@ -1,5 +1,6 @@
 .DS_Store
 .superpowers/
 node_modules/
+scripts/node_modules/
 project.private.config.json
 cloudfunctions/*/coverage/
