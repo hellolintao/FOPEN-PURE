@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournament_brackets')
+const { advanceWinner, finalRoundOf } = require('./lib/generator')
 
 // 生成对位表ID
 function generateBracketId(tournamentId, round) {
@@ -40,11 +41,15 @@ function validateBracket(data) {
   // 验证每场比赛
   if (data.matches) {
     data.matches.forEach((match, index) => {
-      if (!match.player1 || !match.player1.id) {
-        errors.push(`第${index + 1}场比赛缺少player1`)
+      if (match.player1 !== null && match.player1 !== undefined) {
+        if (match.player1.id === undefined) {
+          errors.push(`第${index + 1}场比赛 player1 缺 id`)
+        }
       }
-      if (!match.player2 || !match.player2.id) {
-        errors.push(`第${index + 1}场比赛缺少player2`)
+      if (match.player2 !== null && match.player2 !== undefined) {
+        if (match.player2.id === undefined) {
+          errors.push(`第${index + 1}场比赛 player2 缺 id`)
+        }
       }
       if (match.position === undefined || match.position < 1) {
         errors.push(`第${index + 1}场比赛位置无效`)
@@ -312,6 +317,15 @@ exports.main = async (event, context) => {
         }
       }
 
+      case 'saveInitialMatches':
+        return await handleSaveInitialMatches(event)
+
+      case 'saveSchedule':
+        return await handleSaveSchedule(event)
+
+      case 'regenerateDraft':
+        return await handleRegenerateDraft(event)
+
       default: {
         return { errMsg: 'invalid action' }
       }
@@ -323,4 +337,176 @@ exports.main = async (event, context) => {
       error: err
     }
   }
+}
+
+// ─── New action handlers (Phase 7) ───────────────────────────────────────────
+
+async function handleSaveInitialMatches({ tournamentId, matches }) {
+  if (!tournamentId) {
+    return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
+  }
+  if (!Array.isArray(matches) || matches.length === 0) {
+    return { success: false, error: { code: 'INVALID_ARG', message: 'matches 不能为空' } }
+  }
+
+  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tournament = tournamentRes && tournamentRes.data
+  if (!tournament) {
+    return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+  }
+
+  // Validate R1 matches structure
+  const errs = []
+  matches.forEach((m, i) => {
+    if (m.round !== 1) errs.push(`第 ${i + 1} 场 round 必须 = 1`)
+    if (!m.matchId) errs.push(`第 ${i + 1} 场缺 matchId`)
+    if (m.position === undefined || m.position === null) errs.push(`第 ${i + 1} 场缺 position`)
+  })
+  if (errs.length) {
+    return { success: false, error: { code: 'VALIDATION_FAILED', message: errs.join('; '), errors: errs } }
+  }
+
+  // Wipe old brackets for this tournament
+  const oldBrackets = await collection.where({ tournamentId }).get().catch(() => ({ data: [] }))
+  for (const b of (oldBrackets.data || [])) {
+    await collection.doc(b._id).remove().catch(() => null)
+  }
+
+  // Write R1
+  const r1Id = `bracket_${tournamentId.replace('tournament_', '')}_round_1`
+  await collection.add({
+    data: {
+      _id: r1Id,
+      tournamentId,
+      round: 1,
+      type: tournament.type,
+      matches,
+      createTime: db.serverDate(),
+      updateTime: db.serverDate()
+    }
+  })
+
+  let finalRound = 1
+  if (tournament.format === 'knockout') {
+    const slots = matches.length * 2
+    finalRound = finalRoundOf(slots)
+    // Pre-create R2..finalRound skeleton
+    for (let r = 2; r <= finalRound; r++) {
+      const count = matches.length / Math.pow(2, r - 1)
+      const placeholderMatches = Array.from({ length: count }, (_, i) => ({
+        matchId: `match_r${r}_p${i + 1}_${Date.now()}_${i}`,
+        round: r,
+        position: i + 1,
+        player1: null,
+        player2: null,
+        bye: false,
+        status: 'pending',
+        resultStatus: 'pending',
+        winner: null,
+        courtId: null,
+        queueOrder: null
+      }))
+      const docId = `bracket_${tournamentId.replace('tournament_', '')}_round_${r}`
+      await collection.add({
+        data: {
+          _id: docId,
+          tournamentId,
+          round: r,
+          type: tournament.type,
+          matches: placeholderMatches,
+          createTime: db.serverDate(),
+          updateTime: db.serverDate()
+        }
+      })
+    }
+
+    // Auto-advance BYE winners to R2
+    for (const m of matches) {
+      if (m.bye === true && m.winner) {
+        const patch = advanceWinner({ round: 1, position: m.position, winner: m.winner, isFinal: finalRound === 1 })
+        if (patch) await fillNextSlot(tournamentId, patch)
+      }
+    }
+  }
+
+  return { success: true, data: { count: matches.length, finalRound } }
+}
+
+async function fillNextSlot(tournamentId, { nextRound, nextPosition, slot, winner }) {
+  const docId = `bracket_${tournamentId.replace('tournament_', '')}_round_${nextRound}`
+  const docRes = await collection.doc(docId).get().catch(() => null)
+  const doc = docRes && docRes.data
+  if (!doc) return
+  const idx = doc.matches.findIndex(x => x.position === nextPosition)
+  if (idx < 0) return
+  const newMatches = doc.matches.map((m, i) => i === idx ? { ...m, [slot]: winner } : m)
+  await collection.doc(docId).update({
+    data: { matches: newMatches, updateTime: db.serverDate() }
+  })
+}
+
+async function handleSaveSchedule({ tournamentId, queues }) {
+  if (!tournamentId) {
+    return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
+  }
+  if (!Array.isArray(queues)) {
+    return { success: false, error: { code: 'INVALID_ARG', message: 'queues 必须是数组' } }
+  }
+
+  const matchAssignments = new Map()
+  for (const q of queues) {
+    if (!Array.isArray(q.items)) continue
+    for (const item of q.items) {
+      if (item.kind === 'match') {
+        matchAssignments.set(item.matchId, { courtId: q.courtId, queueOrder: item.order })
+      }
+    }
+  }
+
+  const r1Id = `bracket_${tournamentId.replace('tournament_', '')}_round_1`
+  const r1Res = await collection.doc(r1Id).get().catch(() => null)
+  const r1 = r1Res && r1Res.data
+  if (!r1) {
+    return { success: false, error: { code: 'NOT_FOUND', message: r1Id } }
+  }
+
+  const updated = r1.matches.map(m => {
+    const a = matchAssignments.get(m.matchId)
+    if (!a) return m
+    return { ...m, courtId: a.courtId, queueOrder: a.queueOrder }
+  })
+
+  await collection.doc(r1Id).update({
+    data: { matches: updated, updateTime: db.serverDate() }
+  })
+
+  // Mirror queues into tournament.schedulePlan.queues
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: { 'schedulePlan.queues': queues, updateTime: db.serverDate() }
+  })
+
+  return { success: true, data: { count: updated.filter(m => m.courtId).length } }
+}
+
+async function handleRegenerateDraft({ tournamentId }) {
+  if (!tournamentId) {
+    return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
+  }
+
+  async function wipe(collectionName) {
+    const res = await db.collection(collectionName).where({ tournamentId }).get().catch(() => ({ data: [] }))
+    for (const doc of (res.data || [])) {
+      await db.collection(collectionName).doc(doc._id).remove().catch(() => null)
+    }
+  }
+
+  await wipe('tournament_brackets')
+  await wipe('match_results')
+  await wipe('free_plays')
+
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: { 'schedulePlan.queues': [], updateTime: db.serverDate() }
+  }).catch(() => null)
+
+  return { success: true }
 }
