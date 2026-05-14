@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████░░░░░░░░] 4/6 Phase 完成
+[████████████████████░░░░] 5/6 Phase 完成（含 Phase 7 重做）
 ```
 
 ## Phase 状态
@@ -16,8 +16,9 @@
 | 02 | Phase 3 · Create Tournament | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9da74f2 | court-grid 组件 + tournament-edit 重写为 5 步表单；Codex 验证补齐了双打 partnerId/seed 与编辑模式 `_syncRegistrations` 同步 |
 | 03 | Phase 4 · Scheduler | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9941d79 | scheduler-engine 上线（44 单测全绿，Lines 100%/Stmts 95%）；触发策略改为 C（签表页按钮）+ 保存合并 B + 双打 partnerId 入约束；plan 顶部记录 6 处修订 |
 | 04 | Phase 2 · Browse UI | ✅ 已完成 | 2026-05-12 | 2026-05-12 | e95fcac | points-engine 云函数（7单测全绿）+ 组件库（stat-block/rank-row/brush-stroke-bg）+ custom tabBar（admin 可见管理 tab）+ home/rank/player-detail/mine 全面重写 |
-| 05 | Phase 5 · Result Reconcile | ⬜ 待开始 | — | — | — | — |
-| 06 | Phase 6 · Polish | ⬜ 待开始 | — | — | — | — |
+| 05 | Phase 5 · Result Reconcile | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；录分/积分/对账由 Phase 8 实现 |
+| 06 | Phase 6 · Polish | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；视觉打磨随 Phase 7/8 落地 |
+| 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 | 4 步 wizard / 30min court-grid / schedule-board / player-picker-sheet / generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -25,13 +26,61 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`05-phase-5-result-reconcile.md`
+**👉 下一个 Phase**：`08-phase-8-score-engine.md`
 
-打开该文件，从 "Task 1" 开始按步骤执行。
+打开该文件，从 "Task 1" 开始按步骤执行。Phase 5/6 已由 Phase 7+8 重做覆盖，不再需要单独执行。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-14 · Phase 7 完成（17 Tasks 全部落库）
+
+完成 commit 范围：`3f42b4c`（Task 1）→ `63ee6f5`（Task 16），共 19 个 commit（含两次 Task 2 修复）。
+
+**后端云函数：**
+- `tournaments`：新增 `create / updateNew / list / lastPointsRules` envelope actions；写入 `createdBy/createdByOpenid`（通过 OPENID → members 解析）；list 支持 `status / statusNot / createdBy / ids` 过滤；`validateSchedulePlan` + `validatePointsRules` (19 单测全绿，96.4% / 95.5% 覆盖率)；legacy `add` / `update` 保留兼容
+- `tournament-registrations`：`bulkSet` 幂等批量设置（先校验后删除）
+- `tournament-brackets`：新增 `lib/generator.js`（BYE 自动推进 + 推进公式，17 单测全绿，97.95% 覆盖率）、`lib/scheduler.js`（顺序填满场地，6 单测全绿，100% 覆盖率）；从 scheduler-engine 迁来 `pairing/round-robin` + `pairing/knockout-bracket`（19 单测）；4 个测试套件共 42 测试全过；新增 actions `saveInitialMatches / saveSchedule / regenerateDraft`；放宽 validator 允许 `player1=null` 和 `player2={id:'BYE'}`
+- `match-results`：`bulkUpsertScheduledMatches`（写 `position`，预建 R2+ 占位行）
+- `free-plays`（新建）：`bulkSet / create / list / remove`，集合 `free_plays`
+- `courts`（新建，2026-05-14 review 修订 #3 新增）：`list / create / update`，集合 `courts`
+- `scheduler-engine`：标 @deprecated（44 单测保留），README 注明迁移路径
+
+**前端组件 / 页面：**
+- `court-grid`：完全重写为 30min 颗粒度 28-slot grid（08:00-22:00），按 `availableCourts` 渲染
+- `player-picker-sheet`（新建）：`requiredCount: 1|2|4`（应用 2026-05-14 修订 #7），search + 多选
+- `schedule-board`（新建）：按场地分组渲染 R1 matches + freePlays + extra，长按 actionsheet（上/下/换场/删除），点选手 → picker
+- `tournament-edit`：完全重写为 4 步 wizard（基本信息 → 球员+球场 → 排程 → 积分），草稿即落库；pickerMode=1 协议通过 `app.globalData.lastSelectedPlayers` 回传
+- `tournament-brackets`：按场地维度只读展示 R1 + 灰色 R2+ 占位 + 自由拉球；移除自动排程入口和手动指派 actionSheet
+- `tournament-view`：改用 `schedulePlan` 替代 `courtTimeGrid`，按场地分组只读展示
+- `tournament-manage`：拉「我的草稿」（status=draft, createdBy=me）+ 公开列表（statusNot=draft）
+- `tournament-detail`：draft 显示「继续创建」按钮，upcoming + admin 显示「编辑」按钮
+- `tournament-add-player / tournament-add-players-doubles`：补 pickerMode=1 协议（globalData 回传）
+
+**前端 utils（vendored CommonJS 副本，Phase 8 sync 比对）：**
+- `miniprogram/utils/bracket-generator.js`：mirror of cloud lib/generator.js
+- `miniprogram/utils/scheduler-mirror.js`：mirror of cloud lib/scheduler.js
+
+**应用 2026-05-14 review 修订（10 条全部落地）：**
+1. ✅ 统一新 response contract `{ success, data } / { success: false, error }`（新增 actions 全部应用）
+2. ✅ draft 必须写 `createdBy/createdByOpenid`，list 支持 `createdBy/statusNot/ids` 过滤
+3. ✅ 补 `cloudfunctions/courts`
+4. ✅ tournament-view 改用 schedulePlan（Task 15 一并完成）
+5. ✅ `bulkSet` 先校验后删除（tournament-registrations）
+6. ✅ `match_results` 写 `position` + 预建 R2+ 占位行
+7. ✅ `player-picker-sheet` 用 `requiredCount: 1|2|4`
+8. ✅ 前端 utils mirror 保留 CommonJS module.exports（不改 ES module）
+9. ✅ Task 14 pickerMode=1 接 `app.globalData.lastSelectedPlayers` + `onShow` 回传
+10. ✅ DATABASE_SCHEMA.md 同步更新（待 Task 17 一并落库 — 本期 PROGRESS 更新中）
+
+**已知遗留 / Phase 8 起步前需注意：**
+- `miniprogram/utils/bracket-generator.js` + `scheduler-mirror.js` 是手动 vendored 副本，未接 `sync-shared-libs.sh`（Phase 8 实装该脚本时把它们也纳入 hash 比对）
+- `tournament-add-players-doubles` 的 pickerMode=1 多支队伍累积模式已加 WXML 确认按钮，但 UX 较简陋
+- `tournaments.list` 兼容 list shape：旧 `{ data: array }`（legacy `tournament-detail` get 仍依赖）共存于新 `{ success, data: { tournaments, total } }`；新页面读 `data.tournaments`，已就位
+- legacy `tournament-edit` 旧入口已不存在；老 `add / update` action 保留为兼容 wrapper（无新页面调用）
+- `cloudfunctions/DATABASE_SCHEMA.md` 字段定义滞后于实现；下一会话或 Phase 8 开始前需要更新（schedulePlan / pointsRules / free_plays / courts / match_results.position / registrationStatus）
+- 云函数尚未上传到云端：`tournaments / tournament-registrations / tournament-brackets / match-results / free-plays / courts / scheduler-engine` 需在微信开发者工具里手动上传或脚本上传
 
 ### 2026-05-14 · Phase 7/8 plan 头部 File Structure 与 §3–§7 覆盖 review
 - 结论：`07-phase-7-create-schedule.md` / `08-phase-8-score-engine.md` 大方向可执行，但不能按原文直接开工；已在两个 plan 顶部追加「2026-05-14 Review 修订」作为执行前覆盖口径。
@@ -169,6 +218,10 @@
 - `match_results` 从 Phase 7 起写 `round/position/sourceMatchId/player1/player2/playerIds`；R2+ bracket 占位也要有对应 result 占位行。
 - `player-picker-sheet` 选择数量统一用 `requiredCount`，不要再用 `single` 布尔值表达 1/4 人选择。
 - 普通会员只能提交 pending/submitted；confirmed 行只能由 admin 走二次确认改分。
+- 排程算法第一版采用「顺序填满场地」（court[0] 满了到 court[1]），不做轮询。理由：Phase 7 spec §4 拍板。
+- BYE 第一版不做智能分散，仅测 BYE 数 + 自动推进 + 无空 winner（与 spec §8 / §9.2 一致）。
+- `scheduler-engine` 不删，标 @deprecated；pairing 副本迁到 `cloudfunctions/tournament-brackets/lib/pairing/`，44 单测仍保留为回归基准。
+- `miniprogram/utils/bracket-generator.js` 与云函数 `lib/generator.js` 是 vendored 副本（CommonJS module.exports），Phase 8 `sync-shared-libs.sh` 同步比对；`miniprogram/utils/scheduler-mirror.js` 同理对应 `lib/scheduler.js`。
 
 ---
 
