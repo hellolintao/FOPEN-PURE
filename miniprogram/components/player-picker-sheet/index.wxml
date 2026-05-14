@@ -1,0 +1,24 @@
+<view wx:if="{{show}}" class="picker-mask" bindtap="onMaskTap">
+  <view class="picker-sheet" catchtap="onSheetTap">
+    <view class="picker-head">
+      <text class="picker-title">{{title}}</text>
+      <text class="picker-cancel" bindtap="onCancel">取消</text>
+    </view>
+    <input class="picker-search" placeholder="搜索姓名" bindinput="onSearch" value="{{keyword}}" />
+    <scroll-view scroll-y class="picker-list">
+      <view
+        wx:for="{{members}}"
+        wx:key="_id"
+        wx:if="{{!keyword || item.name.indexOf(keyword) >= 0}}"
+        class="picker-row {{selected.indexOf(item._id) >= 0 ? 'sel' : ''}} {{excludeIds.indexOf(item._id) >= 0 ? 'disabled' : ''}}"
+        data-id="{{item._id}}"
+        bindtap="onTap"
+      >
+        <image class="picker-avatar" src="{{item.avatarUrl}}" />
+        <text class="picker-name">{{item.name}}</text>
+        <text wx:if="{{selected.indexOf(item._id) >= 0}}" class="picker-tick">✓</text>
+      </view>
+    </scroll-view>
+    <button class="picker-confirm" bindtap="onConfirm">确认 ({{selected.length}}/{{requiredCount}})</button>
+  </view>
+</view>
