@@ -71,6 +71,5 @@
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents",
   "__usePrivacyCheck__": true
 }

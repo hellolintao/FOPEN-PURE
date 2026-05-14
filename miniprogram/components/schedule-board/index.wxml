@@ -45,8 +45,8 @@
         <view wx:if="{{!court.__hasAnyRow}}" class="empty text-meta">无比赛</view>
       </view>
       <view class="court-actions">
-        <button size="mini" bindtap="onAddFreePlay" data-court-id="{{court.courtId}}">+ 自由拉球</button>
-        <button size="mini" bindtap="onAddExtra" data-court-id="{{court.courtId}}" disabled="{{tournament.format !== 'regular'}}">+ 添加场次</button>
+        <button class="court-action-button" size="mini" bindtap="onAddFreePlay" data-court-id="{{court.courtId}}">+ 自由拉球</button>
+        <button class="court-action-button" size="mini" bindtap="onAddExtra" data-court-id="{{court.courtId}}" disabled="{{tournament.format !== 'regular'}}">+ 添加场次</button>
       </view>
     </view>
   </block>

@@ -11,7 +11,11 @@
 
   <view class="hero">
     <brush-stroke-bg></brush-stroke-bg>
-    <text class="text-display hero-text">PLAY.&#10;COMPETE.&#10;IMPROVE.</text>
+    <view class="hero-text">
+      <text class="text-display">PLAY.</text>
+      <text class="text-display">COMPETE.</text>
+      <text class="text-display">IMPROVE.</text>
+    </view>
   </view>
 
   <view class="section">

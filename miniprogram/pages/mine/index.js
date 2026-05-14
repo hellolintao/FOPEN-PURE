@@ -1,3 +1,6 @@
+const app = getApp()
+const DEFAULT_AVATAR = '/images/icons/usercenter.png'
+
 Page({
 	data: {
 		userInfo: {
@@ -32,10 +35,14 @@ Page({
 						},
 						currentMemberId: user._id
 					})
+					app.globalData.currentMember = user
+					app.globalData.isAdmin = !!user.admin
 					// 获取积分
 					this.loadUserPoints(user._id)
 				} else {
 					this.setData({ isLogin: false, isAdmin: false, totalPoints: 0 })
+					app.globalData.currentMember = null
+					app.globalData.isAdmin = false
 				}
 			}
 		})
@@ -98,11 +105,13 @@ Page({
 						isLogin: true,
 						isAdmin: user.admin || false,
 						userInfo: {
-							avatarUrl: user.avatarUrl || 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132',
+							avatarUrl: user.avatarUrl || DEFAULT_AVATAR,
 							name: user.name || '微信用户'
 						},
 						currentMemberId: user._id
 					})
+					app.globalData.currentMember = user
+					app.globalData.isAdmin = !!user.admin
 					// 获取积分
 					this.loadUserPoints(user._id)
 					wx.showToast({ title: '登录成功', icon: 'success' })
@@ -114,17 +123,27 @@ Page({
 							action: 'add',
 							data: {
 								name: '微信用户',
-								avatarUrl: 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132'
+								avatarUrl: DEFAULT_AVATAR
 							}
 						},
 						success: addRes => {
+							const member = {
+								_id: addRes.result && addRes.result._id,
+								name: '微信用户',
+								avatarUrl: DEFAULT_AVATAR,
+								admin: false
+							}
 							this.setData({
 								isLogin: true,
+								isAdmin: false,
 								userInfo: {
-									avatarUrl: 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCsl1PaL2XUIPcnYgicQ/132',
+									avatarUrl: DEFAULT_AVATAR,
 									name: '微信用户'
-								}
+								},
+								currentMemberId: member._id || ''
 							})
+							app.globalData.currentMember = member._id ? member : null
+							app.globalData.isAdmin = false
 							wx.showToast({ title: '注册成功', icon: 'success' })
 							// 跳转到编辑资料页面
 							setTimeout(() => {

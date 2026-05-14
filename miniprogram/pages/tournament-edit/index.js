@@ -310,6 +310,10 @@ Page({
     wx.navigateTo({ url })
   },
 
+  onLogin() {
+    wx.switchTab({ url: '/pages/mine/index' })
+  },
+
   onRemovePlayer(e) {
     const id = e.currentTarget.dataset.id
     this.setData({

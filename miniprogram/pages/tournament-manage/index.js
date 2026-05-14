@@ -132,6 +132,10 @@ Page({
         })
     },
 
+    onLogin() {
+        wx.switchTab({ url: '/pages/mine/index' })
+    },
+
     onAddPlayer(e) {
         const id = e.currentTarget.dataset.id
         const type = e.currentTarget.dataset.type
