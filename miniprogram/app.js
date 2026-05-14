@@ -2,7 +2,8 @@ App({
   globalData: {
     env: 'cloud1-0gthnke69a09f52a',
     isAdmin: false,
-    currentMember: null
+    currentMember: null,
+    lastSelectedPlayers: null
   },
 
   onLaunch() {

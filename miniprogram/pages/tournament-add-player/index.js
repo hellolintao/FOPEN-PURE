@@ -1,6 +1,7 @@
 Page({
   data: {
     tournamentId: '',
+    pickerMode: '',
     tournament: null,
     selectedMembers: [],
     originalRegistrationIds: [], // 存储初始的报名记录ID
@@ -10,12 +11,15 @@ Page({
   },
 
   onLoad(options) {
-    const { id } = options
-    if (id) {
-      this.setData({ tournamentId: id })
+    const { id, tournamentId, pickerMode } = options
+    const tid = id || tournamentId || ''
+    this.setData({ tournamentId: tid, pickerMode: pickerMode === '1' ? '1' : '' })
+    this.loadMembers()
+    if (tid) {
       this.loadTournament()
-      this.loadMembers()
-      this.loadRegisteredMembers()
+      if (pickerMode !== '1') {
+        this.loadRegisteredMembers()
+      }
     }
   },
 
@@ -164,7 +168,26 @@ Page({
 
   // 提交
   async onSubmit() {
-    const { selectedMembers, tournament, tournamentId, originalRegistrationIds } = this.data
+    const { selectedMembers, tournament, tournamentId, originalRegistrationIds, pickerMode } = this.data
+
+    if (selectedMembers.length === 0) {
+      wx.showToast({ title: '请选择参赛人员', icon: 'none' })
+      return
+    }
+
+    // pickerMode=1: return selection to wizard via globalData
+    if (pickerMode === '1') {
+      const app = getApp()
+      app.globalData.lastSelectedPlayers = selectedMembers.map(m => ({
+        playerId: m._id,
+        playerName: m.name,
+        partnerId: null,
+        partnerName: null,
+        teamName: null
+      }))
+      wx.navigateBack()
+      return
+    }
 
     if (!tournament) {
       wx.showToast({

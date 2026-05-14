@@ -1,6 +1,7 @@
 {
-  "navigationBarTitleText": "赛事编辑",
+  "navigationBarTitleText": "创建赛事",
   "usingComponents": {
-    "court-grid": "/components/court-grid/index"
+    "court-grid": "/components/court-grid/index",
+    "schedule-board": "/components/schedule-board/index"
   }
 }

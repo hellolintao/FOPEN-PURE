@@ -1,6 +1,7 @@
 Page({
   data: {
     tournamentId: '',
+    pickerMode: '',
     tournament: null,
     teams: [],
     memberList: [],
@@ -15,12 +16,15 @@ Page({
   },
 
   onLoad(options) {
-    const { id } = options
-    if (id) {
-      this.setData({ tournamentId: id })
+    const { id, tournamentId, pickerMode } = options
+    const tid = id || tournamentId || ''
+    this.setData({ tournamentId: tid, pickerMode: pickerMode === '1' ? '1' : '' })
+    this.loadMembers()
+    if (tid) {
       this.loadTournament()
-      this.loadMembers()
-      this.loadRegisteredTeams()
+      if (pickerMode !== '1') {
+        this.loadRegisteredTeams()
+      }
     }
   },
 
@@ -286,7 +290,7 @@ Page({
 
   // 保存队伍
   onSaveTeam() {
-    const { editingTeam, tournament, tournamentId } = this.data
+    const { editingTeam, tournament, tournamentId, pickerMode, teams } = this.data
 
     if (!editingTeam.player1 || !editingTeam.player2) {
       wx.showToast({
@@ -304,9 +308,22 @@ Page({
       return
     }
 
+    // pickerMode=1: add to local teams list, do not write to DB
+    if (pickerMode === '1') {
+      const newTeam = {
+        _id: null,
+        teamName: editingTeam.teamName.trim(),
+        player1: editingTeam.player1,
+        player2: editingTeam.player2,
+        seed: teams.length + 1
+      }
+      this.setData({ teams: [...teams, newTeam], editingTeam: null })
+      return
+    }
+
     const data = {
       tournamentId,
-      seasonId: tournament.seasonId,
+      seasonId: tournament && tournament.seasonId,
       type: 'doubles',
       playerId: editingTeam.player1._id,
       playerName: editingTeam.player1.name,
@@ -354,6 +371,25 @@ Page({
           icon: 'error'
         })
       })
+  },
+
+  // pickerMode=1: confirm and return all teams to wizard
+  onConfirmPickerMode() {
+    const { teams, pickerMode } = this.data
+    if (pickerMode !== '1') return
+    if (teams.length === 0) {
+      wx.showToast({ title: '请至少添加一支队伍', icon: 'none' })
+      return
+    }
+    const app = getApp()
+    app.globalData.lastSelectedPlayers = teams.map(t => ({
+      playerId: t.player1._id,
+      playerName: t.player1.name,
+      partnerId: t.player2._id,
+      partnerName: t.player2.name,
+      teamName: t.teamName
+    }))
+    wx.navigateBack()
   },
 
   // 删除队伍
