@@ -2,6 +2,9 @@
   "navigationBarTitleText": "比分录入",
   "usingComponents": {
     "score-row": "/components/score-row/index",
-    "skeleton-loader": "/components/skeleton-loader/index"
+    "skeleton-loader": "/components/skeleton-loader/index",
+    "status-tag": "/components/status-tag/index",
+    "empty-state": "/components/empty-state/index",
+    "batch-result-sheet": "/components/batch-result-sheet/index"
   }
 }

@@ -1,4 +1,5 @@
 const app = getApp()
+const { call } = require('../../utils/cloud')
 
 Page({
   data: {
@@ -16,7 +17,8 @@ Page({
     bottomDisabled: true,
     anchorMatchId: '',
     loading: false,
-    empty: false
+    empty: false,
+    sheet: { visible: false, title: '', mode: 'confirm', items: [], result: null, requestId: null }
   },
 
   onLoad(options) {
@@ -211,35 +213,112 @@ Page({
     }
   },
 
-  async onConfirmAll() {
-    const drafts = this.collectActionableDrafts()
-    if (drafts.length < 1) return
-    if (this.data.bottomDisabled) return
-    const ok = await new Promise(resolve => wx.showModal({
-      title: this.data.isAdmin ? '确认所有比赛结果并保存？' : `确认已填写的 ${drafts.length} 场？`,
-      content: this.data.isAdmin ? '保存后将记入积分' : '将提交给管理员确认，本次不会记入积分',
-      success: ({ confirm }) => resolve(confirm)
-    }))
-    if (!ok) return
-    try {
-      let okCount = 0
-      for (const d of drafts) {
-        const payload = this.data.isAdmin && d.isConfirmed && d.dirty
-          ? { action: 'reconfirmMatch', matchId: d.matchId, newScore: d.score }
-          : { action: 'submit', matchId: d.matchId, score: d.score }
-        const res = await wx.cloud.callFunction({ name: 'match-results', data: payload })
-        const r = res.result
-        if (!r || !r.success) {
-          wx.showToast({ title: (r && r.error && r.error.message) || '失败', icon: 'none' })
-          return
-        }
-        okCount++
-      }
-      wx.showToast({ title: this.data.isAdmin ? `已保存 ${okCount} 场` : `已确认 ${okCount} 场`, icon: 'success' })
-      await this.refresh()
-    } catch (err) {
-      console.error('[tournament-score] confirmAll', err)
-      wx.showToast({ title: '失败', icon: 'none' })
+  onConfirmAll() {
+    this.onAdminBatchSheet()
+  },
+
+  async onAdminBatchSheet() {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    this.setData({
+      sheet: { visible: true, title: '待确认比分', mode: 'confirm', items: [], result: null, requestId }
+    })
+    const res = await call('match-results', { action: 'pendingReviewItems', payload: { tournamentId: this.data.tournamentId, limit: 50 } })
+    if (!res.ok) {
+      this.setData({ 'sheet.visible': false })
+      wx.showModal({ title: '加载失败', content: (res.error && res.error.message) || '', showCancel: false })
+      return
     }
+    this.setData({ 'sheet.items': res.data.items })
+  },
+
+  async onSheetCommit(e) {
+    const { matchIds } = e.detail
+    const items = this.data.sheet.items.filter(it => matchIds.includes(it.matchId))
+    if (this.data.sheet.mode === 'confirm') {
+      const matches = items.map(it => ({
+        matchId: it.matchId,
+        expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime
+      }))
+      const res = await call('match-results', { action: 'batchConfirm', payload: { matches, requestId: this.data.sheet.requestId } })
+      this._applySheetResult(res, items)
+    }
+  },
+
+  _applySheetResult(res, items) {
+    if (!res.ok) {
+      this.setData({
+        'sheet.result': {
+          requestId: this.data.sheet.requestId,
+          successIds: [],
+          failures: items.map(it => ({
+            matchId: it.matchId,
+            code: res.error.code,
+            message: res.error.message,
+            retryable: !!res.error.retryable,
+            requestId: this.data.sheet.requestId
+          }))
+        }
+      })
+      return
+    }
+    this.setData({ 'sheet.result': res.data })
+  },
+
+  async onSheetRetry(e) {
+    const { failureIds } = e.detail
+    const lastFailures = (this.data.sheet.result && this.data.sheet.result.failures) || []
+    const isBatchLevel = lastFailures.every(f => ['BATCH_TIMEOUT', 'NETWORK', 'TIMEOUT'].includes(f.code))
+    if (isBatchLevel) {
+      const items = this.data.sheet.items
+      const matches = items.map(it => ({
+        matchId: it.matchId,
+        expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime
+      }))
+      const res = await call('match-results', { action: 'batchConfirm', payload: { matches, requestId: this.data.sheet.requestId } })
+      this._applySheetResult(res, items)
+      return
+    }
+    // per-row retry: re-fetch then submit subset
+    const refetch = await call('match-results', { action: 'pendingReviewItems', payload: { tournamentId: this.data.tournamentId, limit: 50 } })
+    if (!refetch.ok) {
+      wx.showModal({ title: '重拉失败', content: (refetch.error && refetch.error.message) || '', showCancel: false })
+      return
+    }
+    const fresh = refetch.data.items
+    const refreshedItems = this.data.sheet.items.map(it => fresh.find(x => x.matchId === it.matchId) || it)
+    this.setData({ 'sheet.items': refreshedItems })
+    const matches = refreshedItems.filter(it => failureIds.includes(it.matchId)).map(it => ({
+      matchId: it.matchId,
+      expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime
+    }))
+    const res = await call('match-results', { action: 'batchConfirm', payload: { matches, requestId: this.data.sheet.requestId } })
+    if (!res.ok) {
+      this.setData({
+        'sheet.result': {
+          ...this.data.sheet.result,
+          failures: matches.map(m => ({
+            matchId: m.matchId,
+            code: res.error.code,
+            message: res.error.message,
+            retryable: !!res.error.retryable,
+            requestId: this.data.sheet.requestId
+          }))
+        }
+      })
+      return
+    }
+    const prior = this.data.sheet.result || { successIds: [], failures: [] }
+    const mergedSuccessIds = [...new Set([...(prior.successIds || []), ...res.data.successIds])]
+    this.setData({ 'sheet.result': { ...res.data, successIds: mergedSuccessIds } })
+  },
+
+  onSheetEditRow() {
+    this.setData({ 'sheet.visible': false })
+    // user can edit inline via score-row UI on the page
+  },
+
+  onSheetClose() {
+    this.setData({ 'sheet.visible': false })
+    this.refresh()
   }
 })

@@ -55,4 +55,16 @@
       <text class="confirm-count num">{{bottomCount}} 场</text>
     </button>
   </view>
+
+  <batch-result-sheet
+    visible="{{sheet.visible}}"
+    title="{{sheet.title}}"
+    mode="{{sheet.mode}}"
+    items="{{sheet.items}}"
+    result="{{sheet.result}}"
+    bindcommit="onSheetCommit"
+    bindretry="onSheetRetry"
+    bindeditrow="onSheetEditRow"
+    bindclose="onSheetClose"
+  />
 </view>
