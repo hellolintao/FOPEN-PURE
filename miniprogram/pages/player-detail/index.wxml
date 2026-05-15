@@ -1,53 +1,103 @@
-<view class="player-page">
-  <skeleton-loader wx:if="{{loading}}" rows="{{4}}" />
+<view class="pd-page">
 
-  <view wx:elif="{{player}}">
-    <view class="hero-row card-hero anim-fade-up">
-      <brush-stroke-bg></brush-stroke-bg>
-      <image class="big-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
-      <view class="player-info">
-        <text class="text-h1">{{player.name}}</text>
-        <text class="text-meta">{{player.playStyle || '打法未知'}}</text>
-      </view>
-    </view>
-
-    <view wx:if="{{player.playStyleNote}}" class="card section">
-      <text class="text-label">关于</text>
-      <text class="text-body">{{player.playStyleNote}}</text>
-    </view>
-
-    <view wx:if="{{stats}}" class="section">
-      <text class="text-label">SINGLES</text>
-      <view class="stats-grid">
-        <stat-block value="{{stats.singles.winCount + stats.singles.lossCount}}" label="MATCHES"></stat-block>
-        <stat-block value="{{stats.singles.winCount}}" label="WINS"></stat-block>
-        <stat-block value="{{stats.singles.totalPoints}}" label="POINTS"></stat-block>
-      </view>
-    </view>
-
-    <view wx:if="{{stats}}" class="section">
-      <text class="text-label">DOUBLES</text>
-      <view class="stats-grid">
-        <stat-block value="{{stats.doubles.winCount + stats.doubles.lossCount}}" label="MATCHES"></stat-block>
-        <stat-block value="{{stats.doubles.winCount}}" label="WINS"></stat-block>
-        <stat-block value="{{stats.doubles.totalPoints}}" label="POINTS"></stat-block>
-      </view>
-    </view>
-
-    <view wx:if="{{recent.length > 0}}" class="section">
-      <text class="text-label">RECENT MATCHES</text>
-      <view wx:for="{{recent}}" wx:key="_id" class="recent-item">
-        <text class="text-body">第 {{item.round}} 轮</text>
-        <text class="text-meta">{{item.resultStatus}}</text>
-      </view>
-    </view>
-
-    <view wx:else class="section empty-state compact">
-      <text class="text-meta">暂无近期比赛</text>
-    </view>
+  <view wx:if="{{loading}}" class="pd-loading">
+    <skeleton-loader rows="{{6}}" />
   </view>
 
-  <view wx:else class="empty-state">
-    <text class="text-meta">球员信息不存在</text>
+  <block wx:elif="{{player}}">
+
+    <!-- HERO -->
+    <view class="pd-hero anim-stage-rise">
+      <view class="pd-hero-tapes">
+        <text class="tape tape-stamped">PLAYER · 球员档案</text>
+      </view>
+      <view class="pd-hero-main">
+        <view class="pd-avatar-wrap">
+          <image class="pd-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+        </view>
+        <view class="pd-hero-info">
+          <text class="pd-name">{{player.name}}</text>
+          <view class="pd-meta">
+            <text class="pd-meta-label">PLAY STYLE</text>
+            <text class="pd-meta-val">{{player.playStyle || '打法未知'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ABOUT -->
+    <view wx:if="{{player.playStyleNote}}" class="pd-section pd-about anim-stage-rise anim-delay-1">
+      <view class="pd-section-head">
+        <text class="tape">关于 · ABOUT</text>
+      </view>
+      <text class="pd-about-text">{{player.playStyleNote}}</text>
+    </view>
+
+    <!-- SINGLES STATS -->
+    <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-2">
+      <view class="pd-section-head">
+        <text class="tape tape-lime tape-stamped-lime">SINGLES · 单打</text>
+      </view>
+      <view class="pd-stats-row">
+        <view class="pd-stat pd-stat-paper">
+          <text class="pd-stat-num num">{{stats.singles.winCount + stats.singles.lossCount}}</text>
+          <text class="pd-stat-label">MATCHES</text>
+        </view>
+        <view class="pd-stat pd-stat-lime">
+          <text class="pd-stat-num num">{{stats.singles.winCount}}</text>
+          <text class="pd-stat-label">WINS</text>
+        </view>
+        <view class="pd-stat pd-stat-ink">
+          <text class="pd-stat-num num">{{stats.singles.totalPoints}}</text>
+          <text class="pd-stat-label">POINTS</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- DOUBLES STATS -->
+    <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-3">
+      <view class="pd-section-head">
+        <text class="tape tape-ghost">DOUBLES · 双打</text>
+      </view>
+      <view class="pd-stats-row">
+        <view class="pd-stat pd-stat-paper">
+          <text class="pd-stat-num num">{{stats.doubles.winCount + stats.doubles.lossCount}}</text>
+          <text class="pd-stat-label">MATCHES</text>
+        </view>
+        <view class="pd-stat pd-stat-paper-alt">
+          <text class="pd-stat-num num">{{stats.doubles.winCount}}</text>
+          <text class="pd-stat-label">WINS</text>
+        </view>
+        <view class="pd-stat pd-stat-paper-alt">
+          <text class="pd-stat-num num">{{stats.doubles.totalPoints}}</text>
+          <text class="pd-stat-label">POINTS</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- RECENT -->
+    <view class="pd-section anim-stage-rise anim-delay-4">
+      <view class="pd-section-head">
+        <text class="tape">最近比赛 · RECENT</text>
+        <text wx:if="{{recent.length}}" class="pd-section-count num">{{recent.length}}</text>
+      </view>
+      <view wx:if="{{recent.length > 0}}" class="pd-recent-list">
+        <view wx:for="{{recent}}" wx:key="_id" class="pd-recent-item">
+          <view class="pd-recent-left">
+            <text class="pd-recent-round num">R{{item.round}}</text>
+            <text class="pd-recent-label">{{item.tournamentName || '赛事'}}</text>
+          </view>
+          <text class="pd-recent-status status-{{item.resultStatus}}">{{item.resultStatus === 'confirmed' ? '已确认' : item.resultStatus === 'submitted' ? '已交' : item.resultStatus === 'disputed' ? '争议' : '待打'}}</text>
+        </view>
+      </view>
+      <view wx:else class="pd-recent-empty">
+        <text>暂无近期比赛</text>
+      </view>
+    </view>
+
+  </block>
+
+  <view wx:else class="pd-empty">
+    <text class="tape">球员信息不存在</text>
   </view>
 </view>

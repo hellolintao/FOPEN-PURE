@@ -1,13 +1,50 @@
-<view class="match-container">
-  <view wx:if="{{tournaments.length === 0}}" class="match-empty">暂无赛事</view>
-  <block wx:for="{{tournaments}}" wx:key="_id">
-    <view class="match-item" bindtap="onItemTap" data-id="{{item._id}}">
-      <view class="match-name">{{item.name}}</view>
-      <view class="match-meta">
-        <text>类型：{{item.type === 'singles' ? '单打' : '双打'}}</text>
-        <text>时间：{{item.startDate}}</text>
-        <text>赛制：{{item.format == 'knockout' ? '淘汰赛' : '常规赛'}}</text>
+<view class="match-page">
+
+  <view class="match-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">EVENTS · 赛事</text>
+    </view>
+    <view class="head-titles">
+      <text class="head-title-zh">赛事</text>
+      <text class="head-title-en num">EVENTS</text>
+    </view>
+    <text class="head-meta">查看俱乐部全部赛事 · 点击进入详情</text>
+  </view>
+
+  <view wx:if="{{tournaments.length === 0}}" class="match-empty">
+    <text class="tape">暂无赛事</text>
+    <text class="match-empty-hint">本赛季还未发布赛事，先关注首页等待开赛</text>
+  </view>
+
+  <view wx:else class="match-list">
+    <view
+      wx:for="{{tournaments}}" wx:key="_id"
+      class="match-card tap-scale anim-stage-rise"
+      bindtap="onItemTap"
+      data-id="{{item._id}}"
+    >
+      <view class="match-card-top">
+        <text class="match-card-name">{{item.name}}</text>
+        <text class="match-card-type">{{item.type === 'singles' ? 'SINGLES' : 'DOUBLES'}}</text>
+      </view>
+      <view class="match-card-body">
+        <view class="mc-row">
+          <text class="mc-label">DATE</text>
+          <text class="mc-val num">{{item.startDate}}</text>
+        </view>
+        <view class="mc-row">
+          <text class="mc-label">FORMAT</text>
+          <text class="mc-val">{{item.format === 'knockout' ? '淘汰赛 KNOCKOUT' : '常规赛 REGULAR'}}</text>
+        </view>
+        <view wx:if="{{item.status}}" class="mc-row">
+          <text class="mc-label">STATUS</text>
+          <text class="mc-val match-status status-{{item.status}}">{{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' || item.status === 'live' ? '进行中' : item.status === 'completed' ? '已结束' : item.status}}</text>
+        </view>
+      </view>
+      <view class="match-card-cta">
+        <text class="match-card-cta-text">查看详情</text>
+        <text class="match-card-cta-arrow num">→</text>
       </view>
     </view>
-  </block>
+  </view>
 </view>

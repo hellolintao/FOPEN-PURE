@@ -1,31 +1,187 @@
-.match-container {
-	background: #FFFFFF;
-	min-height: 100vh;
-	padding: 40rpx 0;
-}
-.match-empty {
-	color: #999;
-	text-align: center;
-	margin-top: 80rpx;
-}
-.match-item {
-	background: #FFFFFF;
-	border-radius: 16rpx;
-	margin: 20rpx 32rpx;
-	padding: 24rpx 20rpx;
-	border: 2rpx solid #f0f0f0;
-}
-.match-name {
-	font-size: 32rpx;
-	color: #000000;
-	font-weight: bold;
-	margin-bottom: 12rpx;
-}
-.match-meta {
-	display: flex;
-	flex-direction: column;
-	gap: 8rpx;
-	color: #666;
-	font-size: 26rpx;
+.match-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: var(--space-5) var(--space-5) 160rpx;
 }
 
+/* ============================================================
+ * HEAD
+ * ============================================================ */
+.match-head {
+  margin-bottom: var(--space-6);
+}
+
+.head-tapes {
+  margin-bottom: var(--space-4);
+}
+
+.head-titles {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.head-title-zh {
+  font-size: 72rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+
+.head-title-en {
+  font-size: 32rpx;
+  font-weight: 900;
+  color: var(--color-muted-2);
+  letter-spacing: 0.08em;
+}
+
+.head-meta {
+  display: block;
+  font-size: var(--font-meta-size);
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+ * EMPTY
+ * ============================================================ */
+.match-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-9) 0;
+  text-align: center;
+}
+
+.match-empty-hint {
+  font-size: var(--font-body-size);
+  color: var(--color-muted);
+  max-width: 480rpx;
+  line-height: 1.5;
+}
+
+/* ============================================================
+ * LIST
+ * ============================================================ */
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.match-card {
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.match-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.match-card-name {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.match-card-type {
+  flex-shrink: 0;
+  font-family: var(--font-family-num);
+  font-size: 20rpx;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: var(--color-lime);
+  padding: 4rpx 12rpx;
+  border: 1rpx solid var(--color-lime);
+  border-radius: var(--radius-sm);
+}
+
+.match-card-body {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mc-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.mc-label {
+  flex-shrink: 0;
+  width: 116rpx;
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.mc-val {
+  flex: 1;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.match-status {
+  display: inline-flex;
+  align-items: center;
+  height: 32rpx;
+  padding: 0 12rpx;
+  border-radius: var(--radius-sm);
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.match-status.status-upcoming { background: var(--color-bg-3); color: var(--color-ink-3); }
+.match-status.status-ongoing,
+.match-status.status-live { background: var(--color-lime); color: var(--color-ink); }
+.match-status.status-completed { background: var(--color-bg-3); color: var(--color-muted); }
+
+.match-card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1rpx solid var(--color-border);
+  background: var(--color-bg-3);
+}
+
+.match-card-cta-text {
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.match-card-cta-arrow {
+  font-size: 28rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  line-height: 1;
+}

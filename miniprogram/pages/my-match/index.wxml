@@ -1,73 +1,84 @@
-<view class="my-match-container">
-  <!-- 加载状态 -->
-  <view wx:if="{{loading}}" class="loading">
-    <text>加载中...</text>
-  </view>
+<view class="mm-page">
 
-  <!-- 可录分比赛 -->
-  <view wx:if="{{!loading && scorable.length > 0}}" class="scorable-block">
-    <text class="block-title">可录分比赛</text>
-    <view
-      wx:for="{{scorable}}"
-      wx:key="_id"
-      class="scorable-row"
-      bindtap="onOpenScoreRow"
-      data-tid="{{item.tournamentId}}"
-      data-mid="{{item.sourceMatchId}}"
-    >
-      <view class="scorable-info">
-        <text class="scorable-tournament">{{item.tournamentName}}</text>
-        <text class="scorable-opponent">vs {{item.opponentLabel}}</text>
-      </view>
-      <text class="scorable-status status-{{item.resultStatus}}">{{item.statusLabel}}</text>
+  <!-- HEAD -->
+  <view class="mm-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">MY MATCHES · 我的比赛</text>
+    </view>
+    <view class="head-titles">
+      <text class="head-title-zh">我的比赛</text>
+      <text class="head-title-en num">MATCHES</text>
     </view>
   </view>
 
-  <!-- 空状态 -->
-  <view wx:if="{{!loading && tournamentList.length === 0 && scorable.length === 0}}" class="empty">
-    <text>暂无参赛记录</text>
+  <!-- LOADING -->
+  <view wx:if="{{loading}}" class="mm-state">
+    <skeleton-loader rows="{{4}}" />
   </view>
 
-  <!-- 赛事列表 -->
-  <view wx:if="{{!loading && tournamentList.length > 0}}" class="tournament-list">
+  <!-- SCORABLE BLOCK -->
+  <view wx:if="{{!loading && scorable.length > 0}}" class="scorable-block anim-stage-rise anim-delay-1">
+    <view class="scorable-head">
+      <text class="tape tape-lime tape-stamped-lime">ACTION · 可录分</text>
+      <text class="scorable-count num">{{scorable.length}} 场</text>
+    </view>
+    <view class="scorable-list">
+      <view
+        wx:for="{{scorable}}"
+        wx:key="_id"
+        class="scorable-row tap-scale"
+        bindtap="onOpenScoreRow"
+        data-tid="{{item.tournamentId}}"
+        data-mid="{{item.sourceMatchId}}"
+      >
+        <view class="scorable-info">
+          <text class="scorable-tournament">{{item.tournamentName}}</text>
+          <text class="scorable-opponent">VS {{item.opponentLabel}}</text>
+        </view>
+        <view class="scorable-status-wrap">
+          <text class="scorable-status status-{{item.resultStatus}}">{{item.statusLabel}}</text>
+          <text class="scorable-arrow num">→</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- EMPTY -->
+  <view wx:if="{{!loading && tournamentList.length === 0 && scorable.length === 0}}" class="mm-empty">
+    <text class="tape">暂无参赛记录</text>
+    <text class="mm-empty-hint">从首页报名一场赛事开始你的网球纪录</text>
+  </view>
+
+  <!-- TOURNAMENT LIST -->
+  <view wx:if="{{!loading && tournamentList.length > 0}}" class="tournament-list anim-stage-rise anim-delay-2">
+    <view class="section-head">
+      <text class="tape">我的赛事 · MY EVENTS</text>
+      <text class="section-count num">{{tournamentList.length}}</text>
+    </view>
     <view
       wx:for="{{tournamentList}}"
       wx:key="tournament._id"
-      class="tournament-card"
+      class="tournament-card tap-scale"
       bindtap="onCardTap"
       data-tournament-id="{{item.tournament._id}}"
     >
-      <!-- 卡片标题 -->
-      <view class="card-header">
-        <view class="header-left">
-          <text class="tournament-name">{{item.tournament.name}}</text>
+      <view class="tc-top">
+        <text class="tc-name">{{item.tournament.name}}</text>
+        <text class="tc-type">{{item.tournament.type === 'singles' ? 'SINGLES' : 'DOUBLES'}}</text>
+      </view>
+      <view class="tc-body">
+        <view wx:if="{{item.registration.teamName}}" class="tc-row">
+          <text class="tc-label">TEAM</text>
+          <text class="tc-value">{{item.registration.teamName}}</text>
         </view>
-        <view class="header-right">
-          <text class="tournament-type">{{item.tournament.type === 'singles' ? '单打' : '双打'}}</text>
+        <view class="tc-row">
+          <text class="tc-label">PLAYER</text>
+          <text class="tc-value">{{item.registration.playerName}}{{item.registration.partnerName ? ' / ' + item.registration.partnerName : ''}}</text>
         </view>
       </view>
-
-      <!-- 卡片内容 -->
-      <view class="card-body">
-
-        <!-- 队伍名 -->
-        <view wx:if="{{item.registration.teamName}}" class="info-row">
-          <text class="info-label">队伍：</text>
-          <text class="info-value">{{item.registration.teamName}}</text>
-        </view>
-
-        <view class="info-row">
-          <text class="info-label">参赛选手：</text>
-          <text class="info-value">{{item.registration.playerName}} {{item.registration.partnerName || ''}}</text>
-        </view>        
-
-        <!-- 赛事状态 -->
-        <!-- <view class="info-row">
-          <text class="info-label">状态：</text>
-          <text class="info-value status-{{item.tournament.status}}">
-            {{item.tournament.status === 'upcoming' ? '待开始' : item.tournament.status === 'ongoing' ? '进行中' : '已结束'}}
-          </text>
-        </view> -->
+      <view class="tc-cta">
+        <text class="tc-cta-text">查看详情</text>
+        <text class="tc-cta-arrow num">→</text>
       </view>
     </view>
   </view>

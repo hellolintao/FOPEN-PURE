@@ -1,7 +1,5 @@
 {
   "usingComponents": {
-    "stat-block": "/components/stat-block/index",
-    "brush-stroke-bg": "/components/brush-stroke-bg/index",
     "skeleton-loader": "/components/skeleton-loader/index"
   },
   "navigationBarTitleText": "球员详情"
