@@ -1,0 +1,24 @@
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.status-tag--sm { font-size: 20rpx; padding: 2rpx 14rpx; }
+.status-tag--md { font-size: 22rpx; padding: 4rpx 18rpx; }
+.status-tag__count {
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 18rpx;
+}
+.status-tag--warn { background: rgba(220, 38, 38, 0.12); color: #991B1B; }
+.status-tag--warn-solid { background: var(--color-danger); color: #FFF; }
+.status-tag--warn-solid .status-tag__count { background: rgba(255, 255, 255, 0.3); }
+.status-tag--ok { background: rgba(132, 204, 22, 0.18); color: #3F6212; }
+.status-tag--amber { background: rgba(245, 158, 11, 0.18); color: #92400E; }
+.status-tag--muted { background: var(--color-bg-3); color: var(--color-muted); }
+.status-tag--info { background: var(--color-ink); color: #FFF; }

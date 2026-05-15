@@ -1,0 +1,4 @@
+<view class="status-tag status-tag--{{type}} status-tag--{{size}}">
+  <text class="status-tag__text">{{text}}</text>
+  <text wx:if="{{count !== null && count !== undefined}}" class="status-tag__count">{{count}}</text>
+</view>
