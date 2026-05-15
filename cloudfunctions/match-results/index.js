@@ -318,6 +318,13 @@ function buildQueryCtx(submitter) {
   }
 }
 
+function buildSubmitCtx(submitter) {
+  return {
+    submitter,
+    stateSvc,
+  }
+}
+
 function buildSummaryCtx(submitter) {
   return {
     callerMemberId: submitter._id,
@@ -657,33 +664,39 @@ exports.main = async (event, context) => {
       return await handleBulkUpsert(event)
 
     case 'submit': {
+      const { submit } = require('./lib/handlers/submit')
       const submitter = await resolveSubmitter()
       if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
       try {
-        await stateSvc.submitResult({ matchId: event.matchId, score: event.score, submitter })
-        return ok({ ok: true })
+        const ctx = buildSubmitCtx(submitter)
+        const data = await submit(ctx, event)
+        return ok(data)
       } catch (e) {
         return fail(e.message || 'INTERNAL', e.message)
       }
     }
 
     case 'confirmAll': {
+      const { confirmAll } = require('./lib/handlers/submit')
       const submitter = await resolveSubmitter()
       if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
       try {
-        const r = await stateSvc.confirmAll({ tournamentId: event.tournamentId, admin: submitter })
-        return ok(r)
+        const ctx = buildSubmitCtx(submitter)
+        const data = await confirmAll(ctx, event)
+        return ok(data)
       } catch (e) {
         return fail(e.message || 'INTERNAL', e.message)
       }
     }
 
     case 'reconfirmMatch': {
+      const { reconfirmMatch } = require('./lib/handlers/submit')
       const submitter = await resolveSubmitter()
       if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
       try {
-        await stateSvc.reconfirmMatch({ matchId: event.matchId, newScore: event.newScore, admin: submitter })
-        return ok({ ok: true })
+        const ctx = buildSubmitCtx(submitter)
+        const data = await reconfirmMatch(ctx, event)
+        return ok(data)
       } catch (e) {
         return fail(e.message || 'INTERNAL', e.message)
       }
