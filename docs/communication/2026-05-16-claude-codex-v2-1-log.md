@@ -276,6 +276,25 @@ Spec 状态：已 commit（次次修订）；待 Codex 与用户 review 通过�
 
 Spec 状态：已修订（三次修订待 commit）。如 §4.13 OK，下一步 invoke writing-plans。
 
+## 2026-05-16 · Plan 实现提醒（用户）
+
+参与方：用户、Claude。
+
+主题：进入 writing-plans 前，用户给 plan 实现的一条强制提醒。
+
+提醒：
+
+- `NETWORK` 错误是前端 wrapper（§5.1）catch 分支构造的，后端从未接到调用，`error.requestId` 可能不存在或仅为 wrapper traceId。
+- Plan 实现 retry 必须用 **`parent.sheet.requestId`**（sheet 开启时生成的 batch group id），**不能依赖 wrapper error 里一定带 requestId**。
+- `BATCH_TIMEOUT` 由后端返回，envelope 必带 requestId，可作 sanity check 但 retry 仍以 sheet.requestId 为准。
+
+落地：
+
+- §4.13 末尾追加「实现注意 · requestId 的真实来源」段落。
+- writing-plans 阶段在对应 Task 描述里显式写明 retry 实现引用 sheet.requestId。
+
+用户决策：spec 现在通过，开始写 plan。
+
 ## 后续执行日志
 
 暂无。

@@ -715,6 +715,8 @@ cloudfunctions/match-results/
 
 **STALE_VERSION 处理**：无论哪条路径，STALE_VERSION 行始终 `retryable=false`、sheet 内灰色不可点；admin 必须 close + 重开 sheet（snapshot 刷新带来新 items + 新 `expectedUpdateTime`）。
 
+**实现注意 · requestId 的真实来源**：`NETWORK` 错误由前端 wrapper（§5.1）的 catch 分支构造，**后端从未接到调用**，因此 `error.requestId` 字段可能不存在或为 wrapper 的 traceId。Plan 实现时 retry 必须使用 **`parent.sheet.requestId`**（开 sheet 时生成、整个 sheet 生命周期保存），**不能**依赖 wrapper error 里一定带 requestId。`BATCH_TIMEOUT` 由后端返回，envelope 必带 requestId（与 sheet 持有的应一致，仅作 sanity check）。
+
 ---
 
 ## 5. 数据流与错误恢复
