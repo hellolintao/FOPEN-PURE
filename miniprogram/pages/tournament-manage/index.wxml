@@ -1,72 +1,98 @@
-<view class="tournament-manage-container">
-  <button class="fab-button" bindtap="onAddTournament">
-      添加赛事
-    </button>
-
-  <!-- 我的草稿 -->
-  <view wx:if="{{drafts.length > 0}}" class="drafts-block">
-    <text class="block-title">我的草稿</text>
-    <view wx:for="{{drafts}}" wx:key="_id" class="draft-row" bindtap="onResumeDraft" data-id="{{item._id}}">
-      <text class="draft-name">{{item.name || '未命名'}}</text>
-      <text class="text-meta">{{item.startDate || '—'}}</text>
-    </view>
+<view class="page">
+  <view class="nav-bar">
+    <text class="nav-title">工作台</text>
+    <view class="nav-cta" bindtap="onCreateTournament">+ 创建</view>
   </view>
 
-  <!-- 待确认比分（admin） -->
-  <view wx:if="{{isAdmin && submittedQueue.length > 0}}" class="queue-block">
-    <text class="block-title">待确认比分</text>
-    <view wx:for="{{submittedQueue}}" wx:key="tournamentId" class="queue-row" bindtap="onOpenScore" data-id="{{item.tournamentId}}">
-      <view class="queue-info">
-        <text class="queue-name">{{item.tournamentName}}</text>
-        <text class="text-meta">{{item.submittedCount}} 场待确认</text>
-      </view>
-      <text class="queue-arrow">›</text>
-    </view>
+  <skeleton-loader wx:if="{{loadState === 'loading'}}" rows="6" />
+
+  <view wx:elif="{{loadState === 'error'}}" class="page-error">
+    <empty-state icon="warn" title="加载失败" subtitle="{{error.message || ''}}" action="重新加载" bindaction="onRetry" />
   </view>
 
-  <block wx:for="{{tournamentList}}" wx:key="_id">
-    <view class="tournament-card" bindtap="onEditTournament" data-id="{{item._id}}">
-      <!-- 卡片左侧装饰条 -->
-      <view class="card-accent {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}"></view>
+  <block wx:elif="{{loadState === 'loaded' || loadState === 'refreshing'}}">
+    <view wx:if="{{snapshot.pendingConfirm.total === 0 && snapshot.myDrafts.length === 0 && snapshot.ongoing.length === 0}}" class="page-empty">
+      <empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" bindaction="onCreateTournament" />
+    </view>
 
-      <!-- 卡片内容 -->
-      <view class="card-content">
-        <!-- 标题和状态 -->
-        <view class="card-header">
-          <view class="card-name">{{item.name}}</view>
-          <!-- <view class="status-badge {{item.status === 'upcoming' ? 'upcoming' : item.status === 'ongoing' ? 'ongoing' : 'completed'}}">
-            {{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' ? '进行中' : '已结束'}}
-          </view> -->
+    <block wx:else>
+      <view class="hero">
+        <text class="hero-eyebrow">今日待办</text>
+        <text class="hero-big">{{snapshot.pendingConfirm.total}} 场待确认 · {{snapshot.myDrafts.length}} 个草稿</text>
+        <view wx:if="{{snapshot.pendingConfirm.total > 0}}" class="hero-cta" bindtap="onHeroCta">→ 审核并确认 {{snapshot.pendingConfirm.total}} 场</view>
+        <view wx:elif="{{snapshot.myDrafts.length > 0}}" class="hero-cta" bindtap="onCreateTournament">→ 继续编辑</view>
+        <view wx:else class="hero-cta" bindtap="onCreateTournament">+ 创建赛事</view>
+      </view>
+
+      <view wx:if="{{snapshot.pendingConfirm.total > 0}}" class="block">
+        <view class="block-title">
+          <text>待确认比分</text>
+          <status-tag type="warn-solid" text="{{snapshot.pendingConfirm.total}}" />
         </view>
-
-        <!-- 元信息 -->
-        <view class="card-meta">
-          <view class="meta-item">
-            <text class="meta-icon">🏆</text>
-            <text class="meta-text">{{item.seasonName || '未设置赛季'}}</text>
+        <view class="row" wx:for="{{snapshot.pendingConfirm.byTournament}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onPendingRow">
+          <view class="row-l">
+            <text class="row-t">{{item.tournamentName}}</text>
+            <text class="row-s">{{item.count}} 场提交中</text>
           </view>
-          <view class="meta-item">
-            <text class="meta-icon">📅</text>
-            <text class="meta-text">{{item.startDate}}</text>
-          </view>
-        </view>
-
-        <!-- 类型标签 -->
-        <view class="card-tags">
-          <view class="tag tag-type">{{item.type === 'doubles' ? '双打' : '单打'}}</view>
-          <view class="tag tag-format">{{item.format === 'knockout' ? '淘汰赛' : '常规赛'}}</view>
-        </view>
-
-        <!-- 描述 -->
-        <view class="card-desc" wx:if="{{item.description}}">{{item.description}}</view>
-
-        <!-- 操作按钮 -->
-        <view class="card-actions" catchtap="onStopPropagation">
-          <button class="action-btn" catchtap="onAddPlayer" data-id="{{item._id}}" data-type="{{item.type}}">参赛人员</button>
-          <button class="action-btn" catchtap="onViewBrackets" data-id="{{item._id}}" data-type="{{item.type}}">对位表</button>
+          <status-tag type="warn-solid" text="{{item.count}}" />
         </view>
       </view>
-    </view>
+
+      <view wx:if="{{snapshot.myDrafts.length > 0}}" class="block">
+        <view class="block-title"><text>我的草稿</text></view>
+        <view class="row" wx:for="{{snapshot.myDrafts}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onDraftRow">
+          <view class="row-l">
+            <text class="row-t">{{item.name}}</text>
+            <text class="row-s">{{item.playerCount}} 球员 · {{item.scheduleReady ? '已排程' : '未排程'}}</text>
+          </view>
+          <status-tag type="muted" text="draft" />
+        </view>
+      </view>
+
+      <view wx:if="{{snapshot.ongoing.length > 0}}" class="block">
+        <view class="block-title"><text>进行中赛事</text></view>
+        <view class="row" wx:for="{{snapshot.ongoing}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onOngoingRow">
+          <view class="row-l">
+            <text class="row-t">{{item.name}}</text>
+            <text class="row-s">{{item.round}} · {{item.remainingMatches}} 场剩余</text>
+          </view>
+          <status-tag type="muted" text="查看" />
+        </view>
+      </view>
+
+      <view class="block block--collapsible">
+        <view class="block-title" bindtap="onToggleFinished">
+          <text>已结束</text>
+          <text class="block-toggle">{{finishedExpanded ? '收起' : '展开'}}</text>
+        </view>
+        <block wx:if="{{finishedExpanded}}">
+          <skeleton-loader wx:if="{{finishedState === 'loading'}}" rows="3" />
+          <view wx:elif="{{finishedState === 'error'}}" class="finished-error">
+            <text>已结束 · 暂时无法加载</text>
+            <view class="finished-retry" bindtap="onRetryFinished">重试</view>
+          </view>
+          <view wx:elif="{{finishedState === 'loaded'}}">
+            <view class="row" wx:for="{{finishedItems}}" wx:key="tournamentId">
+              <view class="row-l">
+                <text class="row-t">{{item.name}}</text>
+                <text class="row-s">{{item.winnerLabel}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+    </block>
   </block>
 
+  <batch-result-sheet
+    visible="{{sheet.visible}}"
+    title="{{sheet.title}}"
+    mode="{{sheet.mode}}"
+    items="{{sheet.items}}"
+    result="{{sheet.result}}"
+    bindcommit="onSheetCommit"
+    bindretry="onSheetRetry"
+    bindeditrow="onSheetEditRow"
+    bindclose="onSheetClose"
+  />
 </view>

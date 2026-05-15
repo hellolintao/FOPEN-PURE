@@ -1,3 +1,9 @@
 {
-  "navigationBarTitleText": "赛事管理"
+  "navigationBarTitleText": "赛事管理",
+  "usingComponents": {
+    "status-tag": "/components/status-tag/index",
+    "empty-state": "/components/empty-state/index",
+    "batch-result-sheet": "/components/batch-result-sheet/index",
+    "skeleton-loader": "/components/skeleton-loader/index"
+  }
 }

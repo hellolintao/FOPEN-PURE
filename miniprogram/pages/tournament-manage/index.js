@@ -1,184 +1,205 @@
-const app = getApp()
+const { call } = require('../../utils/cloud')
 
 Page({
-    data: {
-        drafts: [],
-        submittedQueue: [],
-        tournamentList: [],
-        page: 1,
-        pageSize: 10,
-        loading: false,
-        hasMore: true,
-        isAdmin: false
+  data: {
+    loadState: 'idle',
+    error: null,
+    snapshot: null,
+    finishedExpanded: false,
+    finishedState: 'idle',
+    finishedError: null,
+    finishedItems: [],
+    sheet: {
+      visible: false,
+      title: '',
+      mode: 'confirm',
+      items: [],
+      result: null,
+      requestId: null,
+      loading: false,
+      tournamentIdScope: null,
     },
+    _refreshTimer: null,
+  },
 
-    onLoad() {
-        this.refresh()
-    },
+  onShow() {
+    this._refreshSnapshotDebounced()
+  },
 
-    onShow() {
-        this.setData({ isAdmin: !!(app.globalData && app.globalData.isAdmin) })
-        this.refresh()
-    },
+  _refreshSnapshotDebounced() {
+    if (this.data._refreshTimer) clearTimeout(this.data._refreshTimer)
+    const timer = setTimeout(() => this._loadSnapshot('refreshing'), 300)
+    this.setData({ _refreshTimer: timer })
+  },
 
-    async refresh() {
-        this.setData({ page: 1, tournamentList: [], drafts: [], submittedQueue: [], hasMore: true })
-        await Promise.all([this.loadDrafts(), this.loadSubmittedQueue(), this.loadPublic()])
-    },
+  async _loadSnapshot(mode) {
+    this.setData({ loadState: mode || 'loading', error: null })
+    const res = await call('tournaments', { action: 'adminConsoleSnapshot', payload: {} })
+    if (!res.ok) {
+      this.setData({ loadState: 'error', error: res.error || { code: 'UNKNOWN', message: '加载失败' } })
+      return
+    }
+    this.setData({ loadState: 'loaded', snapshot: res.data })
+  },
 
-    async loadSubmittedQueue() {
-        if (!this.data.isAdmin) {
-            this.setData({ submittedQueue: [] })
-            return
-        }
-        try {
-            const r = await wx.cloud.callFunction({
-                name: 'match-results',
-                data: { action: 'submittedQueue' }
-            })
-            const items = (r.result && r.result.success && r.result.data && r.result.data.items) || []
-            this.setData({ submittedQueue: items })
-        } catch (e) {
-            console.error('loadSubmittedQueue', e)
-        }
-    },
+  onRetry() { this._loadSnapshot('loading') },
 
-    onOpenScore(e) {
-        const tid = e.currentTarget.dataset.id
-        wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${tid}` })
-    },
+  onCreateTournament() {
+    wx.navigateTo({ url: '/pages/tournament-edit/index' })
+  },
 
-    async loadDrafts() {
-        const me = app.globalData && app.globalData.currentMember
-        if (!me || !me._id) {
-            this.setData({ drafts: [] })
-            return
-        }
-        try {
-            const r = await wx.cloud.callFunction({
-                name: 'tournaments',
-                data: { action: 'list', status: 'draft', createdBy: me._id, pageSize: 50 }
-            })
-            const drafts = (r.result && r.result.success && r.result.data && r.result.data.tournaments) || []
-            this.setData({ drafts })
-        } catch (e) {
-            console.error('loadDrafts', e)
-        }
-    },
+  async _openSheetForTournament(tournamentId) {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    this.setData({
+      sheet: {
+        ...this.data.sheet, visible: true, title: '待确认比分', mode: 'confirm',
+        items: [], result: null, requestId, loading: true, tournamentIdScope: tournamentId,
+      },
+    })
+    const res = await call('match-results', { action: 'pendingReviewItems', payload: { tournamentId: tournamentId || null, limit: 50 } })
+    if (!res.ok) {
+      this.setData({ 'sheet.visible': false })
+      wx.showModal({ title: '加载失败', content: (res.error && res.error.message) || '', showCancel: false })
+      return
+    }
+    this.setData({ 'sheet.loading': false, 'sheet.items': res.data.items })
+  },
 
-    async loadPublic() {
-        if (this.data.loading || !this.data.hasMore) return
-        this.setData({ loading: true })
-        try {
-            const r = await wx.cloud.callFunction({
-                name: 'tournaments',
-                data: {
-                    action: 'list',
-                    statusNot: 'draft',
-                    page: this.data.page,
-                    pageSize: this.data.pageSize
-                }
-            })
-            const list = (r.result && r.result.data && r.result.data.tournaments) || []
-            const total = (r.result && r.result.data && r.result.data.total) || 0
-            const tournamentList = this.data.page === 1 ? list : [...this.data.tournamentList, ...list]
-            this.setData({
-                tournamentList,
-                hasMore: tournamentList.length < total,
-                loading: false
-            })
-        } catch (e) {
-            console.error('loadPublic', e)
-            this.setData({ loading: false })
-            wx.showToast({ title: '加载失败', icon: 'none' })
-        }
-    },
+  onHeroCta() { this._openSheetForTournament(null) },
 
-    onReachBottom() {
-        if (!this.data.loading && this.data.hasMore) {
-            this.setData({ page: this.data.page + 1 })
-            this.loadPublic()
-        }
-    },
+  onPendingRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    this._openSheetForTournament(tid)
+  },
 
-    onResumeDraft(e) {
-        const id = e.currentTarget.dataset.id
-        wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
-    },
+  onDraftRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${tid}` })
+  },
 
-    onEditTournament(e) {
-        const id = e.currentTarget.dataset.id
-        wx.navigateTo({
-            url: '/pages/tournament-detail/index?id=' + id
-        })
-    },
+  onOngoingRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-detail/index?id=${tid}` })
+  },
 
-    onSetStatus(e) {
-        const { id, status } = e.currentTarget.dataset
-        wx.showModal({
-            title: '确认修改状态',
-            content: `确定要将该赛事状态修改为"${status === 'upcoming' ? '待开始' : status === 'ongoing' ? '进行中' : '已结束'}"吗？`,
-            success: res => {
-                if (res.confirm) {
-                    wx.cloud.callFunction({
-                        name: 'tournaments',
-                        data: { action: 'updateStatus', _id: id, status },
-                        success: () => {
-                            wx.showToast({
-                                title: '状态已更新',
-                                icon: 'success'
-                            })
-                            this.setData({
-                                page: 1,
-                                tournamentList: [],
-                                hasMore: true
-                            })
-                            this.loadPublic()
-                        },
-                        fail: () => {
-                            wx.showToast({
-                                title: '更新失败',
-                                icon: 'error'
-                            })
-                        }
-                    })
-                }
-            }
-        })
-    },
+  async onSheetCommit(e) {
+    const { matchIds } = e.detail
+    const items = this.data.sheet.items.filter(it => matchIds.includes(it.matchId))
+    const matches = items.map(it => ({
+      matchId: it.matchId,
+      expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime,
+    }))
+    const res = await call('match-results', {
+      action: 'batchConfirm',
+      payload: { matches, requestId: this.data.sheet.requestId },
+    })
+    this._applyResult(res, items)
+  },
 
-    onStopPropagation() {
-        // 阻止事件冒泡
-    },
+  _applyResult(res, items) {
+    if (!res.ok) {
+      this.setData({
+        'sheet.result': {
+          requestId: this.data.sheet.requestId,
+          successIds: [],
+          failures: items.map(it => ({
+            matchId: it.matchId, code: res.error.code, message: res.error.message,
+            retryable: !!res.error.retryable, requestId: this.data.sheet.requestId,
+          })),
+        },
+      })
+      return
+    }
+    this.setData({ 'sheet.result': res.data })
+  },
 
-    onAddTournament() {
-        wx.navigateTo({
-            url: '/pages/tournament-edit/index'
-        })
-    },
+  async onSheetRetry(e) {
+    const { failureIds } = e.detail
+    const lastFailures = (this.data.sheet.result && this.data.sheet.result.failures) || []
+    const isBatchLevel = lastFailures.every(f => ['BATCH_TIMEOUT', 'NETWORK', 'TIMEOUT'].includes(f.code))
 
-    onLogin() {
-        wx.switchTab({ url: '/pages/mine/index' })
-    },
+    if (isBatchLevel) {
+      // §4.13 path 2: do NOT re-fetch, replay original matches via same requestId
+      const items = this.data.sheet.items
+      const matches = items.map(it => ({
+        matchId: it.matchId,
+        expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime,
+      }))
+      const res = await call('match-results', {
+        action: 'batchConfirm',
+        payload: { matches, requestId: this.data.sheet.requestId },
+      })
+      this._applyResult(res, items)
+      return
+    }
 
-    onAddPlayer(e) {
-        const id = e.currentTarget.dataset.id
-        const type = e.currentTarget.dataset.type
-        if (type == 'singles') {
-            wx.navigateTo({
-                url: '/pages/tournament-add-player/index?id=' + id
-            })
-        } else {
-            wx.navigateTo({
-                url: '/pages/tournament-add-players-doubles/index?id=' + id
-            })
-        }
-    },
+    // §4.13 path 1: per-row retryable, re-fetch and submit failure subset
+    const refetch = await call('match-results', { action: 'pendingReviewItems', payload: { tournamentId: this.data.sheet.tournamentIdScope, limit: 50 } })
+    if (!refetch.ok) {
+      wx.showModal({ title: '重拉失败', content: (refetch.error && refetch.error.message) || '', showCancel: false })
+      return
+    }
+    const fresh = refetch.data.items
+    const refreshedItems = this.data.sheet.items.map(it => {
+      const f = fresh.find(x => x.matchId === it.matchId)
+      return f || it
+    })
+    this.setData({ 'sheet.items': refreshedItems })
+    const matches = refreshedItems.filter(it => failureIds.includes(it.matchId)).map(it => ({
+      matchId: it.matchId,
+      expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime,
+    }))
+    const res = await call('match-results', {
+      action: 'batchConfirm',
+      payload: { matches, requestId: this.data.sheet.requestId },
+    })
+    if (!res.ok) {
+      this.setData({
+        'sheet.result': {
+          ...this.data.sheet.result,
+          failures: matches.map(m => ({
+            matchId: m.matchId, code: res.error.code, message: res.error.message,
+            retryable: !!res.error.retryable, requestId: this.data.sheet.requestId,
+          })),
+        },
+      })
+      return
+    }
+    const prior = this.data.sheet.result || { successIds: [], failures: [] }
+    const mergedSuccessIds = [...new Set([...(prior.successIds || []), ...res.data.successIds])]
+    this.setData({ 'sheet.result': { ...res.data, successIds: mergedSuccessIds } })
+  },
 
-    onViewBrackets(e) {
-        const id = e.currentTarget.dataset.id
-        wx.navigateTo({
-            url: '/pages/tournament-brackets/index?id=' + id
-        })
-    },
+  onSheetEditRow(e) {
+    const { matchId } = e.detail
+    const item = this.data.sheet.items.find(it => it.matchId === matchId)
+    if (!item) return
+    this.setData({ 'sheet.visible': false })
+    wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${item.tournamentId}&matchId=${matchId}` })
+  },
+
+  onSheetClose() {
+    this.setData({ 'sheet.visible': false })
+    this._refreshSnapshotDebounced()
+  },
+
+  async onToggleFinished() {
+    const next = !this.data.finishedExpanded
+    this.setData({ finishedExpanded: next })
+    if (next && this.data.finishedState !== 'loaded') {
+      this._loadFinished()
+    }
+  },
+
+  async _loadFinished() {
+    this.setData({ finishedState: 'loading', finishedError: null })
+    const res = await call('tournaments', { action: 'finishedRecent', payload: { limit: 5 } })
+    if (!res.ok) {
+      this.setData({ finishedState: 'error', finishedError: res.error })
+      return
+    }
+    this.setData({ finishedState: 'loaded', finishedItems: res.data.items })
+  },
+
+  onRetryFinished() { this._loadFinished() },
 })
