@@ -67,6 +67,8 @@
 - `batchConfirm` 部分失败时 admin 工作台 hero 数据可能 stale（已写入的 N 场 entries 已落库）——由 sheet 关闭强制 refresh snapshot + 300ms debounce 解决。
 - v2.1 不做离线 retry queue：弱网失败由 sheet 内 retryable 标志驱动手动重试。
 - score-row 视觉只做 token 替换 + tag 统一，**不重构** 折叠/展开/stepper/reconfirm 等业务逻辑；如未来需要重构，单独立任务。
+- 工作台首屏 snapshot 不含 match-level review items 和已结束赛事。Admin 点 hero CTA 时二次拉 `match-results.pendingReviewItems`，"已结束"块用户展开时调 `tournaments.finishedRecent`。代价：CTA 后多一次短 loading；收益：首屏轻、stale 风险更低、失败语义干净。
+- 乐观锁字段使用 `match_results.updateTime`（已存在，无 schema 迁移），API 字段名 `expectedUpdateTime`。若未来需更严格版本控制，再加 `version: Number` 字段并向后兼容。
 
 ---
 
@@ -82,21 +84,23 @@
      - `pendingConfirm.total > 0`：「N 场待确认 · M 个草稿」+ 副文 `按赛事统计`，主 CTA「→ 审核并确认 N 场」
      - `pendingConfirm.total == 0 && myDrafts.length > 0`：「M 个草稿待发布」，主 CTA「→ 继续编辑」
      - 全空：「今天无待办任务」，主 CTA「+ 创建赛事」
-3. **块 1 · 待确认比分**（仅 `pendingConfirm.total > 0` 时显示）：按赛事分组，每行显示 `tournamentName · "X 场提交中" · 最近提交时间`，右侧 count badge（`status-tag warn-solid`）。点击该行也会 open sheet（含该赛事的所有 pending matches）。
+3. **块 1 · 待确认比分**（仅 `pendingConfirm.total > 0` 时显示）：按赛事分组，每行显示 `tournamentName · "X 场提交中" · 最近提交时间`，右侧 count badge（`status-tag warn-solid`）。点击该行触发 sheet 二次拉（仅该赛事的 pending matches）。
 4. **块 2 · 我的草稿**（`status=draft, createdBy=me`）：每行 `tournamentName · "X 球员 · 排程状态"`。点击进 `tournament-edit` 继续编辑。
 5. **块 3 · 进行中赛事**（`status=ongoing` 且 createdBy=me 或 isAdmin 全部）：每行 `tournamentName · "Rx/y · X 场剩余"`。点击进 `tournament-detail`。
-6. **块 4 · 已结束**（折叠，默认收起；展开后展示 `recentFinished` 最近 5 场）。
+6. **块 4 · 已结束**（独立 lazy load 块，默认显示收起态 + 「展开」CTA；用户展开时调 `tournaments.finishedRecent` 拉取，块内 inline loading / error / retry，**与 snapshot 解耦**）。
 
 **数据加载**
 
-- `onLoad` / `onShow` 调 `tournaments.adminConsoleSnapshot`（详 §4.2）
+- `onLoad` / `onShow` 调 `tournaments.adminConsoleSnapshot`（详 §4.2）拉首屏 hero + 块 1/2/3。**不**拉 review items 或 finished 列表。
+- 用户点 hero CTA 或块 1 内某赛事行 → 调 `match-results.pendingReviewItems`（详 §4.6）拉 sheet 明细 → sheet 内 loading skeleton 期间显示 spinner → 加载完成后展示 review cards。
+- 用户展开"已结束"块 → 调 `tournaments.finishedRecent`（详 §4.7）独立拉 → 块内 inline 显示加载/错误/重试。
 - sheet close（详 §5.3）后 parent 调用 `refreshSnapshot()`，含 **300ms debounce**，与 `onShow` 触发的刷新合并去重
 
 **空态**
 
-- `pendingConfirm + myDrafts + ongoing + recentFinished` 全空 → 全屏 `<empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" bindaction="onCreate" />`
-- 加载失败 → 全屏 `<empty-state icon="warn" title="加载失败" subtitle="{error.message}" action="重新加载" bindaction="onRetry" />`
-- `recentFinished` 单块降级 → 该块 inline 显示「已结束 · 暂时无法加载 · 重试」
+- `pendingConfirm + myDrafts + ongoing` 全空 → 全屏 `<empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" bindaction="onCreate" />`
+- snapshot 加载失败 → 全屏 `<empty-state icon="warn" title="加载失败" subtitle="{error.message}" action="重新加载" bindaction="onRetry" />`
+- 已结束块独立 lazy load 失败 → 块内 inline 显示「已结束 · 暂时无法加载 · 重试」（不影响首屏其他块）
 
 ### 2.2 `pages/my-match`（会员主路径）
 
@@ -228,7 +232,9 @@
 | `action` | String | **required** | CTA 文案 |
 | `bindaction` | event | **required** | CTA 点击事件 |
 
-**强制约束**：`action` 与 `bindaction` 必须**同时存在**。组件检测到缺失时在开发期 `console.error` + 渲染兜底「重试」+ `bindaction="onRetry"`（页面如未定义 onRetry，会进一步报错），强制开发者补齐。原因：v2.1 规则是"空态必须告诉用户下一步能做什么"。
+**强制约束**：组件运行时只能校验 `action` prop 存在（缺失则 `console.error`）。`bindaction` 是否绑定无法在组件内可靠检测——由 **lint 规则 / 手工 review / E2E（§6.2 E2E-10）** 三层保证。组件内部点击 CTA 统一 emit `triggerEvent('action')`；父页未绑定 `bindaction` 时事件丢弃但 UI 不破。
+
+设计原则不变：v2.1 规则是"空态必须告诉用户下一步能做什么"，但执行手段从"组件兜底"改为"工程约束 + 测试 + 审阅"，避免组件做无法实现的父级绑定推断。
 
 ### 3.3 `components/batch-result-sheet`（新 · X1 核心）
 
@@ -278,7 +284,8 @@
   score: { sets: [{ a: 4, b: 2 }], tiebreak: null },  // Phase 8 score 结构
   isDoubles: true,
   submitter: { memberId: 'mem_xxx', name: '王明' },   // 可选，用于审计
-  submittedAt: ServerDate                              // 可选
+  submittedAt: ServerDate,                            // 可选
+  updateTime: ServerDate                              // 必填，乐观锁字段；parent commit 时映射为 expectedUpdateTime
 }
 ```
 
@@ -329,16 +336,18 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 
 **保留**（不动）：折叠/展开动画、双打 2 行布局、stepper 0-4、3:3 抢七 input、reconfirm 二次确认弹窗、`submit/newScore` event 协议。
 
-**改造清单**（≈ 60 行 wxss 变更，0 行 js 变更）：
+**改造清单**（≈ 60 行 wxss 变更，0 行 js 变更）。token 一律使用 `miniprogram/styles/tokens.wxss` 现有定义，**v2.1 不引入新 token**：
 
 | 改前 | 改后 |
 |---|---|
-| `#333` / `#999` / `#f5f5f5` 硬编码 | `var(--ink-700)` / `var(--ink-500)` / `var(--surface-1)` |
+| `#333` 硬编码（深字） | `var(--color-ink)` |
+| `#999` 硬编码（次要字） | `var(--color-muted)` |
+| `#f5f5f5` 硬编码（灰底） | `var(--color-bg-2)` 或 `var(--color-bg-3)` 视层级 |
 | WXS 拼接的 "14:00 · 1号场" + 自定义灰底 | `<status-tag type="muted" text="14:00 · 1号场" />` |
 | 自己的 `.tag-confirmed / .tag-pending` CSS 类 | `<status-tag type=...>` 复用 |
-| stepper 紫色 `#4F46E5` | `var(--brand-lime)` / `var(--ink-900)` |
-| 3:3 抢七紫色高亮 | 青柠高亮 + 文字「决胜局」 |
-| 二次确认 modal 灰底 | 全局 modal token |
+| stepper 紫色 `#4F46E5` | `var(--color-lime)`（含 hover/active）+ 字 `var(--color-ink)` |
+| 3:3 抢七紫色高亮 | `var(--color-lime)` 高亮 + 文字「决胜局」 |
+| 二次确认 modal 灰底 | 复用现有 modal 样式（含 `var(--color-bg-2)` + `--shadow-lifted`）；若现有 modal 未走 token，单独列入 v2.2 |
 
 ---
 
@@ -351,23 +360,23 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 { success: true, data: { ... } }
 
 // failure
-{ success: false, error: { code: 'XXX', message: '...' } }
+{ success: false, error: { code: 'XXX', message: '...', requestId?: 'req_<uuid>' } }
 ```
 
 - `success: false` **仅用于整批级拒绝**：`FORBIDDEN` / `INVALID_PAYLOAD` / `SNAPSHOT_TIMEOUT` / `SUMMARY_TIMEOUT` / `BATCH_TIMEOUT`。
 - 批量接口（batchConfirm / batchSubmit）即便有部分失败，整体仍返回 `success: true`，失败项在 `data.failures[]`。
+- 失败 envelope 的 `error.requestId` 字段**对 batch action 必填**（特别是 `BATCH_TIMEOUT`，前端需要它复用同一 group id 重试）；snapshot / mySummary 等非 batch action 失败时该字段可省。
 
 ### 4.2 `tournaments.adminConsoleSnapshot`（新）
+
+**目的**：工作台首屏 hero + 块 1（待确认统计/分组）+ 块 2（草稿）+ 块 3（进行中）。**不**含 match-level review items（由 §4.6 二次拉）和已结束赛事列表（由 §4.7 lazy load）。
 
 **Input**
 
 ```js
 {
   action: 'adminConsoleSnapshot',
-  payload: {
-    includeFinished: false,         // default false
-    finishedLimit: 5                // optional, ≤ 20
-  }
+  payload: {}                       // 无 includeFinished / finishedLimit；已结束块完全独立
 }
 ```
 
@@ -388,8 +397,7 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
     ],
     ongoing: [
       { tournamentId, name, format, round: 'R2/3', remainingMatches: 6 }
-    ],
-    recentFinished: [...] | null    // 仅 includeFinished=true；拉取失败时为 null（唯一允许降级的子块）
+    ]
   }
 }
 ```
@@ -398,8 +406,7 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 
 - Admin only（非 admin 返回 `success: false, error: { code: 'FORBIDDEN' }`）
 - 并行拉 3 路子查询：`match_results.aggregate({resultStatus: 'submitted'})`、`tournaments.list(status='draft', createdBy=me)`、`tournaments.list(status='ongoing')`
-- **`pendingConfirm / myDrafts / ongoing` 任一失败 → 整体 `success: false, error: { code: 'SNAPSHOT_TIMEOUT' | 'SNAPSHOT_FAILED' }`**
-- **`recentFinished` 是唯一允许单块降级的子块**：拉取失败时 `recentFinished: null`，整体仍 `success: true`
+- **任一子查询失败 → 整体 `success: false, error: { code: 'SNAPSHOT_TIMEOUT' | 'SNAPSHOT_FAILED' }`**。snapshot 内**不再有"单块降级"概念**（已结束块独立 lazy load 不属于 snapshot）。
 - 整体超时硬上限：8s
 
 ### 4.3 `match-results.mySummary`（新 · 并入 match-results）
@@ -454,7 +461,10 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 {
   action: 'batchConfirm',
   payload: {
-    matchIds: ['mr_abc', 'mr_def', 'mr_ghi'],
+    matches: [
+      { matchId: 'mr_abc', expectedUpdateTime: '2026-05-16T14:23:45.123Z' },
+      { matchId: 'mr_def', expectedUpdateTime: '2026-05-16T14:24:10.456Z' }
+    ],
     requestId: 'req_<uuid>'       // batch group id, 由前端 parent 在开 sheet 时生成
   }
 }
@@ -467,12 +477,12 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
   success: true,
   data: {
     requestId: 'req_<uuid>',
-    successIds: ['mr_abc', 'mr_ghi'],
+    successIds: ['mr_abc'],
     failures: [
       {
         matchId: 'mr_def',
         code: 'STALE_VERSION',
-        message: '该比分已被其他管理员处理',
+        message: '该比分已被其他管理员处理（数据已更新）',
         retryable: false,
         requestId: 'req_<uuid>'
       }
@@ -484,11 +494,14 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 **核心约束**
 
 - **整体响应 `success: true`，即使有 failures**（部分失败不抬升为整批失败）
-- 逐场调用 Phase 8 现有 `state.confirmOne`；失败收进 `failures[]`，继续下一场
+- **乐观锁**：每场处理前后端 `current = await get(matchId)`，校验 `current.updateTime.getTime() === new Date(item.expectedUpdateTime).getTime()`。不匹配返回该场 `{ code: 'STALE_VERSION', retryable: false }`，并**不**修改该行
+- 校验通过后调用 Phase 8 现有 `state.confirmOne`（内部会更新 `updateTime`）；失败收进 `failures[]`，继续下一场
 - 写 `_request_log[requestId].results[matchId]`：成功记 `{ state: 'success', confirmedAt }`；失败记 `{ state: 'failure', code, message, retryable, attemptCount }`
 - **`requestId` 是 batch group id**：同 requestId 重复调用时，已 `success` 的 matchId 跳过；payload 内此次未列出的 matchId 保持上次结果不动；列出的 matchId 重新跑（覆盖该 matchId 上次结果）
+- **重试时前端必须重新拉 review item 拿到最新 `updateTime`**——绝不复用上次 commit 时的 expectedUpdateTime（防止覆盖被他人修改的数据）
+- Payload 缺 `matches[i].expectedUpdateTime` → 整批 `success: false, error: { code: 'INVALID_PAYLOAD', requestId }`
 - 单场最大处理时间 1.5s；整批 25s 硬超时（≥ 16 场需分两次，由前端在 commit 时拆分；服务端不做自动拆分）
-- 超过整批超时时返回 `success: false, error: { code: 'BATCH_TIMEOUT' }`，**已在飞的子操作可能已写入**（详见 §4.9 错误码 BATCH_TIMEOUT 语义）
+- 超过整批超时时返回 `success: false, error: { code: 'BATCH_TIMEOUT', requestId }`，**已在飞的子操作可能已写入**（详见 §4.12 BATCH_TIMEOUT 语义）
 
 ### 4.5 `match-results.batchSubmit`（新 · 参赛方）
 
@@ -524,7 +537,86 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 - `score` 走 Phase 8 现有 `validateScore` 校验，结构非法返 `code: 'INVALID_SCORE'`
 - 同一 `requestId` 复用规则同 batchConfirm
 
-### 4.6 已有 action 兼容（不动）
+### 4.6 `match-results.pendingReviewItems`（新 · admin only · sheet 二次拉）
+
+**目的**：admin 点工作台 hero CTA 或块 1 内某赛事行后，拉 match-level review items 喂给 batch-result-sheet。Snapshot **不**预拉这些数据，避免首屏体积。
+
+**位置**：`cloudfunctions/match-results/lib/handlers/query.js`
+
+**Input**
+
+```js
+{
+  action: 'pendingReviewItems',
+  payload: {
+    tournamentId: 't_xxx' | null,   // null = 拉所有赛事；指定 = 仅该赛事
+    limit: 50                        // 默认 50，硬上限 100
+  }
+}
+```
+
+**Output**
+
+```js
+{
+  success: true,
+  data: {
+    items: [
+      // 完整 MatchReviewItem 结构（§3.3.1），含 updateTime
+      {
+        matchId, tournamentId, tournamentName, round, position,
+        scheduledStartLabel, courtName,
+        p1, p2, score, isDoubles, submitter, submittedAt,
+        updateTime    // 乐观锁字段
+      }
+    ],
+    truncated: false   // 若 total > limit，true；前端可提示
+  }
+}
+```
+
+**约束**
+
+- Admin only
+- 内部 query：`match_results.where({ resultStatus: 'submitted' [, tournamentId] }).orderBy('updateTime', 'desc').limit(limit)`
+- 同步 join：tournaments 拉 name/format；members 拉 submitter name（如 items 内 submitter.name 缺失）
+- 超时 5s，超时返回 `success: false, error: { code: 'QUERY_TIMEOUT' }`
+
+### 4.7 `tournaments.finishedRecent`（新 · admin only · 已结束块 lazy load）
+
+**目的**：用户展开工作台"已结束"块时调用。与 snapshot 完全解耦。
+
+**Input**
+
+```js
+{
+  action: 'finishedRecent',
+  payload: {
+    limit: 5                         // 默认 5，硬上限 20
+  }
+}
+```
+
+**Output**
+
+```js
+{
+  success: true,
+  data: {
+    items: [
+      { tournamentId, name, format, completedAt, winnerLabel }
+    ]
+  }
+}
+```
+
+**约束**
+
+- Admin only
+- `tournaments.where({ status: 'completed' }).orderBy('completedAt', 'desc').limit(limit)`
+- 失败时仅影响"已结束"块内联状态，不影响工作台其他块（前端已 lazy load）
+
+### 4.8 已有 action 兼容（不动）
 
 | action | 处置 |
 |---|---|
@@ -535,7 +627,7 @@ closed → previewing → submitting → result(partial|all-ok) ──→ done(c
 | `match-results.listByTournament` | 保留 |
 | `match-results.listByPlayer` | 保留（my-match 新走 `mySummary`，但兼容入口仍存在）|
 
-### 4.7 `match-results` 结构拆分
+### 4.9 `match-results` 结构拆分
 
 ```
 cloudfunctions/match-results/
@@ -553,7 +645,7 @@ cloudfunctions/match-results/
 
 旧 action 一律保留，路由从 `index.js` 分发到对应 handler。
 
-### 4.8 `_request_log` 集合 schema（新 · 落 DATABASE_SCHEMA.md）
+### 4.10 `_request_log` 集合 schema（新 · 落 DATABASE_SCHEMA.md）
 
 ```js
 // collection: _request_log
@@ -582,11 +674,11 @@ cloudfunctions/match-results/
 - 索引：`(callerOpenid, lastSeenAt desc)` 便于按用户审计
 - 写入位置：`batch.js` 处理每条 submission 后立即写 `results[matchId]`
 
-### 4.9 错误码表
+### 4.11 错误码表
 
 | code | retryable | scope | 适用 action | 含义 |
 |---|---|---|---|---|
-| `STALE_VERSION` | false | per-match | batchConfirm | 比分已被其他 admin 改或确认 |
+| `STALE_VERSION` | false | per-match | batchConfirm | `expectedUpdateTime` 不匹配 current `updateTime`；数据被其他人改了 |
 | `CLOUD_TIMEOUT` | true | per-match | both | 单场云函数超时（< 整批超时） |
 | `DB_CONFLICT` | true | per-match | both | 数据库写入冲突 |
 | `INVALID_STATE` | false | per-match | batchConfirm | 状态不是 submitted（已 confirmed 或 pending） |
@@ -594,13 +686,14 @@ cloudfunctions/match-results/
 | `MISSING_SCORE` | false | per-match | batchConfirm | 比分为空 |
 | `CANNOT_OVERWRITE_CONFIRMED` | false | per-match | batchSubmit | 会员不能覆盖 confirmed 行 |
 | `FORBIDDEN` | false | per-match \| batch | both | 非参赛方/非 admin |
-| `INVALID_PAYLOAD` | false | batch | both | 整批 payload 结构非法 |
+| `INVALID_PAYLOAD` | false | batch | both | 整批 payload 结构非法（如 batchConfirm 缺 `expectedUpdateTime`） |
 | `SNAPSHOT_TIMEOUT` | true | batch | adminConsoleSnapshot | 整体超时 |
 | `SNAPSHOT_FAILED` | true | batch | adminConsoleSnapshot | 非超时的整体失败 |
 | `SUMMARY_TIMEOUT` | true | batch | mySummary | 整体超时 |
-| `BATCH_TIMEOUT` | true | batch | batchConfirm/batchSubmit | 整批超过 25s；已写入子操作的状态可通过 `_request_log` 查 |
+| `QUERY_TIMEOUT` | true | batch | pendingReviewItems / finishedRecent | 二次拉接口超时 |
+| `BATCH_TIMEOUT` | true | batch | batchConfirm/batchSubmit | 整批超过 25s；envelope 必带 requestId；已写入子操作的状态可通过 `_request_log` 查 |
 
-### 4.10 `BATCH_TIMEOUT` 语义说明
+### 4.12 `BATCH_TIMEOUT` 语义说明
 
 整批超时时，前端收 `success: false, error: { code: 'BATCH_TIMEOUT', requestId }`。后端可能已经成功处理部分 matchId 并写入 `_request_log[requestId].results`。
 
@@ -713,25 +806,39 @@ async function callFunction(name, payload, options = {}) {
 ### 5.3 batch-result-sheet 完整 sequence（admin partial-failure + retry）
 
 ```
-admin 工作台
+admin 工作台 (已加载 snapshot)
   │
   │ tap hero "→ 审核并确认 3 场"
   ▼
-parent.requestId = generateRequestId()       # 整个 sheet 生命周期内只生成一次
-parent.openSheet({ mode: 'confirm', items: snapshot.pendingConfirm })
+parent.requestId = generateRequestId()       # batch group id, sheet 生命周期内只生成一次
+parent.openSheet({ mode: 'confirm', loading: true })  # 立刻开 sheet 显 skeleton
   │
-sheet.state = 'previewing'
+  ▼ utils/cloud.callFunction('match-results', {
+        action: 'pendingReviewItems', payload: { tournamentId: null, limit: 50 }
+    })
+        ▼ return { success: true, data: { items: [{...updateTime, score, p1, p2, ...}, ...] }}
+  │
+parent.items = data.items
+sheet.state = 'previewing'                    # skeleton 切换到 review cards
   │
   │ admin 看完三条比分, tap "确认 3 场"
   ▼
 sheet emit commit { matchIds: ['mr_a','mr_b','mr_c'] }
 parent.state = 'submitting'; sheet.state = 'submitting'
   │
+  │ parent 把 items[i].updateTime 映射成 expectedUpdateTime
   ▼ utils/cloud.callFunction('match-results', {
         action:'batchConfirm',
-        payload:{ matchIds, requestId: parent.requestId }
+        payload:{
+          matches: [
+            { matchId:'mr_a', expectedUpdateTime: items.mr_a.updateTime },
+            { matchId:'mr_b', expectedUpdateTime: items.mr_b.updateTime },
+            { matchId:'mr_c', expectedUpdateTime: items.mr_c.updateTime }
+          ],
+          requestId: parent.requestId
+        }
     })
-        ▼ cloud 逐场处理
+        ▼ cloud 逐场处理（含 expectedUpdateTime 校验）
         ▼ writeLog _request_log[requestId].results
         ▼ return { success:true, data:{
               successIds:['mr_a','mr_c'],
@@ -747,12 +854,22 @@ sheet.state = 'result(partial)'
   ▼
 sheet emit retry { failureIds:['mr_b'] }
   │
-parent calls batchConfirm 第二次, 复用同一 requestId, matchIds=['mr_b']
+  │ 重试前 parent **重新拉 mr_b 的 review item**（拿最新 updateTime）
+  ▼ utils/cloud.callFunction('match-results', {
+        action: 'pendingReviewItems',
+        payload: { tournamentId: items.mr_b.tournamentId, limit: 50 }
+    })
+        ▼ return { items: [..., mr_b: { updateTime: 新值 }, ...] }
   │
-  ▼ cloud 读 _request_log[requestId].results
-  ▼ 'mr_a' / 'mr_c' 已 success, 跳过
-  ▼ 重跑 'mr_b' → success → 更新 _request_log
-  ▼ return { successIds:['mr_b'], failures:[], requestId }
+parent.items.mr_b = 新 item（含新 updateTime）
+  ▼ utils/cloud.callFunction('match-results', {
+        action:'batchConfirm',
+        payload:{ matches: [{ matchId:'mr_b', expectedUpdateTime: 新值 }], requestId: parent.requestId }
+    })
+        ▼ cloud 读 _request_log[requestId].results
+        ▼ 'mr_a' / 'mr_c' 已 success, 跳过
+        ▼ 重跑 'mr_b'（用新 expectedUpdateTime 校验）→ success → 更新 _request_log
+        ▼ return { successIds:['mr_b'], failures:[], requestId }
   │
 parent merges: 累计 successIds = ['mr_a','mr_b','mr_c']
 sheet.result = { successIds: [...all], failures: [] }
@@ -764,6 +881,10 @@ sheet emit close { reason: 'all-ok' }
 parent.refreshSnapshot() (300ms debounce)
 工作台 hero 数字 3 → 0
 ```
+
+**关键不变量补充**（来自 expectedUpdateTime 引入）：
+- Retry 前必须重新拉 review item，**绝不能复用上次 commit 时的 expectedUpdateTime**——否则会越过其他 admin 的修改盲覆盖。
+- 单条重试失败若 code=STALE_VERSION，parent 标记该行不可重试（即便 retryable=true 也不再发请求）；admin 必须主动 close sheet 后重新打开（snapshot 刷新带来新 items）。
 
 ### 5.4 并发与脏数据边界
 
@@ -782,10 +903,11 @@ parent.refreshSnapshot() (300ms debounce)
 
 | 页面 | loading | empty | error | partial-loading |
 |---|---|---|---|---|
-| **tournament-manage** | hero skeleton + 4 块灰色 placeholder | `<empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" />`（全屏，无 hero） | `<empty-state icon="warn" title="加载失败" subtitle="{error.message}" action="重新加载" />`（全屏） | recentFinished 失败时该块单独显示「已结束 · 暂时无法加载 · 重试」inline |
+| **tournament-manage** | hero skeleton + 3 块灰色 placeholder（不含已结束块）+ 已结束块默认收起态 | `<empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" />`（全屏，无 hero） | `<empty-state icon="warn" title="加载失败" subtitle="{error.message}" action="重新加载" />`（全屏） | 已结束块独立 lazy load：展开时块内 inline loading；失败时块内「暂时无法加载 · 重试」（不影响其他块） |
+| **batch-result-sheet 二次拉** | sheet 显示 skeleton（3 行 review-card 灰底）+ 顶部 spinner | n/a（snapshot 已确认 pendingConfirm.total > 0 才会开 sheet）| sheet 内显示 `<empty-state icon="warn" title="加载失败" subtitle="..." action="重新加载" />` → 重新调 pendingReviewItems | n/a |
 | **my-match** | hero skeleton + 3 块 placeholder | `<empty-state icon="sprout" title="本周没有比赛" subtitle="加入下一场赛事或查看历史" action="查看赛程" />` | 同 manage 风格 | n/a（mySummary 不分块降级） |
 | **tournament-score** | 顶部 progress skeleton + 3 行 score-row placeholder | **数据异常**：`<empty-state icon="warn" title="比赛数据异常" subtitle="该赛事没有比赛数据" action="重新加载" />`（不视作 empty） | 同上 | n/a |
-| **batch-result-sheet** | submitting 状态全 sheet 半透蒙层 + 居中 spinner；按钮禁用 | n/a（items 为空时不应打开） | result(partial) 内联失败行 | n/a |
+| **batch-result-sheet 内 submit/confirm** | submitting 状态全 sheet 半透蒙层 + 居中 spinner；按钮禁用 | n/a | result(partial) 内联失败行 | n/a |
 
 **禁用范围（v2.1 局部规则，不全站）**：
 - `wx.showLoading` → 不允许在三页 + sheet 内使用
@@ -811,7 +933,9 @@ parent.refreshSnapshot() (300ms debounce)
 | `cloudfunctions/match-results/lib/handlers/submit.js`（迁旧） | 不退化（与现状一致） | 现状 |
 | `cloudfunctions/match-results/lib/handlers/query.js`（迁旧） | 不退化 | 现状 |
 | `cloudfunctions/match-results/lib/handlers/my-summary.js`（新） | ≥ 85% lines | ≥ 8 |
-| `cloudfunctions/tournaments/index.js:adminConsoleSnapshot`（新 handler） | ≥ 85% lines | ≥ 10（含权限/超时/recentFinished 降级） |
+| `cloudfunctions/tournaments/index.js:adminConsoleSnapshot`（新 handler） | ≥ 85% lines | ≥ 8（权限 / 超时 / 任一子查询失败整体 error / 并行执行 / payload 为空） |
+| `cloudfunctions/tournaments/index.js:finishedRecent`（新 handler） | ≥ 85% lines | ≥ 5（权限 / limit 默认与硬上限 / 排序 / 空结果 / 超时） |
+| `cloudfunctions/match-results/lib/handlers/query.js:pendingReviewItems`（新） | ≥ 85% lines | ≥ 8（权限 / 含 tournamentId / 不含 tournamentId / limit 默认与硬上限 / truncated 标记 / updateTime 字段必出现 / submitter join / 超时） |
 | `miniprogram/utils/cloud.js:callFunction` wrapper | ≥ 90% lines | ≥ 8（success / FORBIDDEN / 超时 / 网络错 / 非法 envelope / 永不抛 / loading 回调 / traceId） |
 | `miniprogram/components/status-tag` | snapshot | 6 type × 含/不含 count = 12 |
 | `miniprogram/components/empty-state` | snapshot + assert | action+bindaction 必填校验、icon 缺省、subtitle 缺省 |
@@ -889,13 +1013,14 @@ weekly-star       4 tests
 - [ ] 期间 hero / 4 块完全不显示残缺数据
 - [ ] 恢复云函数 → 点重新加载 → 正常 loaded
 
-#### E2E-7 · recentFinished 单块降级（唯一允许降级例外）
+#### E2E-7 · 已结束块 lazy load 独立降级
 
-- [ ] 准备：让 recentFinished 子查询超时或失败
-- [ ] 工作台正常显示 hero + pendingConfirm + myDrafts + ongoing
-- [ ] "已结束"块内联显示「已结束 · 暂时无法加载 · 重试」
-- [ ] 点 inline 重试 → 该块恢复
-- [ ] **同时验证**：让 pendingConfirm 失败 → 整体仍 error（不允许单块降级）
+- [ ] 工作台首屏正常 loaded：hero + pendingConfirm + myDrafts + ongoing 全显示，"已结束"块默认收起态
+- [ ] 准备：让 `tournaments.finishedRecent` 接口超时
+- [ ] 用户展开"已结束"块 → 块内 inline 显示「已结束 · 暂时无法加载 · 重试」
+- [ ] 工作台其他三块完全不受影响
+- [ ] 恢复接口 → 点 inline 重试 → 块内加载并展示 finished items
+- [ ] **同时验证**：让 `adminConsoleSnapshot` 任一子查询失败 → 整体 error（snapshot 内无降级，全屏 empty-state「加载失败」）
 
 #### E2E-8 · 视觉一致性 grep
 
@@ -943,6 +1068,8 @@ grep -rn 'wx\.showLoading\|wx\.showToast.*加载失败' \
 | 场景 | 目标 | 测量方法 |
 |---|---|---|
 | `adminConsoleSnapshot(50 场待确认数据)` | 端到端首屏 ≤ 1.2s | 云函数日志 invokeTime + 前端 `console.info('[v2.1]', ...)` 埋点 |
+| `pendingReviewItems(50 场)` | 端到端 ≤ 800ms（admin 点 CTA 到 sheet items 渲染完毕） | 前端埋点 |
+| `finishedRecent(5 场)` | 端到端 ≤ 500ms | 前端埋点 |
 | `mySummary(100 场历史)` | 端到端 ≤ 800ms | 同上 |
 | `batchConfirm(5 场)` | 整批返回 ≤ 3s | 云函数日志 |
 | `batchSubmit(5 场)` | 整批返回 ≤ 3s | 云函数日志 |
@@ -976,6 +1103,17 @@ grep -rn 'wx\.showLoading\|wx\.showToast.*加载失败' \
 - retry 只重试 `retryable=true` 的失败项（不传 retryable=false 的 matchId）
 - 同一 requestId 下成功项不会重复 confirm，也不会重复写积分（含 entries 和 placement）
 - `batchSubmit` 必须覆盖现有比分结构校验：`{ sets: [{ a, b }], tiebreak }`，结构非法返 INVALID_SCORE
+- **`expectedUpdateTime` 乐观锁**：
+  - 后端校验 `updateTime` 精确匹配（毫秒级），不一致返 STALE_VERSION
+  - 缺 `expectedUpdateTime` → 整批 INVALID_PAYLOAD
+  - 重试时前端必须重新调 `pendingReviewItems` 拿新 `updateTime`，**不**复用上次 expectedUpdateTime
+  - STALE_VERSION 行 sheet 内禁用重试，admin 必须 close + 重开 sheet
+- **`pendingReviewItems` 二次拉**：
+  - `tournamentId=null` 拉全部待确认 items；指定 tournamentId 仅拉该赛事
+  - 超过 `limit` 返回 `truncated: true`，前端展示提示
+  - sheet open 时立刻显示 skeleton，loading 期间禁用 commit 按钮
+- **`finishedRecent` 独立失败**：仅影响"已结束"块内联状态，不影响工作台其他块
+- `_request_log` TTL 30 天：写入 7+ 天前的 doc 应被清理（手工验证或 mock TTL 测试）
 
 ### 6.7 验收 Gate（这些不过不算 v2.1 完成）
 
@@ -995,11 +1133,11 @@ v2.1 建议拆 5 段 Phase，依次完成。每段独立可测、可验收。
 
 | Phase | 内容 | 依赖 |
 |---|---|---|
-| **P1 · 后端基础** | 新建 `_request_log` collection 与 schema；`match-results` 拆 handlers/；写 `mySummary` + `batchConfirm` + `batchSubmit` 单测 | — |
-| **P2 · 工作台接口** | `tournaments.adminConsoleSnapshot` 实装 + 单测 | P1（共用 batch infra） |
-| **P3 · 前端基础设施** | `utils/cloud.callFunction` wrapper + 单测；新建 `status-tag` / `empty-state` / `batch-result-sheet` 三组件 + 单测 | — |
-| **P4 · 三页重构** | `tournament-manage` / `my-match` / `tournament-score` IA 重构；score-row 视觉债清理；接 P1+P2+P3 | P1, P2, P3 |
-| **P5 · E2E + 验收** | E2E-1 ~ E2E-10；性能测；QA 截图；DATABASE_SCHEMA.md 更新；commit & deploy 云函数 | P4 |
+| **P1 · 后端基础** | 新建 `_request_log` collection 与 schema；`match-results` 拆 handlers/；写 `mySummary` + `batchConfirm`（含 `expectedUpdateTime` 乐观锁）+ `batchSubmit` + `pendingReviewItems` 单测 | — |
+| **P2 · 工作台接口** | `tournaments.adminConsoleSnapshot`（轻量，仅 hero+三块）+ `tournaments.finishedRecent`（lazy load）实装 + 单测 | P1（共用 batch infra） |
+| **P3 · 前端基础设施** | `utils/cloud.callFunction` wrapper + 单测；新建 `status-tag` / `empty-state` / `batch-result-sheet`（含 sheet 内 skeleton + 二次拉编排）三组件 + 单测 | — |
+| **P4 · 三页重构** | `tournament-manage`（含已结束块 lazy load）/ `my-match` / `tournament-score` IA 重构；score-row 视觉债清理（用现有 token）；接 P1+P2+P3 | P1, P2, P3 |
+| **P5 · E2E + 验收** | E2E-1 ~ E2E-10；性能测；QA 截图；DATABASE_SCHEMA.md 更新（`_request_log` + `match_results.updateTime` 作为乐观锁键说明）；commit & deploy 云函数 | P4 |
 
 P3 与 P1/P2 可并行（前后端无依赖），P4 必须在 P1+P2+P3 完成后启动。
 
@@ -1014,9 +1152,11 @@ P3 与 P1/P2 可并行（前后端无依赖），P4 必须在 P1+P2+P3 完成后
 | **batch group id** | 即 `requestId`，由前端 parent 在开 sheet 时生成；同一 sheet 生命周期内所有 retry 复用 |
 | **trace id** | `utils/cloud.callFunction` 每次 call 生成的客户端日志关联 id；与 batch group id 不同 |
 | **review-then-confirm（X1）** | v2.1 选择的 confirm 操作流：admin 先在 sheet 内审完比分再 batch confirm，禁止盲确认 |
+| **expectedUpdateTime** | `match-results.batchConfirm` 的乐观锁键，值是 review item 拉取时记录的 `updateTime`。后端确认前精确匹配，保证 admin 没盲改他人新提交的数据 |
+| **review item / pendingReviewItems** | sheet 二次拉接口返回的 match-level 明细，含 `updateTime` 等字段，喂给 `batch-result-sheet.items` |
+| **lazy load 块** | 工作台"已结束"块独立 lazy load，与 snapshot 解耦，调 `tournaments.finishedRecent` |
 | **partial failure** | 批量接口整体 `success: true` 但 `data.failures[]` 非空的情况 |
 | **integral failure** | 批量接口整体 `success: false`，仅用于 FORBIDDEN / INVALID_PAYLOAD / *_TIMEOUT |
-| **single-block degrade** | snapshot 仅 `recentFinished` 允许返回 null，其他子查询失败必须整体 error |
 | **stale-after-sheet-close** | sheet 关闭后 parent 强制 refresh snapshot 的命名状态（实质等同 refreshing） |
 
 ---

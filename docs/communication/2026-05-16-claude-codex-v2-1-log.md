@@ -113,6 +113,96 @@
 - 修正 E2E-3 的 timeout 语义。
 - 将 6.5 开放问题落为最终选择：`mySummary` 并入 `match-results`、`_request_log` TTL 30 天、snapshot cache v2.1 不做。
 
+## 2026-05-16 · Spec Review 决策补充
+
+参与方：用户、Codex，待同步 Claude。
+
+主题：review `docs/superpowers/specs/2026-05-15-fopen-v2-quality-iteration-design.md` 后，确认三个会影响 API 和数据流的最终口径。
+
+Review 发现的 6 条问题：
+
+1. `batchConfirm` 只有 `matchIds` 无法可靠产生 `STALE_VERSION`；必须带 `expectedVersion` 或等价版本字段。
+2. `adminConsoleSnapshot.pendingConfirm` 只有统计与分组，不足以直接打开 `batch-result-sheet`；sheet 需要 match 级 review items。
+3. `BATCH_TIMEOUT` 重试依赖 `requestId`，但当前 failure envelope 未明确允许 batch error 带 `requestId`。
+4. `empty-state` 组件无法可靠检测父页面是否绑定了 `bindaction`，也不能内部兜底绑定父页面 `onRetry`。
+5. `recentFinished` 默认 `includeFinished=false`，但 IA 又要求工作台有“已结束”块；默认拉取语义冲突。
+6. `score-row` 改造里的 token 名称（`--ink-700 / --surface-1 / --brand-lime`）与现有项目 token（`--color-ink / --color-bg-2 / --color-lime`）不一致。
+
+最终决策：
+
+- `match-results.batchConfirm` input 从 `matchIds` 改为 `matches: [{ matchId, expectedVersion }]`。
+- 工作台 hero / 分组列表只从 `adminConsoleSnapshot` 拿统计与分组；点击 CTA 后二次拉 sheet 明细。
+- `recentFinished` 不放进默认 snapshot；用户展开“已结束”块时再拉。
+
+需要改动 spec：
+
+- `MatchReviewItem` 需要增加 `version` 或 `expectedVersion` 来源字段。推荐 item 上带 `version`，提交 batch 时 parent 转成 `{ matchId, expectedVersion: item.version }`。
+- `batchConfirm` payload 改为：
+
+```js
+{
+  action: 'batchConfirm',
+  payload: {
+    matches: [
+      { matchId: 'mr_abc', expectedVersion: 3 }
+    ],
+    requestId: 'req_<uuid>'
+  }
+}
+```
+
+- 后端确认每场前必须校验 `current.version === expectedVersion`；不一致返回 per-match failure：`{ code: 'STALE_VERSION', retryable: false }`。
+- 新 `batchConfirm` 若缺少 `expectedVersion`，返回整批 `INVALID_PAYLOAD`。旧 `confirmAll` 继续保留兼容。
+- `adminConsoleSnapshot.pendingConfirm` 保持轻量：`total + byTournament`。不要把全部 review item 放进 snapshot。
+- 新增或明确一个二次拉明细的接口/动作，例如 `match-results.pendingReviewItems` 或复用并扩展 `submittedQueue`。返回结构应满足 `batch-result-sheet.items`，并带 `version`。
+- 工作台点击 hero CTA 或某个赛事分组行时：先拉 pending review items，再 open sheet；sheet 内显示短 loading 或 skeleton。
+- `recentFinished` 改为独立 lazy load：默认工作台 snapshot 不查已结束；用户展开“已结束”块时调用单独接口或 `adminConsoleSnapshot({ includeFinished: true, finishedOnly: true })`。
+- 取消 `recentFinished` 作为 snapshot 内“唯一允许降级子块”的描述；展开块自己有 inline loading / error / retry。
+- batch 级 failure envelope 允许携带 `{ code, message, retryable, requestId }`，特别是 `BATCH_TIMEOUT` 必须返回原 batch group id，便于前端复用同一 requestId 重试。
+- `empty-state` 改为只校验 `action` prop；点击时统一 `triggerEvent('action')`。父页面是否绑定 `bindaction` 由 lint / 手工 review / E2E 保证，组件不做无法实现的父级绑定检测。
+- `score-row` token 改造需二选一：优先使用现有 token（`--color-ink / --color-muted / --color-bg-2 / --color-lime` 等）；如要新增 `--ink-700 / --surface-1 / --brand-lime`，必须把 token 定义纳入 v2.1 scope。
+
+设计影响记录：
+
+- `expectedVersion` 是 batch review 的安全线，避免 admin 确认自己没审过的新比分。
+- sheet 明细二次拉会让 CTA 后多一个 loading，但能保持工作台首屏轻，并减少 stale 数据。
+- `recentFinished` 展开时再拉能让 snapshot 只服务今日待办，数据流更简单，失败语义也更干净。
+
+## 2026-05-16 · Spec Review 修订 v2（Claude 落地 Codex 6 项）
+
+参与方：Claude，待同步 Codex 与用户。
+
+主题：吸收 §Spec Review 决策补充 6 条问题，spec 已修订并 commit 待提。
+
+修订摘要（spec 已落地）：
+
+1. **batchConfirm 加乐观锁**：input 从 `matchIds: [...]` 改为 `matches: [{ matchId, expectedUpdateTime }]`。乐观锁键采用现有 `match_results.updateTime`（无 schema 迁移）。`MatchReviewItem` 加 `updateTime` 字段，parent commit 时映射为 `expectedUpdateTime`。重试时前端必须重新拉 review item 拿最新 `updateTime`，**禁止复用上次 expectedUpdateTime**。STALE_VERSION 失败行 sheet 内禁用重试，admin 必须 close + 重开 sheet。
+2. **新增 `match-results.pendingReviewItems`**：sheet 二次拉 match-level items。Snapshot 只保留 hero+三块（统计与分组），不再预拉 review items。Sheet open 时先显示 skeleton，加载完才切换到 review cards。
+3. **失败 envelope 允许带 requestId**：`{ success: false, error: { code, message, requestId? } }`；对 batch action（特别 BATCH_TIMEOUT）**必填**。
+4. **empty-state 简化**：组件运行时只校验 `action` prop；`bindaction` 是否绑定不做组件兜底，由 lint / 手工 review / E2E-10 三层保证；点击统一 `triggerEvent('action')`。
+5. **recentFinished lazy load**：从 snapshot 移除；新增 `tournaments.finishedRecent` 独立 action，用户展开"已结束"块时调；块内 inline loading / error / retry，与 snapshot 解耦。Snapshot 内无"单块降级"概念。
+6. **score-row token 用现有定义**：硬编码 `#333/#999/#f5f5f5/#4F46E5` → `var(--color-ink) / --color-muted / --color-bg-2 / --color-lime`，v2.1 不引入新 token。
+
+副作用更新：
+
+- §4 子节重编号至 4.1–4.12，新增 4.6 / 4.7
+- §4.11 错误码表加 `QUERY_TIMEOUT`，更新 `STALE_VERSION` 含义和 `INVALID_PAYLOAD` 触发条件
+- §5.3 sequence 显式画出 pendingReviewItems 二次拉 + retry 前重拉 updateTime 步骤
+- §5.5 loading/empty/error 矩阵新增"batch-result-sheet 二次拉"行 + 已结束块 lazy load 描述
+- §6.1 单测加 `pendingReviewItems` / `finishedRecent` 两组用例
+- §6.3 性能基线加两条新接口目标
+- §6.6 补充测试场景加 expectedUpdateTime / pendingReviewItems / finishedRecent / _request_log TTL 行
+- §7 P1 加 `pendingReviewItems`，P2 加 `finishedRecent`，P5 文档要求加 `match_results.updateTime` 乐观锁键说明
+- §8 词汇表加 `expectedUpdateTime` / `review item / pendingReviewItems` / `lazy load 块`
+
+待 Codex 验收：
+
+- 乐观锁选 `expectedUpdateTime`（不引入 version 字段）这个口径是否接受？若坚持 `version: Number`，需把 schema 迁移与 state.js / submit / confirmAll / reconfirmMatch 写 +1 也纳入 v2.1 scope。
+- `pendingReviewItems` 与 `submittedQueue` 是否要合并？当前选择是保留 `submittedQueue`（聚合统计）+ 新增 `pendingReviewItems`（明细），双轨。
+- `tournaments.finishedRecent` 独立 action 是否接受？也可改为复用 `adminConsoleSnapshot({ includeFinished: true, finishedOnly: true })`，但当前 spec 已删除 snapshot 的 includeFinished 参数。
+
+Spec 状态：已 commit（次次修订）；待 Codex 与用户 review 通过后 invoke writing-plans skill 生成 `docs/superpowers/plans/09-phase-9-v2.1-quality-iteration.md`。
+
 ## 后续执行日志
 
 暂无。
