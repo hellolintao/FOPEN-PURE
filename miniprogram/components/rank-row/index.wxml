@@ -1,13 +1,27 @@
 <view class="rank-row {{highlight ? 'highlight' : ''}}" bindtap="onTap">
-  <text class="rank-num">{{rank}}</text>
-  <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" />
-  <view class="info flex-1">
-    <text class="name">{{name}}</text>
-    <text class="text-meta">UTR {{utr || '—'}}</text>
+  <view class="rank-num-cell">
+    <text class="rank-num">{{rank}}</text>
   </view>
+
+  <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
+
+  <view class="info">
+    <text class="name">{{name}}</text>
+    <view class="meta-row">
+      <text class="meta-points">{{utr || '—'}}</text>
+      <text class="meta-points-label">PTS</text>
+    </view>
+  </view>
+
   <view class="trend">
-    <text wx:if="{{trend > 0}}" class="trend-up">↑ {{trend}}</text>
-    <text wx:elif="{{trend < 0}}" class="trend-down">↓ {{-trend}}</text>
-    <text wx:else class="text-meta">—</text>
+    <block wx:if="{{trend > 0}}">
+      <text class="trend-arrow trend-up">▲</text>
+      <text class="trend-num num">{{trend}}</text>
+    </block>
+    <block wx:elif="{{trend < 0}}">
+      <text class="trend-arrow trend-down">▼</text>
+      <text class="trend-num num">{{-trend}}</text>
+    </block>
+    <text wx:else class="trend-flat">—</text>
   </view>
 </view>

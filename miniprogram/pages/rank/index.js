@@ -8,6 +8,7 @@ Page({
     weeklyStar: null,
     weeklyStarWeekRange: '',
     loading: false,
+    seasonYear: new Date().getFullYear(),
     rankTabOptions: [
       { label: 'SINGLES', value: 'singles' },
       { label: 'DOUBLES', value: 'doubles' }
@@ -27,7 +28,7 @@ Page({
         data: {
           action: 'rankList',
           type: this.data.activeTab,
-          currentSeasonId: `s${new Date().getFullYear()}`
+          currentSeasonId: `s${this.data.seasonYear}`
         }
       })
       this.setData({ rankList: res.result?.data?.rankList || [] })
@@ -43,7 +44,7 @@ Page({
     try {
       const res = await callFunction({
         name: 'weekly-star',
-        data: { action: 'latest', seasonId: `s${new Date().getFullYear()}` }
+        data: { action: 'latest', seasonId: `s${this.data.seasonYear}` }
       })
       const star = res.result?.data || null
       const selected = this.data.activeTab === 'singles' ? star?.singlesStar : star?.doublesStar

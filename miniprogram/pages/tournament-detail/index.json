@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "赛事详情",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "skeleton-loader": "/components/skeleton-loader/index"
+  }
 }

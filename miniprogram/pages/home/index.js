@@ -5,7 +5,8 @@ Page({
     currentMember: null,
     myStats: { matches: 0, wins: 0, winRate: 0 },
     isAdmin: false,
-    loadingStats: false
+    loadingStats: false,
+    seasonYear: new Date().getFullYear()
   },
 
   async onShow() {
@@ -41,7 +42,7 @@ Page({
   },
 
   _getCurrentSeasonId() {
-    return `s${new Date().getFullYear()}`;
+    return `s${this.data.seasonYear}`;
   },
 
   onQuickAction(e) {

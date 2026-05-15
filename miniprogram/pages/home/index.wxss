@@ -1,65 +1,273 @@
 .home-page {
-  padding: var(--space-5);
-  padding-bottom: 160rpx;
+  padding: var(--space-5) var(--space-5) 160rpx;
+  background: var(--color-bg);
+  min-height: 100vh;
 }
-.greeting {
+
+/* ============================================================
+ * HEAD · greeting
+ * ============================================================ */
+.home-head {
   margin-bottom: var(--space-5);
 }
-.avatar-row {
+
+.head-tapes {
+  margin-bottom: var(--space-4);
+}
+
+.greeting-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
+
 .user-avatar {
-  width: 88rpx;
-  height: 88rpx;
+  width: 96rpx;
+  height: 96rpx;
   border-radius: 50%;
+  background: var(--color-bg-3);
+  border: 2rpx solid var(--color-ink);
 }
-.hero {
-  position: relative;
-  padding: var(--space-6) var(--space-5);
-  background: var(--color-lime);
-  border-radius: var(--radius-lg);
+
+.greeting-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.hello-zh {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: var(--color-ink-3);
+  letter-spacing: 0.01em;
+}
+
+.hello-name {
+  font-size: 44rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
   overflow: hidden;
-  margin-bottom: var(--space-5);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.hero-text {
+
+/* ============================================================
+ * HERO
+ * ============================================================ */
+.hero-block {
+  position: relative;
+  background: var(--color-lime);
+  border-radius: var(--radius-xl);
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  margin-bottom: var(--space-7);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero-bg-num {
+  position: absolute;
+  right: -32rpx;
+  bottom: -56rpx;
+  font-size: 480rpx;
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.08em;
+  color: var(--color-ink);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-tapes-row {
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--space-6);
+}
+
+.hero-headline {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  font-size: 56rpx;
+  margin-bottom: var(--space-6);
+}
+
+.hero-line {
+  font-size: 96rpx;
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.hero-line:nth-child(2) {
+  padding-left: var(--space-4);
+}
+
+.hero-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 2rpx solid var(--color-ink);
+}
+
+.hero-foot-zh {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+.hero-foot-en {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-ink-3);
+  letter-spacing: 0.16em;
+}
+
+/* ============================================================
+ * SECTION
+ * ============================================================ */
+.section {
+  margin-bottom: var(--space-7);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.section-meta {
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+/* ============================================================
+ * QUICK ACTIONS
+ * ============================================================ */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.quick-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  min-height: 168rpx;
+  overflow: hidden;
+}
+
+.quick-tile:active {
+  background: var(--color-bg-3);
+}
+
+.quick-num {
+  font-size: 26rpx;
+  font-weight: 900;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.quick-text {
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.quick-arrow {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  font-size: 36rpx;
   font-weight: 900;
   color: var(--color-ink);
   line-height: 1;
 }
-.section {
-  margin-bottom: var(--space-5);
+
+.quick-tile-admin {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
 }
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-.action-tile {
-  background: var(--color-bg-2);
-  border-radius: var(--radius-md);
-  padding: var(--space-4) 0;
-  text-align: center;
-}
-.action-tile-admin {
-  background: var(--color-lime);
-}
-.action-text {
-  font-weight: 600;
-  font-size: 24rpx;
-}
-.stats-grid {
+.quick-tile-admin .quick-num { color: var(--color-lime); }
+.quick-tile-admin .quick-text { color: var(--color-bg); }
+.quick-tile-admin .quick-arrow { color: var(--color-lime); }
+
+/* ============================================================
+ * MY STATS · big numbers, three-tile horizontal
+ * ============================================================ */
+.stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
-  margin-top: var(--space-3);
-  background: var(--color-bg-2);
-  border-radius: var(--radius-md);
 }
+
+.my-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-md);
+  min-height: 200rpx;
+  justify-content: space-between;
+}
+
+.my-stat-num {
+  font-size: 88rpx;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+}
+
+.my-stat-suffix {
+  font-size: 40rpx;
+  font-weight: 900;
+  letter-spacing: 0;
+  margin-left: 4rpx;
+}
+
+.my-stat-label {
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.my-stat-paper {
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+}
+
+.my-stat-lime {
+  background: var(--color-lime);
+}
+.my-stat-lime .my-stat-num { color: var(--color-ink); }
+.my-stat-lime .my-stat-label { color: var(--color-ink-3); }
+
+.my-stat-ink {
+  background: var(--color-ink);
+}
+.my-stat-ink .my-stat-num { color: var(--color-bg); }
+.my-stat-ink .my-stat-label { color: var(--color-muted-2); }

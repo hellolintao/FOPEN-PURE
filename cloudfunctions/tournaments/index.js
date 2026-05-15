@@ -295,6 +295,70 @@ async function actionLastPointsRules(event) {
 }
 
 // ---------------------------------------------------------------------------
+// Admin console ctx builder
+// ---------------------------------------------------------------------------
+
+function buildAdminConsoleCtx(submitter) {
+  return {
+    isAdmin: submitter.isAdmin,
+    callerOpenid: submitter.openid,
+    callerMemberId: submitter._id,
+    db: {
+      aggregateSubmitted: async () => {
+        const rows = (await db.collection('match_results')
+          .where({ resultStatus: 'submitted' })
+          .orderBy('updateTime', 'desc')
+          .limit(200).get()).data
+        const tIds = [...new Set(rows.map(r => r.tournamentId))]
+        const tournaments = tIds.length
+          ? (await db.collection('tournaments').where({ _id: _.in(tIds) }).get()).data
+          : []
+        const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
+        const grouped = {}
+        for (const r of rows) {
+          const k = r.tournamentId
+          if (!grouped[k]) {
+            grouped[k] = {
+              tournamentId: k,
+              tournamentName: (tMap[k] && tMap[k].name) || k,
+              format: (tMap[k] && tMap[k].format) || 'regular',
+              count: 0,
+              mostRecentSubmitAt: r.submittedAt || r.updateTime || null,
+            }
+          }
+          grouped[k].count += 1
+          const cur = grouped[k].mostRecentSubmitAt
+          const cmp = r.submittedAt || r.updateTime
+          if (cmp && (!cur || new Date(cmp) > new Date(cur))) grouped[k].mostRecentSubmitAt = cmp
+        }
+        return Object.values(grouped)
+      },
+      listDrafts: async (memberId) => (await db.collection('tournaments').where({
+        status: 'draft',
+        createdBy: memberId,
+      }).orderBy('updateTime', 'desc').limit(20).get()).data.map(t => ({
+        tournamentId: t._id,
+        name: t.name,
+        playerCount: t.playerCount || 0,
+        scheduleReady: !!(t.schedulePlan && t.schedulePlan.courts && t.schedulePlan.courts.length),
+        updatedAt: t.updateTime,
+      })),
+      listOngoing: async () => {
+        const rows = (await db.collection('tournaments').where({ status: 'ongoing' })
+          .orderBy('updateTime', 'desc').limit(50).get()).data
+        return rows.map(t => ({
+          tournamentId: t._id,
+          name: t.name,
+          format: t.format,
+          round: t.currentRoundLabel || '',
+          remainingMatches: t.remainingMatches || 0,
+        }))
+      },
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main entry
 // ---------------------------------------------------------------------------
 
@@ -381,6 +445,30 @@ exports.main = async (event, context) => {
 
     case 'lastPointsRules':
       return actionLastPointsRules(event)
+
+    case 'adminConsoleSnapshot': {
+      const { adminConsoleSnapshot } = require('./lib/handlers/admin-console')
+      try {
+        const wxContext = cloud.getWXContext()
+        const openid = wxContext.OPENID || null
+        if (!openid) return fail('FORBIDDEN', '需要登录')
+        const memberRes = await db.collection('members').where({ openid }).get()
+        const members = memberRes.data || []
+        if (!members.length) return fail('FORBIDDEN', '成员不存在')
+        const member = members[0]
+        if (!member.isAdmin) return fail('FORBIDDEN', '需要管理员权限')
+        const ctx = buildAdminConsoleCtx({ isAdmin: member.isAdmin, openid, _id: member._id })
+        const data = await Promise.race([
+          adminConsoleSnapshot(ctx, event),
+          new Promise((_, rej) => setTimeout(() => {
+            const err = new Error('SNAPSHOT_TIMEOUT'); err.code = 'SNAPSHOT_TIMEOUT'; rej(err)
+          }, 8000)),
+        ])
+        return ok(data)
+      } catch (e) {
+        return fail(e.code || 'INTERNAL', e.message)
+      }
+    }
 
     case 'getStats': {
       const totalCount = await collection.count()

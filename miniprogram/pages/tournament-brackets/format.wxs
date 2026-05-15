@@ -3,7 +3,6 @@ var TWO = function(n) {
   return n;
 };
 
-// 输入 ISO 字符串或 Date，输出 "MM-DD HH:mm"。空值返回 ''。
 var formatScheduleTime = function(value) {
   if (!value) return '';
   var s = '';
@@ -12,7 +11,6 @@ var formatScheduleTime = function(value) {
   else if (value && value.toJSON) s = value.toJSON();
   else return '';
 
-  // ISO: 2026-05-25T08:00:00+08:00
   var idx = s.indexOf('T');
   if (idx < 0) return s;
   var datePart = s.substring(0, idx);
@@ -31,7 +29,6 @@ var formatScheduleTime = function(value) {
   return month + '-' + day + ' ' + hour + ':' + minute;
 };
 
-// 输入 courtId（'c1'）+ schedulePlan.courts 数组，返回 court name；找不到返回 courtId
 var courtName = function(courtId, courts) {
   if (!courtId) return '';
   if (!courts || !courts.length) return courtId;
@@ -41,7 +38,32 @@ var courtName = function(courtId, courts) {
   return courtId;
 };
 
+var statusLabel = function(status, isBye) {
+  if (isBye) return '轮空';
+  if (status === 'pending') return '待打';
+  if (status === 'submitted') return '已交';
+  if (status === 'confirmed') return '已确';
+  if (status === 'disputed') return '争议';
+  return status || '';
+};
+
+var roundLabel = function(round, totalRounds) {
+  var n = +round || 0;
+  if (totalRounds && n === totalRounds) return '决赛';
+  if (totalRounds && n === totalRounds - 1) return '半决赛';
+  if (totalRounds && n === totalRounds - 2) return '四分之一决赛';
+  return '第 ' + n + ' 轮';
+};
+
+var pad2 = function(n) {
+  var v = +n || 0;
+  return v < 10 ? ('0' + v) : ('' + v);
+};
+
 module.exports = {
   formatScheduleTime: formatScheduleTime,
-  courtName: courtName
+  courtName: courtName,
+  statusLabel: statusLabel,
+  roundLabel: roundLabel,
+  pad2: pad2
 };

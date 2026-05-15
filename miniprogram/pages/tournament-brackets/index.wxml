@@ -1,45 +1,102 @@
-<view wx:if="{{loading}}" class="loading">加载中...</view>
+<wxs src="./format.wxs" module="fmt" />
 
-<view wx:elif="{{tournament}}" class="brackets">
-  <view class="head">
-    <text class="title">{{tournament.name}} · 首轮排程</text>
-    <button
-      wx:if="{{tournament.status === 'draft' || tournament.status === 'upcoming'}}"
-      size="mini"
-      bindtap="onEditSchedule">
-      编辑排程
-    </button>
+<view class="bracket-page">
+
+  <view wx:if="{{loading}}" class="state-loading">
+    <skeleton-loader rows="{{6}}" />
   </view>
 
-  <view wx:if="{{decoratedCourts.length === 0}}" class="empty text-meta">尚未配置排程</view>
+  <block wx:elif="{{tournament}}">
 
-  <view wx:for="{{decoratedCourts}}" wx:for-item="court" wx:key="courtId" class="court-block">
-    <view class="court-head">
-      <text class="court-title">{{court.name}}</text>
-      <text class="court-time text-meta">{{court.slotCount}} 个时段</text>
+    <!-- HEAD -->
+    <view class="bracket-head anim-stage-rise">
+      <view class="head-tapes">
+        <text class="tape tape-stamped">TOURNAMENT</text>
+        <text wx:if="{{tournament.status === 'live'}}" class="live-dot">LIVE</text>
+      </view>
+      <text class="head-title">{{tournament.name}}</text>
+      <view class="head-sub">
+        <text class="head-sub-text">首轮排程 · 共 {{decoratedCourts.length}} 片场地</text>
+        <view
+          wx:if="{{tournament.status === 'draft' || tournament.status === 'upcoming'}}"
+          class="head-action cta-secondary tap-scale"
+          bindtap="onEditSchedule">编辑排程</view>
+      </view>
     </view>
 
-    <view wx:if="{{court.matches.length === 0 && court.freePlays.length === 0}}" class="empty text-meta">无比赛</view>
-
-    <view wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId" class="match-row">
-      <text class="player">{{m.__player1Name}}</text>
-      <text class="vs">VS</text>
-      <text class="player">{{m.__player2Name}}</text>
-      <text class="status-chip status-{{m.resultStatus}}">{{m.bye ? '轮空' : m.resultStatus}}</text>
+    <!-- EMPTY -->
+    <view wx:if="{{decoratedCourts.length === 0}}" class="bracket-empty">
+      <text class="tape">尚未配置排程</text>
+      <text class="bracket-empty-hint">前往编辑排程以指定场地与对阵</text>
     </view>
 
-    <view wx:for="{{court.freePlays}}" wx:for-item="fp" wx:key="_id" class="match-row freeplay">
-      <text>自由拉球</text>
-      <text class="text-meta">{{fp.playerIds.length}} 人</text>
-    </view>
-  </view>
+    <!-- ROUND 01 · BY COURT -->
+    <view wx:if="{{decoratedCourts.length > 0}}" class="round-section anim-stage-rise anim-delay-1">
+      <view class="round-banner">
+        <text class="tape tape-lime tape-stamped-lime">ROUND 01</text>
+        <text class="round-banner-sub">首轮 · 按场地分组</text>
+      </view>
 
-  <view wx:for="{{laterRounds}}" wx:for-item="b" wx:key="round" class="later-block">
-    <text class="later-title">第 {{b.round}} 轮（待半决/决赛安排）</text>
-    <view wx:for="{{b.matches}}" wx:for-item="m" wx:key="matchId" class="match-row gray">
-      <text class="player">{{m.__player1Name}}</text>
-      <text class="vs">VS</text>
-      <text class="player">{{m.__player2Name}}</text>
+      <view wx:for="{{decoratedCourts}}" wx:for-item="court" wx:key="courtId" class="court-block">
+        <view class="court-head">
+          <text class="court-name">{{court.name}}</text>
+          <text class="court-meta">{{court.slotCount}} 时段 · {{court.matches.length}} 场</text>
+        </view>
+
+        <view wx:if="{{court.matches.length === 0 && court.freePlays.length === 0}}" class="court-empty">
+          <text>本场地无安排</text>
+        </view>
+
+        <view class="match-list">
+          <view
+            wx:for="{{court.matches}}" wx:for-item="m" wx:key="matchId"
+            class="match-row {{m.bye ? 'is-bye' : ''}} status-{{m.resultStatus}}">
+            <view class="match-players">
+              <text class="player-name">{{m.__player1Name}}</text>
+              <text class="vs num">VS</text>
+              <text class="player-name">{{m.__player2Name}}</text>
+            </view>
+            <view class="match-status">
+              <text class="status-tag status-tag-{{m.bye ? 'bye' : m.resultStatus}}">{{fmt.statusLabel(m.resultStatus, m.bye)}}</text>
+            </view>
+          </view>
+
+          <view
+            wx:for="{{court.freePlays}}" wx:for-item="fp" wx:key="_id"
+            class="match-row is-freeplay">
+            <view class="match-players">
+              <text class="freeplay-label">自由拉球</text>
+            </view>
+            <view class="match-status">
+              <text class="freeplay-count num">{{fp.playerIds.length}} 人</text>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
-  </view>
+
+    <!-- LATER ROUNDS -->
+    <view wx:if="{{laterRounds.length > 0}}" class="round-section later anim-stage-rise anim-delay-2">
+      <view wx:for="{{laterRounds}}" wx:for-item="b" wx:key="round" class="later-block">
+        <view class="round-banner">
+          <text class="tape tape-ghost">ROUND {{fmt.pad2(b.round)}}</text>
+          <text class="round-banner-sub">{{fmt.roundLabel(b.round, laterRounds[laterRounds.length-1].round)}} · 待安排</text>
+        </view>
+
+        <view class="match-list muted">
+          <view wx:for="{{b.matches}}" wx:for-item="m" wx:key="matchId" class="match-row is-pending">
+            <view class="match-players">
+              <text class="player-name">{{m.__player1Name}}</text>
+              <text class="vs num">VS</text>
+              <text class="player-name">{{m.__player2Name}}</text>
+            </view>
+            <view class="match-status">
+              <text class="status-tag status-tag-pending">待安排</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+  </block>
 </view>

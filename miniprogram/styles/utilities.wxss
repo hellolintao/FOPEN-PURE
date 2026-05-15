@@ -1,9 +1,15 @@
 /* miniprogram/styles/utilities.wxss
- * 常用工具类。按需在 WXML 上加 class 复用。
+ * 工具类。按需在 WXML 上加 class 复用。
+ *
+ * 规则：所有 v1 类名都保留（向后兼容）；新增类按"语义 + 视觉模式"命名。
+ * 严禁在工具类里写 border-left/right > 1px 这种 AI 装饰条。
  */
 
-/* ===== 字体层级 ===== */
+/* =========================================================
+ * 字体层级
+ * ========================================================= */
 .text-display {
+  font-family: var(--font-family-display);
   font-size: var(--font-display-size);
   font-weight: var(--font-display-weight);
   letter-spacing: 0;
@@ -13,7 +19,6 @@
 .text-h1 {
   font-size: var(--font-h1-size);
   font-weight: var(--font-h1-weight);
-  text-transform: uppercase;
   letter-spacing: 0.01em;
   line-height: 1.1;
 }
@@ -52,54 +57,168 @@
 }
 
 .text-stat {
+  font-family: var(--font-family-num);
   font-size: var(--font-stat-size);
   font-weight: var(--font-stat-weight);
-  letter-spacing: 0;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
 }
 
-/* ===== 颜色 ===== */
+/* 新增：超大数字阶梯 — 用于排名 hero / 计分牌 / 结算 */
+.text-mega {
+  font-family: var(--font-family-num);
+  font-size: var(--font-mega-size);
+  font-weight: var(--font-mega-weight);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.text-giga {
+  font-family: var(--font-family-num);
+  font-size: var(--font-giga-size);
+  font-weight: var(--font-giga-weight);
+  letter-spacing: -0.06em;
+  line-height: 0.85;
+}
+
+/* 数字专用：等宽、紧凑、display 字体（fallback PingFang） */
+.num {
+  font-family: var(--font-family-num);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.02em;
+}
+
+/* =========================================================
+ * Tape · 印刷感横排标签条
+ *   - 头部章节标识：ROUND 03 · 半决赛
+ *   - 区块小耳标：今日 · TODAY
+ * ========================================================= */
+.tape {
+  display: inline-flex;
+  align-items: center;
+  height: var(--tape-height);
+  padding: 0 var(--space-4);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: var(--font-tape-size);
+  font-weight: var(--font-tape-weight);
+  letter-spacing: var(--tape-letter-spacing);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tape-lime {
+  background: var(--color-lime);
+  color: var(--color-ink);
+}
+
+.tape-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 2rpx solid var(--color-ink);
+  padding: 0 calc(var(--space-4) - 2rpx);
+}
+
+.tape-stamped {
+  /* 印刷错位投影 */
+  box-shadow: var(--shadow-stamp);
+}
+
+.tape-stamped-lime {
+  box-shadow: var(--shadow-stamp-lime);
+}
+
+/* =========================================================
+ * 颜色 / 背景
+ * ========================================================= */
 .color-ink { color: var(--color-ink); }
+.color-ink-2 { color: var(--color-ink-2); }
 .color-muted { color: var(--color-muted); }
+.color-muted-2 { color: var(--color-muted-2); }
 .color-lime { color: var(--color-lime); }
-.color-white { color: #fff; }
+.color-lime-strong { color: var(--color-lime-strong); }
+.color-white { color: var(--color-bg); }
 .color-danger { color: var(--color-danger); }
 .color-success { color: var(--color-success); }
+.color-win { color: var(--color-win); }
+.color-loss { color: var(--color-loss); }
+.color-ace { color: var(--color-ace); }
 
 .bg-lime { background: var(--color-lime); }
+.bg-lime-soft { background: var(--color-lime-soft); }
+.bg-lime-wash { background: var(--color-lime-wash); }
 .bg-ink { background: var(--color-ink); }
+.bg-ink-2 { background: var(--color-ink-2); }
 .bg-card { background: var(--color-bg-2); }
+.bg-soft { background: var(--color-bg-3); }
+.bg-paper { background: var(--color-bg); }
 
-/* ===== 布局 ===== */
+/* =========================================================
+ * 布局
+ * ========================================================= */
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }
 .flex-center { display: flex; align-items: center; justify-content: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-end { display: flex; align-items: center; justify-content: flex-end; }
+.flex-start { display: flex; align-items: flex-start; }
+.flex-baseline { display: flex; align-items: baseline; }
 .flex-1 { flex: 1; }
+.flex-wrap { flex-wrap: wrap; }
 
+.gap-1 { gap: var(--space-1); }
 .gap-2 { gap: var(--space-2); }
 .gap-3 { gap: var(--space-3); }
 .gap-4 { gap: var(--space-4); }
 .gap-5 { gap: var(--space-5); }
+.gap-6 { gap: var(--space-6); }
+.gap-7 { gap: var(--space-7); }
 
-/* ===== 圆角 ===== */
+.full-width { width: 100%; }
+
+/* =========================================================
+ * 圆角
+ * ========================================================= */
 .rounded-sm { border-radius: var(--radius-sm); }
 .rounded-md { border-radius: var(--radius-md); }
 .rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
 .rounded-pill { border-radius: var(--radius-pill); }
+.rounded-none { border-radius: 0; }
 
-/* ===== Padding ===== */
+/* =========================================================
+ * Padding / Margin
+ * ========================================================= */
+.p-2 { padding: var(--space-2); }
 .p-3 { padding: var(--space-3); }
 .p-4 { padding: var(--space-4); }
 .p-5 { padding: var(--space-5); }
+.p-6 { padding: var(--space-6); }
+.p-7 { padding: var(--space-7); }
 
-/* ===== Margin ===== */
+.px-4 { padding-left: var(--space-4); padding-right: var(--space-4); }
+.px-5 { padding-left: var(--space-5); padding-right: var(--space-5); }
+.px-6 { padding-left: var(--space-6); padding-right: var(--space-6); }
+.py-3 { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+.py-4 { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+.py-5 { padding-top: var(--space-5); padding-bottom: var(--space-5); }
+.py-6 { padding-top: var(--space-6); padding-bottom: var(--space-6); }
+
+.mt-2 { margin-top: var(--space-2); }
 .mt-3 { margin-top: var(--space-3); }
 .mt-4 { margin-top: var(--space-4); }
+.mt-5 { margin-top: var(--space-5); }
+.mt-6 { margin-top: var(--space-6); }
+.mt-7 { margin-top: var(--space-7); }
+.mb-2 { margin-bottom: var(--space-2); }
 .mb-3 { margin-bottom: var(--space-3); }
 .mb-4 { margin-bottom: var(--space-4); }
+.mb-5 { margin-bottom: var(--space-5); }
+.mb-6 { margin-bottom: var(--space-6); }
 
-/* ===== 卡片 ===== */
+/* =========================================================
+ * 卡片
+ * ========================================================= */
 .card {
   background: var(--color-bg-2);
   border-radius: var(--radius-lg);
@@ -107,63 +226,275 @@
   box-shadow: var(--shadow-card);
 }
 
+.card-paper {
+  background: var(--color-bg);
+  border: var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.card-ink {
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
 .card-hero {
   background: var(--color-lime);
   color: var(--color-ink);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  padding: var(--space-7);
   position: relative;
   overflow: hidden;
 }
 
-/* ===== CTA ===== */
+.card-stamped {
+  background: var(--color-bg);
+  border: var(--hairline-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-stamp);
+}
+
+/* =========================================================
+ * CTA
+ * ========================================================= */
 .cta-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: var(--color-ink);
-  color: #fff;
-  font-weight: 600;
+  color: var(--color-bg);
+  font-weight: 700;
   font-size: 28rpx;
   padding: 24rpx 48rpx;
   border-radius: var(--radius-pill);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
-  transition: transform 0.1s var(--ease-out);
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
-.cta-primary:active {
-  transform: scale(0.96);
-}
+.cta-primary:active { transform: scale(0.96); }
 
 .cta-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--color-bg);
   color: var(--color-ink);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 28rpx;
-  padding: 20rpx 40rpx;
+  padding: 22rpx 46rpx;
   border-radius: var(--radius-pill);
-  border: 1rpx solid var(--color-ink);
+  border: var(--hairline-strong);
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
-/* ===== Chip Tab ===== */
+.cta-secondary:active { transform: scale(0.96); }
+
+.cta-lime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-lime);
+  color: var(--color-ink);
+  font-weight: 800;
+  font-size: 28rpx;
+  padding: 24rpx 48rpx;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.04em;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.cta-lime:active { transform: scale(0.96); background: var(--color-lime-strong); }
+
+.cta-block {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-weight: 800;
+  font-size: 30rpx;
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-md);
+  letter-spacing: 0.04em;
+}
+
+/* =========================================================
+ * Chip / Tab
+ * ========================================================= */
 .chip {
   display: inline-flex;
   align-items: center;
   padding: 12rpx 24rpx;
   border-radius: var(--radius-pill);
   font-size: var(--font-label-size);
-  font-weight: 600;
-  background: #fff;
+  font-weight: 700;
+  background: var(--color-bg);
   color: var(--color-muted);
-  border: 1rpx solid var(--color-border);
+  border: var(--hairline);
 }
 
 .chip-active {
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-color: var(--color-ink);
+}
+
+.chip-lime {
   background: var(--color-lime);
   color: var(--color-ink);
   border-color: var(--color-lime);
+}
+
+/* 切换条：横向两段 toggle，整体被一个 ink hairline 包住 */
+.toggle-bar {
+  display: inline-flex;
+  border: var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  padding: 4rpx;
+  background: var(--color-bg);
+  gap: 0;
+}
+
+.toggle-bar .chip { border: none; padding: 12rpx 24rpx; }
+
+.toggle-bar .chip-active { background: var(--color-ink); color: var(--color-bg); }
+
+/* =========================================================
+ * Stat Block · 大数字 + 极小标签的对比块
+ * ========================================================= */
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.stat-block .stat-num {
+  font-family: var(--font-family-num);
+  font-size: var(--font-stat-size);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.stat-block .stat-label {
+  font-size: var(--font-meta-size);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.stat-block-lime .stat-num { color: var(--color-ink); }
+.stat-block-lime { background: var(--color-lime); padding: var(--space-5); border-radius: var(--radius-md); }
+
+.stat-block-ink {
+  background: var(--color-ink);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+}
+.stat-block-ink .stat-num { color: var(--color-bg); }
+.stat-block-ink .stat-label { color: var(--color-muted-2); }
+
+/* =========================================================
+ * Score Pair · 对峙比分（两侧大数字对撞）
+ * ========================================================= */
+.score-pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-5);
+}
+.score-pair .side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.score-pair .side-left { align-items: flex-end; text-align: right; }
+.score-pair .side-right { align-items: flex-start; text-align: left; }
+.score-pair .vs {
+  font-family: var(--font-family-display);
+  font-size: 24rpx;
+  font-weight: 800;
+  color: var(--color-muted-2);
+  letter-spacing: 0.2em;
+}
+
+/* =========================================================
+ * 分割线
+ * ========================================================= */
+.divider { height: 1rpx; background: var(--color-border); width: 100%; }
+.divider-strong { height: 2rpx; background: var(--color-ink); width: 100%; }
+.divider-dotted {
+  height: 2rpx;
+  width: 100%;
+  background-image: linear-gradient(to right, var(--color-ink) 50%, transparent 50%);
+  background-size: 16rpx 2rpx;
+  background-repeat: repeat-x;
+}
+
+/* =========================================================
+ * Live 状态点
+ * ========================================================= */
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-label-size);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+.live-dot::before {
+  content: "";
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: var(--color-lime);
+  box-shadow: 0 0 0 4rpx rgba(190, 230, 69, 0.35);
+  animation: live-pulse 1400ms var(--ease-out) infinite;
+}
+
+/* =========================================================
+ * 标签锚 / index ribbon — 用于排名等位次编号
+ * 优先用大数字而非装饰，避免 border-left 条
+ * ========================================================= */
+.rank-num {
+  font-family: var(--font-family-num);
+  font-size: 56rpx;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+  min-width: 96rpx;
+  text-align: left;
+  line-height: 1;
+}
+.rank-num-1 { color: var(--color-ink); }
+.rank-num-2 { color: var(--color-ink-3); }
+.rank-num-3 { color: var(--color-ink-3); }
+.rank-num-rest { color: var(--color-muted); font-weight: 800; }
+
+/* =========================================================
+ * 通用 tap 反馈
+ * ========================================================= */
+.tap-scale {
+  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.tap-scale:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}
+
+/* =========================================================
+ * 形状装饰（非滥用，仅在 hero 等场景按需引用）
+ * ========================================================= */
+.deco-corner-cut {
+  /* 右上斜切 24rpx，用 clip-path 替代图形资源 */
+  clip-path: polygon(0 0, calc(100% - 24rpx) 0, 100% 24rpx, 100% 100%, 0 100%);
 }

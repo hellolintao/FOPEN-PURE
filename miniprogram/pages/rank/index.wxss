@@ -1,49 +1,287 @@
 .rank-page {
-  padding: var(--space-5);
-  padding-bottom: 160rpx;
+  padding: var(--space-5) var(--space-5) 160rpx;
+  background: var(--color-bg);
+  min-height: 100vh;
 }
-.header {
-  margin-bottom: var(--space-4);
+
+/* ============================================================
+ * HEAD
+ * ============================================================ */
+.page-head {
+  margin-bottom: var(--space-6);
 }
-.card-hero {
-  background: var(--color-lime);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  margin-bottom: var(--space-4);
-}
-.star-card {
-  position: relative;
-  overflow: hidden;
-  margin-top: var(--space-5);
-}
-.star-content {
-  position: relative;
-  z-index: 1;
-}
-.star-row {
+
+.head-meta {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  margin-top: var(--space-3);
+  margin-bottom: var(--space-5);
 }
-.star-avatar {
-  width: 96rpx;
-  height: 96rpx;
+
+.head-meta-text {
+  font-size: var(--font-meta-size);
+  color: var(--color-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.head-title-zh {
+  font-size: 72rpx;
+  font-weight: 900;
+  line-height: 0.95;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.head-title-en {
+  font-family: var(--font-family-num);
+  font-size: 36rpx;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-2);
+  line-height: 1;
+}
+
+/* ============================================================
+ * TABS
+ * ============================================================ */
+.tab-wrap {
+  margin-bottom: var(--space-6);
+}
+
+/* ============================================================
+ * CHAMPION HERO
+ * ============================================================ */
+.champion {
+  position: relative;
+  background: var(--color-lime);
+  border-radius: var(--radius-xl);
+  padding: var(--space-7);
+  margin-bottom: var(--space-5);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.champion-ghost {
+  position: absolute;
+  right: -40rpx;
+  top: -32rpx;
+  font-size: 480rpx;
+  font-weight: 900;
+  line-height: 0.7;
+  letter-spacing: -0.08em;
+  color: var(--color-ink);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.champion-tape {
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--space-6);
+}
+
+.champion-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-5);
+}
+
+.champ-portrait {
+  flex-shrink: 0;
+}
+
+.champ-avatar {
+  width: 144rpx;
+  height: 144rpx;
   border-radius: 50%;
-  border: 3rpx solid #fff;
+  background: var(--color-bg);
+  border: 4rpx solid var(--color-ink);
+  box-shadow: 6rpx 6rpx 0 var(--color-ink);
+}
+
+.champ-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.champ-name {
+  font-size: 48rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.champ-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.champ-points {
+  font-size: 88rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.champ-points-label {
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--color-ink-3);
+  text-transform: uppercase;
+}
+
+/* ============================================================
+ * WEEKLY STAR
+ * ============================================================ */
+.star-card {
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+.star-tape-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.star-range {
+  font-size: var(--font-meta-size);
+  color: var(--color-muted-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.star-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.star-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
   background: var(--color-bg-3);
+  border: 2rpx solid var(--color-lime);
 }
-.star-copy {
+
+.star-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 4rpx;
+  min-width: 0;
 }
-.list {
+
+.star-name {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: var(--color-bg);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.star-points-label {
+  font-size: var(--font-meta-size);
+  font-weight: 600;
+  color: var(--color-muted-2);
+  letter-spacing: 0.08em;
+}
+
+.star-points-block {
+  display: flex;
+  align-items: baseline;
+}
+
+.star-points-num {
+  font-size: 56rpx;
+  font-weight: 900;
+  color: var(--color-lime);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* ============================================================
+ * LIST
+ * ============================================================ */
+.list-head {
+  display: grid;
+  grid-template-columns: 96rpx 80rpx 1fr 96rpx;
+  gap: var(--space-4);
+  padding: 0 var(--space-3) var(--space-3);
+  margin-top: var(--space-6);
+  align-items: baseline;
+  border-bottom: 2rpx solid var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.list-col {
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.list-col-player {
+  grid-column: 2 / 4;
+}
+
+.list-col-pts {
+  display: none;
+}
+
+.list-col-trend {
+  text-align: right;
+}
+
+.rank-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
-.empty-state {
+
+/* ============================================================
+ * EMPTY
+ * ============================================================ */
+.rank-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-9) 0;
   text-align: center;
-  padding: var(--space-8) 0;
+}
+
+.rank-empty-hint {
+  font-size: var(--font-body-size);
+  color: var(--color-muted);
+  max-width: 480rpx;
+  line-height: 1.5;
 }

@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "比赛对阵",
-  "usingComponents": {}
+  "usingComponents": {
+    "skeleton-loader": "/components/skeleton-loader/index"
+  }
 }

@@ -1,30 +1,66 @@
 /* miniprogram/styles/tokens.wxss
- * 全局设计 token。所有页面/组件都通过这些变量取值，
- * 严禁直接写硬编码颜色。
+ * 全局设计 token。
+ *
+ * 规则：
+ *  - 所有页面/组件只通过这些变量取值，严禁直接写硬编码颜色。
+ *  - 保持向后兼容：所有 v1 中已使用的 token 名都保留；新维度只扩展、不重命名。
+ *  - 色彩用 OKLCH 思维设计后烘焙为 hex，避免基础库兼容问题。
+ *  - 中性色统一向品牌青柠绿一侧做极弱暖偏（chroma ≈ 0.005–0.01），制造潜意识一致性。
  */
 
 page {
-  /* ===== 色板 ===== */
-  --color-lime: #BEE645;
-  --color-lime-soft: #DDF099;
-  --color-ink: #0A0A0A;
-  --color-ink-2: #1F1F23;
-  --color-bg: #FFFFFF;
-  --color-bg-2: #FAFAFA;
-  --color-bg-3: #F3F4F6;
-  --color-muted: #6B7280;
-  --color-muted-2: #9CA3AF;
-  --color-border: #E5E7EB;
+  /* =========================================================
+   * 色板 · 品牌 / 中性
+   * ========================================================= */
+
+  /* 品牌青柠 — 唯一强调色，全屏稀缺使用 */
+  --color-lime: #BEE645;          /* base */
+  --color-lime-strong: #A8CC2F;   /* 按压 / 深一档 */
+  --color-lime-soft: #DDF099;     /* 浅色背景 / 阶段高亮 */
+  --color-lime-wash: #EEF7CB;     /* 极浅 wash，hero 底层 */
+
+  /* 墨色（轻微暖偏） */
+  --color-ink: #0B0C09;           /* 主文字 / 强边 / 计分牌字 */
+  --color-ink-2: #1B1D17;         /* 次级文字 / 深块 */
+  --color-ink-3: #3A3D33;         /* 三级 / 强 muted */
+  --color-ink-4: #56594D;         /* 四级 / 标签 */
+
+  /* 中性底（轻微暖偏） */
+  --color-bg: #FFFFFF;            /* 页底 */
+  --color-bg-2: #FAFAF7;          /* 卡片底 / 二级面 */
+  --color-bg-3: #F2F3EC;          /* 三级面 / 嵌套块 */
+  --color-bg-4: #E8EAE0;          /* 强分隔色块 */
+
+  /* 灰阶 muted（轻微暖偏） */
+  --color-muted: #6B6E63;
+  --color-muted-2: #9C9F92;
+  --color-muted-3: #B8BBAE;
+
+  /* 边线 */
+  --color-border: #E5E6DD;
+  --color-border-strong: #C9CBBF;
+
+  /* 状态色 */
   --color-danger: #DC2626;
   --color-warn: #F59E0B;
   --color-success: #16A34A;
+
+  /* 体育语义色（保留出口给比赛态） */
+  --color-live: var(--color-lime);          /* 进行中 = 品牌色 */
+  --color-win: #16A34A;                     /* 胜 */
+  --color-loss: #DC2626;                    /* 负 */
+  --color-ace: #F0B100;                     /* 全场最佳 / 金标，仅极少处使用 */
+
+  /* v1 兼容别名（不要删） */
   --color-primary: var(--color-lime);
   --color-bg-soft: var(--color-bg-3);
   --color-text: var(--color-ink);
   --color-text-strong: var(--color-ink);
   --color-text-muted: var(--color-muted);
 
-  /* ===== 间距 ===== */
+  /* =========================================================
+   * 间距 · 4rpx 阶梯（保留 v1）
+   * ========================================================= */
   --space-1: 4rpx;
   --space-2: 8rpx;
   --space-3: 12rpx;
@@ -33,14 +69,21 @@ page {
   --space-6: 32rpx;
   --space-7: 48rpx;
   --space-8: 64rpx;
+  --space-9: 96rpx;     /* 新增：hero / mega 间隔 */
+  --space-10: 128rpx;   /* 新增：分章间隔 */
 
-  /* ===== 圆角 ===== */
+  /* =========================================================
+   * 圆角
+   * ========================================================= */
   --radius-sm: 8rpx;
   --radius-md: 16rpx;
   --radius-lg: 24rpx;
+  --radius-xl: 32rpx;      /* 新增：hero 容器 */
   --radius-pill: 999rpx;
 
-  /* ===== 字号 / 字重 ===== */
+  /* =========================================================
+   * 字号 / 字重
+   * ========================================================= */
   --font-display-size: 56rpx;
   --font-display-weight: 900;
 
@@ -65,11 +108,56 @@ page {
   --font-stat-size: 64rpx;
   --font-stat-weight: 900;
 
-  /* ===== 阴影 ===== */
-  --shadow-card: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
-  --shadow-lifted: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+  /* 新增：超大数字阶梯（计分牌 / 排名 hero / 结算揭晓） */
+  --font-mega-size: 112rpx;
+  --font-mega-weight: 900;
 
-  /* ===== 动画 ===== */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font-giga-size: 168rpx;
+  --font-giga-weight: 900;
+
+  /* 新增：tape 标签条（横排印刷感小标签） */
+  --font-tape-size: 22rpx;
+  --font-tape-weight: 800;
+  --tape-letter-spacing: 0.16em;
+  --tape-height: 40rpx;
+
+  /* =========================================================
+   * 字体族（display 远程字体 fallback PingFang）
+   * - 默认 display-family / num-family = PingFang Heavy，保证未加载远程字体时也有运动感
+   * - 加载 Anton 后由 app.js 在 :root 上覆盖这两个变量
+   * ========================================================= */
+  --font-family-base:
+    "PingFang SC", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --font-family-display: var(--font-family-base);
+  --font-family-num: var(--font-family-base);
+
+  /* =========================================================
+   * 阴影 · 克制 + 印刷错位
+   * ========================================================= */
+  --shadow-card: 0 4rpx 16rpx rgba(11, 12, 9, 0.04);
+  --shadow-lifted: 0 8rpx 32rpx rgba(11, 12, 9, 0.08);
+  --shadow-floor: 0 16rpx 48rpx rgba(11, 12, 9, 0.10);    /* 新：hero 浮起 */
+  --shadow-stamp: 6rpx 6rpx 0 var(--color-ink);           /* 新：贴纸/印刷错位 */
+  --shadow-stamp-lime: 6rpx 6rpx 0 var(--color-lime);     /* 新：品牌色错位 */
+
+  /* =========================================================
+   * 描边
+   * ========================================================= */
+  --hairline: 1rpx solid var(--color-border);
+  --hairline-strong: 2rpx solid var(--color-ink);
+  --hairline-lime: 2rpx solid var(--color-lime-strong);
+
+  /* =========================================================
+   * 动效
+   * ========================================================= */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);   /* v1 兼容；新代码请优先用 -stage */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-stage: cubic-bezier(0.83, 0, 0.17, 1);        /* 新：剧烈舞台出入 */
+  --ease-tick: cubic-bezier(0.2, 0.8, 0.2, 1.2);       /* 新：数字跳动（克制弹性） */
+
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-stage: 480ms;
+  --dur-reveal: 720ms;
 }

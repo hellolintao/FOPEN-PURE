@@ -1,40 +1,76 @@
 <view class="rank-page">
-  <view class="header">
-    <text class="text-h1">RANKINGS</text>
+
+  <!-- HEAD -->
+  <view class="page-head anim-stage-rise">
+    <view class="head-meta">
+      <text class="tape tape-stamped">SEASON · S{{seasonYear}}</text>
+      <text class="head-meta-text">{{rankList.length}} 位选手 · 实时更新</text>
+    </view>
+    <view class="head-title">
+      <text class="head-title-zh">排行榜</text>
+      <text class="head-title-en num">RANKINGS</text>
+    </view>
   </view>
 
-  <chip-tab
-    value="{{activeTab}}"
-    options="{{rankTabOptions}}"
-    bindchange="onTabChange"
-  />
+  <!-- TABS -->
+  <view class="tab-wrap anim-stage-rise anim-delay-1">
+    <chip-tab
+      value="{{activeTab}}"
+      options="{{rankTabOptions}}"
+      bindchange="onTabChange"
+    />
+  </view>
 
-  <view wx:if="{{weeklyStar}}" class="card-hero star-card anim-fade-up">
-    <brush-stroke-bg></brush-stroke-bg>
-    <view class="star-content">
-      <text class="text-label">WEEKLY STAR · {{weeklyStarWeekRange}}</text>
-      <view class="star-row">
-        <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
-        <view class="star-copy">
-          <text class="text-h2">{{weeklyStar.name}}</text>
-          <text class="text-meta">本周积分 {{weeklyStar.points}}</text>
+  <!-- CHAMPION HERO -->
+  <view wx:if="{{rankList[0]}}" class="champion anim-stage-rise anim-delay-2">
+    <view class="champion-ghost num">01</view>
+    <view class="champion-tape">
+      <text class="tape tape-stamped">RANK · 01</text>
+    </view>
+    <view class="champion-body">
+      <view class="champ-portrait">
+        <image class="champ-avatar" src="{{rankList[0].avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
+      </view>
+      <view class="champ-info">
+        <text class="champ-name">{{rankList[0].name}}</text>
+        <view class="champ-stat">
+          <text class="champ-points num">{{rankList[0].totalPoints}}</text>
+          <text class="champ-points-label">POINTS</text>
         </view>
       </view>
     </view>
   </view>
 
-  <view wx:elif="{{rankList[0]}}" class="card-hero star-card anim-fade-up">
-    <brush-stroke-bg></brush-stroke-bg>
-    <view class="star-content">
-      <text class="text-label">RANK #1</text>
-      <text class="text-h2">{{rankList[0].name}}</text>
-      <text class="text-meta">{{rankList[0].totalPoints}} 分</text>
+  <!-- WEEKLY STAR -->
+  <view wx:if="{{weeklyStar}}" class="star-card anim-stage-rise anim-delay-3">
+    <view class="star-tape-wrap">
+      <text class="tape tape-lime">WEEKLY STAR</text>
+      <text class="star-range">{{weeklyStarWeekRange}}</text>
+    </view>
+    <view class="star-body">
+      <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <view class="star-info">
+        <text class="star-name">{{weeklyStar.name}}</text>
+        <text class="star-points-label">本周积分</text>
+      </view>
+      <view class="star-points-block">
+        <text class="star-points-num num">+{{weeklyStar.points}}</text>
+      </view>
     </view>
   </view>
 
+  <!-- LIST HEADER -->
+  <view class="list-head" wx:if="{{rankList.length > 1 || !weeklyStar}}">
+    <text class="list-col list-col-rank">RANK</text>
+    <text class="list-col list-col-player">PLAYER</text>
+    <text class="list-col list-col-pts">PTS</text>
+    <text class="list-col list-col-trend">TREND</text>
+  </view>
+
+  <!-- LIST -->
   <skeleton-loader wx:if="{{loading}}" rows="{{6}}" />
 
-  <view wx:else class="list">
+  <view wx:else class="rank-list">
     <rank-row
       wx:for="{{rankList}}" wx:key="_id"
       wx:if="{{weeklyStar || index > 0}}"
@@ -48,7 +84,10 @@
     />
   </view>
 
-  <view wx:if="{{!loading && rankList.length === 0}}" class="empty-state">
-    <text class="text-meta">暂无排名数据</text>
+  <!-- EMPTY -->
+  <view wx:if="{{!loading && rankList.length === 0}}" class="rank-empty">
+    <text class="tape">暂无排名数据</text>
+    <text class="rank-empty-hint">本赛季还未产生排名，先打几场再来看吧</text>
   </view>
+
 </view>

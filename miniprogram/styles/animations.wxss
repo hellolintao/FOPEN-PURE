@@ -1,32 +1,122 @@
+/* miniprogram/styles/animations.wxss
+ * 全局动效。
+ *
+ * 原则：
+ *  - 只动 transform / opacity / clip-path / filter，绝不动 width/height/padding/margin
+ *  - 默认 duration 短促有力，剧烈出入用 --ease-stage
+ *  - 数字跳动用 --ease-tick，克制弹性
+ */
+
+/* =========================================================
+ * 入场（v1 兼容保留）
+ * ========================================================= */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16rpx); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes soft-pop {
   from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes skeleton-pulse {
-  0% { opacity: 0.45; }
-  50% { opacity: 1; }
+  0%   { opacity: 0.45; }
+  50%  { opacity: 1; }
   100% { opacity: 0.45; }
 }
 
-.anim-fade-up {
-  animation: fade-up 220ms var(--ease-out) both;
+.anim-fade-up { animation: fade-up var(--dur-base) var(--ease-out) both; }
+.anim-soft-pop { animation: soft-pop 180ms var(--ease-out) both; }
+
+/* =========================================================
+ * 舞台级入场 · 大字 / hero / 揭晓
+ * ========================================================= */
+@keyframes stage-rise {
+  from { opacity: 0; transform: translateY(36rpx); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.anim-soft-pop {
-  animation: soft-pop 180ms var(--ease-out) both;
+@keyframes stage-cut {
+  /* 从右上斜切外露 — 像贴纸落下 */
+  from { opacity: 0; transform: translate(8rpx, -8rpx) rotate(-1deg); }
+  to   { opacity: 1; transform: translate(0, 0) rotate(0); }
 }
 
+@keyframes stage-slide-left {
+  from { opacity: 0; transform: translateX(-32rpx); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.anim-stage-rise { animation: stage-rise var(--dur-stage) var(--ease-stage) both; }
+.anim-stage-cut { animation: stage-cut var(--dur-stage) var(--ease-stage) both; }
+.anim-stage-slide-left { animation: stage-slide-left var(--dur-stage) var(--ease-stage) both; }
+
+/* =========================================================
+ * Stagger 延迟工具（与 stage-rise / fade-up 配合）
+ * ========================================================= */
+.anim-delay-1 { animation-delay: 60ms; }
+.anim-delay-2 { animation-delay: 120ms; }
+.anim-delay-3 { animation-delay: 180ms; }
+.anim-delay-4 { animation-delay: 240ms; }
+.anim-delay-5 { animation-delay: 320ms; }
+.anim-delay-6 { animation-delay: 400ms; }
+.anim-delay-7 { animation-delay: 500ms; }
+
+/* =========================================================
+ * 数字跳动 · 计分牌 tick
+ * ========================================================= */
+@keyframes num-tick {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(-12rpx); }
+  100% { transform: translateY(0); }
+}
+
+.anim-num-tick { animation: num-tick 360ms var(--ease-tick); }
+
+/* =========================================================
+ * 揭晓 · 大数字 swap-in（结算页）
+ * ========================================================= */
+@keyframes reveal-pop {
+  from { opacity: 0; transform: scale(0.84); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.anim-reveal-pop { animation: reveal-pop var(--dur-reveal) var(--ease-stage) both; }
+
+/* =========================================================
+ * Live 脉冲（live-dot 内部使用）
+ * ========================================================= */
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(190, 230, 69, 0.55); }
+  70%  { box-shadow: 0 0 0 14rpx rgba(190, 230, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(190, 230, 69, 0); }
+}
+
+/* =========================================================
+ * 边线扫光 — 用于强调下方分隔（hero 底部）
+ * ========================================================= */
+@keyframes ridge-sweep {
+  from { transform: scaleX(0); transform-origin: left center; }
+  to   { transform: scaleX(1); transform-origin: left center; }
+}
+
+.anim-ridge-sweep { animation: ridge-sweep var(--dur-reveal) var(--ease-stage) both; }
+
+/* =========================================================
+ * 通用 tap 反馈
+ * ========================================================= */
 .tap-scale {
   transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
 }
-
 .tap-scale:active {
   transform: scale(0.97);
   opacity: 0.88;
+}
+
+/* 抑制动画 — 用户开启系统减少动效时手动加 */
+.no-anim,
+.no-anim * {
+  animation: none !important;
+  transition: none !important;
 }
