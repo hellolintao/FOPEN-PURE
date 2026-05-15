@@ -480,16 +480,16 @@ async function handleSaveSchedule({ tournamentId, queues }) {
     data: { matches: updated, updateTime: db.serverDate() }
   })
 
-  // Mirror queues into tournament.schedulePlan.queues — 不能用 dot-path
-  // 因为有的旧 draft schedulePlan 字段可能为 null/缺失，dot-path 在 null 上写会报
-  // "Cannot create field 'queues' in element {schedulePlan: null}"
+  // Mirror queues into tournament.schedulePlan.queues — 必须用 _.set() 整体替换
+  // 否则 TCB 会把对象展开成 dot-path（schedulePlan.queues），遇到旧 doc
+  // schedulePlan=null 时会报 "Cannot create field 'queues' in element {schedulePlan: null}"
   const tRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
   const curSP = (tRes && tRes.data && tRes.data.schedulePlan && typeof tRes.data.schedulePlan === 'object')
     ? tRes.data.schedulePlan
     : { slotMinutes: 20, courts: [], queues: [] }
   const nextSP = { ...curSP, queues }
   await db.collection('tournaments').doc(tournamentId).update({
-    data: { schedulePlan: nextSP, updateTime: db.serverDate() }
+    data: { schedulePlan: _.set(nextSP), updateTime: db.serverDate() }
   })
 
   return { success: true, data: { count: updated.filter(m => m.courtId).length } }
@@ -511,14 +511,14 @@ async function handleRegenerateDraft({ tournamentId }) {
   await wipe('match_results')
   await wipe('free_plays')
 
-  // 同样避免 dot-path 在 null 字段上写
+  // 同样用 _.set() 整体替换避免 dot-path 在 null 字段上写
   const tRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
   const curSP = (tRes && tRes.data && tRes.data.schedulePlan && typeof tRes.data.schedulePlan === 'object')
     ? tRes.data.schedulePlan
     : { slotMinutes: 20, courts: [], queues: [] }
   const nextSP = { ...curSP, queues: [] }
   await db.collection('tournaments').doc(tournamentId).update({
-    data: { schedulePlan: nextSP, updateTime: db.serverDate() }
+    data: { schedulePlan: _.set(nextSP), updateTime: db.serverDate() }
   }).catch(() => null)
 
   return { success: true }

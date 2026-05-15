@@ -4,7 +4,10 @@
       <view class="board-title">排程表</view>
       <view class="board-help text-meta">点选手换人；长按格子调整时间或场地</view>
     </view>
-    <button class="board-regen" size="mini" bindtap="onRegenerate">重新随机安排</button>
+    <view class="board-actions">
+      <button class="board-action" size="mini" bindtap="onRegenerate">重随</button>
+      <button class="board-action" size="mini" bindtap="onClear">清空</button>
+    </view>
   </view>
 
   <scroll-view scroll-x class="schedule-scroll">
@@ -23,7 +26,7 @@
           wx:for="{{row.cells}}"
           wx:for-item="cell"
           wx:key="courtId"
-          class="schedule-cell {{cell.available ? '' : 'unavailable'}} cell-{{cell.__rowKind}}"
+          class="schedule-cell {{cell.available ? '' : 'unavailable'}} cell-{{cell.__rowKind}} {{cell.__duplicate ? 'cell-duplicate' : ''}}"
           bindlongpress="onTapItem"
           data-court-id="{{cell.courtId}}"
           data-match-id="{{cell.matchId}}"

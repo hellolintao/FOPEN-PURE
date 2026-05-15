@@ -3,6 +3,8 @@
 .board-title { font-weight: 700; font-size: 32rpx; }
 .board-help { margin-top: 4rpx; }
 .board-regen { flex: 0 0 auto; }
+.board-actions { display: flex; gap: 12rpx; flex: 0 0 auto; }
+.board-action { flex: 0 0 auto; }
 .schedule-scroll { width: 100%; }
 .schedule-table { display: flex; flex-direction: column; min-width: 920rpx; border: 1rpx solid var(--color-border, #e5e7eb); border-radius: 12rpx; overflow: hidden; background: #fff; }
 .schedule-row { display: flex; min-height: 104rpx; border-bottom: 1rpx solid var(--color-border, #e5e7eb); }
@@ -18,6 +20,8 @@
 .cell-bracket { background: #eff6ff; }
 .cell-extra { background: #fff7ed; }
 .cell-freePlay { background: #f8fafc; }
+.schedule-cell.cell-duplicate { background: #fee2e2; box-shadow: inset 0 0 0 2rpx var(--color-danger, #dc2626); }
+.schedule-cell.cell-duplicate .player { background: #fff; color: var(--color-danger, #dc2626); }
 .schedule-cell.unavailable { background: #f3f4f6; color: #9ca3af; }
 .match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding-right: 28rpx; box-sizing: border-box; }
 .player { max-width: 92rpx; padding: 6rpx 8rpx; border-radius: 8rpx; background: rgba(255,255,255,0.86); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 24rpx; text-align: center; }

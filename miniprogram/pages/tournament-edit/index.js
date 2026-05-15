@@ -1,6 +1,6 @@
 const app = getApp()
 const { generateFirstRound } = require('../../utils/bracket-generator')
-const { assignToCourts } = require('../../utils/scheduler-mirror')
+const { assignToCourts, buildRegularSchedule } = require('../../utils/scheduler-mirror')
 
 Page({
   data: {
@@ -200,17 +200,8 @@ Page({
       return
     }
 
-    if (this.data.matches.length === 0) {
-      const matches = generateFirstRound({
-        format: this.data.form.format,
-        type: this.data.form.type,
-        registrations: this.data.selectedPlayers
-      })
-      const queues = assignToCourts(
-        matches.filter(m => !m.bye).map(m => ({ matchId: m.matchId, kind: 'match', sourceMatchId: m.matchId })),
-        this.data.schedulePlanCourts
-      )
-      this.setData({ matches, queues })
+    if (this.data.matches.length === 0 || this.regularScheduleNeedsBuild()) {
+      this.applyDefaultSchedule()
     }
     this.setData({ step: 3 })
   },
@@ -244,16 +235,14 @@ Page({
       return wx.showToast({ title: _errMsg(r3, '生成录分行失败'), icon: 'none' })
     }
 
-    if (this.data.freePlays.length > 0) {
-      const r4 = await wx.cloud.callFunction({
-        name: 'free-plays',
-        data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
-      })
-      if (!_isSuccess(r4)) {
-        console.error('[commitStep3] free-plays.bulkSet failed', r4 && r4.result)
-        // 自由拉球失败不阻塞主流程，仅提示
-        wx.showToast({ title: _errMsg(r4, '保存自由拉球失败'), icon: 'none' })
-      }
+    const r4 = await wx.cloud.callFunction({
+      name: 'free-plays',
+      data: { action: 'bulkSet', tournamentId: tid, items: this.data.freePlays }
+    })
+    if (!_isSuccess(r4)) {
+      console.error('[commitStep3] free-plays.bulkSet failed', r4 && r4.result)
+      // 自由拉球失败不阻塞主流程，仅提示
+      wx.showToast({ title: _errMsg(r4, '保存自由拉球失败'), icon: 'none' })
     }
     this.setData({ step: 4 })
   },
@@ -306,6 +295,25 @@ Page({
   },
 
   async onRegenerate() {
+    this.applyDefaultSchedule()
+  },
+
+  onClearSchedule() {
+    const queues = (this.data.schedulePlanCourts || []).map(c => ({ courtId: c.courtId, items: [] }))
+    this.setData({ matches: [], queues, freePlays: [] })
+  },
+
+  applyDefaultSchedule() {
+    if (this.data.form.format === 'regular') {
+      const { matches, queues, freePlays } = buildRegularSchedule({
+        registrations: this.data.selectedPlayers,
+        courts: this.data.schedulePlanCourts,
+        type: this.data.form.type
+      })
+      this.setData({ matches, queues, freePlays })
+      return
+    }
+
     const matches = generateFirstRound({
       format: this.data.form.format,
       type: this.data.form.type,
@@ -316,6 +324,22 @@ Page({
       this.data.schedulePlanCourts
     )
     this.setData({ matches, queues, freePlays: [] })
+  },
+
+  regularScheduleNeedsBuild() {
+    if (this.data.form.format !== 'regular') return false
+    const queues = this.data.queues || []
+    return (this.data.schedulePlanCourts || []).some(court => {
+      const q = queues.find(x => x.courtId === court.courtId)
+      const slots = [...(court.slots || [])].sort()
+      const items = [...((q && q.items) || [])].sort((a, b) => a.order - b.order)
+      if (items.length !== slots.length) return true
+      for (let i = 0; i < items.length; i++) {
+        const expected = (i % 3 === 2) ? 'freePlay' : 'match'
+        if (items[i].kind !== expected) return true
+      }
+      return false
+    })
   },
 
   onAddPlayer() {

@@ -177,14 +177,23 @@ async function actionUpdate(event) {
     return fail('VALIDATION_ERROR', '数据校验失败', errors)
   }
 
+  // 嵌套对象字段必须用 _.set() 包一层，否则 TCB 会把 { schedulePlan: {...} }
+  // 展开成 dot-path 写入，遇到旧 doc 上 schedulePlan=null 时会报
+  // "Cannot create field 'courts' in element {schedulePlan: null}"
   const updateData = { ...data, updateTime: now }
+  if (updateData.schedulePlan !== undefined) {
+    updateData.schedulePlan = _.set(updateData.schedulePlan)
+  }
+  if (updateData.pointsRules !== undefined) {
+    updateData.pointsRules = _.set(updateData.pointsRules)
+  }
 
   try {
     await collection.doc(id).update({ data: updateData })
     return ok({ id })
   } catch (e) {
     console.error('update tournament failed:', e)
-    return fail('DB_ERROR', '数据库更新失败')
+    return fail('DB_ERROR', e && e.message ? e.message : '数据库更新失败')
   }
 }
 

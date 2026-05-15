@@ -48,6 +48,14 @@ Component({
   methods: {
     // —— decoration helper ——
     _decorate(queues, matches, freePlays) {
+      // Pre-compute duplicate keys: 同样的双方球员（无序）出现多次 → 标红
+      const keyCount = new Map()
+      ;(matches || []).forEach(m => {
+        const key = matchPairKey(m)
+        if (!key) return
+        keyCount.set(key, (keyCount.get(key) || 0) + 1)
+      })
+
       return (queues || []).map(q => {
         const items = (q.items || []).map(it => {
           if (it.kind === 'freePlay') {
@@ -59,7 +67,7 @@ Component({
                 return m ? m.name : pid
               })
               .join('/')
-            return { ...it, __rowKind: 'freePlay', __player1Label: '', __player2Label: '', __playersLabel: playersLabel }
+            return { ...it, __rowKind: 'freePlay', __player1Label: '', __player2Label: '', __playersLabel: playersLabel, __duplicate: false }
           }
           // kind === 'match'
           const match = (matches || []).find(x => x.matchId === it.matchId)
@@ -72,7 +80,16 @@ Component({
           const player2Label = p2
             ? (p2.name + (p2.partnerName ? '/' + p2.partnerName : ''))
             : (match && match.bye ? 'BYE' : '?')
-          return { ...it, __rowKind: rowKind, __player1Label: player1Label, __player2Label: player2Label, __playersLabel: '' }
+          const key = match ? matchPairKey(match) : ''
+          const duplicate = !!key && (keyCount.get(key) || 0) > 1
+          return {
+            ...it,
+            __rowKind: rowKind,
+            __player1Label: player1Label,
+            __player2Label: player2Label,
+            __playersLabel: '',
+            __duplicate: duplicate
+          }
         })
         return { ...q, items }
       })
@@ -141,9 +158,17 @@ Component({
 
     onRegenerate() {
       wx.showModal({
-        title: '重新随机安排？',
+        title: '重随排程？',
         content: '会丢弃当前所有手动调整',
         success: ({ confirm }) => { if (confirm) this.triggerEvent('regenerate') }
+      })
+    },
+
+    onClear() {
+      wx.showModal({
+        title: '清空排程？',
+        content: '所有对局和自由拉球都将被清空',
+        success: ({ confirm }) => { if (confirm) this.triggerEvent('clear') }
       })
     },
 
@@ -312,7 +337,7 @@ Component({
       const queues = JSON.parse(JSON.stringify(this.data.queues))
       const q = queues.find(x => x.courtId === courtId); if (!q) return
       q.items = q.items.filter(it => it.matchId !== matchId)
-      q.items.forEach((it, i) => { it.order = i })
+      // 不再重新索引 order — 保留原 slot 位置，后面的对局不顶上来
       const patch = { queues }
       if (kind === 'freePlay') patch.freePlays = this.data.freePlays.filter(fp => fp._id !== matchId)
       if (kind === 'extra' || kind === 'regularRound') patch.matches = this.data.matches.filter(m => m.matchId !== matchId)
@@ -410,6 +435,20 @@ Component({
     }
   }
 })
+
+function matchPairKey(m) {
+  if (!m) return ''
+  const ids = []
+  const push = obj => {
+    if (!obj || !obj.id || obj.id === 'BYE') return
+    ids.push(String(obj.id))
+    if (obj.partnerId) ids.push(String(obj.partnerId))
+  }
+  push(m.player1)
+  push(m.player2)
+  if (ids.length < 2) return ''
+  return ids.slice().sort().join('|')
+}
 
 function formatSlotLabel(slot) {
   const m = /T(\d{2}):(\d{2})/.exec(slot || '')

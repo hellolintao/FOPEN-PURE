@@ -67,6 +67,7 @@ describe('generateFirstRound · regular', () => {
     expect(ms).toHaveLength(2)
     const players = ms.flatMap(m => [m.player1.id, m.player2.id])
     expect(new Set(players).size).toBe(4)
+    expect(ms.every(m => m.matchKind === 'regularRound')).toBe(true)
   })
 
   test('奇数 5 人 → 2 场（1 人轮空，不进 matches）', () => {
