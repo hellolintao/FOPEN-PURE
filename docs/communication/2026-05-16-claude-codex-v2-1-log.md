@@ -203,6 +203,79 @@ Review 发现的 6 条问题：
 
 Spec 状态：已 commit（次次修订）；待 Codex 与用户 review 通过后 invoke writing-plans skill 生成 `docs/superpowers/plans/09-phase-9-v2.1-quality-iteration.md`。
 
+## 2026-05-16 · Spec 二次 Review（Codex）
+
+参与方：Codex，待同步 Claude。
+
+主题：对 Claude 修订后的 spec 再过一遍，确认 3 个待定口径，并记录进入 writing-plans 前仍需修正的残留不一致。
+
+已确认 OK：
+
+- 乐观锁用 `match_results.updateTime` / API 字段 `expectedUpdateTime` 可以接受。优点是无 schema 迁移；后续若需要更强并发控制，再新增 `version` 字段。
+- `submittedQueue` 保留 + 新增 `pendingReviewItems` 双轨可以接受。旧 action 保兼容；新 action 专门服务 sheet 二次拉 review items。
+- `tournaments.finishedRecent` 独立 action 可以接受。它让 snapshot 只负责工作台首屏待办，已结束块 lazy load 自己处理 loading/error/retry。
+
+仍需修正后再进入 writing-plans：
+
+1. Scope 表需补新 action：
+   - 当前“后端新增 action”仍只列 `adminConsoleSnapshot / batchConfirm / batchSubmit / mySummary`。
+   - 需要补 `match-results.pendingReviewItems` 和 `tournaments.finishedRecent`，否则 plan 容易漏任务。
+
+2. `BATCH_TIMEOUT` 说明仍写“payload 仍是原 matchIds 全集”：
+   - 新 API 已改成 `matches: [{ matchId, expectedUpdateTime }]`。
+   - 这里应改成“原 matches 全集”或“原 batch payload”，不能再写 `matchIds`。
+
+3. timeout / network unknown retry 和 `expectedUpdateTime` 的“必须重拉”规则冲突：
+   - spec 写“重试时必须重新拉 review item，绝不复用上次 expectedUpdateTime”。
+   - 这对后端已返回 `result(partial)` 的 retryable 失败行是合理的：重新拉可让 admin 看到最新待确认数据。
+   - 但对 `NETWORK` / `BATCH_TIMEOUT` 这类“客户端不知道后端是否已成功”的场景，重新拉可能拿不到已 confirmed 的行，反而丢失 `_request_log` 合并路径。
+   - 建议最终规则拆开：
+     - 对 `result(partial)` 中明确失败且仍 retryable 的 match：retry 前重新拉 `pendingReviewItems`，更新 card 和 `expectedUpdateTime`。
+     - 对 `NETWORK` / `BATCH_TIMEOUT` / 整批未知结果：先用同一 `requestId` 重发“原 matches 全集”，后端通过 `_request_log` 跳过已 success 项；若某行未 success 且 updateTime 已变，再返回 `STALE_VERSION`。这样不盲覆盖，也不丢幂等合并。
+
+4. E2E-2 备选 fixture 仍写 mutate `version`：
+   - 已决定不引入 `version` 字段。
+   - 应改为 mutate `match_results.<mr_b>.updateTime`，或通过 submit/reconfirm 改动该行，使 `expectedUpdateTime` 不匹配。
+
+5. `empty-state` 单测描述仍写 `action+bindaction` 必填校验：
+   - 新设计是运行时只校验 `action` prop；`bindaction` 由 lint / review / E2E 保证。
+   - 单测应改为：缺 `action` 报 `console.error`；点击 CTA `triggerEvent('action')`；缺 subtitle/icon 能正常渲染。
+
+6. `match-results` 文件拆分树的 `query.js` 注释需补 `pendingReviewItems`：
+   - 当前仍只写 `submittedQueue / listByTournament / listByPlayer`。
+   - 建议改为 `submittedQueue / listByTournament / listByPlayer / pendingReviewItems`。
+
+## 2026-05-16 · Spec Review 三次修订（Claude 落地 Codex 6 项残留）
+
+参与方：Claude，待同步 Codex 与用户。
+
+落地（spec 已修订）：
+
+1. §1.2 scope 表「后端新增 action」补 `pendingReviewItems` 与 `finishedRecent`，共 6 个新 action。
+2. §4.12 `BATCH_TIMEOUT` 说明从「原 matchIds 全集」改为「原 matches 全集」；并扩展覆盖 `NETWORK` / `CLOUD_TIMEOUT` 整批未知结果场景。
+3. **新增 §4.13 Retry 规则**：拆开 result(partial) per-row retryable 与 batch-level unknown-result 两条路径——
+   - result(partial) 失败行：retry 前必须重拉 review item，payload 仅失败行，复用 requestId。
+   - BATCH_TIMEOUT / NETWORK 整批未知：**不**预重拉，直接复用 requestId 重发原 matches 全集；后端 `_request_log` 合并 success + 剩余项 `expectedUpdateTime` 校验。
+   - STALE_VERSION（任意路径）始终 retryable=false。
+4. §5.3 sequence 末尾「关键不变量补充」改写为两路径并列描述。
+5. §6.2 E2E-2 备选 fixture 从 mutate `version` 改为 mutate `updateTime`（或通过 submit/reconfirm 触发 updateTime 刷新）。
+6. §6.1 `empty-state` 单测描述改为「缺 `action` 报 console.error + 点击触发 triggerEvent('action') + 缺 icon/subtitle 正常渲染 + 父未 bindaction 时事件丢弃不破 UI」。
+7. §4.9 文件拆分树 `query.js` 注释加 `pendingReviewItems`。
+8. §6.6 补充测试场景的「retry 必须重拉」改写为按路径区分。
+
+预期影响：
+
+- 后端 `batchConfirm` 的 retry 处理逻辑必须先读 `_request_log` 合并 success 项，再对剩余项做 `expectedUpdateTime` 校验；客户端无需在 BATCH_TIMEOUT/NETWORK 路径上先重拉。
+- 单测必须分别覆盖两条 retry 路径，避免实现时只做"全部重拉"而漏掉幂等合并路径。
+- E2E-3（网络失败重试）现在的验收文案隐含按 §4.13 第二条路径走；plan 阶段需在 Task 设计里明确这是同 requestId + 原 matches 重发。
+
+待 Codex 验收：
+
+- §4.13 两路径区分是否准确表达了你提出的"分别处理"意图？
+- §4.12 与 §4.13 是否还有遗漏（例如 result(partial) 内 NETWORK 错误的归属——当前归到 result(partial) per-row 路径，需重拉）？
+
+Spec 状态：已修订（三次修订待 commit）。如 §4.13 OK，下一步 invoke writing-plans。
+
 ## 后续执行日志
 
 暂无。

@@ -31,7 +31,7 @@
 | 页面重构 IA | `pages/tournament-manage`、`pages/tournament-score`、`pages/my-match` |
 | 新组件 | `components/status-tag`、`components/empty-state`、`components/batch-result-sheet` |
 | 现有组件 | `components/score-row` 仅视觉债清理（**不动**内部状态机） |
-| 后端新增 action | `tournaments.adminConsoleSnapshot`、`match-results.batchConfirm`、`match-results.batchSubmit`、`match-results.mySummary` |
+| 后端新增 action | `tournaments.adminConsoleSnapshot`、`tournaments.finishedRecent`、`match-results.batchConfirm`、`match-results.batchSubmit`、`match-results.mySummary`、`match-results.pendingReviewItems` |
 | 后端文件拆分 | `cloudfunctions/match-results/index.js` 拆为 `index.js + lib/handlers/{batch,submit,query,my-summary}.js`，控制单文件体积 |
 | 后端日志集合 | 新建 `_request_log` 集合（详 §4.8） |
 | 前端统一 | 三页全部接入 `utils/cloud.callFunction` wrapper（详 §5.1） |
@@ -639,7 +639,7 @@ cloudfunctions/match-results/
 │   └── handlers/                  # 新建
 │       ├── batch.js               # batchConfirm + batchSubmit
 │       ├── submit.js              # submit / confirmAll / reconfirmMatch（迁旧逻辑）
-│       ├── query.js               # submittedQueue / listByTournament / listByPlayer
+│       ├── query.js               # submittedQueue / listByTournament / listByPlayer / pendingReviewItems
 │       └── my-summary.js          # mySummary
 ```
 
@@ -695,13 +695,25 @@ cloudfunctions/match-results/
 
 ### 4.12 `BATCH_TIMEOUT` 语义说明
 
-整批超时时，前端收 `success: false, error: { code: 'BATCH_TIMEOUT', requestId }`。后端可能已经成功处理部分 matchId 并写入 `_request_log[requestId].results`。
+整批超时（或 `NETWORK` / `CLOUD_TIMEOUT` 整批级未知结果）时，前端收 `success: false, error: { code: 'BATCH_TIMEOUT' | 'NETWORK', requestId }`。后端可能已经成功处理部分 match 并写入 `_request_log[requestId].results`。
 
-**前端处理**：
+**前端处理**（"未知结果"路径，与 §4.13 retry 规则配合）：
 - 提示 admin「请求超时，部分已提交。重试将合并已有结果」
-- 用户点重试 → 复用 requestId 调一次新的 batchConfirm，payload 仍是原 matchIds 全集
-- 后端读 `_request_log` 已有的 success 项跳过，只重跑 pending / failure 项
-- 重要：这条路径保证"不重复 confirm、不重复结算积分"
+- 用户点重试 → 复用同一 `requestId` 调一次新的 batchConfirm，payload 仍是**原 matches 全集**（含每场原 `expectedUpdateTime`，**不**预先重拉）
+- 后端读 `_request_log[requestId].results`：已 `success` 的 matchId 跳过；剩余 matchId 按 §4.4 规则正常处理（含 `expectedUpdateTime` 校验）
+- 若剩余 match 的 `current.updateTime` 已变（被其他人改过），后端按 STALE_VERSION 返回该行；其它正常 confirm
+- 重要：这条路径保证"不重复 confirm、不重复结算积分"，同时不盲覆盖他人修改
+
+### 4.13 Retry 规则（区分两种失败路径）
+
+| 失败路径 | 重试前是否重拉 review item | 重试 payload | 原因 |
+|---|---|---|---|
+| **`result(partial)` 内某行 retryable=true**（如单场 `CLOUD_TIMEOUT` / `DB_CONFLICT`） | **必须重拉**该行的 `pendingReviewItems` 拿最新 `updateTime` | 仅失败行，复用同一 `requestId` | 已知后端单条失败、其他行已 success；重拉避免覆盖他人在等待期间的修改 |
+| **整批 `success: false`（`BATCH_TIMEOUT` / `NETWORK`）整批未知结果** | **不**预先重拉 | 原 matches 全集，复用同一 `requestId` | 客户端不知道哪些已成功；用 `_request_log` 合并已 success 项；server 端再做 `expectedUpdateTime` 校验，已变更行返 STALE_VERSION |
+
+**关键**：两种路径在 sheet 内对 admin 表现一致（result(partial) UI），但底层重试行为不同。sheet 内部根据 parent 提供的 `result.failures` 或 envelope `error.code` 自动判定路径。
+
+**STALE_VERSION 处理**：无论哪条路径，STALE_VERSION 行始终 `retryable=false`、sheet 内灰色不可点；admin 必须 close + 重开 sheet（snapshot 刷新带来新 items + 新 `expectedUpdateTime`）。
 
 ---
 
@@ -882,9 +894,10 @@ parent.refreshSnapshot() (300ms debounce)
 工作台 hero 数字 3 → 0
 ```
 
-**关键不变量补充**（来自 expectedUpdateTime 引入）：
-- Retry 前必须重新拉 review item，**绝不能复用上次 commit 时的 expectedUpdateTime**——否则会越过其他 admin 的修改盲覆盖。
-- 单条重试失败若 code=STALE_VERSION，parent 标记该行不可重试（即便 retryable=true 也不再发请求）；admin 必须主动 close sheet 后重新打开（snapshot 刷新带来新 items）。
+**关键不变量补充**（来自 expectedUpdateTime 引入 · 区分两种路径，详 §4.13）：
+- `result(partial)` 内 retryable 失败行：retry 前**必须**重新拉该行 `pendingReviewItems` 拿新 `updateTime`；retry payload 仅含失败行，复用 `requestId`。
+- 整批级 `success: false`（`BATCH_TIMEOUT` / `NETWORK`）未知结果：retry **不**预先重拉，直接复用 `requestId` 重发**原 matches 全集**；服务端通过 `_request_log` 合并已 success 项；剩余项做 `expectedUpdateTime` 校验，已变更返 STALE_VERSION。
+- STALE_VERSION 行（任意路径产生）`retryable=false`、灰色不可点；admin 必须 close + 重开 sheet 才能继续。
 
 ### 5.4 并发与脏数据边界
 
@@ -938,7 +951,7 @@ parent.refreshSnapshot() (300ms debounce)
 | `cloudfunctions/match-results/lib/handlers/query.js:pendingReviewItems`（新） | ≥ 85% lines | ≥ 8（权限 / 含 tournamentId / 不含 tournamentId / limit 默认与硬上限 / truncated 标记 / updateTime 字段必出现 / submitter join / 超时） |
 | `miniprogram/utils/cloud.js:callFunction` wrapper | ≥ 90% lines | ≥ 8（success / FORBIDDEN / 超时 / 网络错 / 非法 envelope / 永不抛 / loading 回调 / traceId） |
 | `miniprogram/components/status-tag` | snapshot | 6 type × 含/不含 count = 12 |
-| `miniprogram/components/empty-state` | snapshot + assert | action+bindaction 必填校验、icon 缺省、subtitle 缺省 |
+| `miniprogram/components/empty-state` | snapshot + assert | 缺 `action` prop 时 `console.error`、点击 CTA 触发 `triggerEvent('action')`、缺 icon/subtitle 仍正常渲染、父级未 bindaction 时事件丢弃不破 UI |
 | `miniprogram/components/batch-result-sheet` | ≥ 85% lines | ≥ 12（4 状态切换 / commit emit / retry emit / editrow emit / close emit / result(partial) 失败行 / submitting 禁用按钮 / all-ok 3s 自动关 / destroy 清理 timer / retryable 灰色 / requestId 复用） |
 
 **现状基线（必须不破）**：
@@ -970,8 +983,8 @@ weekly-star       4 tests
 #### E2E-2 · Admin batch partial-STALE
 
 - [ ] 准备：
-  - 优先：admin A 开 sheet 但不 commit；admin B 在另一个 session 调 reconfirmMatch 改其中一场比分
-  - 备选 fixture：用 cloud 脚本或测试 fixture 直接 mutate `match_results.<mr_b>.version`（或等价字段）让该行进入 stale 状态
+  - 优先：admin A 开 sheet 但不 commit；admin B 在另一个 session 调 reconfirmMatch 改其中一场比分（这会更新 `match_results.<mr_b>.updateTime`）
+  - 备选 fixture：用 cloud 脚本直接 mutate `match_results.<mr_b>.updateTime`（或通过 submit/reconfirm 触发该行 updateTime 刷新），使 admin A 持有的 `expectedUpdateTime` 不再匹配
 - [ ] admin A 点「确认 3 场」→ result(partial)「✓ 2 / ✗ 1」
 - [ ] 失败行展开显示 `code: STALE_VERSION`，灰色不可重试，message「该比分已被其他管理员处理」
 - [ ] 底部 CTA = 「完成」+「重试失败」按钮**隐藏或灰色不可点**（因 retryable=false）
@@ -1106,7 +1119,9 @@ grep -rn 'wx\.showLoading\|wx\.showToast.*加载失败' \
 - **`expectedUpdateTime` 乐观锁**：
   - 后端校验 `updateTime` 精确匹配（毫秒级），不一致返 STALE_VERSION
   - 缺 `expectedUpdateTime` → 整批 INVALID_PAYLOAD
-  - 重试时前端必须重新调 `pendingReviewItems` 拿新 `updateTime`，**不**复用上次 expectedUpdateTime
+  - **Retry 规则区分两路径**（详 §4.13）：
+    - `result(partial)` 内 retryable 失败行：retry 前**必须**重新拉该行 `pendingReviewItems` 拿新 `updateTime`，payload 仅含失败行
+    - `BATCH_TIMEOUT` / `NETWORK` 整批未知结果：**不**预先重拉，直接复用 `requestId` 重发原 matches 全集；服务端用 `_request_log` 合并已 success 项 + 用 `expectedUpdateTime` 校验剩余项
   - STALE_VERSION 行 sheet 内禁用重试，admin 必须 close + 重开 sheet
 - **`pendingReviewItems` 二次拉**：
   - `tournamentId=null` 拉全部待确认 items；指定 tournamentId 仅拉该赛事
