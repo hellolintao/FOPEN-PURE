@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████████████] 6/6 Phase 完成（Phase 5 由 Phase 7+8 重做覆盖；Phase 6 已按 Post-Phase-8 polish 完成）
+[██████████████████████████░░] 6/7 Phase 完成 + Phase 9 代码完成等人工验收
 ```
 
 ## Phase 状态
@@ -20,6 +20,7 @@
 | 06 | Phase 6 · Polish | ✅ 已完成 | 2026-05-15 | 2026-05-15 | bac3810 | Post-Phase-8 polish：weekly-star 定时云函数、排行榜每周之星、全局动效、骨架屏、数字动效、关键录分流程视觉收敛 |
 | 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 | 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | 4df153f | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
+| 09 | Phase 9 · v2.1 Quality Iteration | 🟦 代码完成，待人工 E2E + 部署 | 2026-05-16 | — | `6c58f87` | 6 个新云函数 action（adminConsoleSnapshot/finishedRecent/batchConfirm/batchSubmit/pendingReviewItems/mySummary）+ `_request_log` 集合 + `expectedUpdateTime` 乐观锁 + match-results 拆 handlers/；3 个新组件（status-tag/empty-state/batch-result-sheet 共 22 单测）+ utils/cloud.call v2 wrapper；tournament-manage/my-match/tournament-score IA 重构 + sheet 集成；score-row 视觉债已由 visual stream `c956f9e` 清理；全量 213 测试绿（云函数 191 + miniprogram 22）；分支 `feat/visual-revamp` 与视觉重构 stream 并发，已用 explicit pathspec 隔离；待用户：Tasks 25-27 manual smoke / 29 E2E-1~10 / 30 性能基线+QA 截图 / 31 云函数上传 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
