@@ -109,8 +109,10 @@ async function handleBulkSet(event) {
 
     if (!r.playerId) entryErrors.push(`[${i}] playerId 不能为空`)
     if (!r.playerName || r.playerName.trim() === '') entryErrors.push(`[${i}] playerName 不能为空`)
-    if (tournament.type === 'doubles' && !r.partnerId) {
-      entryErrors.push(`[${i}] doubles 赛事需要 partnerId`)
+    // 双打：仅 knockout（固定搭档）报名时强制要求 partnerId；
+    // regular doubles 报名是个人，组队在排程阶段随机生成。
+    if (tournament.type === 'doubles' && tournament.format === 'knockout' && !r.partnerId) {
+      entryErrors.push(`[${i}] 淘汰赛双打报名必须携带 partnerId`)
     }
 
     errors.push(...entryErrors)

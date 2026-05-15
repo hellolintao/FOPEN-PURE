@@ -45,6 +45,11 @@
 .schedule-cell.cell-freePlay { background: #f8fafc; }
 .schedule-cell.cell-unavailable { background: #f3f4f6; color: #9ca3af; }
 .schedule-cell .match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; }
+.schedule-cell .match-line.doubles { flex-direction: column; gap: 4rpx; }
+.schedule-cell .match-line.doubles .team-row { display: flex; align-items: center; gap: 6rpx; justify-content: center; }
+.schedule-cell .match-line.doubles .slash { color: #6b7280; font-size: 22rpx; }
+.schedule-cell .match-line.doubles .vs { font-size: 18rpx; }
+.schedule-cell .match-line.doubles .player { max-width: 88rpx; }
 .schedule-cell .player {
   max-width: 92rpx;
   padding: 6rpx 8rpx;

@@ -33,7 +33,22 @@
           data-kind="{{cell.__rowKind}}"
         >
           <block wx:if="{{cell.available && cell.matchId}}">
-            <block wx:if="{{cell.kind === 'match'}}">
+            <block wx:if="{{cell.kind === 'match' && cell.__isDoubles}}">
+              <view class="match-line doubles">
+                <view class="team-row">
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{cell.matchId}}" data-slot="player1">{{cell.__doublesP1}}</text>
+                  <text class="slash">/</text>
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{cell.matchId}}" data-slot="player1partner">{{cell.__doublesPartner1}}</text>
+                </view>
+                <text class="vs">VS</text>
+                <view class="team-row">
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{cell.matchId}}" data-slot="player2">{{cell.__doublesP2}}</text>
+                  <text class="slash">/</text>
+                  <text class="player" bindtap="onTapPlayer" data-match-id="{{cell.matchId}}" data-slot="player2partner">{{cell.__doublesPartner2}}</text>
+                </view>
+              </view>
+            </block>
+            <block wx:elif="{{cell.kind === 'match'}}">
               <view class="match-line">
                 <text class="player" bindtap="onTapPlayer" data-match-id="{{cell.matchId}}" data-slot="player1">{{cell.__player1Label}}</text>
                 <text class="vs">VS</text>

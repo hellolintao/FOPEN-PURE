@@ -24,6 +24,11 @@
 .schedule-cell.cell-duplicate .player { background: #fff; color: var(--color-danger, #dc2626); }
 .schedule-cell.unavailable { background: #f3f4f6; color: #9ca3af; }
 .match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding-right: 28rpx; box-sizing: border-box; }
+.match-line.doubles { flex-direction: column; gap: 4rpx; }
+.match-line.doubles .team-row { display: flex; align-items: center; gap: 6rpx; justify-content: center; max-width: 100%; }
+.match-line.doubles .slash { color: var(--color-text-muted, #6b7280); font-size: 22rpx; }
+.match-line.doubles .vs { font-size: 18rpx; }
+.match-line.doubles .player { max-width: 88rpx; }
 .player { max-width: 92rpx; padding: 6rpx 8rpx; border-radius: 8rpx; background: rgba(255,255,255,0.86); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 24rpx; text-align: center; }
 .vs { flex: 0 0 auto; color: var(--color-text-muted, #6b7280); font-size: 20rpx; }
 .free-line { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4rpx; padding-right: 28rpx; box-sizing: border-box; }

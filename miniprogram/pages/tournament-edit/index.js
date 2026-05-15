@@ -155,8 +155,11 @@ Page({
   },
 
   async commitStep2() {
-    if (this.data.selectedPlayers.length < 2) {
-      return wx.showToast({ title: '至少选 2 位球员', icon: 'none' })
+    const minPlayers = this._minPlayers()
+    if (this.data.selectedPlayers.length < minPlayers) {
+      const isKD = this.data.form.type === 'doubles' && this.data.form.format === 'knockout'
+      const unit = isKD ? '组队伍' : '位球员'
+      return wx.showToast({ title: `至少选 ${minPlayers} ${unit}`, icon: 'none' })
     }
     if (this.data.schedulePlanCourts.length === 0) {
       return wx.showToast({ title: '至少选 1 个场地', icon: 'none' })
@@ -367,17 +370,24 @@ Page({
 
   onAddPlayer() {
     const isDoubles = this.data.form.type === 'doubles'
+    const isKnockoutDoubles = isDoubles && this.data.form.format === 'knockout'
     const remaining = this._remainingPlayerSlots()
     this.setData({
       picker: {
         show: true,
-        title: isDoubles ? '选择 2 位组队队员' : '选择球员（可多选）',
-        requiredCount: isDoubles ? 2 : 1,
-        maxCount: isDoubles ? 0 : Math.max(1, remaining),
+        title: isKnockoutDoubles ? '选择 2 位组队队员' : '选择球员（可多选）',
+        requiredCount: isKnockoutDoubles ? 2 : 1,
+        maxCount: isKnockoutDoubles ? 0 : Math.max(1, remaining),
         excludeIds: this._collectExcludedMemberIds(),
         members: this.data.members
       }
     })
+  },
+
+  _minPlayers() {
+    // 单打 / knockout 双打：至少 2（个人 or 队伍）；regular 双打：至少 4 人。
+    if (this.data.form.type === 'doubles' && this.data.form.format === 'regular') return 4
+    return 2
   },
 
   _remainingPlayerSlots() {
@@ -401,10 +411,11 @@ Page({
   onPickerConfirm(e) {
     const memberIds = (e.detail && e.detail.memberIds) || []
     const isDoubles = this.data.form.type === 'doubles'
+    const isKnockoutDoubles = isDoubles && this.data.form.format === 'knockout'
     const findMember = id => this.data.members.find(m => m._id === id)
 
     let toAdd = []
-    if (isDoubles) {
+    if (isKnockoutDoubles) {
       if (memberIds.length !== 2) return
       const m1 = findMember(memberIds[0])
       const m2 = findMember(memberIds[1])

@@ -74,19 +74,26 @@ Component({
           const rowKind = match && match.matchKind ? match.matchKind : 'bracket'
           const p1 = match && match.player1
           const p2 = match && match.player2
-          const player1Label = p1
-            ? (p1.name + (p1.partnerName ? '/' + p1.partnerName : ''))
-            : (match && match.bye ? 'BYE' : '?')
-          const player2Label = p2
-            ? (p2.name + (p2.partnerName ? '/' + p2.partnerName : ''))
-            : (match && match.bye ? 'BYE' : '?')
+          const isDoubles = !!(p1 && p1.partnerId)
+          const player1Label = p1 ? (p1.name || '?') : (match && match.bye ? 'BYE' : '?')
+          const partner1Label = p1 && p1.partnerName ? p1.partnerName : ''
+          const player2Label = p2 ? (p2.name || '?') : (match && match.bye ? 'BYE' : '?')
+          const partner2Label = p2 && p2.partnerName ? p2.partnerName : ''
+          // singles 显示「A VS B」；doubles 用两行「A/B 上 / C/D 下」
+          const singlesP1 = p1 && !isDoubles ? (p1.name + (p1.partnerName ? '/' + p1.partnerName : '')) : player1Label
+          const singlesP2 = p2 && !isDoubles ? (p2.name + (p2.partnerName ? '/' + p2.partnerName : '')) : player2Label
           const key = match ? matchPairKey(match) : ''
           const duplicate = !!key && (keyCount.get(key) || 0) > 1
           return {
             ...it,
             __rowKind: rowKind,
-            __player1Label: player1Label,
-            __player2Label: player2Label,
+            __isDoubles: isDoubles,
+            __player1Label: singlesP1,
+            __player2Label: singlesP2,
+            __doublesP1: player1Label,
+            __doublesPartner1: partner1Label,
+            __doublesP2: player2Label,
+            __doublesPartner2: partner2Label,
             __playersLabel: '',
             __duplicate: duplicate
           }
@@ -350,8 +357,21 @@ Component({
       if (!member) return
       const matches = JSON.parse(JSON.stringify(this.data.matches))
       const m = matches.find(x => x.matchId === matchId); if (!m) return
+
+      // 双打 4 槽：player1 / player1partner / player2 / player2partner
+      if (slot === 'player1partner' || slot === 'player2partner') {
+        const root = slot === 'player1partner' ? 'player1' : 'player2'
+        m[root] = {
+          ...(m[root] || {}),
+          partnerId: member._id,
+          partnerName: member.name
+        }
+        this.emitChange({ matches })
+        return
+      }
+
+      // knockout 单打/双打：尝试与已有位置互换（保持 bracket 完整）
       if (this.properties.tournament && this.properties.tournament.format === 'knockout') {
-        // try to find another bracket position holding newMemberId; if found, swap; else fallthrough
         let swapped = false
         for (const other of matches) {
           if (other.matchId === matchId) continue
@@ -365,10 +385,11 @@ Component({
           if (swapped) break
         }
         if (!swapped) {
-          m[slot] = { id: member._id, name: member.name }
+          m[slot] = { ...(m[slot] || {}), id: member._id, name: member.name }
         }
       } else {
-        m[slot] = { id: member._id, name: member.name }
+        // 常规赛（含双打随机搭档模式）：直接替换 id+name，保留 partnerId/partnerName
+        m[slot] = { ...(m[slot] || {}), id: member._id, name: member.name }
       }
       this.emitChange({ matches })
     },
@@ -405,14 +426,15 @@ Component({
 
     collectMatchPlayerIds(m, excludeSlot) {
       const ids = []
-      const push = obj => {
-        if (obj && obj.id && obj.id !== 'BYE') {
-          ids.push(obj.id)
-          if (obj.partnerId) ids.push(obj.partnerId)
-        }
-      }
-      if (excludeSlot !== 'player1') push(m.player1)
-      if (excludeSlot !== 'player2') push(m.player2)
+      const pushId = id => { if (id && id !== 'BYE') ids.push(id) }
+      // player1 主位
+      if (excludeSlot !== 'player1' && m.player1) pushId(m.player1.id)
+      // player1 搭档位
+      if (excludeSlot !== 'player1partner' && m.player1) pushId(m.player1.partnerId)
+      // player2 主位
+      if (excludeSlot !== 'player2' && m.player2) pushId(m.player2.id)
+      // player2 搭档位
+      if (excludeSlot !== 'player2partner' && m.player2) pushId(m.player2.partnerId)
       return ids
     },
 

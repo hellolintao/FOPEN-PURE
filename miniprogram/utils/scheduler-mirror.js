@@ -113,53 +113,57 @@ function buildRegularSlotPlan(courts) {
 
 function generateBalancedRegularMatches({ registrations, matchCount, type, now }) {
   const players = [...(registrations || [])]
-  if (players.length < 2 || matchCount <= 0) return []
+  const perMatch = type === 'doubles' ? 4 : 2
+  if (players.length < perMatch || matchCount <= 0) return []
 
   const counts = new Map(players.map(p => [p.playerId, 0]))
-  const pairCounts = new Map()
   const matches = []
 
   for (let i = 0; i < matchCount; i++) {
-    const [p1, p2] = pickBalancedPair(players, counts, pairCounts)
-    const key = pairKey(p1.playerId, p2.playerId)
-    pairCounts.set(key, (pairCounts.get(key) || 0) + 1)
-    counts.set(p1.playerId, (counts.get(p1.playerId) || 0) + 1)
-    counts.set(p2.playerId, (counts.get(p2.playerId) || 0) + 1)
-    matches.push(regularMatchFromPair(p1, p2, i, type, now))
+    const picked = pickBalancedNPlayers(players, counts, perMatch)
+    picked.forEach(p => counts.set(p.playerId, (counts.get(p.playerId) || 0) + 1))
+    matches.push(regularMatchFromGroup(picked, i, type, now))
   }
 
   return matches
 }
 
-function pickBalancedPair(players, counts, pairCounts) {
-  let best = null
-  for (let i = 0; i < players.length; i++) {
-    for (let j = i + 1; j < players.length; j++) {
-      const a = players[i]
-      const b = players[j]
-      const ca = counts.get(a.playerId) || 0
-      const cb = counts.get(b.playerId) || 0
-      const score = [
-        Math.max(ca, cb),
-        ca + cb,
-        pairCounts.get(pairKey(a.playerId, b.playerId)) || 0,
-        Math.abs(ca - cb),
-        i,
-        j
-      ]
-      if (!best || compareScore(score, best.score) < 0) best = { pair: [a, b], score }
-    }
-  }
-  return best.pair
+// 按上场次数升序排，平手用随机打破。取前 N 个 = 上场最少的 N 个人。
+function pickBalancedNPlayers(players, counts, N) {
+  const ranked = players.map(p => ({
+    p,
+    c: counts.get(p.playerId) || 0,
+    r: Math.random()
+  }))
+  ranked.sort((a, b) => (a.c !== b.c ? a.c - b.c : a.r - b.r))
+  return ranked.slice(0, N).map(x => x.p)
 }
 
-function regularMatchFromPair(p1, p2, index, type, now) {
+function regularMatchFromGroup(group, index, type, now) {
+  if (type === 'doubles') {
+    const s = shuffleArray(group)
+    return {
+      matchId: `match_regular_p${index + 1}_${now}_${index}`,
+      round: 1,
+      position: index + 1,
+      player1: doublesTeam(s[0], s[1]),
+      player2: doublesTeam(s[2], s[3]),
+      bye: false,
+      status: 'pending',
+      resultStatus: 'pending',
+      winner: null,
+      courtId: null,
+      queueOrder: null,
+      matchKind: 'regularRound'
+    }
+  }
+  const [p1, p2] = group
   return {
     matchId: `match_regular_p${index + 1}_${now}_${index}`,
     round: 1,
     position: index + 1,
-    player1: playerObject(p1, type),
-    player2: playerObject(p2, type),
+    player1: singlesPlayer(p1),
+    player2: singlesPlayer(p2),
     bye: false,
     status: 'pending',
     resultStatus: 'pending',
@@ -170,17 +174,22 @@ function regularMatchFromPair(p1, p2, index, type, now) {
   }
 }
 
-function playerObject(registration, type) {
-  const out = {
-    id: registration.playerId,
-    name: registration.playerName,
-    registrationId: registration.registrationId
+function singlesPlayer(reg) {
+  return {
+    id: reg.playerId,
+    name: reg.playerName,
+    registrationId: reg.registrationId
   }
-  if (type === 'doubles' && registration.partnerId) {
-    out.partnerId = registration.partnerId
-    out.partnerName = registration.partnerName
+}
+
+function doublesTeam(a, b) {
+  return {
+    id: a.playerId,
+    name: a.playerName,
+    registrationId: a.registrationId,
+    partnerId: b.playerId,
+    partnerName: b.playerName
   }
-  return out
 }
 
 function groupSlotsByHour(slots) {
@@ -196,17 +205,6 @@ function groupSlotsByHour(slots) {
 function hourKey(slot) {
   const m = /T(\d{2}):/.exec(slot || '')
   return m ? `${(slot || '').slice(0, (slot || '').indexOf('T'))}T${m[1]}` : String(slot || '')
-}
-
-function pairKey(a, b) {
-  return [a, b].sort().join('|')
-}
-
-function compareScore(a, b) {
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return a[i] - b[i]
-  }
-  return 0
 }
 
 function sanitizeIdPart(value) {

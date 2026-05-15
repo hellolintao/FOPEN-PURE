@@ -228,11 +228,17 @@ function buildScheduleView(tournament, brackets, freePlays) {
   r1Matches.forEach(m => {
     if (!m.courtId || m.queueOrder === null || m.queueOrder === undefined) return
     if (!cellByCourt[m.courtId]) return
+    const isDoubles = !!(m.player1 && m.player1.partnerId)
     cellByCourt[m.courtId][m.queueOrder] = {
       kind: 'match',
       __rowKind: m.matchKind || 'bracket',
+      __isDoubles: isDoubles,
       __player1Label: playerLabel(m.player1, m.bye),
-      __player2Label: playerLabel(m.player2, m.bye)
+      __player2Label: playerLabel(m.player2, m.bye),
+      __doublesP1: m.player1 ? (m.player1.name || '?') : (m.bye ? 'BYE' : '?'),
+      __doublesPartner1: (m.player1 && m.player1.partnerName) || '',
+      __doublesP2: m.player2 ? (m.player2.name || '?') : (m.bye ? 'BYE' : '?'),
+      __doublesPartner2: (m.player2 && m.player2.partnerName) || ''
     }
   })
 
