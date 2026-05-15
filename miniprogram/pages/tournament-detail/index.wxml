@@ -1,12 +1,8 @@
 <view class="tournament-detail-container">
-  <!-- 赛事信息单元 -->
+  <!-- 赛事信息 -->
   <view class="section-card">
     <view class="card-header">
       <text class="header-title">赛事信息</text>
-      <button wx:if="{{tournament.status === 'draft' && isAdmin}}" class="header-btn add" bindtap="onResumeDraft">继续创建</button>
-      <button wx:elif="{{tournament.status !== 'draft' && isAdmin}}" class="header-edit-btn" bindtap="onEdit">
-        <text class="edit-icon">✏️</text>
-      </button>
     </view>
     <view class="info-content">
       <view class="info-row compact">
@@ -23,16 +19,8 @@
       </view>
       <view class="info-row compact">
         <text class="label">时间</text>
-        <text class="value">{{tournament.startDate}} 至 {{tournament.endDate}}</text>
+        <text class="value">{{tournament.startDate}}{{tournament.endDate ? ' 至 ' + tournament.endDate : ''}}</text>
       </view>
-      <!-- <view class="info-row compact">
-        <text class="label">场地</text>
-        <text class="value">{{tournament.location}}</text>
-      </view>
-      <view class="info-row compact">
-        <text class="label">状态</text>
-        <view class="status-badge {{tournament.status}}">{{getStatusText(tournament.status)}}</view>
-      </view> -->
       <view class="info-row compact" wx:if="{{tournament.description}}">
         <text class="label">描述</text>
         <text class="value desc">{{tournament.description}}</text>
@@ -46,11 +34,11 @@
         <text class="label">每场人数</text>
         <text class="value">{{tournamentDisplay.playersPerMatch}}人</text>
       </view>
-      <view class="info-row compact">
+      <view class="info-row compact" wx:if="{{tournamentDisplay.showRoundInfo}}">
         <text class="label">当前轮次</text>
         <text class="value">第{{tournamentDisplay.currentRound}}轮</text>
       </view>
-      <view class="info-row compact">
+      <view class="info-row compact" wx:if="{{tournamentDisplay.showRoundInfo}}">
         <text class="label">总轮数</text>
         <text class="value">{{tournamentDisplay.totalRounds}}轮</text>
       </view>
@@ -62,19 +50,20 @@
         <text class="label">种子选手</text>
         <text class="value">{{tournamentDisplay.seedPlayersText}}</text>
       </view>
+
       <view class="info-divider">积分规则</view>
-      <view class="points-grid" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
+      <view class="points-grid" wx:if="{{tournamentDisplay.pointsMode === 'winLoss'}}">
         <view class="point-item">
           <text class="point-label">胜</text>
-          <text class="point-value win">{{tournamentDisplay.win || 0}}</text>
+          <text class="point-value win">{{tournamentDisplay.win}}</text>
         </view>
         <view class="point-item">
           <text class="point-label">负</text>
-          <text class="point-value loss">{{tournamentDisplay.loss || 0}}</text>
+          <text class="point-value loss">{{tournamentDisplay.loss}}</text>
         </view>
         <view class="point-item" wx:if="{{tournamentDisplay.walkover !== undefined}}">
           <text class="point-label">弃</text>
-          <text class="point-value walkover">{{tournamentDisplay.walkover || 0}}</text>
+          <text class="point-value walkover">{{tournamentDisplay.walkover}}</text>
         </view>
       </view>
       <view class="bonus-section" wx:if="{{tournamentDisplay.pointsMode === 'placement'}}">
@@ -85,24 +74,13 @@
           </view>
         </view>
       </view>
-      <view class="bonus-section" wx:if="{{tournamentDisplay.bonusRows.length > 0}}">
-        <view class="bonus-grid">
-          <view class="bonus-item" wx:for="{{tournamentDisplay.bonusRows}}" wx:key="label">
-            <text class="bonus-label">{{item.label}}</text>
-            <text class="bonus-value">{{item.value}}</text>
-          </view>
-        </view>
-      </view>
     </view>
   </view>
 
-  <!-- 参赛人员单元 -->
+  <!-- 参赛人员 -->
   <view class="section-card">
     <view class="card-header">
       <text class="header-title">参赛人员</text>
-      <button class="header-btn {{registrations.length > 0 ? 'change' : 'add'}}" bindtap="onAddPlayer">
-        {{registrations.length > 0 ? '去变更' : '去添加'}}
-      </button>
     </view>
     <view class="players-content">
       <view wx:if="{{registrations.length === 0}}" class="empty-state">
@@ -112,11 +90,7 @@
       <view wx:else class="players-grid">
         <view class="player-card" wx:for="{{registrations}}" wx:key="_id">
           <view class="player-badge">{{item.seed}}</view>
-
-          <!-- 单打显示 -->
           <text class="player-name singles" wx:if="{{tournament.type === 'singles'}}">{{item.playerName}}</text>
-
-          <!-- 双打显示 -->
           <view wx:if="{{tournament.type === 'doubles'}}" class="doubles-info">
             <text class="player-name">{{item.teamName || item.playerName}}</text>
             <view class="players-row">
@@ -125,66 +99,74 @@
               <text class="player-detail">{{item.partnerName}}</text>
             </view>
           </view>
-
-          <view class="player-status {{item.displayStatus}}">
-            {{item.displayStatusText}}
-          </view>
+          <view class="player-status {{item.displayStatus}}">{{item.displayStatusText}}</view>
         </view>
       </view>
     </view>
   </view>
 
-  <!-- 对位表单元 -->
+  <!-- 赛程（只读） -->
   <view class="section-card">
     <view class="card-header">
-      <text class="header-title">对位表</text>
-      <button class="header-btn" bindtap="onEditMatchups">
-        {{brackets.length > 0 ? '查看' : '创建'}}
-      </button>
+      <text class="header-title">赛程</text>
     </view>
-    <view class="matchups-content">
-      <view wx:if="{{brackets.length === 0}}" class="empty-state">
-        <text class="empty-icon">📊</text>
-        <text class="empty-text">暂无对位信息</text>
-      </view>
-      <view wx:else class="brackets-list">
-          <view class="round-section" wx:for="{{brackets}}" wx:key="_id">
-          <view class="round-header">
-            <text class="round-title">第{{item.round}}轮</text>
-            <text
-              class="round-action"
-              bindtap="onEnterRoundScore"
-              data-round="{{item.round}}"
-              data-id="{{item._id}}"
-              data-tournamentId="{{item.tournamentId}}">录入成绩</text>
-          </view>
-          <view class="round-matches">
-            <view class="round-match" wx:for="{{item.matches}}" wx:for-item="match" wx:key="matchId">
-              <view class="match-player">
-                <text class="player-name">{{match.__player1Name}}</text>
-              </view>
-              <view class="match-divider">Vs</view>
-              <view class="match-player">
-                <text class="player-name">{{match.__player2Name}}</text>
-              </view>
-              <!-- <view class="match-status {{match.status}}">
-                {{match.status === 'pending' ? '待开始' : match.status === 'ongoing' ? '进行中' : '已完成'}}
-              </view> -->
-            </view>
+    <view wx:if="{{scheduleCourts.length === 0}}" class="empty-state">
+      <text class="empty-icon">📅</text>
+      <text class="empty-text">暂无排程</text>
+    </view>
+    <scroll-view wx:else scroll-x class="schedule-scroll">
+      <view class="schedule-table">
+        <view class="schedule-row header">
+          <view class="time-col">时间</view>
+          <view wx:for="{{scheduleCourts}}" wx:key="courtId" class="schedule-cell head">
+            <text class="court-name">{{item.name}}</text>
           </view>
         </view>
-        <!-- <view class="enter-score-btn" bindtap="onEnterScore">
-          <text>录入成绩</text>
-        </view> -->
+        <view wx:for="{{scheduleRows}}" wx:for-item="row" wx:key="slotKey" class="schedule-row">
+          <view class="time-col">{{row.slotLabel}}</view>
+          <view
+            wx:for="{{row.cells}}"
+            wx:for-item="cell"
+            wx:key="courtId"
+            class="schedule-cell cell-{{cell.__rowKind}}"
+          >
+            <block wx:if="{{cell.kind === 'match'}}">
+              <view class="match-line">
+                <text class="player">{{cell.__player1Label}}</text>
+                <text class="vs">VS</text>
+                <text class="player">{{cell.__player2Label}}</text>
+              </view>
+            </block>
+            <block wx:elif="{{cell.kind === 'freePlay'}}">
+              <view class="free-line">
+                <text class="free-title">自由拉球</text>
+              </view>
+            </block>
+            <block wx:else>
+              <text class="empty-cell">-</text>
+            </block>
+          </view>
+        </view>
       </view>
-    </view>
+    </scroll-view>
   </view>
 
   <!-- 删除按钮 -->
-  <view class="delete-section">
+  <view wx:if="{{isAdmin}}" class="delete-section">
     <button class="delete-btn" bindtap="onDelete">
       <text class="delete-icon">🗑️</text>
       <text class="delete-text">删除赛事</text>
     </button>
   </view>
+</view>
+
+<!-- 固定底部操作栏 -->
+<view wx:if="{{tournament}}" class="footer-bar">
+  <block wx:if="{{tournament.status === 'draft' && isAdmin}}">
+    <button class="footer-btn primary full" bindtap="onResumeDraft">继续创建</button>
+  </block>
+  <block wx:else>
+    <button wx:if="{{isAdmin}}" class="footer-btn ghost" bindtap="onEdit">编辑</button>
+    <button class="footer-btn primary" bindtap="onEnterScore">录入成绩</button>
+  </block>
 </view>

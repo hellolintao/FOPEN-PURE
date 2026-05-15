@@ -1,8 +1,98 @@
 .tournament-detail-container {
   min-height: 100vh;
   background: #f7f7f7;
-  padding-bottom: 180rpx;
+  padding-bottom: 200rpx;
 }
+
+/* 排程表（赛程）只读视图 */
+.schedule-scroll { width: 100%; padding: 16rpx; box-sizing: border-box; }
+.schedule-table { display: flex; flex-direction: column; min-width: 920rpx; border: 1rpx solid #e5e7eb; border-radius: 12rpx; overflow: hidden; background: #fff; }
+.schedule-row { display: flex; min-height: 96rpx; border-bottom: 1rpx solid #e5e7eb; }
+.schedule-row:last-child { border-bottom: 0; }
+.schedule-row.header { min-height: 72rpx; background: #f8fafc; }
+.schedule-row .time-col {
+  flex: 0 0 116rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx;
+  border-right: 1rpx solid #e5e7eb;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+.schedule-cell {
+  flex: 0 0 240rpx;
+  min-width: 240rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx;
+  border-right: 1rpx solid #e5e7eb;
+  background: #fff;
+  box-sizing: border-box;
+}
+.schedule-cell:last-child { border-right: 0; }
+.schedule-cell.head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+  padding: 8rpx 12rpx;
+}
+.schedule-cell .court-name { font-weight: 600; font-size: 28rpx; color: #111827; }
+.schedule-cell.cell-regularRound { background: #eef7f1; }
+.schedule-cell.cell-bracket { background: #eff6ff; }
+.schedule-cell.cell-extra { background: #fff7ed; }
+.schedule-cell.cell-freePlay { background: #f8fafc; }
+.schedule-cell.cell-unavailable { background: #f3f4f6; color: #9ca3af; }
+.schedule-cell .match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; }
+.schedule-cell .player {
+  max-width: 92rpx;
+  padding: 6rpx 8rpx;
+  border-radius: 8rpx;
+  background: rgba(255,255,255,0.86);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 24rpx;
+  text-align: center;
+}
+.schedule-cell .vs { color: #6b7280; font-size: 20rpx; }
+.schedule-cell .free-line { display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
+.schedule-cell .free-title { font-weight: 600; font-size: 24rpx; color: #475569; }
+.schedule-cell .empty-cell { color: #9ca3af; font-size: 24rpx; }
+
+/* 固定底部操作栏 */
+.footer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 30rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #e5e7eb;
+  z-index: 50;
+}
+.footer-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  margin: 0;
+  padding: 0 32rpx;
+}
+.footer-btn.primary {
+  background: #2563eb;
+  color: #fff;
+}
+.footer-btn.ghost {
+  background: #f3f4f6;
+  color: #2563eb;
+  border: 1rpx solid #e5e7eb;
+}
+.footer-btn.full { flex: 1; }
 
 /* 卡片样式 */
 .section-card {

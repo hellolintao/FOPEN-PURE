@@ -6,81 +6,77 @@ Page({
     tournament: null,
     registrations: [],
     brackets: [],
-    totalMatches: 0,
+    freePlays: [],
+    scheduleCourts: [],
+    scheduleRows: [],
     tournamentDisplay: null,
     loading: true,
     isAdmin: false
   },
 
   onLoad(options) {
-    const { id } = options;
+    const { id } = options
     if (id) {
-      this.setData({ tournamentId: id });
-      this.loadTournamentDetail();
-      this.loadRegistrations();
-      this.loadBrackets();
+      this.setData({ tournamentId: id })
+      this.refresh()
     }
   },
 
   onShow() {
-    // 页面显示时刷新数据
-    if (this.data.tournamentId) {
-      this.loadTournamentDetail();
-      this.loadRegistrations();
-      this.loadBrackets();
-    }
+    if (this.data.tournamentId) this.refresh()
+  },
+
+  onPullDownRefresh() {
+    this.refresh().then(() => wx.stopPullDownRefresh())
+  },
+
+  async refresh() {
+    await Promise.all([
+      this.loadTournamentDetail(),
+      this.loadRegistrations(),
+      this.loadBrackets(),
+      this.loadFreePlays()
+    ])
+    this._rebuildScheduleView()
   },
 
   async loadTournamentDetail() {
-    this.setData({ loading: true });
-
+    this.setData({ loading: true })
     try {
-      const db = wx.cloud.database();
-      const result = await db.collection('tournaments')
-        .doc(this.data.tournamentId)
-        .get();
-
-      if (result.data) {
-        const me = app.globalData && app.globalData.currentMember
-        const isCreator = !!(me && result.data.createdBy && result.data.createdBy === me._id)
-        const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
-        this.setData({
-          tournament: result.data,
-          tournamentDisplay: buildTournamentDisplay(result.data),
-          isAdmin,
-          loading: false
-        });
-      } else {
-        wx.showToast({
-          title: '赛事不存在',
-          icon: 'none'
-        });
-        setTimeout(() => {
-          wx.navigateBack();
-        }, 1500);
+      const db = wx.cloud.database()
+      const result = await db.collection('tournaments').doc(this.data.tournamentId).get()
+      if (!result.data) {
+        wx.showToast({ title: '赛事不存在', icon: 'none' })
+        setTimeout(() => wx.navigateBack(), 1500)
+        return
       }
+      const me = app.globalData && app.globalData.currentMember
+      const isCreator = !!(me && result.data.createdBy && result.data.createdBy === me._id)
+      const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
+      this.setData({
+        tournament: result.data,
+        tournamentDisplay: buildTournamentDisplay(result.data),
+        isAdmin,
+        loading: false
+      })
     } catch (err) {
-      console.error('加载赛事详情失败:', err);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-      this.setData({ loading: false });
+      console.error('加载赛事详情失败:', err)
+      wx.showToast({ title: '加载失败', icon: 'none' })
+      this.setData({ loading: false })
     }
   },
 
   async loadRegistrations() {
     try {
-      const db = wx.cloud.database();
-      const _ = db.command;
+      const db = wx.cloud.database()
+      const _ = db.command
       const result = await db.collection('tournament_registrations')
         .where({
           tournamentId: this.data.tournamentId,
           status: _.neq('cancelled')
         })
         .orderBy('seed', 'asc')
-        .get();
-
+        .get()
       const registrations = (result.data || []).map(reg => {
         const status = reg.registrationStatus || reg.status || 'registered'
         return {
@@ -89,9 +85,9 @@ Page({
           displayStatusText: status === 'confirmed' ? '已确认' : status === 'withdrew' ? '已退赛' : '已报名'
         }
       })
-      this.setData({ registrations });
+      this.setData({ registrations })
     } catch (err) {
-      console.error('加载参赛人员失败:', err);
+      console.error('加载参赛人员失败:', err)
     }
   },
 
@@ -103,85 +99,46 @@ Page({
           action: 'getByTournament',
           tournamentId: this.data.tournamentId
         }
-      });
-
-      const brackets = (result.result.data || []).map(bracket => ({
-        ...bracket,
-        matches: (bracket.matches || []).map(match => ({
-          ...match,
-          __player1Name: playerLabel(match.player1),
-          __player2Name: playerLabel(match.player2)
-        }))
-      }));
-      let totalMatches = 0;
-      brackets.forEach(bracket => {
-        totalMatches += bracket.matches?.length || 0;
-      });
-
-      this.setData({
-        brackets,
-        totalMatches
-      });
+      })
+      const brackets = (result.result && result.result.data) || []
+      this.setData({ brackets })
     } catch (err) {
-      console.error('加载对位表失败:', err);
+      console.error('加载对位表失败:', err)
     }
   },
 
-  getStatusText(status) {
-    const statusMap = {
-      'upcoming': '待开始',
-      'ongoing': '进行中',
-      'completed': '已结束'
-    };
-    return statusMap[status] || status;
+  async loadFreePlays() {
+    try {
+      const r = await wx.cloud.callFunction({
+        name: 'free-plays',
+        data: { action: 'list', tournamentId: this.data.tournamentId }
+      })
+      const items = (r.result && r.result.success && r.result.data && r.result.data.items) || []
+      this.setData({ freePlays: items })
+    } catch (err) {
+      console.error('加载自由拉球失败:', err)
+    }
+  },
+
+  _rebuildScheduleView() {
+    const view = buildScheduleView(this.data.tournament, this.data.brackets, this.data.freePlays)
+    this.setData(view)
   },
 
   onBack() {
-    wx.navigateBack();
+    wx.navigateBack()
   },
 
   onEdit() {
-    wx.navigateTo({
-      url: `/pages/tournament-edit/index?id=${this.data.tournamentId}`
-    });
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}` })
   },
 
-  onAddPlayer() {
-    const { tournament } = this.data
-    if (!tournament) {
-      wx.showToast({
-        title: '赛事信息加载失败',
-        icon: 'none'
-      })
-      return
-    }
-
-    const pagePath = tournament.type === 'singles'
-      ? '/pages/tournament-add-player/index'
-      : '/pages/tournament-add-players-doubles/index'
-
-    wx.navigateTo({
-      url: `${pagePath}?id=${this.data.tournamentId}`
-    });
-  },
-
-  onEditMatchups() {
-    wx.navigateTo({
-      url: `/pages/tournament-brackets/index?id=${this.data.tournamentId}`
-    });
+  onResumeDraft() {
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}` })
   },
 
   onEnterScore() {
-    wx.navigateTo({
-      url: `/pages/tournament-score/index?id=${this.data.tournamentId}`
-    });
-  },
-
-  onEnterRoundScore(e) {
-    const { round, id, tournamentid } = e.currentTarget.dataset;
-    wx.navigateTo({
-      url: `/pages/tournament-score/index?id=${id}&round=${round}&tournamentId=${tournamentid}`
-    });
+    wx.navigateTo({ url: `/pages/tournament-score/index?id=${this.data.tournamentId}` })
   },
 
   onDelete() {
@@ -191,67 +148,33 @@ Page({
       confirmColor: '#f56c6c',
       confirmText: '删除',
       success: res => {
-        if (res.confirm) {
-          wx.showLoading({ title: '删除中...' });
-
-          wx.cloud.callFunction({
-            name: 'tournaments',
-            data: {
-              action: 'delete',
-              _id: this.data.tournamentId
-            },
-            success: () => {
-              wx.hideLoading();
-              wx.showToast({ title: '删除成功', icon: 'success' });
-              setTimeout(() => {
-                wx.navigateBack();
-              }, 500);
-            },
-            fail: err => {
-              wx.hideLoading();
-              console.error('删除失败', err);
-              wx.showToast({ title: '删除失败', icon: 'error' });
-            }
-          });
-        }
+        if (!res.confirm) return
+        wx.showLoading({ title: '删除中...' })
+        wx.cloud.callFunction({
+          name: 'tournaments',
+          data: { action: 'delete', _id: this.data.tournamentId },
+          success: () => {
+            wx.hideLoading()
+            wx.showToast({ title: '删除成功', icon: 'success' })
+            setTimeout(() => wx.navigateBack(), 500)
+          },
+          fail: err => {
+            wx.hideLoading()
+            console.error('删除失败', err)
+            wx.showToast({ title: '删除失败', icon: 'error' })
+          }
+        })
       }
-    });
-  },
-
-  onResumeDraft() {
-    const id = this.data.tournament && this.data.tournament._id
-    if (id) wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
-  },
-
-  onEditTournament() {
-    const id = this.data.tournament && this.data.tournament._id
-    if (id) wx.navigateTo({ url: `/pages/tournament-edit/index?id=${id}` })
-  },
-
-  onPullDownRefresh() {
-    this.loadTournamentDetail().then(() => {
-      this.loadRegistrations().then(() => {
-        wx.stopPullDownRefresh();
-      });
-    });
+    })
   }
-});
+})
 
 function buildTournamentDisplay(tournament) {
   const config = tournament.config || {}
   const pointsRules = tournament.pointsRules || {}
   const placement = pointsRules.placement || {}
   const winLoss = pointsRules.winLoss || {}
-  const legacyBonus = pointsRules.bonusByRound || {}
-  const hasPlacement = Object.keys(placement).length > 0
-  const hasWinLoss = Object.keys(winLoss).length > 0
-
-  const bonusRows = [1, 2, 3, 4, 5]
-    .filter(round => legacyBonus[round] !== undefined || legacyBonus[String(round)] !== undefined)
-    .map(round => ({
-      label: `第${round}轮`,
-      value: legacyBonus[round] !== undefined ? legacyBonus[round] : legacyBonus[String(round)]
-    }))
+  const isKnockout = tournament.format === 'knockout'
 
   const placementRows = [
     { label: '冠军', value: placement.champion },
@@ -259,27 +182,94 @@ function buildTournamentDisplay(tournament) {
     { label: '四强', value: placement.semifinal },
     { label: '八强', value: placement.quarterfinal },
     { label: '参赛', value: placement.participation }
-  ].filter(row => row.value !== undefined)
+  ].filter(row => row.value !== undefined && row.value !== null)
 
   return {
     maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
     playersPerMatch: config.playersPerMatch || (tournament.type === 'doubles' ? 4 : 2),
+    showRoundInfo: isKnockout,
     currentRound: config.currentRound || 1,
     totalRounds: config.totalRounds || '-',
-    formatText: tournament.format === 'knockout' ? '淘汰赛' : '常规赛',
+    formatText: isKnockout ? '淘汰赛' : '常规赛',
     hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
     seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
-    pointsMode: hasPlacement ? 'placement' : (hasWinLoss ? 'winLoss' : 'legacy'),
-    win: hasWinLoss ? winLoss.win : pointsRules.win,
-    loss: hasWinLoss ? winLoss.loss : pointsRules.loss,
-    walkover: pointsRules.walkover,
-    placementRows,
-    bonusRows
+    pointsMode: isKnockout ? 'placement' : 'winLoss',
+    win: typeof winLoss.win === 'number' ? winLoss.win : '-',
+    loss: typeof winLoss.loss === 'number' ? winLoss.loss : '-',
+    walkover: typeof winLoss.walkover === 'number' ? winLoss.walkover : undefined,
+    placementRows
   }
 }
 
-function playerLabel(player) {
-  if (!player) return '待定'
-  if (player.name) return player.partnerName ? `${player.name} / ${player.partnerName}` : player.name
-  return '待定'
+function buildScheduleView(tournament, brackets, freePlays) {
+  const schedulePlan = tournament && tournament.schedulePlan
+  if (!schedulePlan || !Array.isArray(schedulePlan.courts) || schedulePlan.courts.length === 0) {
+    return { scheduleCourts: [], scheduleRows: [] }
+  }
+
+  const courts = schedulePlan.courts.map(c => ({
+    courtId: c.courtId,
+    name: c.name,
+    slots: [...(c.slots || [])].sort()
+  }))
+
+  const slotKeySet = new Set()
+  courts.forEach(c => c.slots.forEach(s => slotKeySet.add(s)))
+  const slotKeys = [...slotKeySet].sort()
+
+  // 取 R1 bracket 的所有 matches（含 extras + regularRound + bracket）
+  const r1 = (brackets || []).find(b => b.round === 1)
+  const r1Matches = (r1 && r1.matches) || []
+
+  // cellByCourt[courtId][slotIndex] -> cell data
+  const cellByCourt = {}
+  courts.forEach(c => { cellByCourt[c.courtId] = {} })
+
+  r1Matches.forEach(m => {
+    if (!m.courtId || m.queueOrder === null || m.queueOrder === undefined) return
+    if (!cellByCourt[m.courtId]) return
+    cellByCourt[m.courtId][m.queueOrder] = {
+      kind: 'match',
+      __rowKind: m.matchKind || 'bracket',
+      __player1Label: playerLabel(m.player1, m.bye),
+      __player2Label: playerLabel(m.player2, m.bye)
+    }
+  })
+
+  ;(freePlays || []).forEach(fp => {
+    if (!fp.courtId || fp.queueOrder === null || fp.queueOrder === undefined) return
+    if (!cellByCourt[fp.courtId]) return
+    if (cellByCourt[fp.courtId][fp.queueOrder]) return  // 比赛优先
+    cellByCourt[fp.courtId][fp.queueOrder] = {
+      kind: 'freePlay',
+      __rowKind: 'freePlay'
+    }
+  })
+
+  const rows = slotKeys.map(slotKey => ({
+    slotKey,
+    slotLabel: formatSlotLabel(slotKey),
+    cells: courts.map(c => {
+      const slotIndex = c.slots.indexOf(slotKey)
+      if (slotIndex < 0) {
+        return { courtId: c.courtId, kind: null, __rowKind: 'unavailable' }
+      }
+      const cell = cellByCourt[c.courtId][slotIndex]
+      if (!cell) return { courtId: c.courtId, kind: null, __rowKind: 'empty' }
+      return { ...cell, courtId: c.courtId }
+    })
+  }))
+
+  return { scheduleCourts: courts, scheduleRows: rows }
+}
+
+function formatSlotLabel(iso) {
+  const m = /T(\d{2}):(\d{2})/.exec(iso || '')
+  return m ? `${m[1]}:${m[2]}` : String(iso || '')
+}
+
+function playerLabel(p, bye) {
+  if (!p) return bye ? 'BYE' : '?'
+  if (p.id === 'BYE' || p.name === 'BYE') return 'BYE'
+  return (p.name || '') + (p.partnerName ? '/' + p.partnerName : '')
 }
