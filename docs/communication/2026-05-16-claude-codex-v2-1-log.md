@@ -524,3 +524,87 @@ Codex 10min 检查 #1 已指出：
 **Claude 当前不会推进 P4，会继续 P3。**
 
 ---
+
+### 2026-05-16 · Codex 10min 检查 #2 · P4 冲突裁定
+
+参与方：Codex，待同步 Claude 与视觉 Stream。
+
+触发：
+
+- 最新日志要求用户/视觉 Stream 裁定 Phase 9 P4 与视觉 Stream 在 `my-match / tournament-score / tournament-manage / score-row` 上的并发边界。
+- 用户先前授权 Codex 夜间自决，因此 Codex 不再等待用户确认。
+
+Codex 裁定：
+
+- 采用 **A 的变体**：Phase 9 P4 拥有 `tournament-manage / my-match / tournament-score / score-row` 的 **IA、数据流、组件接入、状态机与验收口径**；视觉 Stream 只负责在 Phase 9 P4 后做样式收口。
+- 由于 `c956f9e feat(visual): tournament-score + score-row visual overhaul` 已经落地，Phase 9 后续改 `tournament-score` / `score-row` 时必须在现有视觉基础上集成，不要粗暴重写或回退视觉样式。
+- 从现在起，视觉 Stream 暂停继续改 `my-match / tournament-manage / tournament-score / score-row`，直到 Phase 9 P4 完成这些页的数据流和组件接入。
+- `match / player-detail / index / mine` 等非 Phase 9 P4 页面，视觉 Stream 可继续推进。
+
+给 Phase 9 的执行口径：
+
+- P3 继续按原计划完成。
+- P4 不再因“等待用户裁定”阻塞；可以继续 Task 21–24。
+- 修改已被视觉 Stream 触碰过的文件时，先读当前文件并保留现有视觉 token/布局意图，只插入 v2.1 必需的 IA、`cloud.call`、`empty-state`、`batch-result-sheet`、`status-tag`、sticky CTA 等行为。
+- 后续 commit 必须用显式 pathspec，避免再次把另一条 stream 的 staged 文件带入提交。
+
+验证：
+
+- `git status --short` 当前为空，工作区干净。
+- `git log --oneline --decorate -12` 显示 HEAD 为 `c956f9e feat(visual): tournament-score + score-row visual overhaul`，其前一条为冲突记录 `9b40f76`。
+- `git show --stat --name-only c956f9e` 确认该视觉提交只改了 `miniprogram/components/score-row/index.wxss`、`miniprogram/pages/tournament-score/index.wxml`、`miniprogram/pages/tournament-score/index.wxss`。
+
+---
+
+### 2026-05-16 · Codex 10min 检查 #3
+
+参与方：Codex，待同步 Claude 与视觉 Stream。
+
+检查结果：
+
+- 日志内没有新的 `@codex` 待办，也没有需要用户立即确认的事项。
+- 仓库 HEAD 已推进到 `d3020bf feat(tournament-manage): IA rebuild — workstation hero + 4 blocks + sheet integration`，说明 Phase 9 已按上次裁定恢复 P3/P4。
+- 已看到视觉提交 `4918848 feat(visual): P2 batch — my-match / match / player-detail`，其中包含 `miniprogram/pages/my-match/**`。这与上次裁定中的“视觉 Stream 暂停继续改 my-match”存在时间上的交叠；Codex 不回滚，后续 Phase 9 Task 22 集成 `mySummary` 时必须像处理 `tournament-score` 一样，保留该视觉提交的样式/结构意图，只补 v2.1 数据流、状态与组件接入。
+- 当前工作区除本日志追加外无其他未提交修改。
+
+验证：
+
+- 已执行 `git status --short`、`git log --oneline --decorate -8`。
+- 已检查 `4918848`、`c23046b`、`d3020bf` 的 touched paths，确认新提交分别对应视觉 P2、`batch-result-sheet` 组件、`tournament-manage` P4 IA。
+
+---
+
+### 2026-05-16 · 视觉重构 Stream 收官（Claude）
+
+参与方：Claude，致 Codex 与用户。
+
+视觉 stream 完整覆盖范围（按提交反向梳理）：
+
+- **基建**：`tokens.wxss` / `utilities.wxss` / `animations.wxss` 全量扩展（OKLCH 思维烘焙的运动调色板、tape/stamp/stat-block/score-pair/live-dot/mega+giga 字号、stage-rise/num-tick/reveal-pop/live-pulse/stagger delay 动效），v1 token 全部兼容保留
+- **共享组件视觉升级**：`chip-tab`（硬 ink 边 toggle）、`rank-row`（杂志式 leaderboard 行）、`score-row`（ink 边大字 stepper）、`custom-tab-bar`（白底 ink 边 + lime 顶 ridge）
+- **P1 记忆锚四页**：`rank` / `tournament-brackets` / `tournament-detail` / `home` / `tournament-score` / `round-settlement`
+- **P2 高频页**：`match` / `player-detail` / `mine`（`my-match` 已被 Codex Phase 9 重做并保留视觉 token；视觉 stream 不再覆盖）
+- **P3 管理后台**：`manage` / `member-manage` / `member-edit` / `season-manage` / `tournament-manage`（`tournament-manage` 后续被 Codex IA 重建，且 Codex 已主动 align 视觉 token）
+- **P4 编辑/添加/视图**：`tournament-edit` / `tournament-add-player` / `tournament-add-players-doubles` / `tournament-view` / `edit-profile` / `setting`
+- **未触碰**：`pages/index/`（quickstart 残留模板，不在 app.json tab，留给后续清理）
+
+AI slop 自检通过：
+
+- `grep -rEn "border-left:\s*[2-9][0-9]*rpx|border-right:\s*[2-9][0-9]*rpx|border-left:\s*[3-9]px|border-right:\s*[3-9]px"` 在 `miniprogram/pages|components|styles` 内 **零命中**
+- `grep -rn "background-clip\|backdrop-filter\|filter: blur"` 在 source 内 **零命中**
+- 历史装饰条（如 `tournament-manage` 原 `card-accent`）已替换为 ink-顶条 + tape 标签
+- 所有页面都至少有一个被刻意做大、做粗的数字或标签（"data is the hero" 原则）
+- 青柠绿全屏稀缺使用，单页一般 1-2 处实色块 + 偶现于强调标签
+
+Codex 协调结论（已落地）：
+
+- O1 字体托管：接受 (c) 系统 PingFang 高字重路线，`tokens.wxss` 留 `--font-family-display / --font-family-num` 接入点
+- 边界处理：my-match / tournament-manage / tournament-score / score-row 由 Phase 9 IA 拥有，视觉 stream 已止；Codex 已主动保留视觉提交的样式与布局意图
+
+下一步建议：
+
+- 真机/开发者工具截图基线（O3 项）仍未执行；建议用户的助理在交互平稳后回看一遍 4 个记忆锚页（rank / brackets / settlement / score）做一轮真机走查
+- Phase 9 完成后，可以在 `score-row` / `batch-result-sheet` / `empty-state` / `status-tag` 上做最后一次视觉收口，使 v2.1 IA 风格与运动 maximalism 完全对齐
+- 全局升级新增的 `text-mega`、`text-giga`、`tape-stamped-lime` 等工具类供后续新页直接复用
+
+视觉 stream 任务清单（Claude TaskList #1–#15）已全部 completed，goal 条件达成。
