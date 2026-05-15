@@ -470,6 +470,31 @@ exports.main = async (event, context) => {
       }
     }
 
+    case 'finishedRecent': {
+      const { finishedRecent } = require('./lib/handlers/finished-recent')
+      try {
+        const wxContext = cloud.getWXContext()
+        const openid = wxContext.OPENID || null
+        if (!openid) return fail('FORBIDDEN', '需要登录')
+        const memberRes = await db.collection('members').where({ openid }).get()
+        const members = memberRes.data || []
+        if (!members.length) return fail('FORBIDDEN', '成员不存在')
+        const member = members[0]
+        if (!member.isAdmin) return fail('FORBIDDEN', '需要管理员权限')
+        const ctx = {
+          isAdmin: true,
+          db: {
+            listFinished: async (limit) => (await db.collection('tournaments').where({ status: 'completed' })
+              .orderBy('completedAt', 'desc').limit(limit).get()).data,
+          },
+        }
+        const result = await finishedRecent(ctx, event)
+        return ok(result)
+      } catch (e) {
+        return fail(e.code || 'INTERNAL', e.message)
+      }
+    }
+
     case 'getStats': {
       const totalCount = await collection.count()
       const upcomingCount = await collection.where({ status: 'upcoming' }).count()
