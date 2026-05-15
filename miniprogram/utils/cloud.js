@@ -26,6 +26,46 @@ async function callFunction(options) {
   })
 }
 
+function generateTraceId() {
+  return `trace_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function classifyClientError(e) {
+  const msg = (e && (e.errMsg || e.message) || '').toLowerCase()
+  if (msg.includes('timeout')) return 'TIMEOUT'
+  if (msg.includes('network')) return 'NETWORK'
+  return 'UNKNOWN'
+}
+
+async function call(name, payload, options = {}) {
+  const traceId = options.traceId || generateTraceId()
+  const timeout = options.timeout || 8000
+  const onLoading = options.onLoading
+
+  if (onLoading) onLoading(true)
+  try {
+    const res = await callFunction({ name, data: payload, config: { timeout } })
+    const env = res && res.result
+    if (!env || typeof env.success !== 'boolean') {
+      return { ok: false, error: { code: 'INVALID_ENVELOPE', message: 'cloud function 返回非 envelope', retryable: false }, traceId }
+    }
+    if (env.success === false) {
+      return { ok: false, error: { ...(env.error || {}) }, traceId }
+    }
+    return { ok: true, data: env.data, traceId }
+  } catch (e) {
+    const code = classifyClientError(e)
+    return {
+      ok: false,
+      error: { code, message: (e && (e.errMsg || e.message)) || '请求失败', retryable: ['NETWORK', 'TIMEOUT'].includes(code) },
+      traceId,
+    }
+  } finally {
+    if (onLoading) onLoading(false)
+  }
+}
+
 module.exports = {
-  callFunction
+  callFunction,
+  call,
 }

@@ -1,0 +1,11 @@
+{
+  "name": "miniprogram-tests",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": { "test": "jest" },
+  "devDependencies": { "jest": "^29.7.0" },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  }
+}
