@@ -1,65 +1,64 @@
-<view class="member-manage-container">
-  <!-- 搜索栏 -->
-  <view class="search-bar">
-    <view class="search-input-wrapper">
-      <input
-        class="search-input"
-        placeholder="搜索会员姓名或手机号"
-        value="{{searchKeyword}}"
-        bindinput="onSearchInput"
-        confirm-type="search"
-        bindconfirm="onSearch"
-      />
-      <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">✕</view>
+<view class="mm-page">
+
+  <!-- HEAD -->
+  <view class="mm-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">ADMIN · 会员</text>
+    </view>
+    <view class="head-titles">
+      <text class="head-title-zh">会员管理</text>
+      <text class="head-title-en num">ROSTER</text>
     </view>
   </view>
 
-  <!-- 筛选栏 -->
-  <view class="filter-bar">
-    <view class="filter-item {{filterStatus === '' ? 'active' : ''}}" bindtap="onFilterStatus" data-status="">
-      全部
-    </view>
-    <view class="filter-item {{filterStatus === 'active' ? 'active' : ''}}" bindtap="onFilterStatus" data-status="active">
-      活跃
-    </view>
-    <view class="filter-item {{filterStatus === 'inactive' ? 'active' : ''}}" bindtap="onFilterStatus" data-status="inactive">
-      不活跃
+  <!-- SEARCH -->
+  <view class="search-bar anim-stage-rise anim-delay-1">
+    <input
+      class="search-input"
+      placeholder="搜索姓名或手机号"
+      placeholder-class="search-placeholder"
+      value="{{searchKeyword}}"
+      bindinput="onSearchInput"
+      confirm-type="search"
+      bindconfirm="onSearch"
+    />
+    <view wx:if="{{searchKeyword}}" class="clear-btn tap-scale" bindtap="onClearSearch">
+      <text class="num">×</text>
     </view>
   </view>
 
-  <!-- 会员列表 -->
-  <view class="member-list">
+  <!-- FILTER -->
+  <view class="filter-bar anim-stage-rise anim-delay-2">
+    <view class="filter-item {{filterStatus === '' ? 'active' : ''}} tap-scale" bindtap="onFilterStatus" data-status="">全部</view>
+    <view class="filter-item {{filterStatus === 'active' ? 'active' : ''}} tap-scale" bindtap="onFilterStatus" data-status="active">活跃</view>
+    <view class="filter-item {{filterStatus === 'inactive' ? 'active' : ''}} tap-scale" bindtap="onFilterStatus" data-status="inactive">不活跃</view>
+  </view>
+
+  <!-- LIST -->
+  <view class="member-list anim-stage-rise anim-delay-3">
+
     <view wx:if="{{memberList.length === 0 && !loading}}" class="empty-state">
-      <text class="empty-text">暂无会员数据</text>
+      <text class="tape">暂无会员数据</text>
     </view>
 
-    <block wx:for="{{memberList}}" wx:key="_id">
-      <view class="member-item" bindtap="onEditMember" data-member="{{item}}">
-        <view class="member-avatar" catchtap="onAvatarTap" data-url="{{item.avatarUrl}}">
-          <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" class="avatar-img" mode="aspectFill" />
-          <text wx:else class="avatar-placeholder">{{item.name.charAt(0) || '会'}}</text>
-        </view>
-        <view class="member-info">
-          <view class="member-name">{{item.name || '未命名'}}</view>
-          <view class="member-phone">{{item.phone || '未填写手机号'}}</view>
-          <view class="member-meta">
-            <text class="join-time">加入时间: {{item.formattedTime}}</text>
-          </view>
-        </view>
-        <view class="member-status {{item.status === 'active' ? 'active' : 'inactive'}}">
-          {{item.status === 'active' ? '活跃' : '不活跃'}}
-        </view>
+    <view wx:for="{{memberList}}" wx:key="_id" class="member-item tap-scale" bindtap="onEditMember" data-member="{{item}}">
+      <view class="member-avatar" catchtap="onAvatarTap" data-url="{{item.avatarUrl}}">
+        <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" class="avatar-img" mode="aspectFill" />
+        <text wx:else class="avatar-placeholder">{{item.name.charAt(0) || '会'}}</text>
       </view>
-    </block>
+      <view class="member-info">
+        <text class="member-name">{{item.name || '未命名'}}</text>
+        <text class="member-phone num">{{item.phone || '未填写手机号'}}</text>
+        <text class="member-meta num">JOINED · {{item.formattedTime}}</text>
+      </view>
+      <text class="member-status status-{{item.status || 'inactive'}}">{{item.status === 'active' ? '活跃' : '不活跃'}}</text>
+    </view>
+
   </view>
 
-  <!-- 加载状态 -->
+  <!-- LOAD MORE -->
   <view class="load-more" wx:if="{{memberList.length > 0}}">
-    <view wx:if="{{loading}}" class="loading">
-      <text class="loading-text">加载中...</text>
-    </view>
-    <view wx:elif="{{noMore}}" class="no-more">
-      <text class="no-more-text">没有更多了</text>
-    </view>
+    <view wx:if="{{loading}}" class="load-state">加载中…</view>
+    <view wx:elif="{{noMore}}" class="load-state">— 没有更多了 —</view>
   </view>
 </view>

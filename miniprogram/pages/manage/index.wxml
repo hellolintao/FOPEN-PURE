@@ -1,67 +1,78 @@
-<view class="manage-container">
-  <view class="manage-grid">
-    <view class="manage-card" bindtap="onSeasonManage">
-      <text class="card-title">赛季管理</text>
-    </view>
+<view class="manage-page">
 
-    <view class="manage-card" bindtap="onTournamentManage">
-      <text class="card-title">赛事管理</text>
+  <!-- HEAD -->
+  <view class="manage-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">ADMIN · 管理后台</text>
     </view>
-
-    <view class="manage-card" bindtap="onMemberManage">
-      <text class="card-title">会员管理</text>
+    <view class="head-titles">
+      <text class="head-title-zh">管理</text>
+      <text class="head-title-en num">CONTROL</text>
     </view>
   </view>
 
-  <!-- 对位表列表 -->
-  <view class="brackets-section">
+  <!-- ADMIN GRID -->
+  <view class="manage-grid anim-stage-rise anim-delay-1">
+    <view class="m-tile tap-scale" bindtap="onSeasonManage">
+      <text class="m-tile-num num">01</text>
+      <text class="m-tile-text">赛季管理</text>
+      <text class="m-tile-arrow num">→</text>
+    </view>
+    <view class="m-tile tap-scale" bindtap="onTournamentManage">
+      <text class="m-tile-num num">02</text>
+      <text class="m-tile-text">赛事管理</text>
+      <text class="m-tile-arrow num">→</text>
+    </view>
+    <view class="m-tile tap-scale" bindtap="onMemberManage">
+      <text class="m-tile-num num">03</text>
+      <text class="m-tile-text">会员管理</text>
+      <text class="m-tile-arrow num">→</text>
+    </view>
+  </view>
 
-    <view wx:if="{{loading}}" class="loading-state">
-      <text>加载中...</text>
+  <!-- BRACKETS SECTION -->
+  <view class="brackets-section anim-stage-rise anim-delay-2">
+    <view class="section-head">
+      <text class="tape tape-lime tape-stamped-lime">PENDING · 待录入</text>
+      <text wx:if="{{bracketsList.length}}" class="section-count num">{{bracketsList.length}}</text>
     </view>
 
+    <view wx:if="{{loading}}" class="loading-state">
+      <skeleton-loader rows="{{4}}" />
+    </view>
+
+    <view wx:elif="{{!bracketsList.length}}" class="empty-state">
+      <text class="tape">暂无待录入对阵</text>
+    </view>
 
     <view wx:else class="brackets-list">
-      <view 
-        class="bracket-card" 
-        wx:for="{{bracketsList}}" 
-        wx:key="_id"
+      <view
+        class="bracket-card tap-scale"
+        wx:for="{{bracketsList}}" wx:key="_id"
         bindtap="onBracketTap"
         data-tournamentid="{{item.tournamentId}}"
         data-bracketid="{{item._id}}"
-        data-round="{{item.round}}">
-        
-        <!-- 卡片头部 -->
-        <view class="bracket-header">
-          <view class="bracket-info">
+        data-round="{{item.round}}"
+      >
+        <view class="bracket-head">
+          <view class="bracket-head-info">
             <text class="bracket-tournament">{{tournamentsMap[item.tournamentId].name || '未知赛事'}}</text>
-            <text class="bracket-tip">点击录入成绩</text>
+            <text class="bracket-tip">点击录入比分</text>
           </view>
-          
+          <text class="bracket-round-tape num">R{{item.round < 10 ? '0' : ''}}{{item.round}}</text>
         </view>
 
-        <!-- 比赛列表 -->
         <view class="matches-list">
-          <view class="match-item {{match.status}}" wx:for="{{item.matches}}" wx:key="matchId">
-            <view class="match-players">
-              <text class="player">
-                {{item.player1.name || '待定'}}
-              </text>
-              <text class="vs">Vs</text>
-              <text class="player">
-                {{item.player2.name || '待定'}}
-              </text>
-            </view>
-            <!-- <view class="match-status-tag {{match.status}}">
-              {{match.status === 'completed' ? '已完成' : match.status === 'ongoing' ? '进行中' : '待开始'}}
-            </view> -->
+          <view class="match-item" wx:for="{{item.matches}}" wx:key="matchId" wx:for-item="match">
+            <text class="match-player">{{match.player1.name || '待定'}}</text>
+            <text class="match-vs num">VS</text>
+            <text class="match-player">{{match.player2.name || '待定'}}</text>
           </view>
         </view>
 
-        <!-- 卡片底部 -->
-        <view class="bracket-footer">
-          <view class="bracket-round">第{{item.round}}轮</view>
-          <text class="bracket-time">{{item.updateTime ? item.updateTime : item.createTime}}</text>
+        <view class="bracket-foot">
+          <text class="bracket-time num">{{item.updateTime || item.createTime}}</text>
+          <text class="bracket-cta">录入 →</text>
         </view>
       </view>
     </view>

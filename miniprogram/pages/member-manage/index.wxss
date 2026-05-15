@@ -1,102 +1,141 @@
-.member-manage-container {
-  background: #f7f7f7;
+.mm-page {
   min-height: 100vh;
-  padding: 40rpx 0;
-  padding-bottom: 20rpx;
+  background: var(--color-bg);
+  padding: var(--space-5) var(--space-5) 120rpx;
 }
 
-.member-title {
-  font-size: 44rpx;
-  color: #333333;
-  text-align: center;
-  margin-bottom: 32rpx;
-  font-weight: 600;
+/* ============================================================
+ * HEAD
+ * ============================================================ */
+.mm-head {
+  margin-bottom: var(--space-5);
 }
 
-/* 搜索栏 */
+.head-tapes {
+  margin-bottom: var(--space-4);
+}
+
+.head-titles {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.head-title-zh {
+  font-size: 64rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+
+.head-title-en {
+  font-size: 30rpx;
+  font-weight: 900;
+  color: var(--color-muted-2);
+  letter-spacing: 0.08em;
+}
+
+/* ============================================================
+ * SEARCH
+ * ============================================================ */
 .search-bar {
-  padding: 0 40rpx 24rpx 40rpx;
-}
-
-.search-input-wrapper {
   display: flex;
   align-items: center;
-  background: #ffffff;
-  border-radius: 8rpx;
-  padding: 16rpx 24rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-5);
+  margin-bottom: var(--space-3);
 }
 
 .search-input {
   flex: 1;
-  color: #333333;
   font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0.01em;
+  height: 56rpx;
+  line-height: 56rpx;
+}
+
+.search-placeholder {
+  color: var(--color-muted-2);
+  font-weight: 600;
 }
 
 .clear-btn {
-  width: 40rpx;
-  height: 40rpx;
+  width: 44rpx;
+  height: 44rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: var(--color-ink);
+  color: var(--color-bg);
   border-radius: 50%;
-  color: #999999;
-  font-size: 24rpx;
-  margin-left: 16rpx;
+  margin-left: var(--space-3);
+  font-size: 28rpx;
+  font-weight: 900;
 }
 
-/* 筛选栏 */
+/* ============================================================
+ * FILTER
+ * ============================================================ */
 .filter-bar {
   display: flex;
-  gap: 16rpx;
-  padding: 0 40rpx 32rpx 40rpx;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
 }
 
 .filter-item {
   flex: 1;
   text-align: center;
   padding: 16rpx 0;
-  background: #ffffff;
-  border-radius: 8rpx;
-  color: #999999;
-  font-size: 26rpx;
-  font-weight: 400;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .filter-item.active {
-  background: #333333;
-  color: #ffffff;
+  background: var(--color-ink);
+  color: var(--color-bg);
 }
 
-/* 会员列表 */
+/* ============================================================
+ * LIST
+ * ============================================================ */
 .member-list {
-  padding: 0 32rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-state {
+  padding: var(--space-9) 0;
+  text-align: center;
 }
 
 .member-item {
   display: flex;
   align-items: center;
-  background: #ffffff;
-  border-radius: 8rpx;
-  margin-bottom: 24rpx;
-  padding: 24rpx;
-}
-
-.member-item:active {
-  background: #f5f5f5;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .member-avatar {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: #f5f5f5;
-  border: 2rpx solid #e0e0e0;
-  margin-right: 24rpx;
-  overflow: hidden;
+  background: var(--color-bg-3);
+  border: 2rpx solid var(--color-ink);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
@@ -106,95 +145,70 @@
 }
 
 .avatar-placeholder {
-  font-size: 48rpx;
-  color: #999999;
-  font-weight: 500;
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--color-ink);
 }
 
 .member-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 
 .member-name {
-  font-size: 32rpx;
-  color: #333333;
-  font-weight: 500;
-  margin-bottom: 8rpx;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.01em;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .member-phone {
-  font-size: 26rpx;
-  color: #999999;
-  margin-bottom: 6rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .member-meta {
-  font-size: 24rpx;
-  color: #cccccc;
-}
-
-.join-time {
-  display: block;
+  font-size: 18rpx;
+  font-weight: 800;
+  color: var(--color-muted-2);
+  letter-spacing: 0.12em;
 }
 
 .member-status {
-  padding: 8rpx 20rpx;
-  border-radius: 8rpx;
-  font-size: 24rpx;
-  font-weight: 400;
-  margin-right: 16rpx;
   flex-shrink: 0;
-}
-
-.member-status.active {
-  background: #333333;
-  color: #ffffff;
-}
-
-.member-status.inactive {
-  background: #f5f5f5;
-  color: #999999;
-}
-
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 120rpx 0;
+  height: 40rpx;
+  padding: 0 14rpx;
+  border-radius: var(--radius-sm);
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
-.empty-text {
-  font-size: 28rpx;
-  color: #999999;
-}
+.member-status.status-active { background: var(--color-lime); color: var(--color-ink); }
+.member-status.status-inactive { background: var(--color-bg-3); color: var(--color-muted); }
 
-/* 加载更多 */
 .load-more {
-  padding: 32rpx 0;
+  padding: var(--space-5) 0;
   text-align: center;
 }
 
-.loading-text, .no-more-text {
-  font-size: 26rpx;
-  color: #999999;
-}
-
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-}
-
-.no-more {
-  color: #999999;
+.load-state {
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  text-transform: uppercase;
 }

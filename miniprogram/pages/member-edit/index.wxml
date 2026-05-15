@@ -1,61 +1,74 @@
-<view class="member-edit-container">
-  <view class="form-section">
-    <!-- 头像（只读显示） -->
-    <view class="avatar-section">
-      <view class="avatar-preview">
-        <image wx:if="{{member.avatarUrl}}" src="{{member.avatarUrl}}" class="avatar-img" mode="aspectFill" />
-        <view wx:else class="avatar-placeholder">
-          <text class="placeholder-text">默认头像</text>
-        </view>
+<view class="me-page">
+
+  <!-- HEAD -->
+  <view class="me-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">{{isEdit ? 'EDIT MEMBER · 编辑' : 'NEW MEMBER · 新增'}}</text>
+    </view>
+    <text class="head-title">{{isEdit ? '编辑会员' : '新增会员'}}</text>
+  </view>
+
+  <!-- AVATAR -->
+  <view class="avatar-card anim-stage-rise anim-delay-1">
+    <view class="avatar-wrap">
+      <image wx:if="{{member.avatarUrl}}" src="{{member.avatarUrl}}" class="avatar-img" mode="aspectFill" />
+      <view wx:else class="avatar-placeholder">
+        <text class="placeholder-text">{{member.name ? member.name.charAt(0) : '会'}}</text>
       </view>
     </view>
+    <view class="avatar-meta">
+      <text class="avatar-meta-label">AVATAR</text>
+      <text class="avatar-meta-val">{{member.avatarUrl ? '已上传' : '默认头像'}}</text>
+    </view>
+  </view>
 
-    <!-- 会员姓名 -->
+  <!-- FORM -->
+  <view class="me-form anim-stage-rise anim-delay-2">
     <view class="form-item">
       <view class="field-label">
-        <text class="required">*</text>会员姓名
+        <text class="num field-num">01</text>
+        <text class="field-text">会员姓名 <text class="required">*</text></text>
       </view>
-      <input class="dialog-input" placeholder="请输入会员姓名" value="{{member.name}}" data-key="name" bindinput="onInput" />
+      <input class="form-input" placeholder="请输入会员姓名" placeholder-class="form-placeholder" value="{{member.name}}" data-key="name" bindinput="onInput" />
     </view>
 
-    <!-- 手机号 -->
-    <view class="form-item">
-      <view class="field-label">手机号</view>
-      <input class="dialog-input" type="number" maxlength="11" placeholder="请输入手机号" value="{{member.phone}}" data-key="phone" bindinput="onInput" />
-    </view>
-
-    <!-- 状态 -->
     <view class="form-item">
       <view class="field-label">
-        <text class="required">*</text>会员状态
+        <text class="num field-num">02</text>
+        <text class="field-text">手机号</text>
+      </view>
+      <input class="form-input num" type="number" maxlength="11" placeholder="请输入手机号" placeholder-class="form-placeholder" value="{{member.phone}}" data-key="phone" bindinput="onInput" />
+    </view>
+
+    <view class="form-item">
+      <view class="field-label">
+        <text class="num field-num">03</text>
+        <text class="field-text">会员状态 <text class="required">*</text></text>
       </view>
       <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onPickStatus">
-        <view class="dialog-input picker-input">
-          <text class="picker-text">{{member.status ? statusOptions[statusIndex].label : '选择状态'}}</text>
-          <text class="picker-arrow">›</text>
+        <view class="form-input picker-input">
+          <text class="{{member.status ? '' : 'form-placeholder'}}">{{member.status ? statusOptions[statusIndex].label : '选择状态'}}</text>
+          <text class="picker-arrow num">→</text>
         </view>
       </picker>
     </view>
 
-    <!-- 是否管理员 -->
     <view class="form-item">
-      <view class="field-label">管理员权限</view>
-      <view class="switch-wrapper">
-        <switch
-          class="switch"
-          checked="{{member.admin}}"
-          bindchange="onAdminChange"
-          color="#333333"
-        />
-        <text class="switch-label">{{member.admin ? '是' : '否'}}</text>
+      <view class="field-label">
+        <text class="num field-num">04</text>
+        <text class="field-text">管理员权限</text>
+      </view>
+      <view class="switch-row">
+        <switch class="switch" checked="{{member.admin}}" bindchange="onAdminChange" color="#0B0C09" />
+        <text class="switch-label">{{member.admin ? '是 · ADMIN' : '否 · MEMBER'}}</text>
       </view>
     </view>
   </view>
 
-  <!-- 底部按钮 -->
-  <view class="dialog-actions">
-    <button wx:if="{{isEdit}}" class="dialog-btn delete" bindtap="onDeleteMember">删除会员</button>
-    <button class="dialog-btn cancel" bindtap="onCancel">取消</button>
-    <button class="dialog-btn primary" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认新增'}}</button>
+  <!-- ACTIONS -->
+  <view class="me-actions anim-stage-rise anim-delay-3">
+    <view wx:if="{{isEdit}}" class="me-btn me-btn-danger tap-scale" bindtap="onDeleteMember">删除会员</view>
+    <view class="me-btn me-btn-ghost tap-scale" bindtap="onCancel">取消</view>
+    <view class="me-btn me-btn-primary tap-scale" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认新增'}}</view>
   </view>
 </view>
