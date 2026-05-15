@@ -18,7 +18,7 @@
 | 04 | Phase 2 · Browse UI | ✅ 已完成 | 2026-05-12 | 2026-05-12 | e95fcac | points-engine 云函数（7单测全绿）+ 组件库（stat-block/rank-row/brush-stroke-bg）+ custom tabBar（admin 可见管理 tab）+ home/rank/player-detail/mine 全面重写 |
 | 05 | Phase 5 · Result Reconcile | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；录分/积分/对账由 Phase 8 实现 |
 | 06 | Phase 6 · Polish | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；视觉打磨随 Phase 7/8 落地 |
-| 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 | 4 步 wizard / 30min court-grid / schedule-board / player-picker-sheet / generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
+| 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -33,6 +33,32 @@
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-15 · Phase 7 step 2/3 日程表修订 + 云函数上传
+
+本次是在 Phase 7 已完成后的体验修订，目标是对齐俱乐部实际创建常规赛的排程方式。
+
+**已完成：**
+- `court-grid` 已从原 30min 多选格修订为「1 小时格日程表」：X 轴为 `availableCourts`，Y 轴为 08:00-21:00；点击 1 小时格后内部仍按 20 分钟写入 `schedulePlan.courts[].slots`（h:00 / h:20 / h:40）。
+- `schedulePlan.slotMinutes` 固定为 20；`cloudfunctions/tournaments/lib/validate.js` 与测试已同步。
+- `自由拉球`按钮改为免选球员，直接添加 `playerIds=[]` 的占位行，不再弹 picker。
+- `commitStep3` 保存排程错误信息改用统一 `_isSuccess/_errMsg` 解包，兼容新 envelope `error.message` 与旧 `errMsg`，失败时 `console.error` 打完整 result 便于 DevTools 查日志。
+- `schedule-board` 已从按球场队列列表改成按时间表展示：时间行 + 球场列；可继续长按格子上移/下移/换场地，非 bracket 行可删除。
+- 常规赛进入 step 3 或点「重新随机安排」时自动填满所有已选 20min 格：每个 1 小时固定生成 `比赛 / 比赛 / 自由拉球`；自由拉球写 `free_plays` 占位，比赛写入 `matches + queues`。
+- 常规赛配对算法改为按参赛者已排场次数平衡，尽量让所有人打相同场次；生成比赛标记 `matchKind: 'regularRound'`，避免被当成淘汰赛 bracket。
+- step 3 保存时始终调用 `free-plays.bulkSet`，即使 `freePlays=[]` 也覆盖云端，避免用户删除自由拉球后旧数据残留。
+- 单打添加球员弹窗支持按剩余名额多选；单打/双打添加场次仍分别按 2/4 人选择。
+
+**验证：**
+- `cloudfunctions/tournament-brackets`：44 tests passed（新增常规赛填满与配对平衡测试；generator regularRound 测试）。
+- `cloudfunctions/tournaments`：19 tests passed。
+- `cloudfunctions/match-results`：4 tests passed。
+- 相关前端/云函数 JS 语法检查：`node -c` 全过。
+- 微信开发者工具手动编译：问题面板 0 个问题；Console 仍有一个历史首页 timeout 旧日志，不是本次新增编译错误。
+
+**云函数上传：**
+- 已上传到 `cloud1-0gthnke69a09f52a`：`courts / free-plays / tournaments / tournament-brackets`。
+- 备注：微信 DevTools CLI 对含子目录的 `tournaments / tournament-brackets` 函数直接 `--names` 上传时报 `EISDIR`；本次用临时 deploy-only 包（平铺运行时依赖文件）+ `--paths` 成功上传，未改仓库源码结构。
 
 ### 2026-05-14 · Phase 7 完成（17 Tasks 全部落库）
 
@@ -217,7 +243,9 @@
 - `match_results` 从 Phase 7 起写 `round/position/sourceMatchId/player1/player2/playerIds`；R2+ bracket 占位也要有对应 result 占位行。
 - `player-picker-sheet` 选择数量统一用 `requiredCount`，不要再用 `single` 布尔值表达 1/4 人选择。
 - 普通会员只能提交 pending/submitted；confirmed 行只能由 admin 走二次确认改分。
-- 排程算法第一版采用「顺序填满场地」（court[0] 满了到 court[1]），不做轮询。理由：Phase 7 spec §4 拍板。
+- 淘汰赛 / legacy 首轮排程仍采用「顺序填满场地」（court[0] 满了到 court[1]），不做轮询。常规赛从 2026-05-15 修订起改为按日程表填满：每个已选 1 小时生成 2 场 `regularRound` + 1 个自由拉球占位，并按参赛者场次数平衡配对。
+- `schedulePlan.slotMinutes` 固定为 20；Step 2 UI 可用 1 小时格选择，但入库必须展开成 3 个 20min slot。
+- Step 3 保存自由拉球必须整体覆盖：即使 `freePlays=[]` 也调用 `free-plays.bulkSet`，避免云端残留旧自由拉球。
 - BYE 第一版不做智能分散，仅测 BYE 数 + 自动推进 + 无空 winner（与 spec §8 / §9.2 一致）。
 - `scheduler-engine` 不删，标 @deprecated；pairing 副本迁到 `cloudfunctions/tournament-brackets/lib/pairing/`，44 单测仍保留为回归基准。
 - `miniprogram/utils/bracket-generator.js` 与云函数 `lib/generator.js` 是 vendored 副本（CommonJS module.exports），Phase 8 `sync-shared-libs.sh` 同步比对；`miniprogram/utils/scheduler-mirror.js` 同理对应 `lib/scheduler.js`。

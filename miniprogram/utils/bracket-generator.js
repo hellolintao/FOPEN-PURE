@@ -92,7 +92,8 @@ function generateRegularR1(registrations) {
       resultStatus: 'pending',
       winner: null,
       courtId: null,
-      queueOrder: null
+      queueOrder: null,
+      matchKind: 'regularRound'
     })
   }
   return matches
