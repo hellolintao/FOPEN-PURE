@@ -1,0 +1,63 @@
+<view wx:if="{{visible}}" class="brs-mask" bindtap="onClose">
+  <view class="brs-sheet" catchtap="">
+    <view class="brs-grab"></view>
+    <view class="brs-title">
+      <text>{{title}}</text>
+      <text wx:if="{{stateName === 'result'}}" class="brs-title-meta">
+        ✓ {{result.successIds.length}} / ✗ {{result.failures.length}}
+      </text>
+    </view>
+
+    <view wx:if="{{stateName === 'loading'}}" class="brs-loading">
+      <view class="brs-skel" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <view wx:elif="{{stateName === 'previewing'}}" class="brs-list">
+      <view wx:for="{{items}}" wx:key="matchId" class="brs-card" bindtap="onEditRow" data-matchid="{{item.matchId}}">
+        <view class="brs-card-head">
+          <text>{{item.tournamentName}} · {{item.round}}-{{item.position}} · {{item.scheduledStartLabel}}</text>
+        </view>
+        <view class="brs-card-body">
+          <text class="brs-player">{{item.p1.name}}{{item.p1.partnerName ? ' / ' + item.p1.partnerName : ''}}</text>
+          <text class="brs-score">{{item.score.sets[0].a}} : {{item.score.sets[0].b}}</text>
+          <text class="brs-player">{{item.p2.name}}{{item.p2.partnerName ? ' / ' + item.p2.partnerName : ''}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:elif="{{stateName === 'submitting'}}" class="brs-list brs-list--dim">
+      <view class="brs-overlay">
+        <view class="brs-spinner"></view>
+      </view>
+    </view>
+
+    <view wx:elif="{{stateName === 'result'}}" class="brs-list">
+      <view wx:for="{{items}}" wx:key="matchId" class="brs-card {{result.successIds.indexOf(item.matchId) >= 0 ? 'brs-card--ok' : 'brs-card--err'}}">
+        <view class="brs-card-head">
+          <text>{{item.tournamentName}} · {{item.round}}-{{item.position}}</text>
+          <status-tag wx:if="{{result.successIds.indexOf(item.matchId) >= 0}}" type="ok" text="✓ 已确认" />
+        </view>
+        <view class="brs-card-body">
+          <text class="brs-player">{{item.p1.name}}</text>
+          <text class="brs-score">{{item.score.sets[0].a}} : {{item.score.sets[0].b}}</text>
+          <text class="brs-player">{{item.p2.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="brs-footer">
+      <view wx:if="{{stateName === 'previewing'}}" class="brs-actions">
+        <view class="brs-btn brs-btn--sec" bindtap="onClose">取消</view>
+        <view class="brs-btn brs-btn--prim" bindtap="onCommit">
+          {{mode === 'submit' ? '提交' : '确认'}} {{items.length}} 场
+        </view>
+      </view>
+      <view wx:elif="{{stateName === 'result'}}" class="brs-actions">
+        <view class="brs-btn brs-btn--sec" bindtap="onClose">完成</view>
+        <view wx:if="{{result.failures.length > 0}}" class="brs-btn brs-btn--prim" bindtap="onRetry">
+          重试失败 {{result.failures.length}} 条
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

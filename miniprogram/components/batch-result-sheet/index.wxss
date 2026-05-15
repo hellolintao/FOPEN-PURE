@@ -1,0 +1,23 @@
+.brs-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 999; display: flex; align-items: flex-end; }
+.brs-sheet { width: 100%; background: var(--color-bg); border-radius: 32rpx 32rpx 0 0; padding: 24rpx; max-height: 80vh; overflow-y: auto; }
+.brs-grab { width: 72rpx; height: 8rpx; background: var(--color-bg-3); border-radius: 4rpx; margin: 0 auto 16rpx; }
+.brs-title { font-size: 28rpx; font-weight: 600; color: var(--color-ink); margin-bottom: 16rpx; display: flex; justify-content: space-between; align-items: center; }
+.brs-title-meta { font-size: 22rpx; color: var(--color-muted); }
+.brs-loading .brs-skel { height: 80rpx; background: var(--color-bg-3); border-radius: var(--radius-sm); margin-bottom: 12rpx; }
+.brs-list { display: flex; flex-direction: column; gap: 12rpx; position: relative; }
+.brs-list--dim { opacity: 0.6; }
+.brs-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.brs-spinner { width: 64rpx; height: 64rpx; border: 4rpx solid var(--color-border); border-top-color: var(--color-lime); border-radius: 50%; animation: brs-spin 0.8s linear infinite; }
+@keyframes brs-spin { to { transform: rotate(360deg); } }
+.brs-card { background: var(--color-bg-2); border-radius: var(--radius-md); padding: 16rpx 20rpx; }
+.brs-card--ok { background: rgba(132, 204, 22, 0.10); }
+.brs-card--err { background: rgba(220, 38, 38, 0.10); }
+.brs-card-head { font-size: 22rpx; color: var(--color-muted); margin-bottom: 8rpx; display: flex; justify-content: space-between; }
+.brs-card-body { display: flex; align-items: center; justify-content: space-between; }
+.brs-player { font-size: 24rpx; color: var(--color-ink); max-width: 38%; }
+.brs-score { font-size: 32rpx; font-weight: 700; color: var(--color-ink); }
+.brs-footer { padding-top: 16rpx; border-top: 1rpx solid var(--color-border); margin-top: 16rpx; }
+.brs-actions { display: flex; gap: 12rpx; }
+.brs-btn { flex: 1; text-align: center; padding: 20rpx; border-radius: var(--radius-md); font-size: 26rpx; font-weight: 600; }
+.brs-btn--prim { background: var(--color-lime); color: var(--color-ink); }
+.brs-btn--sec { background: var(--color-bg-3); color: var(--color-muted); }
