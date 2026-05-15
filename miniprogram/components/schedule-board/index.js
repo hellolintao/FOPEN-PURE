@@ -17,38 +17,31 @@ Component({
     pickerMembers: [],
     pickerTitle: '',
     decoratedQueues: [],
-    decoratedCourts: []
+    decoratedCourts: [],
+    decoratedRows: []
   },
 
   observers: {
-    'queues, matches, freePlays'(queues, matches, freePlays) {
-      this.setData({ decoratedQueues: this._decorate(queues, matches, freePlays) })
+    'queues, matches, freePlays, schedulePlan, members'(queues, matches, freePlays, schedulePlan) {
+      const decoratedQueues = this._decorate(queues, matches, freePlays)
+      const courts = this._decorateCourts(schedulePlan)
+      const rows = this._buildRows(schedulePlan, decoratedQueues)
+      this.setData({
+        decoratedQueues,
+        decoratedCourts: courts,
+        decoratedRows: rows
+      })
     },
 
     'schedulePlan'(schedulePlan) {
-      const courts = (schedulePlan && schedulePlan.courts) || []
-      const decoratedCourts = courts.map(court => {
-        const slotsLabel = (court.slots || []).length + ' 个时段'
-        return { ...court, slotsLabel }
-      })
-      // Compute __hasAnyRow per court from current decoratedQueues
-      const queues = this.data.decoratedQueues || []
-      const result = decoratedCourts.map(court => {
-        const q = queues.find(x => x.courtId === court.courtId)
-        return { ...court, __hasAnyRow: !!(q && q.items && q.items.length > 0) }
-      })
-      this.setData({ decoratedCourts: result })
+      const courts = this._decorateCourts(schedulePlan)
+      const rows = this._buildRows(schedulePlan, this.data.decoratedQueues || [])
+      this.setData({ decoratedCourts: courts, decoratedRows: rows })
     },
 
     'decoratedQueues'(decoratedQueues) {
-      // Recompute __hasAnyRow when decoratedQueues changes
-      const courts = this.data.decoratedCourts || []
-      if (!courts.length) return
-      const result = courts.map(court => {
-        const q = decoratedQueues.find(x => x.courtId === court.courtId)
-        return { ...court, __hasAnyRow: !!(q && q.items && q.items.length > 0) }
-      })
-      this.setData({ decoratedCourts: result })
+      const rows = this._buildRows(this.properties.schedulePlan, decoratedQueues || [])
+      this.setData({ decoratedRows: rows })
     }
   },
 
@@ -70,7 +63,7 @@ Component({
           }
           // kind === 'match'
           const match = (matches || []).find(x => x.matchId === it.matchId)
-          const rowKind = match && match.matchKind === 'extra' ? 'extra' : 'bracket'
+          const rowKind = match && match.matchKind ? match.matchKind : 'bracket'
           const p1 = match && match.player1
           const p2 = match && match.player2
           const player1Label = p1
@@ -85,6 +78,67 @@ Component({
       })
     },
 
+    _decorateCourts(schedulePlan) {
+      return ((schedulePlan && schedulePlan.courts) || []).map(court => ({
+        ...court,
+        slots: [...(court.slots || [])].sort(),
+        slotsLabel: (court.slots || []).length + ' 个时段'
+      }))
+    },
+
+    _buildRows(schedulePlan, decoratedQueues) {
+      const courts = this._decorateCourts(schedulePlan)
+      const slotKeys = []
+      const seen = new Set()
+      courts.forEach(court => {
+        ;(court.slots || []).forEach(slot => {
+          if (!seen.has(slot)) {
+            seen.add(slot)
+            slotKeys.push(slot)
+          }
+        })
+      })
+      slotKeys.sort()
+
+      const maxOverflow = courts.reduce((max, court) => {
+        const q = (decoratedQueues || []).find(x => x.courtId === court.courtId)
+        const extra = Math.max(0, ((q && q.items) || []).length - (court.slots || []).length)
+        return Math.max(max, extra)
+      }, 0)
+      for (let i = 0; i < maxOverflow; i++) slotKeys.push(`__overflow_${i}`)
+
+      return slotKeys.map(slotKey => ({
+        slotKey,
+        slotLabel: slotKey.indexOf('__overflow_') === 0 ? `加场 ${parseInt(slotKey.replace('__overflow_', ''), 10) + 1}` : formatSlotLabel(slotKey),
+        cells: courts.map(court => this._cellFor(court, slotKey, decoratedQueues || []))
+      }))
+    },
+
+    _cellFor(court, slotKey, decoratedQueues) {
+      const q = decoratedQueues.find(x => x.courtId === court.courtId)
+      const slots = court.slots || []
+      const isOverflow = slotKey.indexOf('__overflow_') === 0
+      const slotIndex = isOverflow
+        ? slots.length + parseInt(slotKey.replace('__overflow_', ''), 10)
+        : slots.indexOf(slotKey)
+
+      if (slotIndex < 0) {
+        return { courtId: court.courtId, available: false, __rowKind: 'empty', slotIndex: -1 }
+      }
+
+      const item = q && q.items ? q.items.find(it => it.order === slotIndex) : null
+      if (!item) {
+        return { courtId: court.courtId, available: true, __rowKind: 'empty', slotIndex }
+      }
+
+      return {
+        ...item,
+        courtId: court.courtId,
+        available: true,
+        slotIndex
+      }
+    },
+
     onRegenerate() {
       wx.showModal({
         title: '重新随机安排？',
@@ -96,6 +150,7 @@ Component({
     onTapItem(e) {
       // 长按 → actionsheet
       const { courtId, matchId, kind } = e.currentTarget.dataset
+      if (!matchId) return
       const itemList = ['上移', '下移', '移到其他场地']
       if (kind !== 'bracket') itemList.push('删除')
       wx.showActionSheet({
@@ -159,10 +214,56 @@ Component({
       const { memberIds } = e.detail
       const ctx = this.data.pickerCtx
       if (!ctx) return
-      if (ctx.kind === 'switchPlayer') this.applySwitch(ctx, memberIds[0])
-      if (ctx.kind === 'addFreePlay')  this.applyAddFreePlay(ctx, memberIds)
-      if (ctx.kind === 'addExtra')     this.applyAddExtra(ctx, memberIds)
+      if (ctx.kind === 'switchPlayer')  this.applySwitch(ctx, memberIds[0])
+      if (ctx.kind === 'addFreePlay')   this.applyAddFreePlay(ctx, memberIds)
+      if (ctx.kind === 'addExtra')      this.applyAddExtra(ctx, memberIds)
+      if (ctx.kind === 'addMatchAt')    this.applyAddMatchAt(ctx, memberIds)
       this.setData({ pickerShow: false, pickerCtx: null })
+    },
+
+    onTapEmpty(e) {
+      const courtId = e.currentTarget.dataset.courtId
+      const slotIndex = parseInt(e.currentTarget.dataset.slotIndex, 10)
+      if (isNaN(slotIndex) || slotIndex < 0) return
+      wx.showActionSheet({
+        itemList: ['添加对局', '添加自由拉球'],
+        success: ({ tapIndex }) => {
+          if (tapIndex === 0) {
+            const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
+            this.setData({
+              pickerShow: true,
+              pickerCtx: { kind: 'addMatchAt', courtId, slotIndex },
+              pickerRequiredCount: isDoubles ? 4 : 2,
+              pickerExclude: [],
+              pickerMembers: this.properties.members || [],
+              pickerTitle: '选择对局球员'
+            })
+          } else if (tapIndex === 1) {
+            this.applyAddFreePlayAt(courtId, slotIndex)
+          }
+        }
+      })
+    },
+
+    applyAddFreePlayAt(courtId, slotIndex) {
+      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const q = queues.find(x => x.courtId === courtId); if (!q) return
+      // 不能与已有 order 冲突
+      if ((q.items || []).some(it => it.order === slotIndex)) return
+      const fpId = `fp_${courtId}_${Date.now()}`
+      q.items.push({ kind: 'freePlay', matchId: fpId, freePlayId: fpId, order: slotIndex })
+      const freePlays = [...this.data.freePlays, { _id: fpId, courtId, queueOrder: slotIndex, playerIds: [] }]
+      this.emitChange({ queues, freePlays })
+    },
+
+    applyAddMatchAt({ courtId, slotIndex }, memberIds) {
+      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const q = queues.find(x => x.courtId === courtId); if (!q) return
+      if ((q.items || []).some(it => it.order === slotIndex)) return
+      const newId = `match_extra_${Date.now()}`
+      q.items.push({ kind: 'match', matchId: newId, sourceMatchId: newId, order: slotIndex })
+      const matches = [...this.data.matches, this.assemblePlayerObjects(memberIds, newId)]
+      this.emitChange({ queues, matches })
     },
 
     onPickerCancel() { this.setData({ pickerShow: false, pickerCtx: null }) },
@@ -214,7 +315,7 @@ Component({
       q.items.forEach((it, i) => { it.order = i })
       const patch = { queues }
       if (kind === 'freePlay') patch.freePlays = this.data.freePlays.filter(fp => fp._id !== matchId)
-      if (kind === 'extra')    patch.matches   = this.data.matches.filter(m => m.matchId !== matchId)
+      if (kind === 'extra' || kind === 'regularRound') patch.matches = this.data.matches.filter(m => m.matchId !== matchId)
       this.emitChange(patch)
     },
 
@@ -309,3 +410,8 @@ Component({
     }
   }
 })
+
+function formatSlotLabel(slot) {
+  const m = /T(\d{2}):(\d{2})/.exec(slot || '')
+  return m ? `${m[1]}:${m[2]}` : String(slot || '')
+}

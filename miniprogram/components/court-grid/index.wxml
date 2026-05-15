@@ -1,26 +1,43 @@
-<view class="timetable" wx:if="{{availableCourts.length > 0}}">
-  <view class="row header">
-    <view class="time-col">时间</view>
-    <view wx:for="{{availableCourts}}" wx:key="courtId" class="court-col head">
-      <text class="court-name">{{item.name}}</text>
-      <text wx:if="{{item.location}}" class="court-loc">{{item.location}}</text>
+<view wx:if="{{availableCourts.length === 0}}" class="empty">暂无可选球场，请先「+ 添加球场」</view>
+
+<view wx:else class="court-grid-wrapper">
+  <view class="chip-row">
+    <view
+      wx:for="{{courtChips}}"
+      wx:key="courtId"
+      class="court-chip {{item.selected ? 'selected' : ''}}"
+      bindtap="onToggleCourt"
+      data-court-id="{{item.courtId}}"
+    >
+      <text class="chip-name">{{item.name}}</text>
+      <text wx:if="{{item.location}}" class="chip-loc">{{item.location}}</text>
     </view>
   </view>
-  <view wx:for="{{rows}}" wx:for-item="row" wx:key="hour" class="row">
-    <view class="time-col">{{row.hour}}</view>
-    <view
-      wx:for="{{row.cells}}"
-      wx:for-item="cell"
-      wx:key="courtId"
-      class="court-col"
-    >
+
+  <view wx:if="{{selectedCourts.length === 0}}" class="empty">请先勾选要使用的球场</view>
+
+  <view wx:else class="timetable">
+    <view class="row header">
+      <view class="time-col">时间</view>
+      <view wx:for="{{selectedCourts}}" wx:key="courtId" class="court-col head">
+        <text class="court-name">{{item.name}}</text>
+      </view>
+    </view>
+    <view wx:for="{{rows}}" wx:for-item="row" wx:key="hour" class="row">
+      <view class="time-col">{{row.hour}}</view>
       <view
-        class="cell {{cell.picked ? 'picked' : ''}}"
-        bindtap="onCellTap"
-        data-court-id="{{cell.courtId}}"
-        data-hour="{{row.hour}}"
-      ></view>
+        wx:for="{{row.cells}}"
+        wx:for-item="cell"
+        wx:key="courtId"
+        class="court-col"
+      >
+        <view
+          class="cell {{cell.picked ? 'picked' : ''}}"
+          bindtap="onCellTap"
+          data-court-id="{{cell.courtId}}"
+          data-hour="{{row.hour}}"
+        ></view>
+      </view>
     </view>
   </view>
 </view>
-<view wx:else class="empty">暂无可选球场，请先「+ 添加球场」</view>
