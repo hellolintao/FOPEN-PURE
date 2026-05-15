@@ -302,6 +302,18 @@ function buildQueryCtx(submitter) {
         if (!ids.length) return []
         return (await db.collection('members').where({ _id: _.in(ids) }).get()).data
       },
+      pagedFetchSubmitted: async () => pagedFetchSubmitted(),
+      listByTournament: async (tournamentId) => (await collection
+        .where({ tournamentId })
+        .orderBy('round', 'asc')
+        .orderBy('position', 'asc')
+        .orderBy('createTime', 'asc')
+        .limit(500)
+        .get()).data,
+      listByPlayerNotConfirmed: async (memberId) => (await collection.where({
+        playerIds: _.in([memberId]),
+        resultStatus: _.neq('confirmed'),
+      }).orderBy('round', 'asc').limit(200).get()).data,
     },
   }
 }
@@ -733,54 +745,39 @@ exports.main = async (event, context) => {
       }
     }
     case 'submittedQueue': {
-      const submitter = await resolveSubmitter()
-      if (!submitter || !submitter.isAdmin) return fail('UNAUTHORIZED', '需要管理员权限')
+      const { submittedQueue } = require('./lib/handlers/query')
       try {
-        const rows = await pagedFetchSubmitted()
-        if (rows.length === 0) return ok({ items: [] })
-        const grouped = {}
-        for (const r of rows) grouped[r.tournamentId] = (grouped[r.tournamentId] || 0) + 1
-        const tournamentIds = Object.keys(grouped)
-        const tournaments = (await db.collection('tournaments').where({ _id: _.in(tournamentIds) }).get()).data
-        const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
-        return ok({
-          items: tournamentIds.map(tid => ({
-            tournamentId: tid,
-            tournamentName: tMap[tid] && tMap[tid].name ? tMap[tid].name : tid,
-            submittedCount: grouped[tid]
-          }))
-        })
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) return fail('UNAUTHORIZED', '需要管理员权限')
+        const ctx = buildQueryCtx(submitter)
+        const data = await submittedQueue(ctx, event)
+        return ok(data)
       } catch (e) {
-        return fail('INTERNAL', e.message)
+        return fail(e.code || 'INTERNAL', e.message)
       }
     }
 
     case 'listByTournament': {
+      const { listByTournament } = require('./lib/handlers/query')
       try {
-        if (!event.tournamentId) return fail('INVALID_ARG', 'tournamentId 必填')
-        const results = (await collection
-          .where({ tournamentId: event.tournamentId })
-          .orderBy('round', 'asc')
-          .orderBy('position', 'asc')
-          .orderBy('createTime', 'asc')
-          .limit(500)
-          .get()).data
-        return ok({ results })
+        const submitter = await resolveSubmitter()
+        const ctx = buildQueryCtx(submitter || { isAdmin: false })
+        const data = await listByTournament(ctx, event)
+        return ok(data)
       } catch (e) {
-        return fail('INTERNAL', e.message)
+        return fail(e.code || 'INTERNAL', e.message)
       }
     }
 
     case 'listByPlayer': {
+      const { listByPlayer } = require('./lib/handlers/query')
       try {
-        if (!event.memberId) return fail('INVALID_ARG', 'memberId 必填')
-        const matches = (await collection.where({
-          playerIds: _.in([event.memberId]),
-          resultStatus: _.neq('confirmed')
-        }).orderBy('round', 'asc').limit(200).get()).data
-        return ok({ matches })
+        const submitter = await resolveSubmitter()
+        const ctx = buildQueryCtx(submitter || { isAdmin: false })
+        const data = await listByPlayer(ctx, event)
+        return ok(data)
       } catch (e) {
-        return fail('INTERNAL', e.message)
+        return fail(e.code || 'INTERNAL', e.message)
       }
     }
 

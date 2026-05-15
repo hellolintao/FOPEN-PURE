@@ -1,12 +1,44 @@
 // query handlers: submittedQueue / listByTournament / listByPlayer / pendingReviewItems
 async function submittedQueue(ctx, event) {
-  throw new Error('NOT_IMPLEMENTED')
+  if (!ctx.isAdmin) {
+    const err = new Error('需要管理员权限')
+    err.code = 'UNAUTHORIZED'
+    throw err
+  }
+  const rows = await ctx.db.pagedFetchSubmitted()
+  if (rows.length === 0) return { items: [] }
+  const grouped = {}
+  for (const r of rows) grouped[r.tournamentId] = (grouped[r.tournamentId] || 0) + 1
+  const tournamentIds = Object.keys(grouped)
+  const tournaments = await ctx.db.getTournamentsByIds(tournamentIds)
+  const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
+  return {
+    items: tournamentIds.map(tid => ({
+      tournamentId: tid,
+      tournamentName: tMap[tid] && tMap[tid].name ? tMap[tid].name : tid,
+      submittedCount: grouped[tid]
+    }))
+  }
 }
+
 async function listByTournament(ctx, event) {
-  throw new Error('NOT_IMPLEMENTED')
+  if (!event.tournamentId) {
+    const err = new Error('tournamentId 必填')
+    err.code = 'INVALID_ARG'
+    throw err
+  }
+  const results = await ctx.db.listByTournament(event.tournamentId)
+  return { results }
 }
+
 async function listByPlayer(ctx, event) {
-  throw new Error('NOT_IMPLEMENTED')
+  if (!event.memberId) {
+    const err = new Error('memberId 必填')
+    err.code = 'INVALID_ARG'
+    throw err
+  }
+  const matches = await ctx.db.listByPlayerNotConfirmed(event.memberId)
+  return { matches }
 }
 
 async function pendingReviewItems(ctx, payload) {
