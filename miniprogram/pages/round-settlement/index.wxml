@@ -1,65 +1,92 @@
-<view class="container">
-  <view class="page-header">
-    <view class="header-item">
-      <text class="header-label">赛季：</text>
-      <text class="header-value">{{seasonName || '-'}}</text>
+<view class="settle-page">
+
+  <!-- HEAD -->
+  <view class="settle-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">ROUND {{round < 10 ? '0' : ''}}{{round}} · 结算</text>
     </view>
-    <view class="header-item">
-      <text class="header-label">赛事：</text>
-      <text class="header-value">{{tournament.name || '-'}}</text>
+    <view class="head-titles">
+      <text class="head-title-zh">结算</text>
+      <text class="head-title-en num">SETTLEMENT</text>
     </view>
-    <view class="header-item">
-      <text class="header-label">轮次：</text>
-      <text class="header-value">第{{round}}轮</text>
+    <text class="head-tournament">{{tournament.name || '—'}}</text>
+
+    <view class="head-meta">
+      <view class="head-meta-block">
+        <text class="head-meta-label">SEASON</text>
+        <text class="head-meta-val">{{seasonName || '—'}}</text>
+      </view>
+      <view wx:if="{{tournament.pointsRules}}" class="head-meta-block">
+        <text class="head-meta-label">RULES</text>
+        <text class="head-meta-val num">W +{{tournament.pointsRules.win}} / L +{{tournament.pointsRules.loss}}</text>
+      </view>
     </view>
-    <view class="header-item points-rules">
-      <text class="header-label">积分规则：</text>
-      <view class="points-rules-content">
-        <view class="rule-base">
-          <text>胜{{tournament.pointsRules.win}} / 负{{tournament.pointsRules.loss}}</text>
-        </view>
-        <view class="bonus-rules">
-          <text wx:for="{{tournament.pointsRules.bonusByRound}}" wx:for-item="bonus" wx:for-index="roundNum" wx:key="roundNum" class="bonus-tag">
-            R{{roundNum}}:{{bonus}}
-          </text>
-        </view>
+
+    <view wx:if="{{tournament.pointsRules && tournament.pointsRules.bonusByRound}}" class="bonus-row">
+      <text class="tape tape-lime">BONUS · 轮次奖励</text>
+      <view class="bonus-tags">
+        <text
+          wx:for="{{tournament.pointsRules.bonusByRound}}"
+          wx:for-item="bonus"
+          wx:for-index="roundNum"
+          wx:key="roundNum"
+          class="bonus-tag num">R{{roundNum}}+{{bonus}}</text>
       </view>
     </view>
   </view>
-  <view class="match-list">
-    <view class="match-card" wx:for="{{matchRecords}}" wx:key="_id">
-      <view class="match-header">
-        <text class="players">{{item.players[0].name}} Vs {{item.players[1].name}}</text>
-        <text class="match-time">{{item.matchTime}}</text>
+
+  <!-- MATCH CARDS -->
+  <view wx:if="{{matchRecords.length === 0}}" class="settle-empty">
+    <text class="tape">本轮暂无结算记录</text>
+  </view>
+
+  <view wx:for="{{matchRecords}}" wx:key="_id" class="match-card anim-stage-rise">
+    <view class="match-top">
+      <view class="match-top-left">
+        <text class="match-date num">{{item.matchTime || '—'}}</text>
       </view>
-      <view class="match-body">
-        <view class="score-detail">
-          <text class="score-label">比分：</text>
-          <text class="score-value">{{item.score}}</text>
-          <text class="duration-label">比赛时间：</text>
-          <text class="duration-value">{{item.scoreDetail.duration ? item.scoreDetail.duration + '分钟' : '-'}}</text>
+      <view class="match-top-right">
+        <text class="match-score num">{{item.score || '—'}}</text>
+        <text wx:if="{{item.scoreDetail.duration}}" class="match-duration num">{{item.scoreDetail.duration}} MIN</text>
+      </view>
+    </view>
+
+    <view class="match-body">
+      <!-- WINNER -->
+      <view class="settle-side settle-side-win anim-reveal-pop">
+        <view class="side-head">
+          <text class="tape tape-lime">WINNER · 胜</text>
         </view>
-        <view class="winner-info">
-          <text class="result-label">获胜：</text>
-          <text class="result-value winner">{{item.players[0].isWinner ? item.players[0].name : item.players[1].name}}</text>
-        </view>
-        <view class="loser-info">
-          <text class="result-label">落败：</text>
-          <text class="result-value loser">{{item.players[0].isWinner ? item.players[1].name : item.players[0].name}}</text>
-        </view>
-        <view class="points-section">
-          <view class="points-item winner">
-            <text class="points-player">{{item.players[0].isWinner ? item.players[0].name : item.players[1].name}}</text>
-            <text class="points-value">+{{item.pointsAwarded.winner.total}}</text>
-            <text class="points-detail">(基础{{item.pointsAwarded.winner.basePoints}} + 轮次奖励{{item.pointsAwarded.winner.bonusPoints}})</text>
-          </view>
-          <view class="points-item loser">
-            <text class="points-player">{{item.players[0].isWinner ? item.players[1].name : item.players[0].name}}</text>
-            <text class="points-value">+{{item.pointsAwarded.loser.total}}</text>
-            <text class="points-detail">(基础{{item.pointsAwarded.loser.basePoints}})</text>
+        <view class="side-row">
+          <text class="side-name">{{item.players[0].isWinner ? item.players[0].name : item.players[1].name}}</text>
+          <view class="side-points">
+            <text class="side-points-num num">+{{item.pointsAwarded.winner.total}}</text>
+            <text class="side-points-label">PTS</text>
           </view>
         </view>
+        <text class="side-detail">{{item.pointsAwarded.winner.basePoints}} 基础 + {{item.pointsAwarded.winner.bonusPoints}} 轮次奖励</text>
+      </view>
+
+      <!-- DIVIDER -->
+      <view class="match-divider">
+        <text class="match-divider-text num">VS</text>
+      </view>
+
+      <!-- LOSER -->
+      <view class="settle-side settle-side-loss">
+        <view class="side-head">
+          <text class="tape tape-ghost">LOSS · 负</text>
+        </view>
+        <view class="side-row">
+          <text class="side-name">{{item.players[0].isWinner ? item.players[1].name : item.players[0].name}}</text>
+          <view class="side-points side-points-muted">
+            <text class="side-points-num num">+{{item.pointsAwarded.loser.total}}</text>
+            <text class="side-points-label">PTS</text>
+          </view>
+        </view>
+        <text class="side-detail">{{item.pointsAwarded.loser.basePoints}} 基础</text>
       </view>
     </view>
   </view>
+
 </view>
