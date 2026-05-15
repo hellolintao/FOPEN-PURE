@@ -1,3 +1,6 @@
 {
-  "component": true
+  "component": true,
+  "usingComponents": {
+    "number-counter": "/components/number-counter/index"
+  }
 }

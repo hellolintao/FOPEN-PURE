@@ -7,7 +7,6 @@ Page({
     editSeason: { _id: '', name: '', startDate: '', endDate: '' }
   },
   onShow() {
-    console.log('onShow')
     this.getSeasonList()
   },
   getSeasonList() {

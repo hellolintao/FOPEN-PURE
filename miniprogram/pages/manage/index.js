@@ -66,7 +66,6 @@ Page({
   },
 
   onSeasonManage() {
-    console.log('跳转赛季管理');
     wx.navigateTo({ url: '/pages/season-manage/index' });
   },
 

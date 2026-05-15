@@ -4,6 +4,9 @@
   "private": true,
   "description": "Local maintenance scripts for FOPEN-PURE",
   "license": "UNLICENSED",
+  "scripts": {
+    "audit:polish-data": "node audit-polish-data.js"
+  },
   "dependencies": {
     "@cloudbase/node-sdk": "^2.10.0"
   }

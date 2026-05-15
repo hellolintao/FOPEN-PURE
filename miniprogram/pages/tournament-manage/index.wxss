@@ -297,17 +297,24 @@
 }
 
 .queue-block {
-  background: #fff7ed;
-  padding: 24rpx;
-  border-radius: 16rpx;
+  background: var(--color-bg-2);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
   margin: 16rpx;
+  box-shadow: var(--shadow-card);
 }
 .queue-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16rpx 0;
-  border-bottom: 1rpx dashed #fed7aa;
+  border-bottom: 1rpx dashed var(--color-border);
+  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.queue-row:active {
+  transform: scale(0.99);
+  opacity: 0.9;
 }
 .queue-row:last-child {
   border-bottom: 0;
@@ -322,5 +329,5 @@
 }
 .queue-arrow {
   font-size: 36rpx;
-  color: #ea580c;
+  color: var(--color-success);
 }

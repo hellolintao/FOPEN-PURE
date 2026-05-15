@@ -3,27 +3,41 @@
     <text class="text-h1">RANKINGS</text>
   </view>
 
-  <view class="tabs">
-    <view
-      class="chip {{activeTab === 'singles' ? 'chip-active' : ''}}"
-      data-tab="singles" bindtap="onTabChange"
-    >SINGLES</view>
-    <view
-      class="chip {{activeTab === 'doubles' ? 'chip-active' : ''}}"
-      data-tab="doubles" bindtap="onTabChange"
-    >DOUBLES</view>
+  <chip-tab
+    value="{{activeTab}}"
+    options="{{rankTabOptions}}"
+    bindchange="onTabChange"
+  />
+
+  <view wx:if="{{weeklyStar}}" class="card-hero star-card anim-fade-up">
+    <brush-stroke-bg></brush-stroke-bg>
+    <view class="star-content">
+      <text class="text-label">WEEKLY STAR · {{weeklyStarWeekRange}}</text>
+      <view class="star-row">
+        <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+        <view class="star-copy">
+          <text class="text-h2">{{weeklyStar.name}}</text>
+          <text class="text-meta">本周积分 {{weeklyStar.points}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
-  <view wx:if="{{rankList[0]}}" class="card-hero">
-    <text class="text-label">RANK #1</text>
-    <text class="text-h2">{{rankList[0].name}}</text>
-    <text class="text-meta">{{rankList[0].totalPoints}} 分</text>
+  <view wx:elif="{{rankList[0]}}" class="card-hero star-card anim-fade-up">
+    <brush-stroke-bg></brush-stroke-bg>
+    <view class="star-content">
+      <text class="text-label">RANK #1</text>
+      <text class="text-h2">{{rankList[0].name}}</text>
+      <text class="text-meta">{{rankList[0].totalPoints}} 分</text>
+    </view>
   </view>
 
-  <view class="list">
+  <skeleton-loader wx:if="{{loading}}" rows="{{6}}" />
+
+  <view wx:else class="list">
     <rank-row
       wx:for="{{rankList}}" wx:key="_id"
-      wx:if="{{index > 0}}"
+      wx:if="{{weeklyStar || index > 0}}"
       rank="{{index + 1}}"
       name="{{item.name}}"
       avatar-url="{{item.avatarUrl}}"
@@ -34,7 +48,7 @@
     />
   </view>
 
-  <view wx:if="{{rankList.length === 0}}" class="empty-state">
+  <view wx:if="{{!loading && rankList.length === 0}}" class="empty-state">
     <text class="text-meta">暂无排名数据</text>
   </view>
 </view>

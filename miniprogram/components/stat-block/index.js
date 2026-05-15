@@ -1,6 +1,7 @@
 Component({
   properties: {
-    value: String,
-    label: String
+    value: { type: null },
+    label: String,
+    suffix: { type: String, value: '' }
   }
-});
+})

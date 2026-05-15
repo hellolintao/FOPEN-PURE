@@ -3,7 +3,8 @@ Page({
     playerId: '',
     player: null,
     stats: null,
-    recent: []
+    recent: [],
+    loading: false
   },
 
   async onLoad(query) {
@@ -17,7 +18,7 @@ Page({
   },
 
   async loadAll(playerId) {
-    wx.showLoading({ title: '加载中', mask: true });
+    this.setData({ loading: true });
     try {
       const [playerRes, statsRes] = await Promise.all([
         wx.cloud.callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
@@ -32,7 +33,7 @@ Page({
       console.error('[player-detail] loadAll error', err);
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 });
     } finally {
-      wx.hideLoading();
+      this.setData({ loading: false });
     }
   }
 });

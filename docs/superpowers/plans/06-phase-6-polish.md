@@ -1,53 +1,307 @@
-# Phase 6 · 每周之星 + 视觉打磨 + 微交互 · Implementation Plan
+# Phase 6 · Post-Phase-8 Polish Implementation Plan
 
-> **执行说明:** 按本文 checkbox（`- [ ]`）逐项推进。此 Phase 多为视觉与微交互打磨，建议连续执行并做整体验收。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让产品到达上线水准——每周之星定时任务 + 全局微交互 + 装饰元素 + 各种小细节修补。
+**Goal:** 在 Phase 7/8 已完成创建、排程、录分、积分后，补齐上线前体验：每周之星、排行榜高光、全局动效、加载/空状态、视觉 token 收敛、关键流程手动验收。
 
-**Architecture:** 新增 `weekly-star` 定时云函数（每周一 0:30 触发）。给 rank 页接入真实每周之星数据。给所有 tab 切换、CTA 点击、stat 数字加微交互。把 brush-stroke SVG 嵌入到首页 / 排行 hero / 玩家详情 hero。
+**Architecture:** 不再引入旧版 `result-reconcile/result-submit` 路线；录分与积分以现有 `match-results`、`points-engine`、`tournament-score` 为准。新增独立 `weekly-star` 云函数，按 `match_results.pointsAwarded.entries` 和 `tournament_points` 计算每周积分冠军。前端只做轻量组件与样式增强，优先复用现有 `stat-block/rank-row/brush-stroke-bg/score-row`。
 
-**Tech Stack:** 微信小程序云开发定时触发器 + WXSS 动画
+**Tech Stack:** 微信小程序原生组件 + WXSS 动效 + 云开发定时触发器 + Node.js/Jest。
 
-**Spec 引用:** §4.5 微交互、§6.2 weekly-star、§12 第 6 期
-
-**前置条件:** Phase 1-5 全部完成
-
-**推荐执行方式:** Inline。多为视觉小调整，一个对话内连贯完成更顺。
+**Current Baseline (2026-05-15):**
+- `PROGRESS.md` 标记 6/6 已完成，且 Phase 5/6 旧方案已由 Phase 7/8 覆盖。
+- 已存在：`cloudfunctions/points-engine`、`cloudfunctions/match-results`、`miniprogram/pages/tournament-score`、`miniprogram/components/score-row`、`miniprogram/components/brush-stroke-bg`。
+- 不存在：`cloudfunctions/weekly-star`、`miniprogram/components/chip-tab`、`miniprogram/components/number-counter`、`miniprogram/components/skeleton-loader`、`miniprogram/styles/animations.wxss`。
+- 旧 Phase 6 里按 `pointsAwarded.winner.total` 聚合的写法已过期；当前积分结构是 `{ pointsAwarded: { source, entries: [{ memberId, points, role }] } }`。
+- 如果小程序里排行榜、用户详情、用户数据为空，先执行 Task 0；后续 UI polish 不应建立在“数据自然存在”的假设上。
 
 ---
 
 ## File Structure
 
 ```
-cloudfunctions/weekly-star/                  (新建)
-├── index.js
-├── config.json                              - 定时触发配置
-└── package.json
+cloudfunctions/weekly-star/                         (新建)
+├── index.js                                        云函数入口：compute/latest 两个 action + timer 默认 compute
+├── config.json                                     每周一 00:30 定时触发
+├── package.json                                    wx-server-sdk + jest
+└── lib/
+    ├── week-window.js                              周区间与 weekId 纯函数
+    ├── weekly-star.js                              聚合 match_results + tournament_points
+    └── __tests__/
+        ├── week-window.test.js
+        └── weekly-star.test.js
+
+scripts/
+└── audit-polish-data.js                            新建：只读检查 members / match_results / tournament_points / rankable users
 
 miniprogram/
-├── pages/rank/index.{js,wxml}               (改 - 接入真实每周之星)
-├── pages/home/index.wxml                    (改 - hero 加 brush-stroke)
-├── pages/player-detail/index.wxml           (改 - hero 加 brush-stroke)
+├── app.json                                        统一 tabBar/window 颜色到 Phase 1 tokens
+├── app.wxss                                        import animations.wxss
+├── styles/
+│   ├── tokens.wxss                                 补 token alias，移除负字距
+│   ├── utilities.wxss                              CTA/tab/card 动效与 token 收敛
+│   └── animations.wxss                             新建全局动效类
 ├── components/
-│   ├── chip-tab/index.{js,wxml,wxss,json}   (新建 - 带滑动指示)
-│   └── number-counter/index.{js,wxml,wxss}  (新建 - 数字滚动动画)
-└── styles/animations.wxss                   (新建 - 全局动画 keyframes)
+│   ├── chip-tab/index.{js,wxml,wxss,json}          新建：单/双打 tab
+│   ├── number-counter/index.{js,wxml,wxss,json}    新建：数字入场动画，非数字 fallback
+│   ├── skeleton-loader/index.{js,wxml,wxss,json}   新建：列表/卡片骨架屏
+│   └── stat-block/index.{js,wxml,wxss,json}        改：接入 number-counter
+└── pages/
+    ├── rank/index.{js,wxml,wxss,json}              改：真实每周之星、chip-tab、loading/empty
+    ├── home/index.{js,wxml,wxss,json}              改：loading/empty、stat 数字动效
+    ├── player-detail/index.{js,wxml,wxss,json}     改：hero brush stroke、loading/empty、recent copy
+    ├── tournament-score/index.{wxml,wxss}          改：token 收敛、触摸态、loading/empty
+    ├── tournament-manage/index.{wxml,wxss}         改：待确认队列视觉 polish
+    └── my-match/index.{wxml,wxss}                  改：可录分区块视觉 polish
+
+docs/superpowers/plans/PROGRESS.md                  最后更新 Phase 6 状态与执行日志
 ```
 
 ---
 
-## Task 1 · weekly-star 云函数（定时触发）
+## Task 0 · 数据可用性核查（排行 / 用户详情 / 用户数据）
 
 **Files:**
-- Create: `cloudfunctions/weekly-star/index.js`
-- Create: `cloudfunctions/weekly-star/config.json`
+- Create: `scripts/audit-polish-data.js`
+- Modify: `scripts/package.json`
+
+- [ ] **Step 0.1 确认 scripts 依赖存在**
+
+`scripts/package.json` 已有 `@cloudbase/node-sdk`。如果本地没安装：
+
+```bash
+cd scripts
+npm install
+```
+
+- [ ] **Step 0.2 新建只读数据审计脚本**
+
+`scripts/audit-polish-data.js`：
+
+```js
+#!/usr/bin/env node
+
+const tcb = require('@cloudbase/node-sdk')
+
+const PAGE_SIZE = 1000
+
+async function main() {
+  const env = process.env.FOPEN_CLOUD_ENV
+  const seasonId = process.env.FOPEN_SEASON_ID || `s${new Date().getFullYear()}`
+
+  if (!env) {
+    console.error('[abort] FOPEN_CLOUD_ENV is required')
+    console.error('usage: FOPEN_CLOUD_ENV=<envId> FOPEN_SEASON_ID=s2026 node scripts/audit-polish-data.js')
+    process.exit(1)
+  }
+
+  const app = tcb.init({ env })
+  const db = app.database()
+
+  const members = await safeFetchAll(db, 'members', {})
+  const matchResults = await safeFetchAll(db, 'match_results', { seasonId })
+  const tournamentPoints = await safeFetchAll(db, 'tournament_points', { seasonId })
+
+  const activeMembers = members.filter(m => m.status !== 'inactive')
+  const displayReadyMembers = activeMembers.filter(m => m._id && m.name)
+  const confirmedMatches = matchResults.filter(r => r.resultStatus === 'confirmed')
+  const matchesWithEntries = confirmedMatches.filter(r => {
+    const entries = r.pointsAwarded && r.pointsAwarded.entries
+    return Array.isArray(entries) && entries.length > 0
+  })
+
+  const rankable = aggregateRankableMembers(matchesWithEntries, tournamentPoints)
+  const missingMemberRows = Array.from(rankable.keys()).filter(id => !members.find(m => m._id === id))
+  const noNameRows = Array.from(rankable.keys()).filter(id => {
+    const m = members.find(x => x._id === id)
+    return m && !m.name
+  })
+
+  const report = {
+    env,
+    seasonId,
+    members: members.length,
+    activeMembers: activeMembers.length,
+    displayReadyMembers: displayReadyMembers.length,
+    matchResults: matchResults.length,
+    confirmedMatches: confirmedMatches.length,
+    matchesWithPointEntries: matchesWithEntries.length,
+    tournamentPoints: tournamentPoints.length,
+    rankableMembers: rankable.size,
+    missingMemberRows,
+    noNameRows,
+    topRankPreview: Array.from(rankable.entries())
+      .map(([memberId, points]) => ({ memberId, points, name: (members.find(m => m._id === memberId) || {}).name || '' }))
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 10)
+  }
+
+  console.log(JSON.stringify(report, null, 2))
+
+  const failures = []
+  if (displayReadyMembers.length < 2) failures.push('members display data is insufficient: need at least 2 members with _id/name')
+  if (matchesWithEntries.length < 1 && tournamentPoints.length < 1) failures.push('rank source is empty: need confirmed match_results.pointsAwarded.entries or tournament_points')
+  if (rankable.size < 1) failures.push('rankable member count is 0')
+  if (missingMemberRows.length > 0) failures.push(`rank references missing members: ${missingMemberRows.join(', ')}`)
+  if (noNameRows.length > 0) failures.push(`rank references members without name: ${noNameRows.join(', ')}`)
+
+  if (failures.length > 0) {
+    console.error('\n[FAIL]')
+    failures.forEach(f => console.error(`- ${f}`))
+    process.exit(2)
+  }
+
+  console.log('\n[PASS] polish data is ready for rank, player-detail, and weekly-star.')
+}
+
+async function safeFetchAll(db, collectionName, filter) {
+  try {
+    const out = []
+    for (let skip = 0; skip < 100000; skip += PAGE_SIZE) {
+      const page = await db.collection(collectionName).where(filter).skip(skip).limit(PAGE_SIZE).get()
+      const rows = page.data || []
+      out.push(...rows)
+      if (rows.length < PAGE_SIZE) break
+    }
+    return out
+  } catch (err) {
+    const msg = `${err.code || ''} ${err.message || ''} ${err.errMsg || ''}`
+    if (/DATABASE_COLLECTION_NOT_EXIST|not exist|collection/i.test(msg)) return []
+    throw err
+  }
+}
+
+function aggregateRankableMembers(matches, tournamentPoints) {
+  const map = new Map()
+  for (const row of matches) {
+    const entries = (row.pointsAwarded && row.pointsAwarded.entries) || []
+    for (const e of entries) add(map, e.memberId, e.points)
+  }
+  for (const row of tournamentPoints) {
+    add(map, row.memberId, row.points)
+  }
+  return map
+}
+
+function add(map, memberId, points) {
+  if (!memberId) return
+  map.set(memberId, (map.get(memberId) || 0) + (Number(points) || 0))
+}
+
+main().catch(err => {
+  console.error(err)
+  process.exit(1)
+})
+```
+
+- [ ] **Step 0.3 package.json 加脚本入口**
+
+`scripts/package.json`：
+
+```json
+{
+  "scripts": {
+    "audit:polish-data": "node audit-polish-data.js"
+  }
+}
+```
+
+保留现有 `dependencies` 不动。
+
+- [ ] **Step 0.4 运行审计**
+
+```bash
+cd scripts
+FOPEN_CLOUD_ENV=<envId> FOPEN_SEASON_ID=s2026 npm run audit:polish-data
+```
+
+Expected PASS 示例：
+
+```text
+[PASS] polish data is ready for rank, player-detail, and weekly-star.
+```
+
+- [ ] **Step 0.5 如果审计失败，先补真实业务数据**
+
+不要写假排行数据。按现有 Phase 7/8 工作流补齐最小闭环：
+
+1. 管理员登录小程序。
+2. 进入 `tournament-manage` 创建一个当前赛季赛事，至少 2 个单打会员或 4 个双打会员。
+3. 完成 4 步 wizard，进入赛事详情。
+4. 进入 `tournament-score`，录入至少 1 场可确认比分。
+5. 管理员保存比赛结果，确保 `match_results.resultStatus='confirmed'` 且 `pointsAwarded.entries.length > 0`。
+6. 在 `scripts/` 目录重新跑 `npm run audit:polish-data`，直到 PASS。
+
+如果已经有 confirmed 比赛但没有积分，调用：
+
+```json
+{ "action": "recompute", "tournamentId": "<tournamentId>" }
+```
+
+在云开发控制台手动执行 `points-engine` 后，再跑审计。
+
+- [ ] **Step 0.6 手动验证当前三块数据**
+
+- 排行榜：`rankList.length > 0`，至少一个用户有 `name/totalPoints`。
+- 用户详情：从排行榜点任意用户进入，`player`、`stats`、`recent` 至少能正常渲染；没有 recent 时显示空状态而不是白屏。
+- 首页用户数据：当前登录会员有 `currentMember.name`；如果该会员没有比赛，stats 显示 0 而不是加载失败。
+
+- [ ] **Step 0.7 commit**
+
+```bash
+git add scripts/audit-polish-data.js scripts/package.json scripts/package-lock.json
+git commit -m "chore(scripts): audit rank and member data readiness"
+```
+
+---
+
+## Task 1 · weekly-star 纯函数与云函数
+
+**Files:**
 - Create: `cloudfunctions/weekly-star/package.json`
+- Create: `cloudfunctions/weekly-star/config.json`
+- Create: `cloudfunctions/weekly-star/index.js`
+- Create: `cloudfunctions/weekly-star/lib/week-window.js`
+- Create: `cloudfunctions/weekly-star/lib/weekly-star.js`
+- Create: `cloudfunctions/weekly-star/lib/__tests__/week-window.test.js`
+- Create: `cloudfunctions/weekly-star/lib/__tests__/weekly-star.test.js`
 
-- [ ] **Step 1.1 创建目录 + package.json**
+- [ ] **Step 1.1 创建目录和 package.json**
 
-同 Phase 1 模式，含 wx-server-sdk + jest。
+```bash
+mkdir -p cloudfunctions/weekly-star/lib/__tests__
+cd cloudfunctions/weekly-star
+npm init -y
+npm install wx-server-sdk@~3.0.4
+npm install --save-dev jest@^29.7.0
+```
 
-- [ ] **Step 1.2 config.json 定时配置**
+把 `cloudfunctions/weekly-star/package.json` 改成：
+
+```json
+{
+  "name": "weekly-star",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "wx-server-sdk": "~3.0.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  }
+}
+```
+
+- [ ] **Step 1.2 写定时触发配置**
+
+`cloudfunctions/weekly-star/config.json`：
 
 ```json
 {
@@ -61,112 +315,341 @@ miniprogram/
 }
 ```
 
-每周一 0:30 触发。
+- [ ] **Step 1.3 写失败测试：week-window**
 
-- [ ] **Step 1.3 index.js**
+`cloudfunctions/weekly-star/lib/__tests__/week-window.test.js`：
 
 ```js
-const cloud = require('wx-server-sdk');
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const db = cloud.database();
-const _ = db.command;
+const { getPreviousNaturalWeek, getWeekId } = require('../week-window')
 
-exports.main = async (event) => {
-  // 算"上一自然周"（周一 0 点 ~ 周日 23:59）
-  const now = new Date();
-  const todayDow = now.getDay() === 0 ? 7 : now.getDay();
-  const thisMonday = new Date(now);
-  thisMonday.setDate(now.getDate() - (todayDow - 1));
-  thisMonday.setHours(0, 0, 0, 0);
-  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
-  const lastSunday = new Date(thisMonday); lastSunday.setMilliseconds(-1);
+describe('week-window', () => {
+  test('周一 00:30 计算上一自然周', () => {
+    const now = new Date('2026-05-18T00:30:00+08:00')
+    const w = getPreviousNaturalWeek(now)
+    expect(w.weekStart).toBe('2026-05-11')
+    expect(w.weekEnd).toBe('2026-05-17')
+    expect(w.start.getHours()).toBe(0)
+    expect(w.end.getHours()).toBe(23)
+    expect(w.end.getMinutes()).toBe(59)
+  })
 
-  const weekId = getWeekId(lastMonday);
+  test('weekId 使用周一日期，避免跨年周序争议', () => {
+    expect(getWeekId(new Date('2026-05-11T00:00:00+08:00'))).toBe('ws_2026-05-11')
+  })
+})
+```
 
-  // 拉上周 confirmed match-results
-  const matches = (await db.collection('match_results')
-    .where({
-      resultStatus: 'confirmed',
-      confirmedAt: _.gte(lastMonday).and(_.lte(lastSunday))
-    })
-    .get()).data;
+- [ ] **Step 1.4 实现 week-window**
 
-  // 拉对应 tournaments 取 type
-  const tIds = Array.from(new Set(matches.map(m => m.tournamentId)));
-  const tournaments = tIds.length === 0 ? [] : (await db.collection('tournaments').where({ _id: _.in(tIds) }).get()).data;
-  const tMap = {}; tournaments.forEach(t => tMap[t._id] = t);
+`cloudfunctions/weekly-star/lib/week-window.js`：
 
-  // 按 type 聚合积分
-  const aggregateByType = (type) => {
-    const map = {};
-    matches.forEach(m => {
-      const t = tMap[m.tournamentId];
-      if (!t || t.type !== type) return;
-      const wId = m.winnerId, lId = m.loserId;
-      const wPts = m.pointsAwarded?.winner?.total || 0;
-      const lPts = m.pointsAwarded?.loser?.total || 0;
-      if (wId) { map[wId] = (map[wId] || 0) + wPts; }
-      if (lId) { map[lId] = (map[lId] || 0) + lPts; }
-    });
-    let topId = null, topPts = 0;
-    Object.entries(map).forEach(([id, pts]) => {
-      if (pts > topPts) { topId = id; topPts = pts; }
-    });
-    return topId ? { memberId: topId, points: topPts } : null;
-  };
+```js
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
 
-  const singlesStar = aggregateByType('singles');
-  const doublesStar = aggregateByType('doubles');
+function toDateKey(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
-  const memberIds = [singlesStar?.memberId, doublesStar?.memberId].filter(Boolean);
-  let memberMap = {};
-  if (memberIds.length > 0) {
-    const ms = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data;
-    ms.forEach(m => { memberMap[m._id] = m; });
+function startOfLocalDay(d) {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function getPreviousNaturalWeek(now = new Date()) {
+  const today = startOfLocalDay(now)
+  const dow = today.getDay() === 0 ? 7 : today.getDay()
+  const thisMonday = new Date(today)
+  thisMonday.setDate(today.getDate() - (dow - 1))
+
+  const start = new Date(thisMonday)
+  start.setDate(thisMonday.getDate() - 7)
+
+  const end = new Date(thisMonday)
+  end.setMilliseconds(-1)
+
+  return {
+    start,
+    end,
+    weekStart: toDateKey(start),
+    weekEnd: toDateKey(end),
+    weekId: getWeekId(start)
   }
-
-  const fillName = (star) => {
-    if (!star) return null;
-    const m = memberMap[star.memberId];
-    return { ...star, name: m?.name || '', avatarUrl: m?.avatarUrl || '' };
-  };
-
-  const doc = {
-    _id: weekId,
-    weekStart: lastMonday.toISOString().slice(0, 10),
-    weekEnd: lastSunday.toISOString().slice(0, 10),
-    singlesStar: fillName(singlesStar),
-    doublesStar: fillName(doublesStar),
-    computedAt: db.serverDate()
-  };
-
-  // upsert
-  try { await db.collection('weekly_stars').add({ data: doc }); }
-  catch (e) { await db.collection('weekly_stars').doc(weekId).update({ data: doc }); }
-
-  return { success: true, data: doc };
-};
+}
 
 function getWeekId(mondayDate) {
-  const y = mondayDate.getFullYear();
-  const start = new Date(y, 0, 1);
-  const diff = Math.floor((mondayDate - start) / 86400000);
-  const week = Math.floor(diff / 7) + 1;
-  return `ws_${y}_W${String(week).padStart(2, '0')}`;
+  return `ws_${toDateKey(mondayDate)}`
+}
+
+module.exports = { getPreviousNaturalWeek, getWeekId, toDateKey }
+```
+
+- [ ] **Step 1.5 写失败测试：weekly-star 聚合 Phase 8 积分结构**
+
+`cloudfunctions/weekly-star/lib/__tests__/weekly-star.test.js`：
+
+```js
+const { computeWeeklyStarsFromRows } = require('../weekly-star')
+
+const week = {
+  start: new Date('2026-05-11T00:00:00+08:00'),
+  end: new Date('2026-05-17T23:59:59+08:00'),
+  weekStart: '2026-05-11',
+  weekEnd: '2026-05-17',
+  weekId: 'ws_2026-05-11'
+}
+
+describe('computeWeeklyStarsFromRows', () => {
+  test('按 pointsAwarded.entries 汇总单/双打每周之星', () => {
+    const result = computeWeeklyStarsFromRows({
+      week,
+      members: [
+        { _id: 'm1', name: 'A', avatarUrl: 'a.png' },
+        { _id: 'm2', name: 'B', avatarUrl: 'b.png' },
+        { _id: 'm3', name: 'C', avatarUrl: 'c.png' }
+      ],
+      matches: [
+        {
+          _id: 'r1',
+          seasonId: 's2026',
+          tournamentType: 'singles',
+          resultStatus: 'confirmed',
+          confirmedAt: new Date('2026-05-12T10:00:00+08:00'),
+          pointsAwarded: { source: 'match', entries: [
+            { memberId: 'm1', points: 20, role: 'winner' },
+            { memberId: 'm2', points: 10, role: 'loser' }
+          ] }
+        },
+        {
+          _id: 'r2',
+          seasonId: 's2026',
+          tournamentType: 'doubles',
+          resultStatus: 'confirmed',
+          confirmedAt: new Date('2026-05-13T10:00:00+08:00'),
+          pointsAwarded: { source: 'match', entries: [
+            { memberId: 'm3', points: 30, role: 'winner' }
+          ] }
+        }
+      ],
+      placementRows: [
+        {
+          _id: 'p1',
+          seasonId: 's2026',
+          tournamentType: 'singles',
+          memberId: 'm1',
+          points: 100,
+          createTime: new Date('2026-05-17T12:00:00+08:00')
+        }
+      ],
+      seasonId: 's2026'
+    })
+
+    expect(result._id).toBe('s2026_ws_2026-05-11')
+    expect(result.weekId).toBe('ws_2026-05-11')
+    expect(result.singlesStar).toEqual({ memberId: 'm1', name: 'A', avatarUrl: 'a.png', points: 120 })
+    expect(result.doublesStar).toEqual({ memberId: 'm3', name: 'C', avatarUrl: 'c.png', points: 30 })
+  })
+
+  test('忽略周外、赛季外、未 confirmed 数据', () => {
+    const result = computeWeeklyStarsFromRows({
+      week,
+      members: [{ _id: 'm1', name: 'A' }],
+      matches: [
+        { seasonId: 's2025', tournamentType: 'singles', resultStatus: 'confirmed', confirmedAt: week.start, pointsAwarded: { entries: [{ memberId: 'm1', points: 999 }] } },
+        { seasonId: 's2026', tournamentType: 'singles', resultStatus: 'submitted', confirmedAt: week.start, pointsAwarded: { entries: [{ memberId: 'm1', points: 999 }] } },
+        { seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed', confirmedAt: new Date('2026-05-18T00:00:00+08:00'), pointsAwarded: { entries: [{ memberId: 'm1', points: 999 }] } }
+      ],
+      placementRows: [],
+      seasonId: 's2026'
+    })
+    expect(result.singlesStar).toBe(null)
+    expect(result.doublesStar).toBe(null)
+  })
+})
+```
+
+- [ ] **Step 1.6 实现 weekly-star 纯函数**
+
+`cloudfunctions/weekly-star/lib/weekly-star.js`：
+
+```js
+function getTime(row) {
+  return new Date(row.confirmedAt || row.createTime || row.updateTime || 0).getTime()
+}
+
+function inWeek(row, week) {
+  const t = getTime(row)
+  return t >= week.start.getTime() && t <= week.end.getTime()
+}
+
+function add(map, memberId, points) {
+  if (!memberId) return
+  map[memberId] = (map[memberId] || 0) + (Number(points) || 0)
+}
+
+function topStar(map, membersById) {
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
+  if (sorted.length === 0) return null
+  const [memberId, points] = sorted[0]
+  const m = membersById[memberId] || {}
+  return { memberId, name: m.name || memberId, avatarUrl: m.avatarUrl || '', points }
+}
+
+function computeWeeklyStarsFromRows({ week, matches, placementRows, members, seasonId }) {
+  const buckets = { singles: {}, doubles: {} }
+
+  for (const row of matches || []) {
+    if (row.seasonId !== seasonId) continue
+    if (row.resultStatus !== 'confirmed') continue
+    if (!inWeek(row, week)) continue
+    const type = row.tournamentType
+    if (!buckets[type]) continue
+    for (const e of ((row.pointsAwarded && row.pointsAwarded.entries) || [])) {
+      add(buckets[type], e.memberId, e.points)
+    }
+  }
+
+  for (const row of placementRows || []) {
+    if (row.seasonId !== seasonId) continue
+    if (!inWeek(row, week)) continue
+    const type = row.tournamentType
+    if (!buckets[type]) continue
+    add(buckets[type], row.memberId, row.points)
+  }
+
+  const membersById = Object.fromEntries((members || []).map(m => [m._id, m]))
+  return {
+    _id: `${seasonId}_${week.weekId}`,
+    seasonId,
+    weekId: week.weekId,
+    weekStart: week.weekStart,
+    weekEnd: week.weekEnd,
+    singlesStar: topStar(buckets.singles, membersById),
+    doublesStar: topStar(buckets.doubles, membersById)
+  }
+}
+
+module.exports = { computeWeeklyStarsFromRows }
+```
+
+- [ ] **Step 1.7 跑测试**
+
+```bash
+cd cloudfunctions/weekly-star
+npx jest
+```
+
+Expected: `2 test suites passed`。
+
+- [ ] **Step 1.8 写 index.js：compute/latest action**
+
+`cloudfunctions/weekly-star/index.js`：
+
+```js
+const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+const _ = db.command
+
+const { getPreviousNaturalWeek } = require('./lib/week-window')
+const { computeWeeklyStarsFromRows } = require('./lib/weekly-star')
+
+exports.main = async (event = {}) => {
+  const action = event.action || 'compute'
+  try {
+    if (action === 'latest') return await latest(event)
+    if (action === 'compute') return await compute(event)
+    return { success: false, error: { code: 'UNKNOWN_ACTION', message: action } }
+  } catch (e) {
+    console.error('[weekly-star]', action, e)
+    return { success: false, error: { code: 'INTERNAL', message: e.message } }
+  }
+}
+
+async function latest({ seasonId = `s${new Date().getFullYear()}` }) {
+  const rows = (await db.collection('weekly_stars')
+    .where({ seasonId })
+    .orderBy('weekStart', 'desc')
+    .limit(1)
+    .get()).data
+  return { success: true, data: rows[0] || null }
+}
+
+async function compute({ seasonId = `s${new Date().getFullYear()}`, now }) {
+  const week = getPreviousNaturalWeek(now ? new Date(now) : new Date())
+  const [matches, placementRows] = await Promise.all([
+    // confirmedAt 是 Phase 8 新路径；旧/兼容行可能只有 createTime。
+    // 这里先按 season/status 拉取，再交给纯函数用 confirmedAt/createTime/updateTime 过滤周区间。
+    fetchAll('match_results', { seasonId, resultStatus: 'confirmed' }),
+    fetchAll('tournament_points', {
+      seasonId,
+      createTime: _.gte(week.start).and(_.lte(week.end))
+    }).catch(e => {
+      const msg = `${e.errMsg || e.message || ''}`
+      if (/not exist|collection/i.test(msg)) return []
+      throw e
+    })
+  ])
+
+  const memberIds = Array.from(new Set([
+    ...matches.flatMap(m => ((m.pointsAwarded && m.pointsAwarded.entries) || []).map(e => e.memberId)),
+    ...placementRows.map(p => p.memberId)
+  ].filter(Boolean)))
+  const members = memberIds.length
+    ? (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data
+    : []
+
+  const doc = {
+    ...computeWeeklyStarsFromRows({ week, matches, placementRows, members, seasonId }),
+    computedAt: db.serverDate()
+  }
+
+  await upsert('weekly_stars', doc._id, doc)
+  return { success: true, data: doc }
+}
+
+async function fetchAll(collectionName, filter, pageSize = 100) {
+  const out = []
+  for (let skip = 0; skip < 5000; skip += pageSize) {
+    const page = (await db.collection(collectionName).where(filter).skip(skip).limit(pageSize).get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+  }
+  return out
+}
+
+async function upsert(collectionName, id, data) {
+  try {
+    await db.collection(collectionName).doc(id).set({ data })
+  } catch (e) {
+    await db.collection(collectionName).add({ data })
+  }
 }
 ```
 
-- [ ] **Step 1.4 上传：`bash uploadCloudFunction.sh weekly-star`**
-
-- [ ] **Step 1.5 在云开发控制台手动跑一次测试**
-
-进入云函数面板 → weekly-star → 测试。看 weekly_stars 集合是否多一条记录。
-
-- [ ] **Step 1.6 commit**
+- [ ] **Step 1.9 上传并手动测试**
 
 ```bash
-git add cloudfunctions/weekly-star/
-git commit -m "feat(weekly-star): 定时每周之星计算云函数"
+bash uploadCloudFunction.sh weekly-star
+```
+
+在云开发控制台调用：
+
+```json
+{ "action": "compute", "seasonId": "s2026" }
+```
+
+Expected:
+- 返回 `{ success: true, data: { _id, weekStart, weekEnd, singlesStar, doublesStar } }`
+- 数据库新增或覆盖 `weekly_stars/<seasonId>_ws_YYYY-MM-DD`
+
+- [ ] **Step 1.10 commit**
+
+```bash
+git add cloudfunctions/weekly-star
+git commit -m "feat(weekly-star): compute weekly stars from awarded points"
 ```
 
 ---
@@ -174,167 +657,334 @@ git commit -m "feat(weekly-star): 定时每周之星计算云函数"
 ## Task 2 · rank 页接入真实每周之星
 
 **Files:**
-- Modify: `miniprogram/pages/rank/index.{js,wxml}`
+- Modify: `miniprogram/pages/rank/index.js`
+- Modify: `miniprogram/pages/rank/index.wxml`
+- Modify: `miniprogram/pages/rank/index.wxss`
+- Modify: `miniprogram/pages/rank/index.json`
 
-- [ ] **Step 2.1 js 加载 weekly star**
+- [ ] **Step 2.1 修改 rank data 与加载流程**
 
-在 onShow 中追加：
+在 `miniprogram/pages/rank/index.js` 的 `data` 增加：
 
 ```js
-await this.loadWeeklyStar();
+weeklyStar: null,
+weeklyStarWeekRange: '',
+loading: false
 ```
 
-新方法：
+把 `onShow/loadRank/onTabChange` 改成：
 
 ```js
+async onShow() {
+  this.setData({ currentMember: getApp().globalData.currentMember })
+  await Promise.all([this.loadRank(), this.loadWeeklyStar()])
+},
+
+async loadRank() {
+  this.setData({ loading: true })
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'points-engine',
+      data: {
+        action: 'rankList',
+        type: this.data.activeTab,
+        currentSeasonId: `s${new Date().getFullYear()}`
+      }
+    })
+    this.setData({ rankList: res.result?.data?.rankList || [] })
+  } catch (err) {
+    console.error('[rank] loadRank error', err)
+    wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 })
+  } finally {
+    this.setData({ loading: false })
+  }
+},
+
 async loadWeeklyStar() {
-  const db = wx.cloud.database();
-  const res = await db.collection('weekly_stars').orderBy('weekStart', 'desc').limit(1).get();
-  const star = res.data?.[0];
-  if (!star) return;
-  this.setData({
-    weeklyStar: this.data.activeTab === 'singles' ? star.singlesStar : star.doublesStar,
-    weeklyStarWeekRange: `${star.weekStart} ~ ${star.weekEnd}`
-  });
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'weekly-star',
+      data: { action: 'latest', seasonId: `s${new Date().getFullYear()}` }
+    })
+    const star = res.result?.data || null
+    const selected = this.data.activeTab === 'singles' ? star?.singlesStar : star?.doublesStar
+    this.setData({
+      weeklyStar: selected || null,
+      weeklyStarWeekRange: star ? `${star.weekStart} ~ ${star.weekEnd}` : ''
+    })
+  } catch (err) {
+    console.error('[rank] loadWeeklyStar error', err)
+  }
+},
+
+onTabChange(e) {
+  const tab = e.detail?.value || e.currentTarget.dataset.tab
+  if (!tab || tab === this.data.activeTab) return
+  this.setData({ activeTab: tab })
+  this.loadRank()
+  this.loadWeeklyStar()
 }
 ```
 
-在 onTabChange 中追加 `this.loadWeeklyStar();`
+- [ ] **Step 2.2 注册新组件**
 
-- [ ] **Step 2.2 wxml 替换原 #1 card 为真正每周之星**
-
-```xml
-<view wx:if="{{weeklyStar}}" class="card-hero star-card">
-  <brush-stroke-bg></brush-stroke-bg>
-  <view style="position:relative;z-index:1">
-    <text class="text-label">每周之星 · {{weeklyStarWeekRange}}</text>
-    <view class="star-row">
-      <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/avatar.png'}}" />
-      <view>
-        <text class="text-h1">{{weeklyStar.name}}</text>
-        <text class="text-meta">本周积分 {{weeklyStar.points}}</text>
-      </view>
-    </view>
-  </view>
-</view>
-```
-
-- [ ] **Step 2.3 wxss**
-
-```css
-.star-card { padding: var(--space-5); position: relative; overflow: hidden; }
-.star-row { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-3); }
-.star-avatar { width: 96rpx; height: 96rpx; border-radius: 50%; border: 3rpx solid #fff; }
-```
-
-- [ ] **Step 2.4 注册 brush-stroke-bg 在 rank/index.json**
+`miniprogram/pages/rank/index.json`：
 
 ```json
 {
   "usingComponents": {
     "rank-row": "/components/rank-row/index",
-    "brush-stroke-bg": "/components/brush-stroke-bg/index"
-  }
+    "brush-stroke-bg": "/components/brush-stroke-bg/index",
+    "chip-tab": "/components/chip-tab/index",
+    "skeleton-loader": "/components/skeleton-loader/index"
+  },
+  "navigationBarTitleText": "排行榜"
 }
 ```
 
-- [ ] **Step 2.5 commit**
+- [ ] **Step 2.3 替换 rank tab 与 hero**
+
+`miniprogram/pages/rank/index.wxml` 里把 `.tabs` 和 `RANK #1` card 替换为：
+
+```xml
+<chip-tab
+  value="{{activeTab}}"
+  options="{{[{ label: 'SINGLES', value: 'singles' }, { label: 'DOUBLES', value: 'doubles' }]}}"
+  bindchange="onTabChange"
+/>
+
+<view wx:if="{{weeklyStar}}" class="card-hero star-card anim-fade-up">
+  <brush-stroke-bg></brush-stroke-bg>
+  <view class="star-content">
+    <text class="text-label">WEEKLY STAR · {{weeklyStarWeekRange}}</text>
+    <view class="star-row">
+      <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <view class="star-copy">
+        <text class="text-h2">{{weeklyStar.name}}</text>
+        <text class="text-meta">本周积分 {{weeklyStar.points}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view wx:elif="{{rankList[0]}}" class="card-hero star-card anim-fade-up">
+  <brush-stroke-bg></brush-stroke-bg>
+  <view class="star-content">
+    <text class="text-label">RANK #1</text>
+    <text class="text-h2">{{rankList[0].name}}</text>
+    <text class="text-meta">{{rankList[0].totalPoints}} 分</text>
+  </view>
+</view>
+
+<skeleton-loader wx:if="{{loading}}" rows="{{6}}" />
+```
+
+- [ ] **Step 2.4 补 rank 样式**
+
+追加到 `miniprogram/pages/rank/index.wxss`：
+
+```css
+.star-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: var(--space-5);
+}
+
+.star-content {
+  position: relative;
+  z-index: 1;
+}
+
+.star-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.star-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 3rpx solid #fff;
+  background: var(--color-bg-3);
+}
+
+.star-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+```
+
+- [ ] **Step 2.5 手动验证**
+
+在开发者工具打开排行榜：
+- 单/双打切换时排名和每周之星同步切换。
+- 没有 `weekly_stars` 数据时 fallback 到 `RANK #1`。
+- 点击列表头像仍进入 `player-detail`。
+
+- [ ] **Step 2.6 commit**
 
 ```bash
-git add miniprogram/pages/rank/
-git commit -m "feat(rank): 真实每周之星 + brush-stroke 装饰"
+git add miniprogram/pages/rank
+git commit -m "feat(rank): show weekly star and polished tabs"
 ```
 
 ---
 
-## Task 3 · animations.wxss 全局动画
+## Task 3 · 全局动效与 token 收敛
 
 **Files:**
 - Create: `miniprogram/styles/animations.wxss`
-- Modify: `miniprogram/app.wxss` (import)
+- Modify: `miniprogram/app.wxss`
+- Modify: `miniprogram/app.json`
+- Modify: `miniprogram/styles/tokens.wxss`
+- Modify: `miniprogram/styles/utilities.wxss`
 
-- [ ] **Step 3.1 写 animations.wxss**
+- [ ] **Step 3.1 新建 animations.wxss**
+
+`miniprogram/styles/animations.wxss`：
 
 ```css
-/* 全局动画 keyframes */
-
-@keyframes scale-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(0.96); }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slide-in-up {
-  from { transform: translateY(40rpx); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes soft-pop {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes skeleton-pulse {
+  0% { opacity: 0.45; }
+  50% { opacity: 1; }
+  100% { opacity: 0.45; }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.anim-fade-up {
+  animation: fade-up 220ms var(--ease-out) both;
 }
 
-.anim-slide-in {
-  animation: slide-in-up 400ms var(--ease-out);
+.anim-soft-pop {
+  animation: soft-pop 180ms var(--ease-out) both;
 }
 
-.anim-fade-in {
-  animation: fade-in 300ms var(--ease-out);
+.tap-scale {
+  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
 }
 
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-3) 0%,
-    var(--color-bg-2) 50%,
-    var(--color-bg-3) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-md);
+.tap-scale:active {
+  transform: scale(0.97);
+  opacity: 0.88;
 }
 ```
 
 - [ ] **Step 3.2 app.wxss import**
 
-```diff
-  @import "/styles/tokens.wxss";
-  @import "/styles/base.wxss";
-  @import "/styles/utilities.wxss";
-+ @import "/styles/animations.wxss";
+`miniprogram/app.wxss`：
+
+```css
+@import "/styles/tokens.wxss";
+@import "/styles/base.wxss";
+@import "/styles/utilities.wxss";
+@import "/styles/animations.wxss";
 ```
 
-- [ ] **Step 3.3 commit**
+- [ ] **Step 3.3 补 token alias，消除旧 fallback 名称漂移**
+
+在 `miniprogram/styles/tokens.wxss` 的 `page {}` 内补：
+
+```css
+--color-primary: var(--color-lime);
+--color-bg-soft: var(--color-bg-3);
+--color-text: var(--color-ink);
+--color-text-strong: var(--color-ink);
+--color-text-muted: var(--color-muted);
+```
+
+- [ ] **Step 3.4 移除负字距**
+
+把 `miniprogram/styles/utilities.wxss` 里的负 `letter-spacing` 改为 `0`：
+
+```css
+.text-display { letter-spacing: 0; }
+.text-h2 { letter-spacing: 0; }
+.text-stat { letter-spacing: 0; }
+```
+
+保留 `.text-label` 的正字距和 CTA 的正字距。
+
+- [ ] **Step 3.5 app.json 颜色跟随当前视觉系统**
+
+`miniprogram/app.json` 中只改这些颜色字段，保留 `pages` 与 `tabBar.list` 原值：
+
+| Path | Value |
+|---|---|
+| `tabBar.color` | `#6B7280` |
+| `tabBar.selectedColor` | `#0A0A0A` |
+| `tabBar.backgroundColor` | `#FFFFFF` |
+| `tabBar.borderStyle` | `white` |
+| `window.backgroundColor` | `#FFFFFF` |
+| `window.backgroundTextStyle` | `dark` |
+| `window.navigationBarBackgroundColor` | `#FFFFFF` |
+| `window.navigationBarTextStyle` | `black` |
+
+注意：不要删除 `tabBar.list`，也不要调整 tab 顺序。
+
+- [ ] **Step 3.6 commit**
 
 ```bash
-git add miniprogram/styles/animations.wxss miniprogram/app.wxss
-git commit -m "feat(styles): 全局动画 keyframes"
+git add miniprogram/app.json miniprogram/app.wxss miniprogram/styles
+git commit -m "style: add global polish animations and token aliases"
 ```
 
 ---
 
-## Task 4 · chip-tab 组件（带滑动指示）
+## Task 4 · chip-tab / number-counter / skeleton-loader 组件
 
 **Files:**
 - Create: `miniprogram/components/chip-tab/index.{js,wxml,wxss,json}`
+- Create: `miniprogram/components/number-counter/index.{js,wxml,wxss,json}`
+- Create: `miniprogram/components/skeleton-loader/index.{js,wxml,wxss,json}`
+- Modify: `miniprogram/components/stat-block/index.{js,wxml,wxss,json}`
 
-- [ ] **Step 4.1 json**
+- [ ] **Step 4.1 新建 chip-tab**
+
+`miniprogram/components/chip-tab/index.json`：
 
 ```json
 { "component": true }
 ```
 
-- [ ] **Step 4.2 wxml**
+`miniprogram/components/chip-tab/index.js`：
+
+```js
+Component({
+  properties: {
+    value: String,
+    options: { type: Array, value: [] }
+  },
+  methods: {
+    onTap(e) {
+      const value = e.currentTarget.dataset.value
+      if (value === this.data.value) return
+      wx.vibrateShort({ type: 'light' })
+      this.triggerEvent('change', { value })
+    }
+  }
+})
+```
+
+`miniprogram/components/chip-tab/index.wxml`：
 
 ```xml
-<view class="chip-tab">
+<view class="chip-tab" role="tablist">
   <view
-    wx:for="{{items}}" wx:key="value"
-    class="chip-item {{value === item.value ? 'active' : ''}}"
+    wx:for="{{options}}"
+    wx:key="value"
+    class="chip-tab-item tap-scale {{value === item.value ? 'active' : ''}}"
     data-value="{{item.value}}"
     bindtap="onTap"
   >
@@ -343,379 +993,503 @@ git commit -m "feat(styles): 全局动画 keyframes"
 </view>
 ```
 
-- [ ] **Step 4.3 wxss**
+`miniprogram/components/chip-tab/index.wxss`：
 
 ```css
 .chip-tab {
   display: flex;
+  gap: var(--space-2);
+  padding: 6rpx;
+  border-radius: var(--radius-pill);
   background: var(--color-bg-3);
-  border-radius: var(--radius-pill);
-  padding: 4rpx;
 }
-.chip-item {
+
+.chip-tab-item {
   flex: 1;
-  text-align: center;
-  padding: 16rpx 32rpx;
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: var(--font-label-size);
   color: var(--color-muted);
-  transition: all 200ms var(--ease-spring);
+  font-size: var(--font-label-size);
+  font-weight: 700;
 }
-.chip-item.active {
+
+.chip-tab-item.active {
   background: var(--color-lime);
   color: var(--color-ink);
-  transform: scale(1.02);
+  box-shadow: var(--shadow-card);
 }
 ```
 
-- [ ] **Step 4.4 js**
+- [ ] **Step 4.2 新建 number-counter**
 
-```js
-Component({
-  properties: {
-    items: Array,  // [{ label, value }]
-    value: String
-  },
-  methods: {
-    onTap(e) {
-      const value = e.currentTarget.dataset.value;
-      this.triggerEvent('change', { value });
-      wx.vibrateShort({ type: 'light' });
-    }
-  }
-});
-```
-
-- [ ] **Step 4.5 在 rank/home 等页替换原 chip 用法**
-
-修改 rank/index.json：
-```json
-{ "usingComponents": { "chip-tab": "/components/chip-tab/index", ... } }
-```
-
-修改 rank/index.wxml 中的 tabs：
-```xml
-<chip-tab
-  items="{{[{label: 'SINGLES', value: 'singles'}, {label: 'DOUBLES', value: 'doubles'}]}}"
-  value="{{activeTab}}"
-  bind:change="onTabChange"
-/>
-```
-
-js 中改 `onTabChange(e) { this.setData({ activeTab: e.detail.value }); this.loadRank(); }`
-
-- [ ] **Step 4.6 commit**
-
-```bash
-git add miniprogram/components/chip-tab/ miniprogram/pages/rank/
-git commit -m "feat(components): chip-tab 滑动 tab 切换"
-```
-
----
-
-## Task 5 · number-counter 数字滚动动画
-
-**Files:**
-- Create: `miniprogram/components/number-counter/index.{js,wxml,wxss}`
-
-- [ ] **Step 5.1 wxml + wxss**
-
-```xml
-<text class="number-counter">{{displayValue}}</text>
-```
-
-```css
-.number-counter {
-  font-size: var(--font-stat-size);
-  font-weight: var(--font-stat-weight);
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-```
-
-- [ ] **Step 5.2 js（从 0 滚动到 target）**
-
-```js
-Component({
-  properties: {
-    value: { type: Number, value: 0, observer: '_animate' }
-  },
-  data: { displayValue: 0 },
-  methods: {
-    _animate(newVal) {
-      const start = 0;
-      const end = Number(newVal) || 0;
-      const duration = 600;
-      const startTime = Date.now();
-      const tick = () => {
-        const t = Math.min(1, (Date.now() - startTime) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        this.setData({ displayValue: Math.round(start + (end - start) * eased) });
-        if (t < 1) setTimeout(tick, 16);
-      };
-      tick();
-    }
-  }
-});
-```
-
-- [ ] **Step 5.3 替换 stat-block 内的 text 为 number-counter（仅数字字段）**
-
-修改 `components/stat-block/index.json`：
-```json
-{ "component": true, "usingComponents": { "number-counter": "/components/number-counter/index" } }
-```
-
-修改 wxml：
-```xml
-<view class="stat-block">
-  <number-counter value="{{value}}" wx:if="{{isNumber}}"></number-counter>
-  <text class="text-stat" wx:else>{{value}}</text>
-  <text class="text-label">{{label}}</text>
-</view>
-```
-
-js 添加 `isNumber` 自动判断：
-```js
-Component({
-  properties: {
-    value: { type: null },
-    label: String
-  },
-  computed: {
-    isNumber() { return typeof this.data.value === 'number' || /^\d+$/.test(String(this.data.value)); }
-  }
-});
-```
-
-注：小程序 Component 默认不支持 computed，需要 behavior 或手动 observer。简化版：直接在 wxml 用 `{{value+0===value}}` 判断或在 js setData 时计算。
-
-实用做法：
-
-```js
-Component({
-  properties: {
-    value: { type: null, observer: '_check' },
-    label: String
-  },
-  data: { isNumber: false, valueNum: 0 },
-  methods: {
-    _check(v) {
-      const num = Number(v);
-      const isNumber = !isNaN(num) && String(num) === String(v);
-      this.setData({ isNumber, valueNum: num });
-    }
-  }
-});
-```
-
-wxml 调整：
-```xml
-<number-counter wx:if="{{isNumber}}" value="{{valueNum}}"></number-counter>
-<text class="text-stat" wx:else>{{value}}</text>
-```
-
-- [ ] **Step 5.4 commit**
-
-```bash
-git add miniprogram/components/number-counter/ miniprogram/components/stat-block/
-git commit -m "feat(components): number-counter 滚动 + stat-block 接入"
-```
-
----
-
-## Task 6 · 首页 / 玩家详情 hero 加 brush-stroke
-
-**Files:**
-- Modify: `miniprogram/pages/home/index.{wxml,json}`
-- Modify: `miniprogram/pages/player-detail/index.{wxml,json}`
-
-- [ ] **Step 6.1 home/index.json 注册组件**
-
-```json
-{
-  "usingComponents": {
-    "stat-block": "/components/stat-block/index",
-    "brush-stroke-bg": "/components/brush-stroke-bg/index"
-  }
-}
-```
-
-- [ ] **Step 6.2 home/index.wxml 在 hero 内嵌入**
-
-```diff
-  <view class="hero">
-+   <brush-stroke-bg></brush-stroke-bg>
-    <text class="text-display">PLAY.{'\n'}COMPETE.{'\n'}IMPROVE.</text>
-  </view>
-```
-
-确保 .hero 是 `position: relative` （Phase 2 已设置）。
-
-- [ ] **Step 6.3 同样处理 player-detail/index**
-
-```diff
-  <view class="hero-row">
-+   <brush-stroke-bg></brush-stroke-bg>
-    <image class="big-avatar" .../>
-    ...
-  </view>
-```
-
-`.hero-row` 改 `position: relative; overflow: hidden;`，给内部元素 `position: relative; z-index: 1;`。
-
-- [ ] **Step 6.4 commit**
-
-```bash
-git add miniprogram/pages/home/ miniprogram/pages/player-detail/
-git commit -m "feat(pages): home + player-detail hero 加 brush-stroke 装饰"
-```
-
----
-
-## Task 7 · CTA 触觉反馈 + page slide-in 动画
-
-**Files:**
-- Modify: `miniprogram/styles/utilities.wxss`
-- 全局给主要页面 wxml 加 anim-slide-in 类
-
-- [ ] **Step 7.1 utilities.wxss 增强 cta-primary**
-
-```diff
-  .cta-primary {
-    ...
-+   user-select: none;
-  }
-  .cta-primary:active {
-    transform: scale(0.96);
-+   filter: brightness(0.9);
-  }
-```
-
-- [ ] **Step 7.2 在 home/rank/player-detail/result-submit/manage 顶层 view 加 `class="anim-slide-in"`**
-
-```xml
-<view class="home-page anim-slide-in">
-  ...
-</view>
-```
-
-- [ ] **Step 7.3 commit**
-
-```bash
-git add miniprogram/styles/utilities.wxss miniprogram/pages/
-git commit -m "feat(ui): CTA 触觉反馈 + 页面进场动画"
-```
-
----
-
-## Task 8 · skeleton-loader 列表骨架屏
-
-**Files:**
-- Create: `miniprogram/components/skeleton-loader/index.{js,wxml,wxss,json}`
-- 在 rank/home 列表加载时使用
-
-- [ ] **Step 8.1 json**
+`miniprogram/components/number-counter/index.json`：
 
 ```json
 { "component": true }
 ```
 
-- [ ] **Step 8.2 wxml**
-
-```xml
-<view class="skeleton-list">
-  <view wx:for="{{count}}" wx:key="*this" class="skeleton skeleton-row"></view>
-</view>
-```
-
-- [ ] **Step 8.3 wxss**
-
-```css
-.skeleton-list { display: flex; flex-direction: column; gap: var(--space-3); }
-.skeleton-row { height: 96rpx; }
-```
-
-- [ ] **Step 8.4 js**
+`miniprogram/components/number-counter/index.js`：
 
 ```js
 Component({
   properties: {
-    count: { type: Number, value: 6 }
+    value: { type: null, observer: 'animateToValue' },
+    suffix: { type: String, value: '' }
+  },
+  data: {
+    displayValue: '0'
+  },
+  lifetimes: {
+    attached() {
+      this.animateToValue(this.data.value)
+    }
+  },
+  methods: {
+    animateToValue(value) {
+      const target = Number(value)
+      if (!Number.isFinite(target)) {
+        this.setData({ displayValue: value == null ? '0' : String(value) })
+        return
+      }
+      const start = 0
+      const steps = 12
+      const duration = 240
+      let tick = 0
+      clearInterval(this._timer)
+      this._timer = setInterval(() => {
+        tick += 1
+        const p = tick / steps
+        const eased = 1 - Math.pow(1 - p, 3)
+        const current = Math.round(start + (target - start) * eased)
+        this.setData({ displayValue: `${current}${this.data.suffix}` })
+        if (tick >= steps) clearInterval(this._timer)
+      }, duration / steps)
+    }
   }
-});
+})
 ```
 
-- [ ] **Step 8.5 在 rank 页接入**
-
-修改 rank/index.json 注册组件。修改 rank wxml：
+`miniprogram/components/number-counter/index.wxml`：
 
 ```xml
-<skeleton-loader wx:if="{{loading}}" count="6"></skeleton-loader>
-<view wx:else class="list">
-  <rank-row .../>
-  ...
+<text class="number-counter">{{displayValue}}</text>
+```
+
+`miniprogram/components/number-counter/index.wxss`：
+
+```css
+.number-counter {
+  font-variant-numeric: tabular-nums;
+}
+```
+
+- [ ] **Step 4.3 新建 skeleton-loader**
+
+`miniprogram/components/skeleton-loader/index.json`：
+
+```json
+{ "component": true }
+```
+
+`miniprogram/components/skeleton-loader/index.js`：
+
+```js
+Component({
+  properties: {
+    rows: { type: Number, value: 3 }
+  },
+  data: {
+    rowList: []
+  },
+  observers: {
+    rows(rows) {
+      this.setData({ rowList: Array.from({ length: rows || 3 }, (_, i) => i) })
+    }
+  },
+  lifetimes: {
+    attached() {
+      this.setData({ rowList: Array.from({ length: this.data.rows || 3 }, (_, i) => i) })
+    }
+  }
+})
+```
+
+`miniprogram/components/skeleton-loader/index.wxml`：
+
+```xml
+<view class="skeleton">
+  <view wx:for="{{rowList}}" wx:key="*this" class="skeleton-row">
+    <view class="skeleton-avatar"></view>
+    <view class="skeleton-lines">
+      <view class="skeleton-line long"></view>
+      <view class="skeleton-line short"></view>
+    </view>
+  </view>
 </view>
 ```
 
-在 js 中加 `loading: true` 初始值，在 loadRank 成功后设 false。
+`miniprogram/components/skeleton-loader/index.wxss`：
 
-- [ ] **Step 8.6 commit**
+```css
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.skeleton-avatar,
+.skeleton-line {
+  background: var(--color-bg-3);
+  animation: skeleton-pulse 900ms ease-in-out infinite;
+}
+
+.skeleton-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+}
+
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  height: 22rpx;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton-line.long { width: 70%; }
+.skeleton-line.short { width: 42%; }
+```
+
+- [ ] **Step 4.4 stat-block 接入 number-counter**
+
+`miniprogram/components/stat-block/index.json`：
+
+```json
+{
+  "component": true,
+  "usingComponents": {
+    "number-counter": "/components/number-counter/index"
+  }
+}
+```
+
+`miniprogram/components/stat-block/index.js`：
+
+```js
+Component({
+  properties: {
+    value: null,
+    label: String,
+    suffix: { type: String, value: '' }
+  }
+})
+```
+
+`miniprogram/components/stat-block/index.wxml`：
+
+```xml
+<view class="stat-block anim-soft-pop">
+  <text class="text-stat">
+    <number-counter value="{{value}}" suffix="{{suffix}}"></number-counter>
+  </text>
+  <text class="text-label">{{label}}</text>
+</view>
+```
+
+- [ ] **Step 4.5 替换百分比调用**
+
+在 `miniprogram/pages/home/index.wxml` 里把：
+
+```xml
+<stat-block value="{{myStats.winRate + '%'}}" label="WIN RATE"></stat-block>
+```
+
+改成：
+
+```xml
+<stat-block value="{{myStats.winRate}}" suffix="%" label="WIN RATE"></stat-block>
+```
+
+- [ ] **Step 4.6 commit**
 
 ```bash
-git add miniprogram/components/skeleton-loader/ miniprogram/pages/rank/
-git commit -m "feat(components): 骨架屏 + rank 页接入"
+git add miniprogram/components/chip-tab miniprogram/components/number-counter miniprogram/components/skeleton-loader miniprogram/components/stat-block miniprogram/pages/home/index.wxml
+git commit -m "feat(ui): add polished tabs counters and skeleton loaders"
 ```
 
 ---
 
-## Task 9 · 最终 QA 巡检 + 更新 PROGRESS
+## Task 5 · 页面级 polish：home / player-detail / score flows
 
-**Files:** -
+**Files:**
+- Modify: `miniprogram/pages/home/index.{js,wxml,wxss}`
+- Modify: `miniprogram/pages/player-detail/index.{js,wxml,wxss,json}`
+- Modify: `miniprogram/pages/tournament-score/index.{wxml,wxss}`
+- Modify: `miniprogram/pages/tournament-manage/index.wxss`
+- Modify: `miniprogram/pages/my-match/index.wxss`
 
-- [ ] **Step 9.1 完整巡检清单（在工具里跑一遍每个页面）**
+- [ ] **Step 5.1 home 增加 loading/empty 状态**
 
-- [ ] 首页：hero 装饰可见 / 个人 stats 显示正确 / quick actions 可点
-- [ ] 赛事 tab：能看到所有赛事列表，能进入详情
-- [ ] 排行榜：单/双打 tab 流畅切换 / #1 (或每周之星) 高亮 / 点头像进玩家详情
-- [ ] 玩家详情：基本信息 + 单/双打 stats 显示 / brush stroke 装饰
-- [ ] 我的：基本信息卡 + 操作按钮可用
-- [ ] 管理（admin only）：仲裁队列 + 待确认队列 + 快捷入口
-- [ ] my-match：能看到自己的待打/已打比赛
-- [ ] result-submit：vs 选择 + 比分输入 + 提交 → toast 正确
-- [ ] tournament-edit：5 步表单流畅
-- [ ] tournament-brackets：unscheduled 警告条 / 正常显示
-- [ ] tabBar：admin 5 个 / 普通会员 4 个
-- [ ] 全局：背景白、字体青柠+黑、按钮触觉、tab 滑动、数字滚动
+在 `miniprogram/pages/home/index.js` 的 `data` 增加：
 
-任何不对的地方 inline 修，每个修复都 commit。
-
-- [ ] **Step 9.2 更新 PROGRESS.md**
-
-```diff
-- | 06 | Phase 6 · Polish | ⬜ 待开始 | — | — | — | — |
-+ | 06 | Phase 6 · Polish | ✅ 已完成 | YYYY-MM-DD | YYYY-MM-DD | <hash> | 上线水准达成 |
+```js
+loadingStats: false
 ```
 
-进度条 `[████████████████████████] 6/6 Phase 完成 🎉`，下一个 Phase 改为 `（无 — 全部完成）`。
+在 `loadHome()` 调 `points-engine` 前后设置：
 
-- [ ] **Step 9.3 commit**
+```js
+this.setData({ loadingStats: true })
+try {
+  // existing stats call
+} finally {
+  this.setData({ loadingStats: false })
+}
+```
+
+在 `miniprogram/pages/home/index.wxml` stats 区块里加：
+
+```xml
+<skeleton-loader wx:if="{{loadingStats}}" rows="{{2}}" />
+<view wx:else class="stats-grid">
+  <stat-block value="{{myStats.matches}}" label="MATCHES"></stat-block>
+  <stat-block value="{{myStats.wins}}" label="WINS"></stat-block>
+  <stat-block value="{{myStats.winRate}}" suffix="%" label="WIN RATE"></stat-block>
+</view>
+```
+
+并在 `miniprogram/pages/home/index.json` 注册：
+
+```json
+"skeleton-loader": "/components/skeleton-loader/index"
+```
+
+- [ ] **Step 5.2 player-detail hero 加 brush stroke**
+
+`miniprogram/pages/player-detail/index.json` 注册：
+
+```json
+{
+  "usingComponents": {
+    "stat-block": "/components/stat-block/index",
+    "brush-stroke-bg": "/components/brush-stroke-bg/index",
+    "skeleton-loader": "/components/skeleton-loader/index"
+  },
+  "navigationBarTitleText": "球员详情"
+}
+```
+
+`miniprogram/pages/player-detail/index.wxml` 里把 `hero-row` 改成：
+
+```xml
+<view class="hero-row card-hero anim-fade-up">
+  <brush-stroke-bg></brush-stroke-bg>
+  <image class="big-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+  <view class="player-info">
+    <text class="text-h1">{{player.name}}</text>
+    <text class="text-meta">{{player.playStyle || '打法未知'}}</text>
+  </view>
+</view>
+```
+
+在 `miniprogram/pages/player-detail/index.wxss` 确保：
+
+```css
+.hero-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-row .big-avatar,
+.hero-row .player-info {
+  position: relative;
+  z-index: 1;
+}
+```
+
+- [ ] **Step 5.3 tournament-score token 收敛**
+
+在 `miniprogram/pages/tournament-score/index.wxss`：
+- 将 `var(--color-bg-soft, #f0f0f0)` 替换为 `var(--color-bg-3)`。
+- 将 `var(--color-text-muted, #777)` 替换为 `var(--color-muted)`。
+- 将 `var(--color-primary, #16a34a)` 替换为 `var(--color-success)`。
+- 给 `.round-group` 加 `animation: fade-up 220ms var(--ease-out) both;`。
+- 给 `.confirm-all` 加 `transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);` 和 `.confirm-all:active { transform: scale(0.98); }`。
+
+- [ ] **Step 5.4 tournament-manage / my-match 队列区块统一视觉**
+
+检查两个页面里“待确认比分”和“可录分比赛”区块，统一：
+
+```css
+.queue-card,
+.scorable-card {
+  background: var(--color-bg-2);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.queue-card:active,
+.scorable-card:active {
+  transform: scale(0.99);
+  opacity: 0.9;
+}
+```
+
+如果现有 class 名不同，只改对应已有 class，不新增重复结构。
+
+- [ ] **Step 5.5 手动验证**
+
+- 首页首次进来 stats 有骨架屏，加载后数字动效不撑开布局。
+- 球员详情 hero 装饰不遮挡头像和姓名。
+- 录分页底部按钮点击反馈清晰，不影响禁用态。
+- 管理页待确认队列和我的比赛可录分队列视觉一致。
+
+- [ ] **Step 5.6 commit**
 
 ```bash
-git add docs/superpowers/plans/PROGRESS.md
-git commit -m "docs(progress): Phase 6 完成，项目第一版完整交付"
+git add miniprogram/pages/home miniprogram/pages/player-detail miniprogram/pages/tournament-score miniprogram/pages/tournament-manage miniprogram/pages/my-match
+git commit -m "style: polish key post-score user flows"
 ```
 
 ---
 
-## Self-Review Checklist
+## Task 6 · 清理调试输出与最终验收
 
-- [ ] weekly-star 定时触发器配置正确，云开发控制台能手动跑成功
-- [ ] 排行榜上每周之星显示当前周（如果是周一刚跑过的）
-- [ ] 所有 tab 切换有触觉 + 动画
-- [ ] stat 数字第一次加载时滚动
-- [ ] CTA 点击有 scale 反馈
-- [ ] 列表加载时显示骨架屏
-- [ ] PROGRESS.md 显示全部 6 Phase 完成
-- [ ] 在真实手机上跑一遍（不是只在工具里）
+**Files:**
+- Modify: `miniprogram/pages/season-manage/index.js`
+- Modify: `miniprogram/pages/round-settlement/index.js`
+- Modify: `miniprogram/pages/match/index.js`
+- Modify: `miniprogram/pages/index/index.js`
+- Modify: `cloudfunctions/match-results/index.js`
+- Modify: `docs/superpowers/plans/PROGRESS.md`
+
+- [ ] **Step 6.1 清理明显调试 console.log**
+
+删除这些只用于开发期的输出：
+
+```bash
+rg -n "console\\.log" miniprogram cloudfunctions
+```
+
+必须删除或降级的已知位置：
+- `miniprogram/pages/season-manage/index.js`
+- `miniprogram/pages/round-settlement/index.js`
+- `miniprogram/pages/match/index.js`
+- `miniprogram/pages/index/index.js`
+- `cloudfunctions/match-results/index.js` 中 legacy `add/update/updateMatchScore` 的大对象日志
+
+保留 `console.error/console.warn`，因为云函数和页面失败时仍需要定位。
+
+- [ ] **Step 6.2 跑后端测试**
+
+```bash
+cd cloudfunctions/weekly-star && npx jest
+cd ../points-engine && npx jest
+cd ../match-results && npx jest
+cd ../_shared && npx jest
+```
+
+Expected:
+- `weekly-star`: all tests pass
+- `points-engine`: existing 16 tests pass
+- `match-results`: existing 55 tests pass
+- `_shared`: existing 22 tests pass
+
+- [ ] **Step 6.3 跑 shared hash 检查**
+
+```bash
+bash scripts/sync-shared-libs.sh
+```
+
+Expected: 所有 mirror hash 一致。
+
+- [ ] **Step 6.4 JS 语法检查**
+
+```bash
+find miniprogram cloudfunctions -path "*/node_modules" -prune -o -name "*.js" -print0 | xargs -0 -n1 node -c
+```
+
+Expected: 无 syntax error。
+
+- [ ] **Step 6.5 开发者工具手动巡检**
+
+逐页检查：
+- 首页：hero、quick actions、stats 骨架屏和数字动效。
+- 赛事 tab：赛事列表可进入详情。
+- 排行榜：weekly star、单/双打切换、点击球员。
+- 球员详情：hero、单双打 stats、recent matches。
+- 我的比赛：可录分比赛入口。
+- 管理：待确认比分队列。
+- 录分页：展开编辑、提交、admin 保存、底部 sticky 按钮。
+- 创建赛事：4 步 wizard 无视觉回归。
+- 排程页：schedule-board 仍可拖动/保存。
+- tabBar：admin 5 个 tab，普通会员隐藏管理 tab。
+
+- [ ] **Step 6.6 更新 PROGRESS.md**
+
+把 `docs/superpowers/plans/PROGRESS.md` 中 Phase 6 行从“由 Phase 7+8 重做覆盖”改为：
+
+```md
+| 06 | Phase 6 · Polish | ✅ 已完成 | 2026-05-15 | 2026-05-15 | <commit> | Post-Phase-8 polish：weekly-star 定时云函数、排行榜每周之星、全局动效、骨架屏、数字动效、关键录分流程视觉收敛 |
+```
+
+在执行日志顶部追加：
+
+```md
+### 2026-05-15 · Phase 6 Post-Phase-8 Polish 完成
+
+- 新增 `scripts/audit-polish-data.js`，上线 polish 前先确认 members / confirmed match_results / tournament_points 能支撑排行榜、用户详情、首页用户数据。
+- 新增 `weekly-star` 定时云函数，按 Phase 8 的 `pointsAwarded.entries` 与 `tournament_points` 计算每周之星。
+- 排行榜接入真实 weekly star，缺数据时 fallback 到当前 #1。
+- 新增 `chip-tab / number-counter / skeleton-loader`，并接入 rank/home/stat-block。
+- 全局补 `animations.wxss`，统一 token alias，收敛旧 `color-text-muted/color-bg-soft` fallback。
+- 清理明显调试日志。
+- 验证：`weekly-star / points-engine / match-results / _shared` Jest 全过，`scripts/sync-shared-libs.sh` 全过，JS syntax check 全过，DevTools 关键页面手动巡检通过。
+```
+
+- [ ] **Step 6.7 commit**
+
+```bash
+git add miniprogram cloudfunctions docs/superpowers/plans/PROGRESS.md
+git commit -m "chore: complete post-phase-8 polish"
+```
+
+---
+
+## Acceptance Criteria
+
+- [ ] `cd scripts && FOPEN_CLOUD_ENV=<envId> FOPEN_SEASON_ID=s2026 npm run audit:polish-data` 通过，报告里 `rankableMembers >= 1`。
+- [ ] 排行榜不是空白：有 rank 数据时显示真实会员姓名和积分；没有 rank 数据时显示明确空状态。
+- [ ] 从排行榜点击用户能进入用户详情，`members.getById` 与 `points-engine.playerStats` 返回结构能被页面正确渲染。
+- [ ] 首页当前用户数据不是空白：未登录/无比赛/有比赛三种状态都有明确展示。
+- [ ] `weekly-star` 定时触发器存在，手动调用 `compute` 能写入 `weekly_stars`。
+- [ ] 排行榜显示对应 tab 的真实每周之星；无周数据时显示 Rank #1。
+- [ ] 单/双打 tab 使用统一 `chip-tab`，切换有轻触反馈，不破坏 rank 数据加载。
+- [ ] 首页、排行榜、球员详情、录分页有一致的加载/空状态。
+- [ ] `stat-block` 数字首次展示有轻量滚动，不造成布局跳动。
+- [ ] `app.json/app.wxss/styles/*` 与 Phase 1 白底 + 青柠/黑视觉统一。
+- [ ] 不再新增旧路线页面：不创建 `result-submit`，不创建 `result-reconcile`。
+- [ ] `cloudfunctions/weekly-star && npx jest` 通过。
+- [ ] `cloudfunctions/points-engine && npx jest` 通过。
+- [ ] `cloudfunctions/match-results && npx jest` 通过。
+- [ ] `cloudfunctions/_shared && npx jest` 通过。
+- [ ] `bash scripts/sync-shared-libs.sh` 通过。
+- [ ] 全部 JS `node -c` 通过。
+- [ ] 微信开发者工具关键页面巡检通过，Console 无新增红错。

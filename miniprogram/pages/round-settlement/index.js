@@ -68,8 +68,6 @@ Page({
         }
       });
 
-      console.log('比赛记录数据:', result.result.data);
-      console.log(this.data.params)
       let records = (result.result.data || [])
       .filter(record => record.tournamentId === this.data.params.tournamentId )
       .map(record => {

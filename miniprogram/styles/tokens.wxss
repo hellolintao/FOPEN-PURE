@@ -18,6 +18,11 @@ page {
   --color-danger: #DC2626;
   --color-warn: #F59E0B;
   --color-success: #16A34A;
+  --color-primary: var(--color-lime);
+  --color-bg-soft: var(--color-bg-3);
+  --color-text: var(--color-ink);
+  --color-text-strong: var(--color-ink);
+  --color-text-muted: var(--color-muted);
 
   /* ===== 间距 ===== */
   --space-1: 4rpx;

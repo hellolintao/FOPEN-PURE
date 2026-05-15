@@ -1,4 +1,6 @@
-<view class="stat-block">
-  <text class="text-stat">{{value}}</text>
+<view class="stat-block anim-soft-pop">
+  <view class="text-stat">
+    <number-counter value="{{value}}" suffix="{{suffix}}"></number-counter>
+  </view>
   <text class="text-label">{{label}}</text>
 </view>

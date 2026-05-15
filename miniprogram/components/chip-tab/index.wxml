@@ -1,0 +1,11 @@
+<view class="chip-tab" role="tablist">
+  <view
+    wx:for="{{options}}"
+    wx:key="value"
+    class="chip-tab-item tap-scale {{value === item.value ? 'active' : ''}}"
+    data-value="{{item.value}}"
+    bindtap="onTap"
+  >
+    <text>{{item.label}}</text>
+  </view>
+</view>

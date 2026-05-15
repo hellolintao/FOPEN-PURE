@@ -10,7 +10,6 @@ Page({
 	async loadTournaments() {
 		try {
 			const result = await db.collection('tournaments').get()
-			console.log('赛事列表:', result.data)
 			this.setData({ tournaments: result.data || [] })
 		} catch (err) {
 			console.error('获取赛事失败:', err)

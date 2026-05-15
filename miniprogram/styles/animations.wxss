@@ -1,0 +1,32 @@
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes soft-pop {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes skeleton-pulse {
+  0% { opacity: 0.45; }
+  50% { opacity: 1; }
+  100% { opacity: 0.45; }
+}
+
+.anim-fade-up {
+  animation: fade-up 220ms var(--ease-out) both;
+}
+
+.anim-soft-pop {
+  animation: soft-pop 180ms var(--ease-out) both;
+}
+
+.tap-scale {
+  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+
+.tap-scale:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}

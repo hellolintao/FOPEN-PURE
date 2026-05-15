@@ -105,10 +105,12 @@
 
 /* ========== Phase 8 可录分块 ========== */
 .scorable-block {
-  background: #fff7ed;
+  background: var(--color-bg-2);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-lg);
   margin: 16rpx;
-  padding: 24rpx;
-  border-radius: 16rpx;
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
 }
 .block-title {
   font-weight: 600;
@@ -121,8 +123,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 16rpx 0;
-  border-bottom: 1rpx dashed #fed7aa;
+  border-bottom: 1rpx dashed var(--color-border);
   gap: 12rpx;
+  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.scorable-row:active {
+  transform: scale(0.99);
+  opacity: 0.9;
 }
 .scorable-row:last-child {
   border-bottom: 0;
@@ -143,7 +150,7 @@
 }
 .scorable-opponent {
   font-size: 24rpx;
-  color: #777;
+  color: var(--color-muted);
 }
 .scorable-status {
   padding: 6rpx 16rpx;

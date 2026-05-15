@@ -13,7 +13,9 @@
     <view class="rules-hint text-meta">4 局制 · 3:3 抢七（如 7-5） · 4:0 / 4:1 / 4:2 直接结束</view>
   </view>
 
-  <view wx:if="{{empty}}" class="empty-state">
+  <skeleton-loader wx:if="{{loading && rowsByRound.length === 0}}" rows="{{4}}" />
+
+  <view wx:if="{{!loading && empty}}" class="empty-state">
     <text>暂无比赛</text>
   </view>
 

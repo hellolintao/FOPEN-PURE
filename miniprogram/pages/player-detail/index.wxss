@@ -7,6 +7,8 @@
   align-items: center;
   gap: var(--space-4);
   margin-bottom: var(--space-5);
+  position: relative;
+  overflow: hidden;
 }
 .big-avatar {
   width: 160rpx;
@@ -17,6 +19,11 @@
 }
 .player-info {
   flex: 1;
+}
+.hero-row .big-avatar,
+.hero-row .player-info {
+  position: relative;
+  z-index: 1;
 }
 .section {
   margin-top: var(--space-5);
@@ -43,4 +50,7 @@
 .empty-state {
   text-align: center;
   padding: var(--space-8) 0;
+}
+.empty-state.compact {
+  padding: var(--space-5) 0;
 }

@@ -1,6 +1,9 @@
 {
   "usingComponents": {
-    "rank-row": "/components/rank-row/index"
+    "rank-row": "/components/rank-row/index",
+    "brush-stroke-bg": "/components/brush-stroke-bg/index",
+    "chip-tab": "/components/chip-tab/index",
+    "skeleton-loader": "/components/skeleton-loader/index"
   },
   "navigationBarTitleText": "排行榜"
 }

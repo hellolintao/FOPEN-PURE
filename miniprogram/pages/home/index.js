@@ -2,7 +2,8 @@ Page({
   data: {
     currentMember: null,
     myStats: { matches: 0, wins: 0, winRate: 0 },
-    isAdmin: false
+    isAdmin: false,
+    loadingStats: false
   },
 
   async onShow() {
@@ -17,6 +18,7 @@ Page({
     if (!member) return;
     this.setData({ currentMember: member });
 
+    this.setData({ loadingStats: true });
     try {
       const stats = await wx.cloud.callFunction({
         name: 'points-engine',
@@ -31,6 +33,8 @@ Page({
     } catch (err) {
       console.error('[home] loadHome stats error', err);
       wx.showToast({ title: '数据加载失败', icon: 'none', duration: 2000 });
+    } finally {
+      this.setData({ loadingStats: false });
     }
   },
 

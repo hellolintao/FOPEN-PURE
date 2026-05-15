@@ -5,28 +5,38 @@
 .header {
   margin-bottom: var(--space-4);
 }
-.tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-5);
-}
-.chip {
-  padding: var(--space-2) var(--space-4);
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--color-muted);
-  background: var(--color-bg-2);
-}
-.chip-active {
-  background: var(--color-lime);
-  color: var(--color-ink);
-}
 .card-hero {
   background: var(--color-lime);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   margin-bottom: var(--space-4);
+}
+.star-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: var(--space-5);
+}
+.star-content {
+  position: relative;
+  z-index: 1;
+}
+.star-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.star-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 3rpx solid #fff;
+  background: var(--color-bg-3);
+}
+.star-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 .list {
   display: flex;

@@ -1,0 +1,25 @@
+.chip-tab {
+  display: flex;
+  gap: var(--space-2);
+  padding: 6rpx;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-3);
+}
+
+.chip-tab-item {
+  flex: 1;
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  font-size: var(--font-label-size);
+  font-weight: 700;
+}
+
+.chip-tab-item.active {
+  background: var(--color-lime);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
+}

@@ -120,7 +120,6 @@ Page({
 
   jumpPage(e) {
     const { type, page } = e.currentTarget.dataset;
-    console.log("jump page", type, page);
     if (page) {
       wx.navigateTo({
         url: `/pages/${page}/index?envId=${this.data.selectedEnv?.envId}`,

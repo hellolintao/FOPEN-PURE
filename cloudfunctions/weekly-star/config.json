@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "weekly-star-monday",
+      "type": "timer",
+      "config": "0 30 0 ? * MON *"
+    }
+  ]
+}

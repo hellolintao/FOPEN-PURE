@@ -1,6 +1,9 @@
 <view class="player-page">
-  <view wx:if="{{player}}">
-    <view class="hero-row">
+  <skeleton-loader wx:if="{{loading}}" rows="{{4}}" />
+
+  <view wx:elif="{{player}}">
+    <view class="hero-row card-hero anim-fade-up">
+      <brush-stroke-bg></brush-stroke-bg>
       <image class="big-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
       <view class="player-info">
         <text class="text-h1">{{player.name}}</text>
@@ -38,9 +41,13 @@
         <text class="text-meta">{{item.resultStatus}}</text>
       </view>
     </view>
+
+    <view wx:else class="section empty-state compact">
+      <text class="text-meta">暂无近期比赛</text>
+    </view>
   </view>
 
-  <view wx:elif="{{!player}}" class="empty-state">
+  <view wx:else class="empty-state">
     <text class="text-meta">球员信息不存在</text>
   </view>
 </view>

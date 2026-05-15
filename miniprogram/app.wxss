@@ -2,6 +2,7 @@
 @import "/styles/tokens.wxss";
 @import "/styles/base.wxss";
 @import "/styles/utilities.wxss";
+@import "/styles/animations.wxss";
 
 /* 旧版兼容：保留 .container 类供未重写的页面用 */
 .container {

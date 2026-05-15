@@ -239,12 +239,9 @@ exports.main = async (event, context) => {
 
   switch (action) {
     case 'add': {
-      console.log('收到新增比赛数据:', JSON.stringify(data, null, 2))
-
       // 数据验证
       const errors = validateMatchResult(data)
       if (errors.length > 0) {
-        console.log('验证失败:', errors)
         return { errMsg: 'validation failed', errors }
       }
 
@@ -293,8 +290,6 @@ exports.main = async (event, context) => {
         updateTime: now
       }
 
-      console.log('准备插入数据库的数据:', JSON.stringify(addData, null, 2))
-
       return await collection.add({
         data: addData
       })
@@ -317,8 +312,6 @@ exports.main = async (event, context) => {
     }
 
     case 'update': {
-      console.log('收到更新比赛数据:', JSON.stringify(data, null, 2))
-
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }
       }
@@ -326,7 +319,6 @@ exports.main = async (event, context) => {
       // 数据验证
       const errors = validateMatchResult(data)
       if (errors.length > 0) {
-        console.log('验证失败:', errors)
         return { errMsg: 'validation failed', errors }
       }
 
@@ -346,8 +338,6 @@ exports.main = async (event, context) => {
         courtId: data.courtId || null,
         updateTime: now
       }
-
-      console.log('准备更新的数据:', JSON.stringify(updateData, null, 2))
 
       return await collection.doc(_id || id).update({
         data: updateData
@@ -491,8 +481,6 @@ exports.main = async (event, context) => {
           isWinner: p.id === data.winnerId
         }))
       }
-
-      console.log('准备更新的比分数据:', JSON.stringify(updateData, null, 2))
 
       return await collection.doc(_id || id).update({
         data: updateData

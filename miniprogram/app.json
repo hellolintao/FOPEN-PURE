@@ -25,10 +25,10 @@
   "subPackages": [],
   "tabBar": {
     "custom": true,
-    "color": "#888",
-    "selectedColor": "#7c3aed",
-    "backgroundColor": "#101017",
-    "borderStyle": "black",
+    "color": "#6B7280",
+    "selectedColor": "#0A0A0A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",
@@ -63,11 +63,11 @@
     ]
   },
   "window": {
-    "backgroundColor": "#0d0d14",
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#101017",
+    "backgroundColor": "#FFFFFF",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTitleText": "Fuopen",
-    "navigationBarTextStyle": "white"
+    "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
