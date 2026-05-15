@@ -233,6 +233,103 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
   }
 }
 
+// Phase 9 v2.1 — ctx builder helpers for new handler routes
+
+function buildBatchCtx(submitter, isAdminFlag) {
+  const scoreRule = require('./lib/score-rule')
+  const stateLib = require('./lib/state')
+  return {
+    callerOpenid: submitter.openid,
+    callerMemberId: submitter._id,
+    isAdmin: isAdminFlag,
+    confirmedAtNow: new Date(),
+    nowDate: new Date(),
+    db: {
+      getMatch: async (id) => {
+        const r = await db.collection('match_results').doc(id).get().catch(() => null)
+        return r ? r.data : null
+      },
+      updateMatch: async (id, patch) => {
+        await db.collection('match_results').doc(id).update({ data: patch })
+      },
+      getRequestLog: async (id) => {
+        const r = await db.collection('_request_log').doc(id).get().catch(() => null)
+        return r ? r.data : null
+      },
+      upsertRequestLog: async (id, doc) => {
+        const exists = await db.collection('_request_log').doc(id).get().catch(() => null)
+        if (exists && exists.data) {
+          await db.collection('_request_log').doc(id).update({ data: doc })
+        } else {
+          await db.collection('_request_log').add({ data: doc })
+        }
+      },
+    },
+    confirmOne: async (current) => {
+      // Reuse Phase 8 state machine
+      if (typeof stateLib.confirmOne === 'function') {
+        return stateLib.confirmOne({ matchId: current._id, db })
+      }
+      // Fallback: direct update to confirmed (logic should mirror state.confirmOne)
+      await db.collection('match_results').doc(current._id).update({
+        data: { resultStatus: 'confirmed', updateTime: new Date(), confirmedAt: new Date() }
+      })
+    },
+    validateScore: scoreRule.validateScore,
+  }
+}
+
+function buildQueryCtx(submitter) {
+  return {
+    isAdmin: submitter && submitter.isAdmin,
+    db: {
+      queryMatchResults: async ({ resultStatus, tournamentId, limit }) => {
+        const where = { resultStatus }
+        if (tournamentId) where.tournamentId = tournamentId
+        return (await db.collection('match_results').where(where).orderBy('updateTime', 'desc').limit(limit).get()).data
+      },
+      countMatchResults: async ({ resultStatus, tournamentId }) => {
+        const where = { resultStatus }
+        if (tournamentId) where.tournamentId = tournamentId
+        const r = await db.collection('match_results').where(where).count()
+        return r.total
+      },
+      getTournamentsByIds: async (ids) => {
+        if (!ids.length) return []
+        return (await db.collection('tournaments').where({ _id: _.in(ids) }).get()).data
+      },
+      getMembersByIds: async (ids) => {
+        if (!ids.length) return []
+        return (await db.collection('members').where({ _id: _.in(ids) }).get()).data
+      },
+    },
+  }
+}
+
+function buildSummaryCtx(submitter) {
+  return {
+    callerMemberId: submitter._id,
+    db: {
+      queryMyPending: async (mid) => (await db.collection('match_results').where({
+        playerIds: _.in([mid]),
+        resultStatus: 'pending',
+      }).orderBy('scheduledStart', 'asc').limit(50).get()).data,
+      queryMySubmitted: async (mid) => (await db.collection('match_results').where({
+        playerIds: _.in([mid]),
+        resultStatus: 'submitted',
+      }).orderBy('submittedAt', 'desc').limit(50).get()).data,
+      queryMyConfirmed: async (mid, limit) => (await db.collection('match_results').where({
+        playerIds: _.in([mid]),
+        resultStatus: 'confirmed',
+      }).orderBy('confirmedAt', 'desc').limit(limit).get()).data,
+      getTournamentsByIds: async (ids) => {
+        if (!ids.length) return []
+        return (await db.collection('tournaments').where({ _id: _.in(ids) }).get()).data
+      },
+    },
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data, page = 1, pageSize = 10, _id, id } = event
   const now = db.serverDate()
@@ -581,6 +678,60 @@ exports.main = async (event, context) => {
     }
 
 
+    case 'batchConfirm': {
+      const { batchConfirm } = require('./lib/handlers/batch')
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) {
+          return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限', requestId: event && event.requestId } }
+        }
+        const ctx = buildBatchCtx(submitter, true)
+        const data = await batchConfirm(ctx, event)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: event && event.requestId } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: event && event.requestId } }
+      }
+    }
+    case 'batchSubmit': {
+      const { batchSubmit } = require('./lib/handlers/batch')
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter) return { success: false, error: { code: 'FORBIDDEN', message: '请登录', requestId: event && event.requestId } }
+        const ctx = buildBatchCtx(submitter, false)
+        const data = await batchSubmit(ctx, event)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: event && event.requestId } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: event && event.requestId } }
+      }
+    }
+    case 'pendingReviewItems': {
+      const { pendingReviewItems } = require('./lib/handlers/query')
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+        const ctx = buildQueryCtx(submitter)
+        const data = await pendingReviewItems(ctx, event)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message } }
+      }
+    }
+    case 'mySummary': {
+      const { mySummary } = require('./lib/handlers/my-summary')
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter) return { success: false, error: { code: 'FORBIDDEN', message: '请登录' } }
+        const ctx = buildSummaryCtx(submitter)
+        const data = await mySummary(ctx, event)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message } }
+      }
+    }
     case 'submittedQueue': {
       const submitter = await resolveSubmitter()
       if (!submitter || !submitter.isAdmin) return fail('UNAUTHORIZED', '需要管理员权限')
