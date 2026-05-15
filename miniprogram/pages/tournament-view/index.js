@@ -151,33 +151,29 @@ function buildTournamentDisplay(tournament, brackets) {
   const pointsRules = tournament.pointsRules || {}
   const placement = pointsRules.placement || {}
   const winLoss = pointsRules.winLoss || {}
-  const legacyBonus = pointsRules.bonusByRound || {}
+  const isKnockout = tournament.format === 'knockout'
+
   const placementRows = [
     { label: '冠军', value: placement.champion },
     { label: '亚军', value: placement.runnerUp },
     { label: '四强', value: placement.semifinal },
     { label: '八强', value: placement.quarterfinal },
     { label: '参赛', value: placement.participation }
-  ].filter(row => row.value !== undefined)
-  const bonusRows = [1, 2, 3, 4, 5]
-    .filter(round => legacyBonus[round] !== undefined || legacyBonus[String(round)] !== undefined)
-    .map(round => ({
-      label: `第${round}轮`,
-      value: legacyBonus[round] !== undefined ? legacyBonus[round] : legacyBonus[String(round)]
-    }))
+  ].filter(row => row.value !== undefined && row.value !== null)
 
   return {
     maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
     playersPerMatch: config.playersPerMatch || (tournament.type === 'doubles' ? 4 : 2),
+    showRoundInfo: isKnockout,
     totalRounds: config.totalRounds || (brackets || []).length || '-',
     currentRound: config.currentRound || 1,
-    formatText: tournament.format === 'knockout' ? '淘汰赛' : '常规赛',
-    pointsMode: placementRows.length > 0 ? 'placement' : (winLoss.win !== undefined || winLoss.loss !== undefined ? 'winLoss' : 'legacy'),
-    win: winLoss.win !== undefined ? winLoss.win : pointsRules.win,
-    loss: winLoss.loss !== undefined ? winLoss.loss : pointsRules.loss,
-    walkover: pointsRules.walkover,
-    placementRows,
-    bonusRows
+    formatText: isKnockout ? '淘汰赛' : '常规赛',
+    // 积分展示模式按 format 拍定，不再根据 pointsRules 内容自检
+    pointsMode: isKnockout ? 'placement' : 'winLoss',
+    win: typeof winLoss.win === 'number' ? winLoss.win : '-',
+    loss: typeof winLoss.loss === 'number' ? winLoss.loss : '-',
+    walkover: typeof winLoss.walkover === 'number' ? winLoss.walkover : undefined,
+    placementRows
   }
 }
 

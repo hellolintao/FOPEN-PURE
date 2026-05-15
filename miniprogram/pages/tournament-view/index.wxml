@@ -55,7 +55,7 @@
         <text class="info-value">{{tournamentDisplay.maxPlayers}}</text>
       </view>
 
-      <view class="info-item">
+      <view class="info-item" wx:if="{{tournamentDisplay.showRoundInfo}}">
         <text class="info-label">总轮数</text>
         <text class="info-value">{{tournamentDisplay.totalRounds}}</text>
       </view>
@@ -70,7 +70,7 @@
         <text class="info-value">{{tournamentDisplay.formatText}}</text>
       </view>
 
-      <view class="info-item">
+      <view class="info-item" wx:if="{{tournamentDisplay.showRoundInfo}}">
         <text class="info-label">当前轮次</text>
         <text class="info-value">第{{tournamentDisplay.currentRound}}轮</text>
       </view>
@@ -80,34 +80,25 @@
     <view class="section-card">
       <view class="section-title">积分规则</view>
 
-      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
+      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode === 'winLoss'}}">
         <text class="info-label">胜利积分</text>
-        <text class="info-value">{{tournamentDisplay.win || 0}}</text>
+        <text class="info-value">{{tournamentDisplay.win}}</text>
       </view>
 
-      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode !== 'placement'}}">
+      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode === 'winLoss'}}">
         <text class="info-label">失败积分</text>
-        <text class="info-value">{{tournamentDisplay.loss || 0}}</text>
+        <text class="info-value">{{tournamentDisplay.loss}}</text>
       </view>
 
-      <view class="info-item" wx:if="{{tournamentDisplay.walkover !== undefined}}">
+      <view class="info-item" wx:if="{{tournamentDisplay.pointsMode === 'winLoss' && tournamentDisplay.walkover !== undefined}}">
         <text class="info-label">弃权积分</text>
-        <text class="info-value">{{tournamentDisplay.walkover || 0}}</text>
+        <text class="info-value">{{tournamentDisplay.walkover}}</text>
       </view>
 
       <view class="bonus-list" wx:if="{{tournamentDisplay.pointsMode === 'placement'}}">
         <view class="section-subtitle">名次积分</view>
 
         <view class="info-item" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
-          <text class="info-label">{{item.label}}</text>
-          <text class="info-value">{{item.value}}</text>
-        </view>
-      </view>
-
-      <view class="bonus-list" wx:if="{{tournamentDisplay.bonusRows.length > 0}}">
-        <view class="section-subtitle">轮次奖励积分</view>
-
-        <view class="info-item" wx:for="{{tournamentDisplay.bonusRows}}" wx:key="label">
           <text class="info-label">{{item.label}}</text>
           <text class="info-value">{{item.value}}</text>
         </view>
