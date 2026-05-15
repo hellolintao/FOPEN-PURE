@@ -13,6 +13,7 @@
 **前置条件:**
 - Phase 7 完成（PROGRESS.md 5/6）：`match_results` 是按 Phase 7 的新 schema 落库的；`pointsRules` 双子树存在；BYE 行 `resultStatus='confirmed'` 已就位
 - 上一阶段遗留：前端 `utils/bracket-generator.js / scheduler-mirror.js` 也要纳入 sync hash 比对（本 Phase Task 1 一起做）
+- 2026-05-15 Phase 7 收尾后的若干实际改动（双打报名按个人 / `_.set()` 包嵌套 / list shape / 跳转参数 / 双打 cell 2 行）必须按下方「2026-05-15 同步修订」节再覆盖一次
 
 **推荐执行方式:** Subagent-driven。Task 1–6（lib + sync 脚本）独立度高，可并行；Task 7+ 是前端 / 落库编排，建议串行盯。Task 4（state machine）最复杂，单独派一个 fresh subagent 跑完整 TDD 循环。
 
@@ -30,6 +31,91 @@
 6. **`scripts/sync-shared-libs.sh` 精确 hash 前提。** Phase 7 的 `bracket-generator.js / scheduler-mirror.js` 必须是 CommonJS 原样复制；本 Phase 不再接受“改 ES module 后仍 hash 比对”的做法。
 7. **`tournaments.listByIds` 是本 Phase 明确依赖。** Task 12 的 my-match 会调用它；如果 Phase 7 未实现，Task 12 必须补 `cloudfunctions/tournaments/index.js`，并在 File Structure/commit 中包含该文件。
 8. **E2E 前必须确认后续轮 result 行存在。** Task 13 的 Admin 闭环里，首轮确认后半决能否录分是硬门槛：既要 bracket player slot 推进，也要 `match_results` 半决行可在 `tournament-score` 页面显示。
+
+## 2026-05-15 同步修订（Phase 7 收尾后追加，执行前按此再覆盖一次）
+
+Phase 7 在 plan 草案落笔后又做了若干实际改动，本节把这些差异压进 Phase 8 启动口径。下方原 Task 与「2026-05-14 Review 修订」中若与本节冲突，按本节为准。
+
+9. **常规赛双打报名是个人，不是队伍。** Phase 7 实际改成：`tournament-registrations.bulkSet` 对 `tournament.type==='doubles' && tournament.format==='regular'` 不再要求 `partnerId`；reg 行 `partnerId=null`；搭档在 step 3 排程时随机配对，写入 `match.player1.partnerId/partnerName`（同一人在不同场次可与不同搭档组队）。
+
+    - 对 `award.js` 的影响：**无须改算法**。`collectIds(obj, type)` 已经把 `obj.id + obj.partnerId` 都算进 entries，winLoss 双方各自 +rule.win/+rule.loss 即可。
+    - 对 state.js `submitResult` 的影响：**权限校验靠 `result.playerIds`**（Phase 7 已写 4 个 id），不能再用 `result.player1.id || result.player2.id` 的简化判断。
+    - 对 `tournament-score` UI 的影响：每场 4 名玩家任一可提交。
+    - 对 `score-row` 的影响：判断 `match.player1.partnerId` 渲染 2 行布局（A/B vs C/D），与 Phase 7 `schedule-board` / `tournament-detail` 赛程表 cell 一致。
+
+10. **submitter 权限必须用 `playerIds` 校验。** `state.js#submitResult` 在分数校验之后、写 DB 之前补：
+    ```js
+    if (!submitter.isAdmin && !(result.playerIds || []).includes(submitter._id)) {
+      throw new Error('UNAUTHORIZED')
+    }
+    ```
+    spec §6.4 要求"普通会员只能提交自己参与的比赛"，Phase 8 必须落地。原 Task 4 plan 没写这条，**执行时务必补**。
+
+11. **嵌套对象 update 全用 `_.set()`。** Phase 7 踩过坑：TCB SDK 把 `update({ data: { schedulePlan: {...} } })` 内部展开成 dot-path 写入，遇到旧 doc 字段为 `null` 时报 `Cannot create field 'X' in element {schedulePlan: null}`。Phase 8 写 `match_results` 的嵌套对象同样有风险。在 state.js confirmOne / reconfirmMatch / clearDownstream 里：
+    ```js
+    const _ = db.command
+    await db.collection('match_results').doc(id).update({
+      data: {
+        score: _.set(score),                 // score 是嵌套对象
+        pointsAwarded: _.set({ source: 'match', entries }),
+        winner: _.set(winner),               // {id, name} 嵌套
+        ...
+      }
+    })
+    ```
+    清空时用 `_.remove()` 或显式 `_.set(null)`。同理 `tournament_brackets.matches` 用 `_.set(updated)` 整体替换 matches 数组。
+
+12. **`match-results.list` 旧返回 shape 是 raw cloud SDK 结果。** Phase 7 没改 list 协议。`listByTournament({ tournamentId }) → { success, data: { results: [...] } }` **必须新建**而不是覆盖旧 list，page 与 cloud 函数都按这个新 action 来。原 Task 10 代码示例里仍写 `action: 'list', tournamentId`，执行时改成 `action: 'listByTournament', tournamentId`。
+
+13. **录分页 `onLoad` 参数命名。** Phase 7 `tournament-detail` 底部「录入成绩」实际跳的是 `?id=${tournamentId}`（不是 `?tournamentId=`）。Phase 8 Task 10 `onLoad` 必须兼容两者：
+    ```js
+    onLoad({ tournamentId, id, matchId }) {
+      const tid = tournamentId || id
+      if (!tid) return wx.showToast({ title: '缺少 tournamentId', icon: 'none' })
+      this.setData({ tournamentId: tid, anchorMatchId: matchId || '' })
+    }
+    ```
+    Phase 8 Task 10 顺手把 `tournament-detail.onEnterScore` 改成传 `tournamentId`（也接受两个）。
+
+14. **`matchKind` 三类决定积分边界。** Phase 7 实际产生：
+    - `bracket` — 淘汰赛 R1+R2+ 占位（含 BYE walkover）
+    - `regularRound` — 常规赛 buildRegularSchedule 生成
+    - `extra` — step 3 用户手动加场（regular only）
+
+    state.js 行为：
+    - `confirmOne` 推进下一轮**仅** `result.matchKind === 'bracket'`
+    - `maybeAwardPlacement` 仅扫 `matchKind === 'bracket'` 行
+    - `buildAwardEntries` 不区分 matchKind，所有非 BYE / 非 walkover 的 confirmed match 都给 `winLoss` 积分（regularRound / extra / bracket 一视同仁）
+    - `freePlay` 不入 `match_results` 集合（在 `free_plays`），积分忽略
+
+    **拍板**：淘汰赛玩家同时拿 `winLoss` 与 `placement`（不是替代关系）。R1 输家拿 `winLoss.loss + placement.participation`（或 quarterfinal / semifinal，按轮次）。买 plan 的 buildAwardEntries + buildPlacementEntries 双路径同时叠加。如果俱乐部规则不接受叠加，再加一处 toggle。
+
+15. **walkover 字段名义存在但 Phase 8 不实现弃赛入口。** `winLoss.walkover` 是 schema 一部分，commitStep4 normalize 时默认 `0`。但 Phase 8 没有「弃赛」UI 入口，award.js 也不会主动赋 walkover。**保留字段、不实现流程**，留给后续 phase。BYE 行 award `entries: []`（不给 walkover），符合"轮空不进积分"的口径。
+
+16. **`score-row` 双打 2 行布局。** 与 Phase 7 `schedule-board` cell 风格保持一致：组件接收的 `match` 若含 `player1.partnerId`，渲染 2 行 `A/B` vs `C/D`；4 个名字位都不可点（只展示，不在录分页换人）；分数输入只显示一格 4 局比分。
+
+17. **Phase 7 `tournament-manage` 已经分了「我的草稿」+「公开列表」。** Phase 8 Task 11 加「待确认比分队列」时，**插在「我的草稿」之后、公开列表之前**，并复用 `tournaments.list` 已有的过滤。不要破坏现有两块的渲染。
+
+18. **`tournament_registrations.registrationStatus`。** Phase 7 已统一写入 `registrationStatus: 'confirmed'`（旧 `status` 字段废弃）。Phase 8 Task 12 my-match 拉报名时按 `registrationStatus` 过滤，**不要再 fallback 到 `status`**。
+
+19. **`score-rule` 4 局制 + 3:3 抢七是俱乐部规则，写死即可。** Phase 7 没在 wizard 提供规则切换。Phase 8 Task 2 `score-rule.js` 按此规则实现，不要试图从 `tournament.config` 读规则参数（Phase 7 config 已基本废弃）。如果未来要支持 6 局制，再加 config 字段。
+
+20. **执行 Phase 8 前要顺手更新 `cloudfunctions/DATABASE_SCHEMA.md`。** 加：
+    - `match_results.matchKind`（bracket / regularRound / extra）
+    - `match_results.position / round / sourceMatchId / playerIds`（Phase 7 已写但 schema 未同步）
+    - `tournaments.schedulePlan.slotMinutes = 20`（不是 30）
+    - `tournaments.createdBy / createdByOpenid` （draft 可见性依赖）
+    - `tournament_registrations.registrationStatus`（取代 `status`）
+    - `free_plays.{tournamentId, courtId, queueOrder, playerIds}`
+    - `courts.{courtId, name, location, enabled}`
+    - 写明 regular doubles 报名是个人（`partnerId=null`），knockout doubles 报名是队伍（`partnerId/partnerName/teamName` 必填）
+
+21. **Phase 8 启动前回归验证清单。** 在做 Task 1 之前，跑一遍这几条确保 Phase 7 收尾干净：
+    - 创建一个常规赛单打（4 人 / 2 球场） → 走完 step 4 「创建赛事」 → tournament 状态 `upcoming`，`schedulePlan.slotMinutes === 20`
+    - 创建一个常规赛双打（4 个人，不组队） → tournament-registrations 4 行 `partnerId=null` → step 3 排程一场 doubles match `player1.partnerId / partnerName` 由前端 random 填好
+    - 创建一个淘汰赛单打（6 人 / 2 球场） → bracket R1 4 场（2 BYE 推进到 R2）+ R2/R3 占位 + `match_results` 8 行（BYE 行 `resultStatus='confirmed'`，非 BYE `pending`）
+    - tournament-detail 进入：草稿态显示「继续创建」；upcoming 态显示「编辑 + 录入成绩」；赛程区按场地分组渲染对（双打 2 行）
+    - 若任一条不通过，先回 Phase 7 修，再进 Phase 8
 
 ## 文档纪律
 
