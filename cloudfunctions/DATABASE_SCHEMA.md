@@ -453,3 +453,36 @@ courts (球场字典)
 4. **数据验证**：每个集合都在云函数层面进行了数据验证
 5. **级联删除**：删除赛事时需要注意级联删除相关数据
 6. **索引建议**：建议为常用查询字段建立索引，如 `tournamentId`、`round`、`playerId` 等
+
+## `_request_log` 集合（v2.1 新增）
+
+用于 batchConfirm / batchSubmit 的幂等合并与失败行复盘。**TTL 30 天**自动清理（lastSeenAt + 30d）。
+
+### 文档结构
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `_id` | String | 是 | requestId（batch group id），前端 parent 在开 sheet 时生成 |
+| `action` | String | 是 | `batchConfirm` \| `batchSubmit` |
+| `callerOpenid` | String | 是 | 调用方 OPENID |
+| `callerMemberId` | String | 是 | 调用方 member._id |
+| `firstSeenAt` | ServerDate | 是 | 首次写入时间 |
+| `lastSeenAt` | ServerDate | 是 | 最近一次重试时间，TTL 索引基准 |
+| `results` | Object | 是 | map<matchId, perMatchResult> |
+| `closedAt` | ServerDate \| null | 否 | 整批 all-ok 或 admin 显式关闭 sheet 时打戳 |
+
+### perMatchResult 形态
+
+成功：`{ state: 'success', confirmedAt: ServerDate, attemptCount: 1 }`
+失败：`{ state: 'failure', code: 'CLOUD_TIMEOUT', message: '...', retryable: true, attemptCount: 2 }`
+
+### 索引
+
+- TTL：`lastSeenAt` + 30 天
+- 复合：`(callerOpenid, lastSeenAt desc)` 便于按用户审计
+
+## `match_results.updateTime` 作为乐观锁键（v2.1 新增说明）
+
+v2.1 `batchConfirm` 使用 `match_results.updateTime` 作为乐观锁键，API payload 字段名 `expectedUpdateTime`。
+后端确认前精确匹配 `current.updateTime.getTime() === new Date(payload.expectedUpdateTime).getTime()`；不匹配返 STALE_VERSION。
+后续若需要严格 version，再新增 `version: Number` 字段，向后兼容。
