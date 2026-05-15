@@ -1,15 +1,51 @@
-/* ========== 容器 ========== */
-.setting-container {
+.setting-page {
   min-height: 100vh;
-  background: #f7f7f7;
+  background: var(--color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--space-7);
 }
 
-.brand-text {
-  font-size: 100rpx;
-  font-weight: 700;
-  color: #333333;
-  letter-spacing: 8rpx;
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 640rpx;
+}
+
+.brand-tape {
+  margin-bottom: var(--space-3);
+}
+
+.brand-mark {
+  font-family: var(--font-family-display);
+  font-size: 168rpx;
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: var(--color-ink);
+}
+
+.brand-sub {
+  font-size: 26rpx;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.brand-divider {
+  width: 96rpx;
+  height: 6rpx;
+  background: var(--color-lime);
+  margin: var(--space-4) 0;
+}
+
+.brand-meta {
+  font-size: var(--font-body-size);
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
 }

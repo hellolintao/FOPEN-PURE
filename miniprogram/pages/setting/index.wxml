@@ -1,3 +1,11 @@
-<view class="setting-container">
-  <text class="brand-text">FOPEN</text>
+<view class="setting-page">
+  <view class="brand-block anim-stage-rise">
+    <view class="brand-tape">
+      <text class="tape tape-stamped">FOPEN TENNIS CLUB</text>
+    </view>
+    <text class="brand-mark">FOPEN</text>
+    <text class="brand-sub num">/ TENNIS CLUB · EST. 2026</text>
+    <view class="brand-divider"></view>
+    <text class="brand-meta">设置页 · 后续会加入通知、隐私、关于等条目</text>
+  </view>
 </view>

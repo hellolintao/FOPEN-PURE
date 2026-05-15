@@ -1,367 +1,347 @@
-/* ========== 容器 ========== */
 .tournament-view-container {
   min-height: 100vh;
-  background: #f7f7f7;
-  padding-bottom: 24rpx;
+  background: var(--color-bg);
+  padding: var(--space-5) var(--space-5) 160rpx;
 }
 
-/* ========== 加载状态 ========== */
 .loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #999;
-  font-size: 28rpx;
+  padding: var(--space-9) 0;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: var(--font-body-size);
 }
 
-/* ========== 内容包装器 ========== */
 .content-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
-  padding: 24rpx;
+  gap: var(--space-5);
 }
 
-/* ========== 卡片 ========== */
+/* ============================================================
+ * SECTION CARD
+ * ============================================================ */
 .section-card {
-  background: #ffffff;
-  border-radius: 8rpx;
-  padding: 24rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
 }
 
-/* ========== 标题 ========== */
-.section-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #333333;
-  margin-bottom: 24rpx;
-  padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #e5e5e5;
-}
-
+.section-title,
 .section-title-with-action {
   display: flex;
   align-items: center;
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--color-ink);
+  text-transform: uppercase;
+  padding-bottom: var(--space-3);
+  border-bottom: 2rpx solid var(--color-ink);
+  margin-bottom: var(--space-4);
   justify-content: space-between;
-  margin-bottom: 24rpx;
-  padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #e5e5e5;
-}
-
-.section-title-with-action .section-title {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
 }
 
 .section-subtitle {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #666666;
-  margin: 24rpx 0 16rpx 0;
-  padding-top: 16rpx;
-  border-top: 1rpx dashed #e5e5e5;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: var(--space-3) 0 var(--space-2);
 }
 
-/* ========== 详情按钮 ========== */
 .detail-btn {
-  padding: 8rpx 24rpx;
-  background: #333333;
-  border-radius: 4rpx;
+  display: inline-flex;
+  align-items: center;
+  padding: 6rpx 16rpx;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
-.detail-btn text {
-  font-size: 26rpx;
-  color: #ffffff;
-}
-
-.detail-btn:active {
-  background: #555555;
-}
-
-/* ========== 信息项 ========== */
+/* ============================================================
+ * INFO ITEM
+ * ============================================================ */
 .info-item {
   display: flex;
-  align-items: center;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
-.info-item:last-child {
-  border-bottom: none;
-}
+.info-item:last-child { border-bottom: 0; }
 
 .info-label {
-  font-size: 28rpx;
-  color: #666666;
-  min-width: 180rpx;
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
 .info-value {
-  font-size: 28rpx;
-  color: #333333;
   flex: 1;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--color-ink);
   text-align: right;
+  letter-spacing: 0.01em;
 }
 
-/* ========== 奖励列表 ========== */
-.bonus-list {
-  padding-top: 8rpx;
-}
-
-/* ========== 空提示 ========== */
+/* ============================================================
+ * EMPTY
+ * ============================================================ */
 .empty-tip {
+  padding: var(--space-6) 0;
   text-align: center;
-  padding: 60rpx 0;
-  color: #999;
-  font-size: 28rpx;
+  color: var(--color-muted);
+  font-size: var(--font-body-size);
 }
 
-/* ========== 参赛人员列表 ========== */
+/* ============================================================
+ * PLAYER LIST
+ * ============================================================ */
 .player-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
 }
 
 .player-item {
-  padding: 20rpx;
-  background: #f9f9f9;
-  border-radius: 8rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
+  padding: var(--space-3);
+  background: var(--color-bg-3);
+  border-radius: var(--radius-sm);
+}
+
+.team-info { margin-bottom: 4rpx; }
+
+.team-name {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
 }
 
 .player-info {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .player-name {
-  font-size: 30rpx;
-  font-weight: 500;
-  color: #333333;
+  flex: 1;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .player-seed {
-  font-size: 24rpx;
-  color: #999;
-  background: #e5e5e5;
-  padding: 4rpx 12rpx;
-  border-radius: 4rpx;
+  flex-shrink: 0;
+  font-family: var(--font-family-num);
+  font-size: 22rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  padding: 2rpx 8rpx;
+  background: var(--color-lime);
+  border-radius: var(--radius-sm);
 }
 
-.partner-info {
+/* ============================================================
+ * COURTS / SCHEDULE
+ * ============================================================ */
+.courts-list {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.court-block {
+  background: var(--color-bg-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+}
+
+.court-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 1rpx solid var(--color-border);
+  margin-bottom: var(--space-2);
+}
+
+.court-title {
+  font-size: 26rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+.court-meta {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+.court-empty {
+  padding: var(--space-3) 0;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 22rpx;
+}
+
+.court-match-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
   align-items: center;
-  gap: 8rpx;
+  gap: var(--space-2);
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
-.partner-label {
-  font-size: 26rpx;
-  color: #666666;
+.court-match-row:last-child { border-bottom: 0; }
+
+.court-player {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.partner-name {
-  font-size: 26rpx;
-  color: #333333;
+.court-vs {
+  font-family: var(--font-family-num);
+  font-size: 18rpx;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: var(--color-muted-2);
 }
 
-.team-info {
-  padding-top: 4rpx;
+.court-freeplay {
+  grid-template-columns: 1fr auto;
 }
 
-.team-name {
-  font-size: 26rpx;
-  color: #666666;
+.court-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30rpx;
+  padding: 0 10rpx;
+  border-radius: var(--radius-sm);
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-/* ========== 对位信息列表 ========== */
+.court-chip.chip-pending { background: var(--color-bg); color: var(--color-muted); }
+.court-chip.chip-submitted { background: var(--color-ink); color: var(--color-bg); }
+.court-chip.chip-confirmed { background: var(--color-lime); color: var(--color-ink); }
+.court-chip.chip-disputed { background: var(--color-danger); color: var(--color-bg); }
+
+/* ============================================================
+ * BRACKETS (later rounds)
+ * ============================================================ */
 .brackets-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: var(--space-4);
 }
 
 .bracket-item {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+  background: var(--color-bg-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
 }
 
 .bracket-header {
-  padding: 16rpx;
-  background: #f0f0f0;
-  border-radius: 8rpx;
+  padding-bottom: var(--space-2);
+  border-bottom: 1rpx solid var(--color-border);
+  margin-bottom: var(--space-2);
 }
 
 .bracket-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #333333;
+  font-size: 24rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: 0.04em;
 }
 
 .match-list {
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: var(--space-2);
 }
 
 .match-item {
-  padding: 20rpx;
-  background: #f9f9f9;
-  border-radius: 8rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
+  display: grid;
+  grid-template-columns: 96rpx 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
+.match-item:last-child { border-bottom: 0; }
+
 .match-position {
-  display: flex;
-  align-items: center;
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
 .position-text {
-  font-size: 24rpx;
-  color: #999;
-  background: #e5e5e5;
-  padding: 4rpx 12rpx;
-  border-radius: 4rpx;
+  font-family: var(--font-family-num);
 }
 
 .match-content {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .match-player {
-  flex: 1;
-  text-align: center;
+  min-width: 0;
 }
 
 .player-status {
-  font-size: 28rpx;
-  color: #333333;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .player-status.winner {
-  color: #52c41a;
-  font-weight: 600;
+  color: var(--color-ink);
+  font-weight: 900;
+  background: var(--color-lime);
+  padding: 4rpx 8rpx;
+  border-radius: var(--radius-sm);
+  display: inline-block;
 }
 
 .vs-text {
-  font-size: 24rpx;
-  color: #999;
-  font-weight: 600;
+  font-family: var(--font-family-num);
+  font-size: 18rpx;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: var(--color-muted-2);
 }
-
-.match-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.status-badge {
-  font-size: 24rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 4rpx;
-}
-
-.status-pending {
-  color: #999;
-  background: #e5e5e5;
-}
-
-.status-ongoing {
-  color: #1890ff;
-  background: #e6f7ff;
-}
-
-.status-completed {
-  color: #52c41a;
-  background: #f6ffed;
-}
-
-/* ========== 首轮排程 — 按场地分组 ========== */
-.courts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-
-.court-block {
-  background: #f3f4f6;
-  padding: 20rpx;
-  border-radius: 16rpx;
-}
-
-.court-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12rpx;
-}
-
-.court-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #333333;
-}
-
-.court-meta {
-  font-size: 22rpx;
-  color: #6b7280;
-}
-
-.court-empty {
-  padding: 16rpx 0;
-  text-align: center;
-  font-size: 24rpx;
-  color: #9ca3af;
-}
-
-.court-match-row {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 12rpx 0;
-  border-bottom: 1rpx dashed #e5e7eb;
-}
-
-.court-match-row.court-freeplay {
-  background: rgba(0,0,0,0.02);
-  padding-left: 8rpx;
-  padding-right: 8rpx;
-  border-radius: 8rpx;
-}
-
-.court-player {
-  flex: 1;
-  padding: 4rpx 8rpx;
-  background: #ffffff;
-  border-radius: 6rpx;
-  font-size: 26rpx;
-  color: #333333;
-}
-
-.court-vs {
-  font-size: 22rpx;
-  color: #9ca3af;
-}
-
-.court-chip {
-  font-size: 20rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 12rpx;
-}
-
-.chip-pending { background: #fef3c7; color: #92400e; }
-.chip-submitted { background: #dbeafe; color: #1e40af; }
-.chip-confirmed { background: #d1fae5; color: #065f46; }
-.chip-disputed { background: #fee2e2; color: #991b1b; }
