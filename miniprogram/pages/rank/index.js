@@ -1,3 +1,5 @@
+const { callFunction } = require('../../utils/cloud')
+
 Page({
   data: {
     activeTab: 'singles',
@@ -20,7 +22,7 @@ Page({
   async loadRank() {
     this.setData({ loading: true })
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await callFunction({
         name: 'points-engine',
         data: {
           action: 'rankList',
@@ -39,7 +41,7 @@ Page({
 
   async loadWeeklyStar() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await callFunction({
         name: 'weekly-star',
         data: { action: 'latest', seasonId: `s${new Date().getFullYear()}` }
       })

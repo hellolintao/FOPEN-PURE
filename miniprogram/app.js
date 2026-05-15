@@ -1,3 +1,5 @@
+const { callFunction } = require('./utils/cloud');
+
 App({
   globalData: {
     env: 'cloud1-0gthnke69a09f52a',
@@ -17,7 +19,7 @@ App({
 
   async refreshIdentity() {
     try {
-      const res = await wx.cloud.callFunction({ name: 'members', data: { action: 'get' } });
+      const res = await callFunction({ name: 'members', data: { action: 'get' } });
       const member = res.result?.data?.[0];
       this.globalData.currentMember = member || null;
       this.globalData.isAdmin = !!(member && member.admin);

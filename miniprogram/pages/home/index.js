@@ -1,3 +1,5 @@
+const { callFunction } = require('../../utils/cloud');
+
 Page({
   data: {
     currentMember: null,
@@ -20,7 +22,7 @@ Page({
 
     this.setData({ loadingStats: true });
     try {
-      const stats = await wx.cloud.callFunction({
+      const stats = await callFunction({
         name: 'points-engine',
         data: { action: 'playerStats', playerId: member._id, currentSeasonId: this._getCurrentSeasonId() }
       });

@@ -1,3 +1,5 @@
+const { callFunction } = require('../../utils/cloud')
+
 Page({
   data: {
     playerId: '',
@@ -21,8 +23,8 @@ Page({
     this.setData({ loading: true });
     try {
       const [playerRes, statsRes] = await Promise.all([
-        wx.cloud.callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
-        wx.cloud.callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: `s${new Date().getFullYear()}` } })
+        callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
+        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: `s${new Date().getFullYear()}` } })
       ]);
       this.setData({
         player: playerRes.result?.data || null,
