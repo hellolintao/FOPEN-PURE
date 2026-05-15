@@ -11,7 +11,7 @@ Page({
       location: '',
       startDate: '',
       type: 'singles',
-      format: 'knockout',
+      format: 'regular',
       maxPlayers: 8,
       description: ''
     },
@@ -21,7 +21,7 @@ Page({
     queues: [],
     freePlays: [],
     pointsRules: {
-      winLoss: { win: 10, loss: 0 },
+      winLoss: { win: 20, loss: 10, walkover: 0 },
       placement: { champion: 100, runnerUp: 60, semifinal: 30, quarterfinal: 10, participation: 5 }
     },
     members: [],
@@ -71,13 +71,13 @@ Page({
         location: t.location || '',
         startDate: t.startDate || '',
         type: t.type || 'singles',
-        format: t.format || 'knockout',
+        format: t.format || 'regular',
         maxPlayers: t.maxPlayers || 8,
         description: t.description || ''
       },
       schedulePlanCourts: (t.schedulePlan && t.schedulePlan.courts) || [],
       queues: (t.schedulePlan && t.schedulePlan.queues) || [],
-      pointsRules: t.pointsRules || this.data.pointsRules
+      pointsRules: this._normalizePointsRules(t.pointsRules || this.data.pointsRules)
     })
 
     const regsRes = await wx.cloud.callFunction({
@@ -248,22 +248,45 @@ Page({
   },
 
   async commitStep4() {
+    // 校验器要求 winLoss.{win,loss,walkover} 与 placement.{...} 都是数字。
+    // UI 只展示部分字段，剩余字段在这里补默认值，避免「数据校验失败」。
+    const pointsRules = this._normalizePointsRules(this.data.pointsRules)
     const r = await wx.cloud.callFunction({
       name: 'tournaments',
       data: {
         action: 'updateNew',
         id: this.data.tournamentId,
-        data: { pointsRules: this.data.pointsRules, status: 'upcoming' }
+        data: { pointsRules, status: 'upcoming' }
       }
     })
     if (!(r.result && r.result.success)) {
-      const msg = (r.result && r.result.error && r.result.error.message) || '失败'
+      console.error('[commitStep4] update failed', r && r.result)
+      const msg = _errMsg(r, '创建失败')
       return wx.showToast({ title: msg, icon: 'none' })
     }
     wx.showToast({ title: '已创建', icon: 'success' })
     setTimeout(() => {
       wx.redirectTo({ url: `/pages/tournament-detail/index?id=${this.data.tournamentId}` })
     }, 800)
+  },
+
+  _normalizePointsRules(pr) {
+    const wl = (pr && pr.winLoss) || {}
+    const pl = (pr && pr.placement) || {}
+    return {
+      winLoss: {
+        win: typeof wl.win === 'number' ? wl.win : 20,
+        loss: typeof wl.loss === 'number' ? wl.loss : 10,
+        walkover: typeof wl.walkover === 'number' ? wl.walkover : 0
+      },
+      placement: {
+        champion: typeof pl.champion === 'number' ? pl.champion : 100,
+        runnerUp: typeof pl.runnerUp === 'number' ? pl.runnerUp : 60,
+        semifinal: typeof pl.semifinal === 'number' ? pl.semifinal : 30,
+        quarterfinal: typeof pl.quarterfinal === 'number' ? pl.quarterfinal : 10,
+        participation: typeof pl.participation === 'number' ? pl.participation : 5
+      }
+    }
   },
 
   onFieldChange(e) {
