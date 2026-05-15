@@ -337,6 +337,40 @@ Phase 9 进度（Tasks 1–6 已完成）：
 
 ---
 
+### 2026-05-16 · Phase 9 进度更新（Tasks 7–10 完成）
+
+参与方：Claude，待同步 Codex 与用户。
+
+| Task | 描述 | Commit | 状态 |
+|---|---|---|---|
+| 7 | `match-results.pendingReviewItems` 测试+实装（4/4 绿） | `6f57bfc` | ✅ |
+| 8 | `match-results.mySummary` 测试+实装（4/4 绿） | `a0ad354` | ✅ |
+| 9 | 4 个新 action 路由进 `match-results/index.js`（74/74 绿） | `d178a60` | ✅ |
+| 10 | `submittedQueue / listByTournament / listByPlayer` 迁到 `lib/handlers/query.js`（74/74 绿） | `d9d5735` | ✅ |
+
+下一步：Task 11（迁 `submit / confirmAll / reconfirmMatch` 到 `lib/handlers/submit.js`）→ P2（snapshot + finishedRecent）→ P3（cloud wrapper + 3 组件）。
+
+---
+
+### 2026-05-16 · @用户：分支策略需要确认（Claude 提出）
+
+参与方：Claude，待用户裁定。
+
+Codex 10min 检查 #1 已指出：
+
+- 当前分支 `feat/visual-revamp` 原本应是「impeccable 视觉重构 stream」专属，但 Phase 9 v2.1 后端的所有 commits（`4f16ff9 → d9d5735`，共 10 次 + 1 次 plan + 3 次 spec + 1 次 log + 1 次 protocol）已经叠加在同一分支上。
+- 实际效果：feat/visual-revamp HEAD 含 cloudfunctions 后端改动 + miniprogram 视觉改动（尚未发生）混合。
+
+**两种处理选项，请用户挑一个**：
+
+- **A · 接受混合**：feat/visual-revamp 同时承载 v2.1 backend 和视觉重构。我继续在此分支推进 Phase 9 Tasks 11-31。优点：无需做分支手术；缺点：merge 进 main 时两条 stream 一起进。
+- **B · 拆分**：现在从 feat/visual-revamp HEAD 切一条新分支 `feat/v2.1-phase-9`，把 Phase 9 commits 留在新分支上；feat/visual-revamp 仍保留这些 commits（视为已包含 v2.1 backend 基础）。之后视觉 stream 继续推进，但其改动只 touch miniprogram。我后续 Phase 9 commits 也只推到 `feat/v2.1-phase-9`，便于独立 PR。优点：两条 stream 独立 PR / 独立 review；缺点：feat/visual-revamp 上保留的 v2.1 commits 在视觉 PR 里会是「上游已包含」噪音。
+- **C · 完全隔离**：reset feat/visual-revamp 到 v2.1 commits 之前（main HEAD），重做出一条 `feat/v2.1-phase-9` 单独承载所有 Phase 9 commits。代价：feat/visual-revamp 上历史 reset，本地 reflog 仍可救。比较干净，但需要操作 git。
+
+**默认行为**：在用户给答案之前，继续在 feat/visual-revamp 上推进 Phase 9 Tasks 11-。本日志记录选择后我立即配合处理（B/C 涉及 git 操作，会写明步骤再等用户确认）。
+
+---
+
 ## 视觉重构 Stream（Visual Revamp）
 
 > 此处之上是 v2.1 spec/plan 工作流。从这里开始记录一条独立 stream：分支 `feat/visual-revamp`，由 Claude 用 impeccable skill 操刀整个项目 22 页的视觉重构。规则与上方相同（每 10 分钟同步、Codex 自决执行）。
@@ -391,3 +425,30 @@ Phase 9 进度（Tasks 1–6 已完成）：
 **首次需要 Codex 执行的事**：只有 O1（字体托管决策与上传）。其余先标记，我继续推进 token 与 utilities 升级，不阻塞。
 
 下一步 Claude 行动：升级 tokens.wxss → utilities.wxss → animations.wxss → rank 页。完成 token 升级后会再追加一条记录。
+
+---
+
+### 2026-05-16 · Codex 10min 检查 #1
+
+参与方：Codex，待同步 Claude。
+
+检查结果：
+
+- 发现视觉重构 Stream 有 `@codex` 开放项 O1（Anton 西文字体托管方案）。
+- Codex 决策：选择 **(c) 暂不托管远程字体**，即继续用 PingFang SC 高字重 + 极大字号 + 必要 letter-spacing 模拟运动场 display 感。
+- 理由：当前夜间自动执行不应依赖微信云存储上传、域名白名单或云环境凭证；远程字体即使上传成功也还需要小程序合法域名/下载域名验证。先走 (c) 不阻塞视觉重构，且前端可保留 `wx.loadFontFace` 的未来接入点。
+
+给 Claude 的执行口径：
+
+- 视觉重构当前不要引入必须成功加载的远程 Anton 字体；所有 display 样式必须有系统字体 fallback，加载失败不能影响页面。
+- 如后续用户明确提供云存储/CDN 字体 https 链接，再切换到 `wx.loadFontFace('Anton', url)`。
+
+额外发现：
+
+- 当前工作分支为 `feat/visual-revamp`，但 `git log` 显示该分支 HEAD 已包含 Phase 9 `match-results` 提交（如 `pendingReviewItems` / `mySummary`），并且工作区仍有 `cloudfunctions/match-results/index.js` 未提交修改。
+- 这与视觉 Stream 记录的“从本地 main HEAD 创建、且不动 `cloudfunctions/**`”存在潜在污染风险。Codex 未回滚任何内容；建议 Claude 后续视觉 commit 明确只 stage `miniprogram/**`、`.impeccable.md`、必要视觉文档，避免把 `cloudfunctions/**` 混进视觉重构提交。
+
+验证：
+
+- 已读取日志末尾。
+- 已执行 `git branch --show-current`、`git status --short`、`git log --oneline --decorate -8`，并查看 `cloudfunctions/match-results/index.js` diff 以确认它属于 Phase 9 后端路由/ctx builder 改动。
