@@ -50,7 +50,7 @@
 | 03 | [phase-4-scheduler.md](./03-phase-4-scheduler.md) | 自动排程引擎 + 签表/对局表 | ✅ 已完成 | 见 PROGRESS |
 | 04 | [phase-2-browse-ui.md](./04-phase-2-browse-ui.md) | 首页 + 排行榜 + 玩家详情 | ✅ 已完成 | 见 PROGRESS |
 | 05 | [phase-5-result-reconcile.md](./05-phase-5-result-reconcile.md) | 录分对账 + 仲裁 + 积分计算 | ⏸ 由 Phase 7+8 重做覆盖 | 不再作为主线继续 |
-| 06 | [phase-6-polish.md](./06-phase-6-polish.md) | 每周之星 + 视觉打磨 + 微交互 | ⏸ 延后 | 等核心闭环稳定后再做 |
+| 06 | [phase-6-polish.md](./06-phase-6-polish.md) | 每周之星 + 视觉打磨 + 微交互 | ✅ 已完成 | `bac3810` |
 | 07 | [phase-7-create-schedule.md](./07-phase-7-create-schedule.md) | 创建赛事 + 排程重构 | ✅ 已完成 | `63ee6f5` + 2026-05-15 修订 |
 | 08 | [phase-8-score-engine.md](./08-phase-8-score-engine.md) | 成绩链路 + 积分引擎 | ✅ 已完成 | `4df153f`；hash 回填 `f57c393` |
 
@@ -58,7 +58,8 @@
 
 截至 2026-05-15：
 
-- 当前最新主线：Phase 8 已完成并通过 E2E。
+- 当前最新主线：Phase 6 Post-Phase-8 Polish 已完成并提交；Phase 8 已完成并通过 E2E。
+- Phase 6 polish 提交：`bac3810 Complete phase 6 polish`
 - Phase 8 主提交：`4df153f feat(phase8): complete score engine e2e`
 - Phase 8 hash 回填提交：`f57c393 docs(progress): backfill phase 8 commit hash`
 - 已验证：`match-results 55/55`、`points-engine 16/16`、`scripts/sync-shared-libs.sh` 通过、DevTools 三条 E2E 通过。

@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████████████] 6/6 Phase 完成（Phase 5/6 由 Phase 7+8 重做覆盖）
+[████████████████████████] 6/6 Phase 完成（Phase 5 由 Phase 7+8 重做覆盖；Phase 6 已按 Post-Phase-8 polish 完成）
 ```
 
 ## Phase 状态
@@ -17,7 +17,7 @@
 | 03 | Phase 4 · Scheduler | ✅ 已完成 | 2026-05-12 | 2026-05-12 | 9941d79 | scheduler-engine 上线（44 单测全绿，Lines 100%/Stmts 95%）；触发策略改为 C（签表页按钮）+ 保存合并 B + 双打 partnerId 入约束；plan 顶部记录 6 处修订 |
 | 04 | Phase 2 · Browse UI | ✅ 已完成 | 2026-05-12 | 2026-05-12 | e95fcac | points-engine 云函数（7单测全绿）+ 组件库（stat-block/rank-row/brush-stroke-bg）+ custom tabBar（admin 可见管理 tab）+ home/rank/player-detail/mine 全面重写 |
 | 05 | Phase 5 · Result Reconcile | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；录分/积分/对账由 Phase 8 实现 |
-| 06 | Phase 6 · Polish | ✅ 已完成 | 2026-05-15 | 2026-05-15 | 待提交 | Post-Phase-8 polish：weekly-star 定时云函数、排行榜每周之星、全局动效、骨架屏、数字动效、关键录分流程视觉收敛 |
+| 06 | Phase 6 · Polish | ✅ 已完成 | 2026-05-15 | 2026-05-15 | bac3810 | Post-Phase-8 polish：weekly-star 定时云函数、排行榜每周之星、全局动效、骨架屏、数字动效、关键录分流程视觉收敛 |
 | 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 | 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | 4df153f | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
 
@@ -27,12 +27,11 @@
 
 ## 当前应该做什么
 
-**👉 Phase 6 Post-Phase-8 Polish 已完成，等待用户确认 commit。** 剩余动作：
+**👉 Phase 6 Post-Phase-8 Polish 已完成并已提交。** 剩余动作：
 
-1. 用户确认后提交 Phase 6 全部改动。
-2. commit 后回填本表 Phase 6 的 commit hash 列。
-3. 如需真实业务数据审计，在有腾讯云 `secretId/secretKey` 的终端环境执行 `cd scripts && FOPEN_CLOUD_ENV=cloud1-0gthnke69a09f52a FOPEN_SEASON_ID=s2026 npm run audit:polish-data`。
-4. `weekly-star` 云函数已上传到 `cloud1-0gthnke69a09f52a`；含 `lib/` 目录的源码包会触发 DevTools CLI `EISDIR`，本次使用临时 deploy-only bundle + `--paths` 成功部署，仓库源码结构不变。
+1. 按 `superpowers:finishing-a-development-branch` 做收尾验证并选择集成方式。
+2. 如需真实业务数据审计，在有腾讯云 `secretId/secretKey` 的终端环境执行 `cd scripts && FOPEN_CLOUD_ENV=cloud1-0gthnke69a09f52a FOPEN_SEASON_ID=s2026 npm run audit:polish-data`。
+3. `weekly-star` 云函数已上传到 `cloud1-0gthnke69a09f52a`；含 `lib/` 目录的源码包会触发 DevTools CLI `EISDIR`，本次使用临时 deploy-only bundle + `--paths` 成功部署，仓库源码结构不变。
 
 后续运维 / v3 演进见 spec §9.2。
 
