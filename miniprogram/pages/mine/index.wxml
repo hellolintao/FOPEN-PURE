@@ -1,21 +1,50 @@
 <view class="mine-page">
-  <view wx:if="{{isLogin}}">
-    <view class="card-hero">
-      <image class="big-avatar" src="{{userInfo.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
-      <text class="text-h2">{{userInfo.name}}</text>
-      <text class="text-meta">{{totalPoints}} 分</text>
+  <block wx:if="{{isLogin}}">
+
+    <!-- HERO -->
+    <view class="mine-hero anim-stage-rise">
+      <view class="mine-hero-tapes">
+        <text class="tape tape-stamped">PROFILE · {{isAdmin ? 'ADMIN' : 'MEMBER'}}</text>
+      </view>
+      <view class="mine-hero-row">
+        <image class="mine-avatar" src="{{userInfo.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+        <view class="mine-hero-info">
+          <text class="mine-name">{{userInfo.name}}</text>
+          <view class="mine-points-row">
+            <text class="mine-points-num num">{{totalPoints}}</text>
+            <text class="mine-points-label">TOTAL POINTS</text>
+          </view>
+        </view>
+      </view>
     </view>
 
-    <view class="actions">
-      <button class="cta-secondary full-width" bindtap="onEditProfile">编辑资料</button>
-      <button class="cta-secondary full-width" bindtap="onMyMatch">我的比赛</button>
-      <button class="cta-secondary full-width" bindtap="onSetting">设置</button>
+    <!-- ACTIONS -->
+    <view class="mine-actions anim-stage-rise anim-delay-1">
+      <view class="action-tile tap-scale" bindtap="onMyMatch">
+        <text class="action-num num">01</text>
+        <text class="action-text">我的比赛</text>
+        <text class="action-arrow num">→</text>
+      </view>
+      <view class="action-tile tap-scale" bindtap="onEditProfile">
+        <text class="action-num num">02</text>
+        <text class="action-text">编辑资料</text>
+        <text class="action-arrow num">→</text>
+      </view>
+      <view class="action-tile tap-scale" bindtap="onSetting">
+        <text class="action-num num">03</text>
+        <text class="action-text">设置</text>
+        <text class="action-arrow num">→</text>
+      </view>
     </view>
-  </view>
 
-  <view wx:else class="empty-state">
-    <text class="text-h2">加入俱乐部</text>
-    <text class="text-meta">登录后查看个人资料</text>
-    <button class="cta-primary" style="margin-top: var(--space-5);" bindtap="onLogin">登录 / 注册</button>
+  </block>
+
+  <view wx:else class="mine-anon">
+    <view class="anon-tapes">
+      <text class="tape tape-stamped">FOPEN TC</text>
+    </view>
+    <text class="anon-headline">加入俱乐部</text>
+    <text class="anon-sub">登录后开始记录你的网球纪元</text>
+    <view class="cta-lime anon-cta tap-scale" bindtap="onLogin">登录 / 注册</view>
   </view>
 </view>

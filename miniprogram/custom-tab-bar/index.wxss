@@ -1,8 +1,8 @@
 .tab-bar {
   display: flex;
-  height: 120rpx;
-  background: var(--color-bg, #101017);
-  border-top: 1rpx solid var(--color-border);
+  height: 124rpx;
+  background: var(--color-bg);
+  border-top: 2rpx solid var(--color-ink);
   padding-bottom: env(safe-area-inset-bottom);
   position: fixed;
   bottom: 0;
@@ -10,6 +10,7 @@
   right: 0;
   z-index: 100;
 }
+
 .tab {
   flex: 1;
   display: flex;
@@ -17,20 +18,45 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
-  color: #888;
+  color: var(--color-muted);
+  position: relative;
+  transition: color 160ms var(--ease-out);
 }
+
 .tab.on {
-  color: var(--color-lime, #BEE645);
-  font-weight: 700;
+  color: var(--color-ink);
 }
+
+/* lime underline ridge for active tab (顶部，紧贴 ink hairline) */
+.tab.on::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56rpx;
+  height: 6rpx;
+  background: var(--color-lime);
+  border-radius: 0 0 6rpx 6rpx;
+}
+
 .tab-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 44rpx;
+  height: 44rpx;
 }
+
 .tab-text {
-  font-size: 22rpx;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
+
+.tab.on .tab-text {
+  font-weight: 900;
+  color: var(--color-ink);
+}
+
 .tab-text-on {
   color: var(--color-ink);
-  font-weight: 700;
+  font-weight: 900;
 }
