@@ -484,3 +484,43 @@ Codex 10min 检查 #1 已指出：
 - 之后是 P2 高频页：`my-match` / `match` / `player-detail` / `index` / `mine`。
 - P3/P4 管理后台与编辑页随后处理。
 - 最后跑 impeccable AI slop 自检（grep 残留 `border-left`/gradient text/glassmorphism）+ 收尾 commit。
+
+---
+
+### 2026-05-16 · v2.1 Stream 与视觉 Stream 并发冲突 · 待用户/视觉裁定（Claude · Phase 9）
+
+参与方：Claude（Phase 9 stream），致视觉 Stream 与用户。
+
+**已发生的事**：
+
+1. 我的 commit `0063342 feat(tournaments): adminConsoleSnapshot for v2.1 workstation` 因为工作区已被视觉 Stream `git add` 进暂存的文件（`.impeccable.md / .claude/agents/* / miniprogram/components/chip-tab / rank-row / pages/home / pages/rank / pages/tournament-brackets / pages/tournament-detail`）跟着 `git commit` 一起带走。视觉 Stream 已在他们的记录里说明并表示改用 `git commit -- <paths>` 显式路径限定。
+2. 我后续 commits 也基本走的是 `git add <path>/` + `git commit -m`，可能再次串入视觉变更。下一批 Phase 9 subagent 我会改成 `git commit -- <explicit paths>` 进一步隔离。
+
+**现在的范围冲突**：
+
+| 路径 | Phase 9 v2.1 计划要动 | 视觉 Stream 已动 / 计划动 | 冲突等级 |
+|---|---|---|---|
+| `miniprogram/styles/tokens.wxss` | 不动（直接用现有 token） | 已扩展（向后兼容） | 无冲突 ✅ |
+| `miniprogram/utils/cloud.js` | Task 17 加 `call()` v2 wrapper | 不动 | 无冲突 ✅ |
+| `miniprogram/components/{status-tag, empty-state, batch-result-sheet}` | Tasks 18-20 新建 | 不动 | 无冲突 ✅ |
+| `miniprogram/components/score-row` | Task 24 视觉债清理（硬编码→token, 时段标→status-tag） | 未列入（仅 chip-tab / rank-row） | 可能冲突 ⚠️ |
+| `miniprogram/pages/tournament-manage` | Task 21 IA 重构 + 接 sheet | 视觉 Stream 暂未列入但 P4 范围内 | 待确认 |
+| `miniprogram/pages/my-match` | Task 22 IA 重构 + 接 mySummary | **视觉 Stream P2 列入**（"my-match / match / player-detail / index / mine"） | **直接冲突 🚨** |
+| `miniprogram/pages/tournament-score` | Task 23 sticky CTA + 接 sheet | **视觉 Stream P1 下一批列入**（"tournament-score 计分体验"） | **直接冲突 🚨** |
+
+**Claude 现在的处置**：
+
+- **P3（Tasks 16-20）继续执行**：cloud wrapper + 3 个新组件。全部是新文件 + utils/cloud.js 小扩展，与视觉 Stream 无冲突。下一批 subagent 用 `git commit -- <paths>` 显式路径。
+- **P4 暂停** 直到下列两项明确：
+  - 视觉 Stream 是否会同时改这三页的 IA（增删块、改 hero 结构、改 sticky 按钮），还是只动样式？如果视觉 Stream 只动样式，我可以先做 IA，视觉 Stream 后续重做样式；如果视觉 Stream 也动 IA，则需要决定哪条 Stream 先做。
+  - 用户希望 P4 在哪条 Stream 收敛？
+
+**建议（请用户或视觉 Stream 在日志回复）**：
+
+- **优先建议 A**：视觉 Stream 先跳过 `my-match / tournament-score`，由我 Phase 9 P4 先动 IA（含接 batch-result-sheet / mySummary / cloud.call wrapper），视觉 Stream 之后再过这两页做样式收口。理由：v2.1 后端 batch action 与 sheet 组件是用户体验的"地基"，IA 配套必须先到位，视觉再覆盖才有意义。
+- **备选 B**：视觉 Stream 完成 `tournament-score / my-match` 视觉，留 hook（不动 sticky / 不动 hero 结构），我 Phase 9 P4 在其基础上插入 IA 逻辑与 sheet 集成。需视觉 Stream 明确不动 sticky/sheet/data flow，仅样式。
+- **备选 C**：合并 stream，由一个执行者同时做 IA + 视觉。但 v2.1 plan 与视觉 plan 是两套 spec，合并代价大。
+
+**Claude 当前不会推进 P4，会继续 P3。**
+
+---
