@@ -72,3 +72,72 @@ test('batchConfirm STALE_VERSION: expectedUpdateTime mismatch returns failure', 
   })
   expect(ctx._state.matchesById.mr_a.resultStatus).toBe('submitted')  // 未变更
 })
+
+test('batchConfirm retry merge: same requestId skips already-success match', async () => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    matches: [
+      { _id: 'mr_a', resultStatus: 'submitted', updateTime },
+      { _id: 'mr_b', resultStatus: 'submitted', updateTime },
+    ],
+    requestLog: {
+      req_3: {
+        _id: 'req_3', action: 'batchConfirm',
+        callerOpenid: 'oA', callerMemberId: 'mA',
+        firstSeenAt: new Date(), lastSeenAt: new Date(),
+        results: { mr_a: { state: 'success', confirmedAt: new Date(), attemptCount: 1 } },
+        closedAt: null,
+      },
+    },
+  })
+  // simulate state: mr_a already confirmed in DB
+  ctx._state.matchesById.mr_a.resultStatus = 'confirmed'
+
+  const result = await batchConfirm(ctx, {
+    matches: [
+      { matchId: 'mr_a', expectedUpdateTime: updateTime.toISOString() },  // already success in log
+      { matchId: 'mr_b', expectedUpdateTime: updateTime.toISOString() },
+    ],
+    requestId: 'req_3',
+  })
+
+  expect(result.successIds).toEqual(['mr_a', 'mr_b'])  // mr_a skipped via log, mr_b newly confirmed
+  expect(result.failures).toEqual([])
+})
+
+test('batchConfirm INVALID_PAYLOAD: missing matches', async () => {
+  const ctx = makeCtx({ matches: [] })
+  await expect(batchConfirm(ctx, { matches: [], requestId: 'req_x' })).rejects.toMatchObject({ code: 'INVALID_PAYLOAD' })
+})
+
+test('batchConfirm INVALID_PAYLOAD: missing expectedUpdateTime in one entry', async () => {
+  const ctx = makeCtx({ matches: [] })
+  await expect(batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_a' }],
+    requestId: 'req_x',
+  })).rejects.toMatchObject({ code: 'INVALID_PAYLOAD' })
+})
+
+test('batchConfirm FORBIDDEN: non-admin caller', async () => {
+  const ctx = makeCtx({ matches: [], isAdmin: false })
+  await expect(batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_a', expectedUpdateTime: new Date().toISOString() }],
+    requestId: 'req_x',
+  })).rejects.toMatchObject({ code: 'FORBIDDEN' })
+})
+
+test('batchConfirm writes _request_log with merged results', async () => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    matches: [{ _id: 'mr_a', resultStatus: 'submitted', updateTime }],
+  })
+  await batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_a', expectedUpdateTime: updateTime.toISOString() }],
+    requestId: 'req_4',
+  })
+  const log = ctx._state.requestLogById.req_4
+  expect(log).toBeTruthy()
+  expect(log.action).toBe('batchConfirm')
+  expect(log.results.mr_a.state).toBe('success')
+  expect(log.results.mr_a.attemptCount).toBe(1)
+})
