@@ -1,79 +1,209 @@
 .score-page {
-  padding: var(--space-3, 24rpx);
-  padding-bottom: 200rpx;
+  padding: var(--space-5) var(--space-5) 220rpx;
+  background: var(--color-bg);
+  min-height: 100vh;
 }
-.head .title-row {
+
+/* ============================================================
+ * HEAD
+ * ============================================================ */
+.score-head {
+  margin-bottom: var(--space-6);
+}
+
+.head-tapes {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
-.head .title {
-  font-size: 36rpx;
-  font-weight: 600;
+
+.head-title {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-5);
 }
-.format-chip {
-  padding: 4rpx 14rpx;
-  background: var(--color-bg-3);
-  border-radius: 999rpx;
-  font-size: 22rpx;
-  color: var(--color-muted);
-}
-.progress {
+
+/* progress */
+.progress-block {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 16rpx);
-  margin-top: var(--space-2, 16rpx);
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 2rpx solid var(--color-ink);
+  border-bottom: 2rpx solid var(--color-ink);
 }
+
+.progress-bar-wrap { flex: 1; }
+
 .progress-bar {
-  flex: 1;
-  height: 12rpx;
+  height: 24rpx;
   background: var(--color-bg-3);
-  border-radius: 6rpx;
+  border-radius: var(--radius-pill);
   overflow: hidden;
+  position: relative;
 }
+
 .progress-fill {
   height: 100%;
-  background: var(--color-success);
-  border-radius: 6rpx;
-  transition: width 200ms ease;
+  background: var(--color-lime);
+  border-radius: var(--radius-pill);
+  transition: width 320ms var(--ease-stage);
 }
-.progress-label {
-  font-size: 24rpx;
-  color: var(--color-muted);
+
+.progress-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+  flex-shrink: 0;
 }
-.rules-hint {
-  margin-top: var(--space-2, 16rpx);
-  font-size: 24rpx;
+
+.progress-num {
+  font-size: 40rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
-.empty-state {
-  padding: 200rpx 0;
-  text-align: center;
-  color: var(--color-muted);
-}
-.round-group {
-  margin-top: var(--space-3, 24rpx);
-  animation: fade-up 220ms var(--ease-out) both;
-}
-.round-title {
-  font-weight: 600;
+
+.progress-slash,
+.progress-total {
   font-size: 28rpx;
-  display: block;
-  margin-bottom: var(--space-1, 8rpx);
+  font-weight: 800;
+  color: var(--color-muted-2);
 }
+
+.progress-label {
+  margin-left: var(--space-2);
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--color-muted);
+}
+
+.rules-hint {
+  display: block;
+  margin-top: var(--space-3);
+  font-size: 22rpx;
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+/* ============================================================
+ * ROUND GROUP
+ * ============================================================ */
+.round-group {
+  margin-bottom: var(--space-6);
+}
+
+.round-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 var(--space-3);
+}
+
+.round-count {
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.round-rows {
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.round-rows > view:last-child .row {
+  border-bottom: none;
+}
+
+/* ============================================================
+ * EMPTY
+ * ============================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-9) 0;
+  text-align: center;
+}
+
+.empty-hint {
+  font-size: var(--font-body-size);
+  color: var(--color-muted);
+}
+
+/* ============================================================
+ * STICKY BOTTOM
+ * ============================================================ */
 .sticky-bottom {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
-  padding: var(--space-3, 24rpx);
-  background: #fff;
-  border-top: 1rpx solid var(--color-border, #eee);
+  bottom: 0;
+  padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--color-bg);
+  border-top: 2rpx solid var(--color-ink);
   z-index: 10;
 }
+
 .confirm-all {
   width: 100%;
-  transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
+  margin: 0;
+  height: 96rpx;
+  background: var(--color-lime) !important;
+  color: var(--color-ink) !important;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-6);
+  font-size: 30rpx;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
+
+.confirm-all::after { border: none; }
+
 .confirm-all:active {
   transform: scale(0.98);
+  background: var(--color-lime-strong) !important;
+}
+
+.confirm-all[disabled] {
+  background: var(--color-bg-3) !important;
+  color: var(--color-muted) !important;
+}
+
+.confirm-label {
+  font-weight: 800;
+}
+
+.confirm-count {
+  font-size: 24rpx;
+  font-weight: 900;
+  padding: 6rpx 14rpx;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+
+.confirm-all[disabled] .confirm-count {
+  background: var(--color-muted);
+  color: var(--color-bg);
 }

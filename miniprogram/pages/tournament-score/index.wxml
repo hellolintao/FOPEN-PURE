@@ -1,40 +1,58 @@
 <view class="score-page">
-  <view wx:if="{{tournament}}" class="head">
-    <view class="title-row">
-      <text class="title">{{tournament.name}}</text>
-      <text class="format-chip">{{tournament.format === 'knockout' ? '单淘汰' : '常规赛'}}</text>
+  <view wx:if="{{tournament}}" class="score-head anim-stage-rise">
+    <view class="head-tapes">
+      <text class="tape tape-stamped">{{tournament.format === 'knockout' ? 'KNOCKOUT' : 'REGULAR'}}</text>
+      <text wx:if="{{tournament.format === 'knockout'}}" class="tape tape-ghost">单淘汰</text>
+      <text wx:else class="tape tape-ghost">常规赛</text>
     </view>
-    <view class="progress">
-      <view class="progress-bar">
-        <view class="progress-fill" style="width: {{totalCount > 0 ? (confirmedCount * 100 / totalCount) : 0}}%"></view>
+    <text class="head-title">{{tournament.name}}</text>
+
+    <view class="progress-block">
+      <view class="progress-bar-wrap">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{totalCount > 0 ? (confirmedCount * 100 / totalCount) : 0}}%"></view>
+        </view>
       </view>
-      <text class="progress-label">已确认 {{confirmedCount}} / {{totalCount}}</text>
+      <view class="progress-meta">
+        <text class="progress-num num">{{confirmedCount}}</text>
+        <text class="progress-slash">/</text>
+        <text class="progress-total num">{{totalCount}}</text>
+        <text class="progress-label">CONFIRMED</text>
+      </view>
     </view>
-    <view class="rules-hint text-meta">4 局制 · 3:3 抢七（如 7-5） · 4:0 / 4:1 / 4:2 直接结束</view>
+
+    <text class="rules-hint">4 局制 · 3:3 抢七（如 7-5） · 4:0 / 4:1 / 4:2 直接结束</text>
   </view>
 
   <skeleton-loader wx:if="{{loading && rowsByRound.length === 0}}" rows="{{4}}" />
 
   <view wx:if="{{!loading && empty}}" class="empty-state">
-    <text>暂无比赛</text>
+    <text class="tape">暂无比赛</text>
+    <text class="empty-hint">前往赛事详情先生成对阵</text>
   </view>
 
-  <view wx:for="{{rowsByRound}}" wx:for-item="g" wx:key="round" class="round-group">
-    <text class="round-title">第 {{g.round}} 轮</text>
-    <view wx:for="{{g.matches}}" wx:for-item="m" wx:key="_id" id="row-{{m.sourceMatchId}}">
-      <score-row
-        match="{{m}}"
-        is-admin="{{isAdmin}}"
-        bindsubmit="onSubmit"
-        bindreconfirm="onReconfirm"
-        binddraftchange="onDraftChange"
-      />
+  <view wx:for="{{rowsByRound}}" wx:for-item="g" wx:key="round" class="round-group anim-stage-rise">
+    <view class="round-banner">
+      <text class="tape tape-lime tape-stamped-lime">ROUND {{g.round < 10 ? '0' : ''}}{{g.round}}</text>
+      <text class="round-count num">{{g.matches.length}} 场</text>
+    </view>
+    <view class="round-rows">
+      <view wx:for="{{g.matches}}" wx:for-item="m" wx:key="_id" id="row-{{m.sourceMatchId}}">
+        <score-row
+          match="{{m}}"
+          is-admin="{{isAdmin}}"
+          bindsubmit="onSubmit"
+          bindreconfirm="onReconfirm"
+          binddraftchange="onDraftChange"
+        />
+      </view>
     </view>
   </view>
 
   <view wx:if="{{totalCount > 0}}" class="sticky-bottom">
-    <button class="confirm-all" bindtap="onConfirmAll" disabled="{{bottomDisabled}}" type="primary">
-      {{bottomLabel}}（{{bottomCount}} 场）
+    <button class="confirm-all" bindtap="onConfirmAll" disabled="{{bottomDisabled}}">
+      <text class="confirm-label">{{bottomLabel}}</text>
+      <text class="confirm-count num">{{bottomCount}} 场</text>
     </button>
   </view>
 </view>
