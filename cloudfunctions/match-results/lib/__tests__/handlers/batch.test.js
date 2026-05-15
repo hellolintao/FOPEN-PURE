@@ -141,3 +141,81 @@ test('batchConfirm writes _request_log with merged results', async () => {
   expect(log.results.mr_a.state).toBe('success')
   expect(log.results.mr_a.attemptCount).toBe(1)
 })
+
+const { batchSubmit } = require('../../handlers/batch')
+
+function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA' } = {}) {
+  const matchesById = Object.fromEntries(matches.map(m => [m._id, { ...m }]))
+  const requestLogById = {}
+  return {
+    callerOpenid: openid,
+    callerMemberId: memberId,
+    isAdmin: false,
+    nowDate: new Date('2026-05-16T11:00:00.000Z'),
+    db: {
+      getMatch: async (id) => matchesById[id] || null,
+      updateMatch: async (id, patch) => {
+        matchesById[id] = { ...matchesById[id], ...patch }
+      },
+      getRequestLog: async (id) => requestLogById[id] || null,
+      upsertRequestLog: async (id, doc) => { requestLogById[id] = doc },
+    },
+    _state: { matchesById, requestLogById },
+    validateScore: () => ({ valid: true }),
+  }
+}
+
+test('batchSubmit happy: member submits multiple scores', async () => {
+  const ctx = makeSubmitCtx({
+    matches: [
+      { _id: 'mr_a', resultStatus: 'pending', playerIds: ['mA', 'mB'] },
+      { _id: 'mr_b', resultStatus: 'pending', playerIds: ['mA', 'mC'] },
+    ],
+  })
+  const result = await batchSubmit(ctx, {
+    submissions: [
+      { matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } },
+      { matchId: 'mr_b', score: { sets: [{ a: 4, b: 1 }], tiebreak: null } },
+    ],
+    requestId: 'req_s1',
+  })
+  expect(result.successIds).toEqual(['mr_a', 'mr_b'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_a.resultStatus).toBe('submitted')
+  expect(ctx._state.matchesById.mr_a.score).toEqual({ sets: [{ a: 4, b: 2 }], tiebreak: null })
+})
+
+test('batchSubmit FORBIDDEN: caller not in playerIds', async () => {
+  const ctx = makeSubmitCtx({
+    matches: [{ _id: 'mr_a', resultStatus: 'pending', playerIds: ['mX', 'mY'] }],
+  })
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_s2',
+  })
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({ matchId: 'mr_a', code: 'FORBIDDEN', retryable: false })
+})
+
+test('batchSubmit CANNOT_OVERWRITE_CONFIRMED: member cannot overwrite confirmed match', async () => {
+  const ctx = makeSubmitCtx({
+    matches: [{ _id: 'mr_a', resultStatus: 'confirmed', playerIds: ['mA'] }],
+  })
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_s3',
+  })
+  expect(result.failures[0].code).toBe('CANNOT_OVERWRITE_CONFIRMED')
+})
+
+test('batchSubmit INVALID_SCORE: bad score structure', async () => {
+  const ctx = makeSubmitCtx({
+    matches: [{ _id: 'mr_a', resultStatus: 'pending', playerIds: ['mA'] }],
+  })
+  ctx.validateScore = () => ({ valid: false, error: 'INVALID_SCORE' })
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_a', score: { sets: [{ a: 9, b: 9 }], tiebreak: null } }],
+    requestId: 'req_s4',
+  })
+  expect(result.failures[0].code).toBe('INVALID_SCORE')
+})
