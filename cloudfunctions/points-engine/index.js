@@ -1,104 +1,151 @@
-const cloud = require('wx-server-sdk');
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const db = cloud.database();
-const _ = db.command;
-const { calculatePoints, isPointValid } = require('./lib/calculate');
+const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+const _ = db.command
+
+const award = require('./lib/award')
+const { aggregateRanks } = require('./lib/aggregate')
 
 exports.main = async (event) => {
-  const { action } = event;
-  if (action === 'rankList') return await rankList(event);
-  if (action === 'playerStats') return await playerStats(event);
-  if (action === 'recalculateMatch') return await recalculateMatch(event);
-  return { success: false, error: { code: 'UNKNOWN_ACTION', message: action } };
-};
-
-async function rankList({ type = 'singles', currentSeasonId }) {
+  const { action } = event
   try {
-    const matches = (await db.collection('match_results')
-      .where({ resultStatus: 'confirmed' })
-      .get()).data;
-    const tournaments = await fetchTournaments(matches.map(m => m.tournamentId));
-    const map = {};
-    for (const m of matches) {
-      const t = tournaments[m.tournamentId];
-      if (!t || t.type !== type) continue;
-      const meta = { seasonId: t.seasonId, format: t.format, createTime: m.createTime };
-      if (!isPointValid(meta, currentSeasonId)) continue;
-      const award = m.pointsAwarded || {};
-      addPoints(map, m.winnerId, award.winner?.total || 0, true);
-      addPoints(map, m.loserId, award.loser?.total || 0, false);
+    if (action === 'rankAggregate')    return await rankAggregate(event)
+    if (action === 'recompute')        return await recompute(event)
+
+    // 兼容 wrappers (旧前端契约保持)
+    if (action === 'rankList')         return await rankListCompat(event)
+    if (action === 'playerStats')      return await playerStatsCompat(event)
+    if (action === 'recalculateMatch') return await recalculateMatchCompat(event)
+
+    return { success: false, error: { code: 'UNKNOWN_ACTION', message: action } }
+  } catch (e) {
+    console.error('[points-engine]', action, e)
+    return { success: false, error: { code: 'INTERNAL', message: e.message } }
+  }
+}
+
+// ─── New actions ────────────────────────────────────────────────
+
+async function rankAggregate({ seasonId, type = 'singles', pageSize = 100 }) {
+  if (!seasonId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId 必填' } }
+  const list = await aggregateRanks({ db, seasonId, type, pageSize })
+  return { success: true, data: { rankList: await joinMembers(list) } }
+}
+
+async function recompute({ tournamentId }) {
+  if (!tournamentId) return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
+  const tRes = await db.collection('tournaments').doc(tournamentId).get()
+  const t = tRes.data
+  if (!t) return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+  const rows = (await db.collection('match_results').where({ tournamentId, resultStatus: 'confirmed' }).limit(500).get()).data
+  let count = 0
+  for (const r of rows) {
+    if (r.bye) continue
+    const rule = (t.pointsRules && t.pointsRules.winLoss) || { win: 20, loss: 10, walkover: 0 }
+    const entries = award.buildAwardEntries(r, rule, t.type)
+    await replacePointsAwarded(r._id, { source: 'match', entries })
+    count++
+  }
+  return { success: true, data: { count } }
+}
+
+// ─── Compat wrappers (旧前端 contract) ──────────────────────────
+
+async function rankListCompat({ type = 'singles', currentSeasonId }) {
+  if (!currentSeasonId) return { success: true, data: { rankList: [] } }
+  const list = await aggregateRanks({ db, seasonId: currentSeasonId, type, pageSize: 100 })
+  const joined = await joinMembers(list)
+  // joinMembers already maps {memberId, totalPoints, wins, losses} → {_id, name, avatarUrl, totalPoints, winCount, lossCount}
+  return { success: true, data: { rankList: joined } }
+}
+
+async function playerStatsCompat({ playerId, currentSeasonId }) {
+  if (!playerId) return { success: false, error: { code: 'INVALID_ARG', message: 'playerId 必填' } }
+  const seasonId = currentSeasonId
+  const buckets = {
+    singles: { winCount: 0, lossCount: 0, totalPoints: 0 },
+    doubles: { winCount: 0, lossCount: 0, totalPoints: 0 }
+  }
+  if (seasonId) {
+    for (const t of ['singles', 'doubles']) {
+      const list = await aggregateRanks({ db, seasonId, type: t, pageSize: 100 })
+      const me = list.find(x => x.memberId === playerId)
+      if (me) {
+        buckets[t] = {
+          winCount: me.wins || 0,
+          lossCount: me.losses || 0,
+          totalPoints: me.totalPoints || 0
+        }
+      }
     }
-    const memberIds = Object.keys(map);
-    if (memberIds.length === 0) return { success: true, data: { rankList: [] } };
-    const members = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data;
-    const list = members.map(mb => ({
-      _id: mb._id,
-      name: mb.name,
-      avatarUrl: mb.avatarUrl,
-      ...map[mb._id]
-    })).sort((a, b) => b.totalPoints - a.totalPoints);
-    return { success: true, data: { rankList: list } };
-  } catch (err) {
-    console.error('[rankList]', err);
-    return { success: false, error: { code: 'DB_ERROR', message: err.message } };
   }
+  // recent: 最近 10 场该选手参与的 confirmed match_results
+  const recent = await fetchRecentForPlayer(playerId)
+  return { success: true, data: { stats: buckets, recent } }
 }
 
-function addPoints(map, id, pts, isWin) {
-  if (!id) return;
-  if (!map[id]) map[id] = { totalPoints: 0, winCount: 0, lossCount: 0 };
-  map[id].totalPoints += pts;
-  if (isWin) map[id].winCount++; else map[id].lossCount++;
+async function recalculateMatchCompat({ matchId }) {
+  if (!matchId) return { success: false, error: { code: 'INVALID_ARG', message: 'matchId 必填' } }
+  // matchId 可能是 sourceMatchId（前端原意）或 doc _id；优先尝试 sourceMatchId 查找
+  let row = null
+  const bySource = await db.collection('match_results').where({ sourceMatchId: matchId }).limit(1).get()
+  if (bySource.data && bySource.data.length > 0) {
+    row = bySource.data[0]
+  } else {
+    const byDocId = await db.collection('match_results').doc(matchId).get().catch(() => ({ data: null }))
+    row = byDocId.data
+  }
+  if (!row) return { success: false, error: { code: 'NOT_FOUND', message: matchId } }
+  const tRes = await db.collection('tournaments').doc(row.tournamentId).get()
+  const t = tRes.data
+  if (!t) return { success: false, error: { code: 'NOT_FOUND', message: row.tournamentId } }
+  const rule = (t.pointsRules && t.pointsRules.winLoss) || { win: 20, loss: 10, walkover: 0 }
+  const entries = award.buildAwardEntries(row, rule, t.type)
+  const pointsAwarded = { source: 'match', entries }
+  await replacePointsAwarded(row._id, pointsAwarded)
+  return { success: true, data: { pointsAwarded } }
 }
 
-async function fetchTournaments(ids) {
-  const unique = Array.from(new Set(ids));
-  if (unique.length === 0) return {};
-  const list = (await db.collection('tournaments').where({ _id: _.in(unique) }).get()).data;
-  const map = {};
-  list.forEach(t => { map[t._id] = t; });
-  return map;
+// ─── Helpers ────────────────────────────────────────────────────
+
+async function replacePointsAwarded(resultId, pointsAwarded) {
+  if (_ && typeof _.remove === 'function') {
+    await db.collection('match_results').doc(resultId).update({
+      data: { pointsAwarded: _.remove() }
+    })
+  }
+  await db.collection('match_results').doc(resultId).update({ data: { pointsAwarded } })
 }
 
-async function playerStats({ playerId, currentSeasonId }) {
+async function joinMembers(list) {
+  if (!list || list.length === 0) return []
+  const memberIds = list.map(x => x.memberId)
+  const members = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data
+  const memberMap = Object.fromEntries(members.map(m => [m._id, m]))
+  return list.map(x => ({
+    _id: x.memberId,
+    name: (memberMap[x.memberId] && memberMap[x.memberId].name) || x.memberId,
+    avatarUrl: (memberMap[x.memberId] && memberMap[x.memberId].avatarUrl) || '',
+    totalPoints: x.totalPoints || 0,
+    winCount: x.wins || 0,
+    lossCount: x.losses || 0
+  }))
+}
+
+async function fetchRecentForPlayer(playerId) {
+  // Phase 8 写入 playerIds 扁平字段；也兼容旧 winnerId/loserId 路径
+  let rows = []
   try {
-    const winMatches = (await db.collection('match_results').where({ winnerId: playerId, resultStatus: 'confirmed' }).get()).data;
-    const loseMatches = (await db.collection('match_results').where({ loserId: playerId, resultStatus: 'confirmed' }).get()).data;
-    const all = [...winMatches, ...loseMatches];
-    const tournaments = await fetchTournaments(all.map(m => m.tournamentId));
-
-    const stats = { singles: { winCount: 0, lossCount: 0, totalPoints: 0 }, doubles: { winCount: 0, lossCount: 0, totalPoints: 0 } };
-    const recent = all.sort((a, b) => new Date(b.createTime) - new Date(a.createTime)).slice(0, 10);
-
-    for (const m of all) {
-      const t = tournaments[m.tournamentId];
-      if (!t) continue;
-      const meta = { seasonId: t.seasonId, format: t.format, createTime: m.createTime };
-      if (!isPointValid(meta, currentSeasonId)) continue;
-      const bucket = stats[t.type] || stats.singles;
-      const isWin = m.winnerId === playerId;
-      if (isWin) bucket.winCount++; else bucket.lossCount++;
-      const pts = isWin ? (m.pointsAwarded?.winner?.total || 0) : (m.pointsAwarded?.loser?.total || 0);
-      bucket.totalPoints += pts;
-    }
-
-    return { success: true, data: { stats, recent } };
-  } catch (err) {
-    console.error('[playerStats]', err);
-    return { success: false, error: { code: 'DB_ERROR', message: err.message } };
+    rows = (await db.collection('match_results')
+      .where({ playerIds: _.in([playerId]), resultStatus: 'confirmed' })
+      .orderBy('createTime', 'desc')
+      .limit(10).get()).data
+  } catch (e) {
+    rows = []
   }
-}
-
-async function recalculateMatch({ matchId }) {
-  try {
-    const match = (await db.collection('match_results').doc(matchId).get()).data;
-    if (!match) return { success: false, error: { code: 'NOT_FOUND', message: `match ${matchId} not found` } };
-    const tournament = (await db.collection('tournaments').doc(match.tournamentId).get()).data;
-    const pointsAwarded = calculatePoints(match, tournament);
-    await db.collection('match_results').doc(matchId).update({ data: { pointsAwarded } });
-    return { success: true, data: { pointsAwarded } };
-  } catch (err) {
-    console.error('[recalculateMatch]', err);
-    return { success: false, error: { code: 'DB_ERROR', message: err.message } };
-  }
+  if (rows && rows.length > 0) return rows
+  // 兜底：旧 schema
+  const winR = (await db.collection('match_results').where({ winnerId: playerId, resultStatus: 'confirmed' }).orderBy('createTime', 'desc').limit(10).get()).data
+  const loseR = (await db.collection('match_results').where({ loserId: playerId, resultStatus: 'confirmed' }).orderBy('createTime', 'desc').limit(10).get()).data
+  return [...winR, ...loseR].sort((a, b) => new Date(b.createTime) - new Date(a.createTime)).slice(0, 10)
 }

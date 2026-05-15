@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████████░░░░] 5/6 Phase 完成（含 Phase 7 重做）
+[████████████████████████] 6/6 Phase 完成（Phase 5/6 由 Phase 7+8 重做覆盖）
 ```
 
 ## Phase 状态
@@ -19,6 +19,7 @@
 | 05 | Phase 5 · Result Reconcile | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；录分/积分/对账由 Phase 8 实现 |
 | 06 | Phase 6 · Polish | ⏸ 由 Phase 7+8 重做覆盖 | — | — | — | 设计规范阶段废弃；视觉打磨随 Phase 7/8 落地 |
 | 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
+| 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | _待回填_ | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -26,13 +27,103 @@
 
 ## 当前应该做什么
 
-**👉 下一个 Phase**：`08-phase-8-score-engine.md`
+**👉 全部 Phase 完成**（代码层面）。剩余动作：
 
-打开该文件，从 "Task 1" 开始按步骤执行。Phase 5/6 已由 Phase 7+8 重做覆盖，不再需要单独执行。
+1. Phase 8 Task 13 的 E2E 三条旅程已通过（admin 闭环 / player 提交 / 改分回滚）— 见下方「2026-05-15 · Phase 8 E2E 手动验证清单」节
+2. Phase 8 全部改动已准备作为一次 commit 提交
+3. commit 后回填本表的 commit hash 列
+4. Phase 8 云函数已上传：`points-engine` 走 DevTools GUI；`match-results` 因 CLI/GU​​I 对 `lib/` 包处理不稳定，最终用临时 deploy-only bundle + `--paths` 成功部署
+
+后续运维 / v3 演进见 spec §9.2。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-15 · Phase 8 完成（Task 1-14 + E2E）
+
+实施方式：superpowers:subagent-driven-development，14 个 Task 分别由 subagent 实施。用户决策：
+
+- 「Phase 7 收尾 PROGRESS.md + bracket-generator.js 改动」先单独 commit（ae8b69f）再开 Phase 8
+- 「每 Task 一次 commit」改为「Phase 完成后一次性 commit」
+- Task 13 E2E 三条旅程已在 DevTools 自动化/GUI 环境通过
+- 云函数上传已完成：points-engine 走 DevTools GUI；match-results 用 deploy-only bundle + `--paths` 避开 `lib/` EISDIR
+
+**后端云函数：**
+- `cloudfunctions/_shared/award.js` 新建（22 单测 / 100% lines / 95.87% statements）：`buildAwardEntries / buildPlacementEntries / finalRoundOf / ROLE_WINNER / ROLE_LOSER`；不入云函数包，通过 sync 脚本 vendor 到 match-results + points-engine
+- `scripts/sync-shared-libs.sh` 新建：hash 比对 award.js 两份副本 + score-rule / bracket-generator / scheduler-mirror 三对前端 mirror
+- `cloudfunctions/match-results/lib/score-rule.js` 新建（29 单测 / 100% 覆盖率）：4 局制 validateScore + computeWinner，3:3 抢七支持
+- `cloudfunctions/match-results/lib/state.js` 新建（19 单测 / 99.27% lines / 93.86% statements / 81.69% branches）：状态机 `submitResult / confirmAll / reconfirmMatch / clearDownstream / maybeAwardPlacement`，applied 修订 #1（confirmed 硬拦）+ #10（playerIds 校验）+ #2（confirmOne 同步推进 R+1 match_results 占位 + 当前轮 bracket winner）
+- `cloudfunctions/match-results/index.js` 新增 6 个 envelope action：`submit / confirmAll / reconfirmMatch / submittedQueue / listByTournament / listByPlayer`，新增 `resolveSubmitter()`（wxContext → members → `{ _id, isAdmin }`）+ `pagedFetchSubmitted()`（复合游标分页）；原 11 个 legacy action 保留
+- `cloudfunctions/match-results/lib/award.js` vendor copy（hash 与 _shared 一致）
+- `cloudfunctions/points-engine/lib/aggregate.js` 新建（8 单测 / 96.77% lines）：`aggregateRanks` 复合游标分页（50 / 250 / 2500 测试通过）
+- `cloudfunctions/points-engine/index.js` 重写：新 actions `rankAggregate / recompute`；保留 wrapper `rankList / playerStats / recalculateMatch` 维持前端 home/rank/player-detail 契约（winCount / lossCount / totalPoints, 双 singles+doubles 桶, recent 10 场）
+- `cloudfunctions/points-engine/lib/award.js` vendor copy（hash 与 _shared 一致）
+
+**前端：**
+- `miniprogram/utils/score-rule.js` vendor copy（hash 与 cloud 一致）
+- `miniprogram/utils/scheduler-mirror.js` Phase 7 遗留 1 行注释 diff 已补齐（sync 通过）
+- `miniprogram/components/score-row/` 新建：折叠 + 展开内联编辑器；stepper 0-4 + 3:3 触发 tiebreak input；双打 2 行 A/B vs C/D 布局（修订 #16）；event 字段统一 `score`（submit）/ `newScore`（reconfirm，二次确认弹窗）— 修订 #5
+- `miniprogram/pages/tournament-score/` 完全重写：`onLoad({ tournamentId?, id?, matchId? })`（修订 #13 双参数兼容）；按 round 分组渲染 score-row；progress bar + admin 一键确认 sticky-bottom 按钮
+- `miniprogram/pages/tournament-detail/index.js` `onEnterScore` 改用 `?tournamentId=` 协议
+- `miniprogram/pages/tournament-manage/` 加「待确认比分」队列块（admin only，插在「我的草稿」之后、公开列表之前 — 修订 #17）
+- `miniprogram/pages/my-match/` 加「可录分比赛」块；按 registrationStatus 过滤报名（修订 #18，不再 fallback `status`）；tournaments.list ids 批量拉名
+
+**文档：**
+- `cloudfunctions/DATABASE_SCHEMA.md`：补 `tournament_points` 集合（Phase 8 新）；schedulePlan.slotMinutes 改为 20；pointsRules 示例数值更新 + walkover 字段说明；pointsAwarded 结构改为 `{ source, entries: [{ memberId, points, role }] }`；tournament_registrations.partnerId 区分淘汰赛必填 vs 常规赛 nullable
+
+**验证：**
+- _shared: 22 tests
+- match-results: 55 tests（validate + score-rule + state）
+- points-engine: 16 tests（calculate + aggregate）
+- tournaments: 19 tests
+- tournament-brackets: 44 tests
+- **核心 Phase 8 云函数单测全绿：match-results 55/55，points-engine 16/16**
+- `scripts/sync-shared-libs.sh` 全过（award.js + 3 个 mirror）
+- 全部 .js 文件 `node -c` syntax check 通过
+- Phase 8 E2E 三条旅程通过：Admin 完整闭环 / Player 提交 + Admin 确认 / 改分回滚；DevTools Console 已清空且无可见红错
+
+**遗留 / 注意：**
+- Task 13 E2E 三条旅程已通过，见下方清单
+- 云函数已上传到云端；`match-results` 保留源码 `lib/` 结构，部署时使用临时 bundle 目录规避 DevTools CLI `EISDIR`
+- `state.js#maybeAwardPlacement` 假设 `tournament.format === 'knockout'` 时才发 placement，常规赛只走 winLoss entries
+- `aggregate.js` 在常规赛仅有 `regularRound` matchKind 时也能正常聚合（不区分 matchKind，所有 confirmed 行的 entries 都进 totalPoints）
+- `tournament_points` 表 placement 行的 createTime 是 maybeAwardPlacement 触发当下；改分回滚整体按 tournamentId remove 全部 placement 行
+- 排行榜 100/页拉取在 2500+ 行级仍线性，>5000 时建议加 placement 增量索引（推 v3）
+- score-row 双打 2 行布局依赖 `match.player1.partnerName / player2.partnerName`，后端 confirmOne 推进时填写
+- `match-results.listByPlayer` 用 `playerIds: _.in([memberId]), resultStatus: _.neq('confirmed')` 过滤；BYE 行在前端再次过滤掉
+
+### 2026-05-15 · Phase 8 E2E 手动验证清单（已通过）
+
+**13.1 Admin 完整闭环**
+
+- [x] 登录 admin → tournament-manage → 创建赛事 → 走完 4 步 wizard（draft 落库）→ 提交创建
+- [x] tournament-detail 进入新赛事 → 排程页（schedule-board）可看到 R1 比赛 + 自由拉球
+- [x] tournament-detail 底部「录入成绩」按钮 → 跳 tournament-score（带 `?tournamentId=`）
+- [x] 录 R1 所有场次 → 一键「✓ 确认全部待确认」
+- [x] bracket 自动推进 → 半决/决赛 player slot 出现 → 录半决 → 确认 → 录决赛 → 确认
+- [x] 数据库 `tournament_points` 集合按 placement 桶入库（{tournamentId}_{memberId}_placement docId）
+- [x] `tournaments[T].status = 'completed'`
+- [x] 排行榜（rank 页）刷新 → 积分按 winLoss + placement 累加
+
+**13.2 Player 提交流程**
+
+- [x] 登录 player（非 admin）→ my-match「可录分比赛」区块 → 点击 → tournament-score（带 matchId anchor 滚动）
+- [x] 内联编辑器 → 提交（resultStatus='submitted'，pointsAwarded=null）
+- [x] 切 admin 账号 → tournament-manage 顶部「待确认比分」队列出现 → 点击 → tournament-score
+- [x] admin「确认全部待确认」→ 该场 resultStatus='confirmed' + pointsAwarded.entries 写入
+
+**13.3 改分回滚**
+
+- [x] admin 在已 completed 的赛事打开 tournament-score
+- [x] 改半决某场 winner（4:0 → 0:4）→ 二次确认弹窗 → 确认
+- [x] `tournament_brackets` 决赛 winner / 对应 slot player 清空
+- [x] `match_results` 决赛行 `resultStatus='pending'` + score/winner/pointsAwarded 清空
+- [x] `tournament_points` 该 tournament 所有 placement 行删除
+- [x] `tournaments[T].status='ongoing'`
+- [x] reconfirm 内部 confirmOne 再次推进新 winner 到 R+1 slot
+
+**任一旅程失败：** 回 Phase 8 对应 Task 修复后再 commit。三条全过 → commit Phase 8。
 
 ### 2026-05-15 · Phase 7 step 2/3 日程表修订 + 云函数上传
 

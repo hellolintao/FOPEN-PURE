@@ -6,6 +6,11 @@ const db = cloud.database()
 const _ = db.command
 const collection = db.collection('match_results')
 
+const { createMatchStateService } = require('./lib/state')
+const awardLib = require('./lib/award')
+const scoreRule = require('./lib/score-rule')
+const stateSvc = createMatchStateService({ db, awardLib, scoreRule })
+
 // 收集选手 ID（兼容 singles/doubles，跳过 BYE）
 function collectPlayerIds(m, type) {
   const ids = []
@@ -24,6 +29,22 @@ function collectPlayerIds(m, type) {
 function generateMatchId(tournamentId, round, matchIndex) {
   return `match_${tournamentId.split('_')[1]}_${tournamentId.split('_')[2]}_r${round}_m${matchIndex}`
 }
+
+// Phase 8 helpers — resolve current openid → member doc with isAdmin
+// Historical member documents use `admin`; Phase 8 state service expects
+// `isAdmin`. Keep both accepted so older member rows and newer test fixtures
+// resolve to the same role.
+async function resolveSubmitter() {
+  const wxContext = cloud.getWXContext()
+  if (!wxContext || !wxContext.OPENID) return null
+  const r = await db.collection('members').where({ openid: wxContext.OPENID }).get()
+  const m = r.data[0]
+  if (!m) return null
+  return { _id: m._id, isAdmin: (typeof m.admin === 'boolean') ? m.admin : !!m.isAdmin }
+}
+
+function ok(data) { return { success: true, data } }
+function fail(code, message) { return { success: false, error: { code, message } } }
 
 // 数据验证函数
 function validateMatchResult(data) {
@@ -538,7 +559,117 @@ exports.main = async (event, context) => {
     case 'bulkUpsertScheduledMatches':
       return await handleBulkUpsert(event)
 
+    case 'submit': {
+      const submitter = await resolveSubmitter()
+      if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
+      try {
+        await stateSvc.submitResult({ matchId: event.matchId, score: event.score, submitter })
+        return ok({ ok: true })
+      } catch (e) {
+        return fail(e.message || 'INTERNAL', e.message)
+      }
+    }
+
+    case 'confirmAll': {
+      const submitter = await resolveSubmitter()
+      if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
+      try {
+        const r = await stateSvc.confirmAll({ tournamentId: event.tournamentId, admin: submitter })
+        return ok(r)
+      } catch (e) {
+        return fail(e.message || 'INTERNAL', e.message)
+      }
+    }
+
+    case 'reconfirmMatch': {
+      const submitter = await resolveSubmitter()
+      if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
+      try {
+        await stateSvc.reconfirmMatch({ matchId: event.matchId, newScore: event.newScore, admin: submitter })
+        return ok({ ok: true })
+      } catch (e) {
+        return fail(e.message || 'INTERNAL', e.message)
+      }
+    }
+
+
+    case 'submittedQueue': {
+      const submitter = await resolveSubmitter()
+      if (!submitter || !submitter.isAdmin) return fail('UNAUTHORIZED', '需要管理员权限')
+      try {
+        const rows = await pagedFetchSubmitted()
+        if (rows.length === 0) return ok({ items: [] })
+        const grouped = {}
+        for (const r of rows) grouped[r.tournamentId] = (grouped[r.tournamentId] || 0) + 1
+        const tournamentIds = Object.keys(grouped)
+        const tournaments = (await db.collection('tournaments').where({ _id: _.in(tournamentIds) }).get()).data
+        const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
+        return ok({
+          items: tournamentIds.map(tid => ({
+            tournamentId: tid,
+            tournamentName: tMap[tid] && tMap[tid].name ? tMap[tid].name : tid,
+            submittedCount: grouped[tid]
+          }))
+        })
+      } catch (e) {
+        return fail('INTERNAL', e.message)
+      }
+    }
+
+    case 'listByTournament': {
+      try {
+        if (!event.tournamentId) return fail('INVALID_ARG', 'tournamentId 必填')
+        const results = (await collection
+          .where({ tournamentId: event.tournamentId })
+          .orderBy('round', 'asc')
+          .orderBy('position', 'asc')
+          .orderBy('createTime', 'asc')
+          .limit(500)
+          .get()).data
+        return ok({ results })
+      } catch (e) {
+        return fail('INTERNAL', e.message)
+      }
+    }
+
+    case 'listByPlayer': {
+      try {
+        if (!event.memberId) return fail('INVALID_ARG', 'memberId 必填')
+        const matches = (await collection.where({
+          playerIds: _.in([event.memberId]),
+          resultStatus: _.neq('confirmed')
+        }).orderBy('round', 'asc').limit(200).get()).data
+        return ok({ matches })
+      } catch (e) {
+        return fail('INTERNAL', e.message)
+      }
+    }
+
     default:
       return { errMsg: 'invalid action' }
   }
+}
+
+// Phase 8 — page through submitted match_results using compound cursor
+async function pagedFetchSubmitted() {
+  const out = []
+  const pageSize = 100
+  let last = null
+  for (let safety = 0; safety < 100; safety++) {
+    const filter = last
+      ? _.and([
+          { resultStatus: 'submitted' },
+          _.or([
+            { createTime: _.gt(last.createTime) },
+            _.and([{ createTime: last.createTime }, { _id: _.gt(last._id) }])
+          ])
+        ])
+      : { resultStatus: 'submitted' }
+    const res = await collection.where(filter).orderBy('createTime', 'asc').orderBy('_id', 'asc').limit(pageSize).get()
+    const page = res.data
+    out.push(...page)
+    if (page.length < pageSize) break
+    last = { createTime: page[page.length - 1].createTime, _id: page[page.length - 1]._id }
+  }
+  return out
 }

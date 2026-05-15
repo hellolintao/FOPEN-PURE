@@ -1,0 +1,348 @@
+const { createMatchStateService } = require('../state')
+const award = require('../award')
+const scoreRule = require('../score-rule')
+
+function makeDb(seed) {
+  const collections = JSON.parse(JSON.stringify(seed))
+  const createdCollections = []
+  // a very simple in-memory db emulator
+  // Supports: doc(id).get/update/set/remove, where({...}).get/remove, where({...}).orderBy/limit ignored
+  return {
+    serverDate: () => new Date(),
+    async createCollection(name) {
+      createdCollections.push(name)
+      collections[name] = collections[name] || []
+    },
+    collection(name) {
+      const rows = collections[name] = collections[name] || []
+      return _coll(rows)
+    },
+    __all: () => collections,
+    __created: () => createdCollections
+  }
+  function _coll(rows) {
+    return {
+      doc(id) {
+        return {
+          async get() {
+            const r = rows.find(x => x._id === id)
+            if (!r) return { data: null }
+            return { data: r }
+          },
+          async update({ data }) {
+            const r = rows.find(x => x._id === id)
+            if (!r) throw new Error('not found: ' + id)
+            Object.assign(r, data)
+          },
+          async set({ data }) {
+            if (Object.prototype.hasOwnProperty.call(data, '_id')) throw new Error('cannot update _id')
+            const idx = rows.findIndex(x => x._id === id)
+            if (idx < 0) rows.push({ ...data, _id: id })
+            else rows[idx] = { ...data, _id: id }
+          },
+          async remove() {
+            const idx = rows.findIndex(x => x._id === id)
+            if (idx >= 0) rows.splice(idx, 1)
+          }
+        }
+      },
+      where(filter) {
+        const matchFn = row => Object.entries(filter).every(([k, v]) => {
+          if (v && typeof v === 'object' && v.$in) return v.$in.includes(row[k])
+          return row[k] === v
+        })
+        return {
+          orderBy() { return this },
+          limit() { return this },
+          async get() { return { data: rows.filter(matchFn) } },
+          async remove() {
+            const before = rows.length
+            for (let i = rows.length - 1; i >= 0; i--) if (matchFn(rows[i])) rows.splice(i, 1)
+            return { deleted: before - rows.length }
+          }
+        }
+      }
+    }
+  }
+}
+
+function seed4Knockout() {
+  return {
+    tournaments: [{
+      _id: 'T1', seasonId: 'S1', type: 'singles', format: 'knockout',
+      pointsRules: { winLoss: { win: 20, loss: 10, walkover: 0 }, placement: { champion: 100, runnerUp: 70, semifinal: 50, quarterfinal: 30, participation: 10 } },
+      status: 'ongoing'
+    }],
+    tournament_brackets: [
+      { _id: 'bracket_T1_round_1', tournamentId: 'T1', round: 1, type: 'singles', matches: [
+        { matchId: 'r1m1', round: 1, position: 1, player1: { id: 'A' }, player2: { id: 'B' }, bye: false, status: 'pending', resultStatus: 'pending', winner: null },
+        { matchId: 'r1m2', round: 1, position: 2, player1: { id: 'C' }, player2: { id: 'D' }, bye: false, status: 'pending', resultStatus: 'pending', winner: null }
+      ]},
+      { _id: 'bracket_T1_round_2', tournamentId: 'T1', round: 2, type: 'singles', matches: [
+        { matchId: 'r2m1', round: 2, position: 1, player1: null, player2: null, bye: false, status: 'pending', resultStatus: 'pending', winner: null }
+      ]}
+    ],
+    match_results: [
+      { _id: 'result_T1_r1m1', tournamentId: 'T1', sourceMatchId: 'r1m1', matchKind: 'bracket', round: 1, position: 1,
+        player1: { id: 'A' }, player2: { id: 'B' }, playerIds: ['A','B'],
+        resultStatus: 'pending', winner: null, pointsAwarded: null,
+        tournamentType: 'singles', seasonId: 'S1', confirmedBy: null, confirmedAt: null },
+      { _id: 'result_T1_r1m2', tournamentId: 'T1', sourceMatchId: 'r1m2', matchKind: 'bracket', round: 1, position: 2,
+        player1: { id: 'C' }, player2: { id: 'D' }, playerIds: ['C','D'],
+        resultStatus: 'pending', winner: null, pointsAwarded: null,
+        tournamentType: 'singles', seasonId: 'S1', confirmedBy: null, confirmedAt: null },
+      { _id: 'result_T1_r2m1', tournamentId: 'T1', sourceMatchId: 'r2m1', matchKind: 'bracket', round: 2, position: 1,
+        player1: null, player2: null, playerIds: [],
+        resultStatus: 'pending', winner: null, pointsAwarded: null,
+        tournamentType: 'singles', seasonId: 'S1', confirmedBy: null, confirmedAt: null }
+    ],
+    tournament_registrations: [
+      { _id: 'reg_T1_001', tournamentId: 'T1', playerId: 'A', registrationStatus: 'confirmed' },
+      { _id: 'reg_T1_002', tournamentId: 'T1', playerId: 'B', registrationStatus: 'confirmed' },
+      { _id: 'reg_T1_003', tournamentId: 'T1', playerId: 'C', registrationStatus: 'confirmed' },
+      { _id: 'reg_T1_004', tournamentId: 'T1', playerId: 'D', registrationStatus: 'confirmed' }
+    ],
+    tournament_points: []
+  }
+}
+
+describe('submitResult', () => {
+  test('pending → admin submit → confirmed + award', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const rows = db.__all().match_results
+    const r = rows.find(x => x._id === 'result_T1_r1m1')
+    expect(r.resultStatus).toBe('confirmed')
+    expect(r.pointsAwarded.entries.length).toBe(2)
+    expect(r.pointsAwarded.entries.find(e => e.memberId === 'A').role).toBe('winner')
+  })
+
+  test('pending → player submit (是参赛者) → submitted（无 award）', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'A', isAdmin: false } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.resultStatus).toBe('submitted')
+    expect(r.pointsAwarded).toBeNull()
+  })
+
+  test('submitted → 参赛者覆盖 → submitted（旧丢）', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'A', isAdmin: false } })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'B', isAdmin: false } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.resultStatus).toBe('submitted')
+    expect(r.score.sets[0]).toEqual({ a: 4, b: 0 })
+  })
+
+  test('invalid score（4:3 直接录） → 抛 INVALID_SCORE', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 3 }], tiebreak: null }, submitter: { _id: 'a', isAdmin: true } }))
+      .rejects.toThrow('INVALID_SCORE')
+  })
+
+  test('confirmed 普通会员覆盖 → 抛 UNAUTHORIZED (修订 #1)', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await expect(svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'A', isAdmin: false } }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+
+  test('未登录提交 → 抛 UNAUTHORIZED', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: null }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+
+  test('赛事参赛选手可提交本赛事任意比赛', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'C', isAdmin: false } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.resultStatus).toBe('submitted')
+  })
+
+  test('非本赛事参赛会员提交 → 抛 UNAUTHORIZED', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'STRANGER', isAdmin: false } }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+
+  test('提交未找到匹配 → NOT_FOUND', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.submitResult({ matchId: 'nope', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } }))
+      .rejects.toThrow('NOT_FOUND')
+  })
+
+  test('admin 确认 R1 后下一轮 result 行 player slot 被推进', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const r2 = db.__all().match_results.find(x => x._id === 'result_T1_r2m1')
+    expect(r2.player1).toEqual({ id: 'A' })
+    expect(r2.resultStatus).toBe('pending')
+    // bracket 也推进
+    const r2b = db.__all().tournament_brackets.find(b => b.round === 2)
+    expect(r2b.matches[0].player1).toEqual({ id: 'A' })
+  })
+
+  test('tournament_ 前缀赛事使用生成器 bracket docId 推进', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0]._id = 'tournament_T1'
+    seed.tournament_brackets.forEach(b => { b.tournamentId = 'tournament_T1' })
+    seed.match_results.forEach(r => { r.tournamentId = 'tournament_T1' })
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    const r2b = db.__all().tournament_brackets.find(b => b._id === 'bracket_T1_round_2')
+    const r2r = db.__all().match_results.find(x => x._id === 'result_T1_r2m1')
+    expect(r2b.matches[0].player1).toEqual({ id: 'A' })
+    expect(r2r.player1).toEqual({ id: 'A' })
+  })
+})
+
+describe('confirmAll', () => {
+  test('admin confirmAll → 所有 submitted 变 confirmed + award', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'A', isAdmin: false } })
+    await svc.submitResult({ matchId: 'r1m2', score: { sets: [{ a: 4, b: 1 }], tiebreak: null }, submitter: { _id: 'C', isAdmin: false } })
+    const r = await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
+    expect(r.confirmedCount).toBe(2)
+    const rows = db.__all().match_results.filter(x => x.tournamentId === 'T1' && x.matchKind === 'bracket' && x.round === 1)
+    expect(rows.every(x => x.resultStatus === 'confirmed')).toBe(true)
+  })
+
+  test('幂等：再次 confirmAll → confirmedCount=0', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'A', isAdmin: false } })
+    await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
+    const r = await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
+    expect(r.confirmedCount).toBe(0)
+  })
+
+  test('非 admin 调 confirmAll → UNAUTHORIZED', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'A', isAdmin: false } }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+})
+
+describe('reconfirmMatch · winner 翻盘清后续', () => {
+  test('winner 翻盘 → 清后续 bracket + match_results + tournament_points + status=ongoing', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    // 全部 R1 admin 确认 → 推进
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.submitResult({ matchId: 'r1m2', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    // R2 admin 确认 → tournament_points 写入
+    await svc.submitResult({ matchId: 'r2m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    expect(db.__all().tournament_points.length).toBeGreaterThan(0)
+    expect(db.__all().tournaments[0].status).toBe('completed')
+
+    // 改 r1m1 → B 赢 (4:0 → 0:4)
+    await svc.reconfirmMatch({ matchId: 'r1m1', newScore: { sets: [{ a: 0, b: 4 }], tiebreak: null }, admin: { _id: 'admin1', isAdmin: true } })
+
+    const r2b = db.__all().tournament_brackets.find(b => b.round === 2)
+    const r2r = db.__all().match_results.find(x => x._id === 'result_T1_r2m1')
+    expect(r2r.resultStatus).toBe('pending')
+    expect(r2r.winner).toBeNull()
+    // After reconfirm: clearDownstream sets player1=null, then confirmOne(r1m1, winner=B) advances player1=B
+    expect(r2b.matches[0].player1).toEqual({ id: 'B' })
+    expect(r2r.player1).toEqual({ id: 'B' })
+    expect(db.__all().tournament_points.length).toBe(0)
+    expect(db.__all().tournaments[0].status).toBe('ongoing')
+
+    const r1r1 = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r1r1.winner).toEqual({ id: 'B' })
+  })
+
+  test('决赛 placement 写入前自动创建 tournament_points 集合', async () => {
+    const seed = seed4Knockout()
+    delete seed.tournament_points
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.submitResult({ matchId: 'r1m2', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.submitResult({ matchId: 'r2m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    expect(db.__created()).toContain('tournament_points')
+    expect(db.__all().tournament_points.length).toBeGreaterThan(0)
+  })
+
+  test('reconfirm winner 不变 → 仅覆盖 entries，不清后续', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const before = JSON.parse(JSON.stringify(db.__all().tournament_brackets.find(b => b.round === 2)))
+    await svc.reconfirmMatch({ matchId: 'r1m1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null }, admin: { _id: 'admin1', isAdmin: true } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.score.sets[0]).toEqual({ a: 4, b: 2 })
+    expect(r.pointsAwarded.entries.length).toBe(2)
+    const after = db.__all().tournament_brackets.find(b => b.round === 2)
+    expect(after.matches[0].player1).toEqual(before.matches[0].player1) // R2 未变
+  })
+
+  test('重复 confirm 同一场 → 不产生重复 entries（update 覆盖）', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.pointsAwarded.entries.length).toBe(2)
+    expect(r.score.sets[0]).toEqual({ a: 4, b: 0 })
+  })
+
+  test('reconfirmMatch 非 admin → UNAUTHORIZED', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await expect(svc.reconfirmMatch({ matchId: 'r1m1', newScore: { sets: [{ a: 4, b: 2 }] }, admin: { _id: 'A', isAdmin: false } }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+
+  test('reconfirmMatch 未找到 → NOT_FOUND', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await expect(svc.reconfirmMatch({ matchId: 'nope', newScore: { sets: [{ a: 4, b: 0 }] }, admin: { _id: 'admin1', isAdmin: true } }))
+      .rejects.toThrow('NOT_FOUND')
+  })
+
+  test('reconfirmMatch invalid score → INVALID_SCORE', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await expect(svc.reconfirmMatch({ matchId: 'r1m1', newScore: { sets: [{ a: 4, b: 4 }] }, admin: { _id: 'admin1', isAdmin: true } }))
+      .rejects.toThrow('INVALID_SCORE')
+  })
+})
+
+describe('regularRound', () => {
+  test('常规赛 confirmOne 不推进 bracket（只写 entries）', async () => {
+    const seed = seed4Knockout()
+    // 改为常规赛
+    seed.tournaments[0].format = 'regular'
+    seed.match_results[0].matchKind = 'regularRound'
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 4, b: 0 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const r = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(r.resultStatus).toBe('confirmed')
+    expect(r.pointsAwarded.entries.length).toBe(2)
+    // R2 bracket 不应被影响
+    const r2 = db.__all().tournament_brackets.find(b => b.round === 2)
+    expect(r2.matches[0].player1).toBeNull()
+  })
+})

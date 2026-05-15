@@ -295,3 +295,32 @@
   font-size: 24rpx;
   color: #999999;
 }
+
+.queue-block {
+  background: #fff7ed;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  margin: 16rpx;
+}
+.queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx dashed #fed7aa;
+}
+.queue-row:last-child {
+  border-bottom: 0;
+}
+.queue-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.queue-name {
+  font-weight: 500;
+}
+.queue-arrow {
+  font-size: 36rpx;
+  color: #ea580c;
+}

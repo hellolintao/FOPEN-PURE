@@ -4,13 +4,32 @@
     <text>加载中...</text>
   </view>
 
+  <!-- 可录分比赛 -->
+  <view wx:if="{{!loading && scorable.length > 0}}" class="scorable-block">
+    <text class="block-title">可录分比赛</text>
+    <view
+      wx:for="{{scorable}}"
+      wx:key="_id"
+      class="scorable-row"
+      bindtap="onOpenScoreRow"
+      data-tid="{{item.tournamentId}}"
+      data-mid="{{item.sourceMatchId}}"
+    >
+      <view class="scorable-info">
+        <text class="scorable-tournament">{{item.tournamentName}}</text>
+        <text class="scorable-opponent">vs {{item.opponentLabel}}</text>
+      </view>
+      <text class="scorable-status status-{{item.resultStatus}}">{{item.statusLabel}}</text>
+    </view>
+  </view>
+
   <!-- 空状态 -->
-  <view wx:elif="{{!loading && tournamentList.length === 0}}" class="empty">
+  <view wx:if="{{!loading && tournamentList.length === 0 && scorable.length === 0}}" class="empty">
     <text>暂无参赛记录</text>
   </view>
 
   <!-- 赛事列表 -->
-  <view wx:else class="tournament-list">
+  <view wx:if="{{!loading && tournamentList.length > 0}}" class="tournament-list">
     <view
       wx:for="{{tournamentList}}"
       wx:key="tournament._id"

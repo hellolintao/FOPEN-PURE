@@ -128,7 +128,6 @@ function generateBalancedRegularMatches({ registrations, matchCount, type, now }
   return matches
 }
 
-// 按上场次数升序排，平手用随机打破。取前 N 个 = 上场最少的 N 个人。
 function pickBalancedNPlayers(players, counts, N) {
   const ranked = players.map(p => ({
     p,

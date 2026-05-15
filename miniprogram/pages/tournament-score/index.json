@@ -1,4 +1,6 @@
 {
-  "navigationBarTitleText": "录入成绩",
-  "usingComponents": {}
+  "navigationBarTitleText": "比分录入",
+  "usingComponents": {
+    "score-row": "/components/score-row/index"
+  }
 }

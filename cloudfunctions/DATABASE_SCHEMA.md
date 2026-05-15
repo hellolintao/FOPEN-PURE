@@ -95,7 +95,7 @@
 | `status` | String | 是 | `draft` / `upcoming` / `ongoing` / `completed` |
 | `description` | String | 否 | 赛事描述 |
 | `maxPlayers` | Number | 否 | 淘汰赛最大参赛人数 |
-| `schedulePlan` | Object | 非 draft 必填 | 30 分钟粒度场地排程，结构见下 |
+| `schedulePlan` | Object | 非 draft 必填 | 20 分钟粒度场地排程（Phase 7 2026-05-15 起固定 slotMinutes=20，UI 用 1 小时格但入库展开 3 个 slot），结构见下 |
 | `pointsRules` | Object | 非 draft 必填 | Phase 7 积分规则，结构见下 |
 | `createdBy` | String | draft 必填 | 创建者 member._id，用于“我的草稿”过滤 |
 | `createdByOpenid` | String | 否 | 创建者 OPENID，仅后端使用 |
@@ -107,7 +107,7 @@
 
 ```json
 {
-  "slotMinutes": 30,
+  "slotMinutes": 20,
   "courts": [
     {
       "courtId": "court_001",
@@ -132,16 +132,19 @@
 
 ```json
 {
-  "winLoss": { "win": 10, "loss": 0 },
+  "winLoss": { "win": 20, "loss": 10, "walkover": 0 },
   "placement": {
     "champion": 100,
-    "runnerUp": 60,
-    "semifinal": 30,
-    "quarterfinal": 10,
-    "participation": 5
+    "runnerUp": 70,
+    "semifinal": 50,
+    "quarterfinal": 30,
+    "participation": 10
   }
 }
 ```
+
+- `winLoss.walkover`: Phase 8 字段已存在但未实现弃赛流程，默认 0，留给后续 phase 接入。
+- 淘汰赛玩家可同时获得 `winLoss` + `placement`（叠加，非互斥）。BYE 行 `entries: []`，不进积分。
 
 ---
 
@@ -159,9 +162,9 @@
 | `type` | String | 是 | 参赛类型，'singles'（单打）或 'doubles'（双打） |
 | `playerId` | String | 是 | 参赛选手ID（会员ID） |
 | `playerName` | String | 是 | 参赛选手姓名 |
-| `partnerId` | String | 否 | 双打时的搭档ID |
-| `partnerName` | String | 否 | 双打时的搭档姓名 |
-| `teamName` | String | 否 | 双打时的队伍名称 |
+| `partnerId` | String | 双打+淘汰赛 必填 | 双打搭档 member._id。常规赛双打报名按个人，`partnerId=null`，搭档由 step 3 排程随机配对（Phase 7 2026-05-15 修订） |
+| `partnerName` | String | 双打+淘汰赛 必填 | 双打搭档姓名（常规赛双打可空） |
+| `teamName` | String | 否 | 双打时的队伍名称（淘汰赛常用） |
 | `seed` | Number | 否 | 种子排名，范围：1-64 |
 | `registrationStatus` | String | 否 | Phase 7 报名状态：`confirmed` / `withdrew`，bulkSet 默认 `confirmed` |
 | `status` | String | 否 | 旧报名状态字段，历史兼容 |
@@ -313,7 +316,7 @@
 | `winnerId` | String | 否 | 获胜者ID |
 | `loserId` | String | 否 | 失败者ID |
 | `score` | String | 否 | 比分，格式如 "6-4, 6-3" |
-| `pointsAwarded` | Object | 否 | 积分发放快照；BYE 自动 confirmed 时 entries 为空 |
+| `pointsAwarded` | Object | 否 | 积分发放快照 `{ source: 'match', entries: [{ memberId, points, role }] }`；role: 'winner'/'loser'；BYE 行 entries 为空。Phase 8 起统一此结构 |
 | `submissions` | Array | 否 | 提交记录列表，结构见下"submissions 子结构"小节 |
 | `confirmedAt` | Date | 否 | 自动/仲裁 confirmed 时间 |
 | `confirmedBy` | String | 否 | 管理员仲裁时填 admin._id；双方一致 auto-confirm 时为 null |
@@ -397,6 +400,27 @@
 | `playerIds` | Array | 是 | 参与球员 member._id 列表，单打 2 人，双打 4 人 |
 | `createdBy` | String | 否 | 创建者 member._id |
 | `createTime` | Date | 是 | 创建时间 |
+
+---
+
+## 9. tournament_points（赛事 placement 积分快照）
+
+Phase 8 起，淘汰赛决赛 confirmed 后由 `match-results/lib/state.maybeAwardPlacement` 写入。每个 (tournamentId, memberId) 一行，承载 `placement` 桶积分（champion / runnerUp / semifinal / quarterfinal / participation）。`winLoss` 积分通过 `match_results.pointsAwarded.entries` 表达，不写本表。改分回滚（winner 翻盘）会按 tournamentId 整体删除该表对应行。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `_id` | String | 是 | 主键，固定格式：`{tournamentId}_{memberId}_placement` |
+| `tournamentId` | String | 是 | 赛事ID |
+| `memberId` | String | 是 | 选手 member._id |
+| `seasonId` | String | 是 | 赛季ID（用于排行榜聚合过滤） |
+| `tournamentType` | String | 是 | `singles` / `doubles` |
+| `rank` | String | 是 | `champion` / `runnerUp` / `semifinal` / `quarterfinal` / `participation` |
+| `points` | Number | 是 | 桶对应分值（来自 tournament.pointsRules.placement） |
+| `awardedAt` | Date | 是 | 发放时间 |
+| `createTime` | Date | 是 | 创建时间 |
+| `updateTime` | Date | 是 | 更新时间 |
+
+排行榜聚合（`points-engine.rankAggregate / rankList`）按 `(createTime asc, _id asc)` 复合游标分页拉取本表 + `match_results` 已 confirmed 行，累加每位选手的 `totalPoints / wins / losses`。
 
 ---
 

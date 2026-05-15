@@ -75,8 +75,8 @@ Page({
         maxPlayers: t.maxPlayers || 8,
         description: t.description || ''
       },
-      schedulePlanCourts: (t.schedulePlan && t.schedulePlan.courts) || [],
-      queues: (t.schedulePlan && t.schedulePlan.queues) || [],
+      schedulePlanCourts: asArray(t.schedulePlan && t.schedulePlan.courts),
+      queues: asArray(t.schedulePlan && t.schedulePlan.queues),
       pointsRules: this._normalizePointsRules(t.pointsRules || this.data.pointsRules)
     })
 
@@ -108,7 +108,7 @@ Page({
       name: 'free-plays', data: { action: 'list', tournamentId: id }
     })
     const fp = (fpRes.result && fpRes.result.success && fpRes.result.data && fpRes.result.data.items) || []
-    this.setData({ freePlays: fp })
+    this.setData({ freePlays: asArray(fp) })
   },
 
   async onNext() {
@@ -309,14 +309,14 @@ Page({
   },
 
   onCourtsChange(e) {
-    this.setData({ schedulePlanCourts: e.detail.courts })
+    this.setData({ schedulePlanCourts: asArray(e.detail && e.detail.courts) })
   },
 
   onScheduleChange(e) {
     this.setData({
-      matches: e.detail.matches,
-      queues: e.detail.queues,
-      freePlays: e.detail.freePlays
+      matches: asArray(e.detail && e.detail.matches),
+      queues: asArray(e.detail && e.detail.queues),
+      freePlays: asArray(e.detail && e.detail.freePlays)
     })
   },
 
@@ -561,4 +561,8 @@ function unpackList(res, dataFields) {
   }
   if (Array.isArray(r.data)) return r.data
   return []
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : []
 }

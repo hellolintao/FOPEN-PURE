@@ -1,12 +1,12 @@
 Component({
   properties: {
     tournament: Object,
-    registrations: { type: Array, value: [] },
-    schedulePlan: Object,
-    matches: { type: Array, value: [] },
-    freePlays: { type: Array, value: [] },
-    queues: { type: Array, value: [] },
-    members: { type: Array, value: [] }
+    registrations: { type: null, value: [] },
+    schedulePlan: { type: null, value: { courts: [] } },
+    matches: { type: null, value: [] },
+    freePlays: { type: null, value: [] },
+    queues: { type: null, value: [] },
+    members: { type: null, value: [] }
   },
 
   data: {
@@ -50,27 +50,27 @@ Component({
     _decorate(queues, matches, freePlays) {
       // Pre-compute duplicate keys: 同样的双方球员（无序）出现多次 → 标红
       const keyCount = new Map()
-      ;(matches || []).forEach(m => {
+      ;(asArray(matches)).forEach(m => {
         const key = matchPairKey(m)
         if (!key) return
         keyCount.set(key, (keyCount.get(key) || 0) + 1)
       })
 
-      return (queues || []).map(q => {
-        const items = (q.items || []).map(it => {
+      return asArray(queues).map(q => {
+        const items = asArray(q.items).map(it => {
           if (it.kind === 'freePlay') {
-            const fp = (freePlays || []).find(x => x._id === it.matchId)
-            const playerIds = (fp && fp.playerIds) || []
+            const fp = asArray(freePlays).find(x => x._id === it.matchId)
+            const playerIds = asArray(fp && fp.playerIds)
             const playersLabel = playerIds
               .map(pid => {
-                const m = (this.properties.members || []).find(x => x._id === pid)
+                const m = asArray(this.properties.members).find(x => x._id === pid)
                 return m ? m.name : pid
               })
               .join('/')
             return { ...it, __rowKind: 'freePlay', __player1Label: '', __player2Label: '', __playersLabel: playersLabel, __duplicate: false }
           }
           // kind === 'match'
-          const match = (matches || []).find(x => x.matchId === it.matchId)
+          const match = asArray(matches).find(x => x.matchId === it.matchId)
           const rowKind = match && match.matchKind ? match.matchKind : 'bracket'
           const p1 = match && match.player1
           const p2 = match && match.player2
@@ -103,10 +103,10 @@ Component({
     },
 
     _decorateCourts(schedulePlan) {
-      return ((schedulePlan && schedulePlan.courts) || []).map(court => ({
+      return asArray(schedulePlan && schedulePlan.courts).map(court => ({
         ...court,
-        slots: [...(court.slots || [])].sort(),
-        slotsLabel: (court.slots || []).length + ' 个时段'
+        slots: asArray(court.slots).slice().sort(),
+        slotsLabel: asArray(court.slots).length + ' 个时段'
       }))
     },
 
@@ -115,7 +115,7 @@ Component({
       const slotKeys = []
       const seen = new Set()
       courts.forEach(court => {
-        ;(court.slots || []).forEach(slot => {
+        ;(asArray(court.slots)).forEach(slot => {
           if (!seen.has(slot)) {
             seen.add(slot)
             slotKeys.push(slot)
@@ -125,8 +125,8 @@ Component({
       slotKeys.sort()
 
       const maxOverflow = courts.reduce((max, court) => {
-        const q = (decoratedQueues || []).find(x => x.courtId === court.courtId)
-        const extra = Math.max(0, ((q && q.items) || []).length - (court.slots || []).length)
+        const q = asArray(decoratedQueues).find(x => x.courtId === court.courtId)
+        const extra = Math.max(0, asArray(q && q.items).length - asArray(court.slots).length)
         return Math.max(max, extra)
       }, 0)
       for (let i = 0; i < maxOverflow; i++) slotKeys.push(`__overflow_${i}`)
@@ -134,13 +134,13 @@ Component({
       return slotKeys.map(slotKey => ({
         slotKey,
         slotLabel: slotKey.indexOf('__overflow_') === 0 ? `加场 ${parseInt(slotKey.replace('__overflow_', ''), 10) + 1}` : formatSlotLabel(slotKey),
-        cells: courts.map(court => this._cellFor(court, slotKey, decoratedQueues || []))
+        cells: courts.map(court => this._cellFor(court, slotKey, asArray(decoratedQueues)))
       }))
     },
 
     _cellFor(court, slotKey, decoratedQueues) {
-      const q = decoratedQueues.find(x => x.courtId === court.courtId)
-      const slots = court.slots || []
+      const q = asArray(decoratedQueues).find(x => x.courtId === court.courtId)
+      const slots = asArray(court.slots)
       const isOverflow = slotKey.indexOf('__overflow_') === 0
       const slotIndex = isOverflow
         ? slots.length + parseInt(slotKey.replace('__overflow_', ''), 10)
@@ -150,7 +150,7 @@ Component({
         return { courtId: court.courtId, available: false, __rowKind: 'empty', slotIndex: -1 }
       }
 
-      const item = q && q.items ? q.items.find(it => it.order === slotIndex) : null
+      const item = q && q.items ? asArray(q.items).find(it => it.order === slotIndex) : null
       if (!item) {
         return { courtId: court.courtId, available: true, __rowKind: 'empty', slotIndex }
       }
@@ -278,23 +278,27 @@ Component({
     },
 
     applyAddFreePlayAt(courtId, slotIndex) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
       // 不能与已有 order 冲突
-      if ((q.items || []).some(it => it.order === slotIndex)) return
+      q.items = asArray(q.items)
+      if (q.items.some(it => it.order === slotIndex)) return
       const fpId = `fp_${courtId}_${Date.now()}`
       q.items.push({ kind: 'freePlay', matchId: fpId, freePlayId: fpId, order: slotIndex })
-      const freePlays = [...this.data.freePlays, { _id: fpId, courtId, queueOrder: slotIndex, playerIds: [] }]
+      const freePlays = [...asArray(this.data.freePlays), { _id: fpId, courtId, queueOrder: slotIndex, playerIds: [] }]
       this.emitChange({ queues, freePlays })
     },
 
     applyAddMatchAt({ courtId, slotIndex }, memberIds) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
-      if ((q.items || []).some(it => it.order === slotIndex)) return
+      q.items = asArray(q.items)
+      if (q.items.some(it => it.order === slotIndex)) return
       const newId = `match_extra_${Date.now()}`
       q.items.push({ kind: 'match', matchId: newId, sourceMatchId: newId, order: slotIndex })
-      const matches = [...this.data.matches, this.assemblePlayerObjects(memberIds, newId)]
+      const match = this.assemblePlayerObjects(memberIds, newId)
+      if (!match) return
+      const matches = [...asArray(this.data.matches), match]
       this.emitChange({ queues, matches })
     },
 
@@ -302,8 +306,9 @@ Component({
 
     // —— 数据变更工具 ——
     move(courtId, matchId, delta) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
+      q.items = asArray(q.items)
       const idx = q.items.findIndex(it => it.matchId === matchId); if (idx < 0) return
       const target = idx + delta
       if (target < 0 || target >= q.items.length) return
@@ -313,22 +318,24 @@ Component({
     },
 
     moveCourt(fromCourtId, matchId) {
-      const schedulePlan = this.properties.schedulePlan
-      if (!schedulePlan || !schedulePlan.courts) return
-      const otherCourts = schedulePlan.courts
+      const courts = asArray(this.properties.schedulePlan && this.properties.schedulePlan.courts)
+      if (courts.length === 0) return
+      const otherCourts = courts
         .filter(c => c.courtId !== fromCourtId)
         .map(c => c.name)
-      const ids = schedulePlan.courts
+      const ids = courts
         .filter(c => c.courtId !== fromCourtId)
         .map(c => c.courtId)
       wx.showActionSheet({
         itemList: otherCourts,
         success: ({ tapIndex }) => {
           const toCourtId = ids[tapIndex]
-          const queues = JSON.parse(JSON.stringify(this.data.queues))
+          const queues = cloneArray(this.data.queues)
           const from = queues.find(x => x.courtId === fromCourtId)
           const to = queues.find(x => x.courtId === toCourtId)
           if (!from || !to) return
+          from.items = asArray(from.items)
+          to.items = asArray(to.items)
           const idx = from.items.findIndex(it => it.matchId === matchId)
           if (idx < 0) return
           const [item] = from.items.splice(idx, 1)
@@ -341,21 +348,21 @@ Component({
     },
 
     removeItem(courtId, matchId, kind) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
-      q.items = q.items.filter(it => it.matchId !== matchId)
+      q.items = asArray(q.items).filter(it => it.matchId !== matchId)
       // 不再重新索引 order — 保留原 slot 位置，后面的对局不顶上来
       const patch = { queues }
-      if (kind === 'freePlay') patch.freePlays = this.data.freePlays.filter(fp => fp._id !== matchId)
-      if (kind === 'extra' || kind === 'regularRound') patch.matches = this.data.matches.filter(m => m.matchId !== matchId)
+      if (kind === 'freePlay') patch.freePlays = asArray(this.data.freePlays).filter(fp => fp._id !== matchId)
+      if (kind === 'extra' || kind === 'regularRound') patch.matches = asArray(this.data.matches).filter(m => m.matchId !== matchId)
       this.emitChange(patch)
     },
 
     applySwitch({ matchId, slot }, newMemberId) {
-      const member = (this.properties.members || []).find(x => x._id === newMemberId)
+      const member = asArray(this.properties.members).find(x => x._id === newMemberId)
         || (this.allowedPoolForSwitch(null)).find(x => x._id === newMemberId)
       if (!member) return
-      const matches = JSON.parse(JSON.stringify(this.data.matches))
+      const matches = cloneArray(this.data.matches)
       const m = matches.find(x => x.matchId === matchId); if (!m) return
 
       // 双打 4 槽：player1 / player1partner / player2 / player2partner
@@ -395,26 +402,31 @@ Component({
     },
 
     applyAddFreePlay({ courtId }, memberIds) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
+      q.items = asArray(q.items)
       const fpId = `fp_${courtId}_${Date.now()}`
       q.items.push({ kind: 'freePlay', matchId: fpId, freePlayId: fpId, order: q.items.length })
-      const freePlays = [...this.data.freePlays, { _id: fpId, courtId, queueOrder: q.items.length - 1, playerIds: memberIds || [] }]
+      const freePlays = [...asArray(this.data.freePlays), { _id: fpId, courtId, queueOrder: q.items.length - 1, playerIds: memberIds || [] }]
       this.emitChange({ queues, freePlays })
     },
 
     applyAddExtra({ courtId }, memberIds) {
-      const queues = JSON.parse(JSON.stringify(this.data.queues))
+      const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
+      q.items = asArray(q.items)
       const newId = `match_extra_${Date.now()}`
       q.items.push({ kind: 'match', matchId: newId, sourceMatchId: newId, order: q.items.length })
-      const matches = [...this.data.matches, this.assemblePlayerObjects(memberIds, newId)]
+      const match = this.assemblePlayerObjects(memberIds, newId)
+      if (!match) return
+      const matches = [...asArray(this.data.matches), match]
       this.emitChange({ queues, matches })
     },
 
     assemblePlayerObjects(memberIds, matchId) {
-      const ms = memberIds.map(id => (this.properties.members || []).find(x => x._id === id)).filter(Boolean)
+      const ms = asArray(memberIds).map(id => asArray(this.properties.members).find(x => x._id === id)).filter(Boolean)
       const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
+      if ((!isDoubles && ms.length < 2) || (isDoubles && ms.length < 4)) return null
       const player1 = isDoubles
         ? { id: ms[0]._id, name: ms[0].name, partnerId: ms[1]._id, partnerName: ms[1].name }
         : { id: ms[0]._id, name: ms[0].name }
@@ -439,7 +451,7 @@ Component({
     },
 
     allowedPoolForSwitch(/* m */) {
-      return (this.properties.registrations || []).map(r => ({
+      return asArray(this.properties.registrations).map(r => ({
         _id: r.playerId,
         name: r.playerName,
         avatarUrl: r.avatarUrl
@@ -448,9 +460,9 @@ Component({
 
     emitChange(patch) {
       const detail = {
-        matches:   patch.matches   !== undefined ? patch.matches   : this.data.matches,
-        queues:    patch.queues    !== undefined ? patch.queues    : this.data.queues,
-        freePlays: patch.freePlays !== undefined ? patch.freePlays : this.data.freePlays
+        matches:   patch.matches   !== undefined ? asArray(patch.matches)   : asArray(this.data.matches),
+        queues:    patch.queues    !== undefined ? asArray(patch.queues)    : asArray(this.data.queues),
+        freePlays: patch.freePlays !== undefined ? asArray(patch.freePlays) : asArray(this.data.freePlays)
       }
       this.setData(patch)
       this.triggerEvent('change', detail)
@@ -475,4 +487,12 @@ function matchPairKey(m) {
 function formatSlotLabel(slot) {
   const m = /T(\d{2}):(\d{2})/.exec(slot || '')
   return m ? `${m[1]}:${m[2]}` : String(slot || '')
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function cloneArray(value) {
+  return JSON.parse(JSON.stringify(asArray(value)))
 }

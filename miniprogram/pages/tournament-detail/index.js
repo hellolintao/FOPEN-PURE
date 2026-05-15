@@ -138,7 +138,7 @@ Page({
   },
 
   onEnterScore() {
-    wx.navigateTo({ url: `/pages/tournament-score/index?id=${this.data.tournamentId}` })
+    wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
   },
 
   onDelete() {

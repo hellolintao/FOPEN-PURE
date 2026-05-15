@@ -6,9 +6,9 @@
 
 Component({
   properties: {
-    value: { type: Object, value: { slotMinutes: 20, courts: [] } },
+    value: { type: null, value: { slotMinutes: 20, courts: [] } },
     tournamentDate: { type: String, value: '' },
-    availableCourts: { type: Array, value: [] }
+    availableCourts: { type: null, value: [] }
   },
   data: {
     hours: [],                // ['08:00', '09:00', ..., '21:00']
@@ -23,9 +23,9 @@ Component({
       const hours = buildHours()
       const pickedByCourt = {}
       const selectedFromValue = []
-      ;(value && value.courts ? value.courts : []).forEach(c => {
+      ;(asArray(value && value.courts)).forEach(c => {
         const set = new Set()
-        ;(c.slots || []).forEach(s => {
+        ;(asArray(c && c.slots)).forEach(s => {
           const hhmm = formatHHmm(s)
           if (hhmm && hhmm.endsWith(':00')) set.add(hhmm)
         })
@@ -35,7 +35,7 @@ Component({
 
       // 合并已有 selectedCourtIds 与 value 中的 courtIds，避免初始化空
       const merged = [...new Set([...this.data.selectedCourtIds, ...selectedFromValue])]
-        .filter(id => (availableCourts || []).some(c => c.courtId === id))
+        .filter(id => asArray(availableCourts).some(c => c.courtId === id))
 
       this._recompute({ hours, pickedByCourt, selectedCourtIds: merged })
     }
@@ -73,11 +73,11 @@ Component({
 
     _recompute(patch) {
       const next = {
-        hours: patch.hours || this.data.hours,
-        pickedByCourt: patch.pickedByCourt || this.data.pickedByCourt,
-        selectedCourtIds: patch.selectedCourtIds || this.data.selectedCourtIds
+        hours: asArray(patch.hours || this.data.hours),
+        pickedByCourt: patch.pickedByCourt || this.data.pickedByCourt || {},
+        selectedCourtIds: asArray(patch.selectedCourtIds || this.data.selectedCourtIds)
       }
-      const available = this.properties.availableCourts || []
+      const available = asArray(this.properties.availableCourts)
       const selectedCourts = next.selectedCourtIds
         .map(id => available.find(c => c.courtId === id))
         .filter(Boolean)
@@ -128,9 +128,9 @@ function buildHours() {
 }
 
 function buildRows(hours, selectedCourts, pickedByCourt) {
-  return hours.map(hour => ({
+  return asArray(hours).map(hour => ({
     hour,
-    cells: selectedCourts.map(c => ({
+    cells: asArray(selectedCourts).map(c => ({
       courtId: c.courtId,
       picked: (pickedByCourt[c.courtId] || []).indexOf(hour) >= 0
     }))
@@ -144,4 +144,8 @@ function pad(n) {
 function formatHHmm(iso) {
   const m = /T(\d{2}):(\d{2})/.exec(iso || '')
   return m ? `${m[1]}:${m[2]}` : ''
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : []
 }

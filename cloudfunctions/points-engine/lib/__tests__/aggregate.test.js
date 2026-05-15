@@ -1,0 +1,195 @@
+const { aggregateRanks } = require('../aggregate')
+
+/**
+ * In-memory db emulator that supports:
+ *   - collection(name).where(filter).orderBy(field, dir).orderBy(field, dir).limit(N).get()
+ * filter can be:
+ *   - plain object (AND of equality)
+ *   - { __op: 'and', clauses: [...] }
+ *   - { __op: 'or', clauses: [...] }
+ *   - { __op: 'gt', value: x } as field value (paired with field key)
+ *   - { __op: 'in', value: [...] } as field value
+ * We don't fully emulate TCB SDK, but enough to validate compound-cursor pagination.
+ *
+ * For simplicity, the implementation under test will build queries using db.command
+ * helpers. We provide a fake db.command that produces sentinel objects, which the
+ * fake where() interprets.
+ */
+function makeFakeDb({ matchResults, tournamentPoints }) {
+  const _ = {
+    and(clauses) { return { __op: 'and', clauses } },
+    or(clauses) { return { __op: 'or', clauses } },
+    gt(value) { return { __op: 'gt', value } },
+    in(value) { return { __op: 'in', value } },
+    neq(value) { return { __op: 'neq', value } }
+  }
+  function matchRow(row, filter) {
+    if (filter && filter.__op === 'and') return filter.clauses.every(c => matchRow(row, c))
+    if (filter && filter.__op === 'or')  return filter.clauses.some(c => matchRow(row, c))
+    for (const [k, v] of Object.entries(filter || {})) {
+      const cell = row[k]
+      if (v && typeof v === 'object' && v.__op) {
+        if (v.__op === 'gt') { if (!(cell > v.value)) return false }
+        else if (v.__op === 'in') { if (!v.value.includes(cell)) return false }
+        else if (v.__op === 'neq') { if (cell === v.value) return false }
+        else return false
+      } else if (cell !== v) return false
+    }
+    return true
+  }
+  function buildCollection(rows) {
+    function cursor(filter, orders, lim) {
+      const filtered = rows.filter(r => matchRow(r, filter))
+      const sorted = filtered.sort((a, b) => {
+        for (const [field, dir] of orders) {
+          if (a[field] < b[field]) return dir === 'asc' ? -1 : 1
+          if (a[field] > b[field]) return dir === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+      return sorted.slice(0, lim || sorted.length)
+    }
+    function api(filter = {}, orders = [], lim = null) {
+      return {
+        where(f) { return api(f, orders, lim) },
+        orderBy(field, dir) { return api(filter, [...orders, [field, dir]], lim) },
+        limit(n) { return api(filter, orders, n) },
+        async get() { return { data: cursor(filter, orders, lim) } }
+      }
+    }
+    return api()
+  }
+  return {
+    command: _,
+    collection(name) {
+      if (name === 'tournament_points' && tournamentPoints === undefined) {
+        return {
+          where() {
+            return {
+              orderBy() { return this },
+              limit() { return this },
+              async get() {
+                const e = new Error('database collection not exists')
+                e.errCode = -502005
+                throw e
+              }
+            }
+          }
+        }
+      }
+      const rows = name === 'match_results' ? matchResults : (name === 'tournament_points' ? tournamentPoints : [])
+      return buildCollection(rows)
+    }
+  }
+}
+
+function generateConfirmedMatches(seasonId, type, n, opts = {}) {
+  const out = []
+  for (let i = 0; i < n; i++) {
+    out.push({
+      _id: `r_${seasonId}_${type}_${i}`,
+      tournamentId: `T_${seasonId}`,
+      seasonId,
+      tournamentType: type,
+      matchKind: 'bracket',
+      resultStatus: 'confirmed',
+      createTime: new Date(2026, 0, 1, 0, 0, i),
+      pointsAwarded: { source: 'match', entries: [
+        { memberId: `M_${i % 5}`, points: 20, role: 'winner' },
+        { memberId: `M_${(i % 5) + 5}`, points: 10, role: 'loser' }
+      ] }
+    })
+  }
+  return out
+}
+
+describe('aggregateRanks', () => {
+  test('单页：50 条 → 累加正确', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 50)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    expect(list.length).toBeGreaterThan(0)
+    expect(list[0].totalPoints).toBeGreaterThanOrEqual(list[list.length - 1].totalPoints)
+    // 5 winners (M_0..M_4) + 5 losers (M_5..M_9) = 10 distinct memberIds
+    expect(list.length).toBe(10)
+    // 50 matches: 50 winners * 20 + 50 losers * 10 = 1000 + 500 = 1500
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(1500)
+  })
+
+  test('多页：250 条 / pageSize=100 → 全部累加', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 250)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(250 * 20 + 250 * 10) // 7500
+  })
+
+  test('大数据：2500 条 / pageSize=100 → 25 页', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 2500)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(2500 * 30)
+  })
+
+  test('按 seasonId / type 过滤', async () => {
+    const matches = [
+      ...generateConfirmedMatches('S1', 'singles', 10),
+      ...generateConfirmedMatches('S2', 'singles', 10),
+      ...generateConfirmedMatches('S1', 'doubles', 10)
+    ]
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(10 * 30) // 仅 S1+singles
+  })
+
+  test('结合 tournament_points placement', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 10)
+    const placement = [
+      { _id: 'p1', tournamentId: 'T1', memberId: 'M_0', seasonId: 'S1', tournamentType: 'singles', points: 100, rank: 'champion', createTime: new Date(2026, 1, 1) }
+    ]
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: placement })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const M0 = list.find(x => x.memberId === 'M_0')
+    // M_0 is winner 10 times (in this set: i%5===0 → M_0 → 2 matches, but iteration i 0..9 with 5 mod → M_0 wins on i=0,5; M_5 wins on 0; etc.)
+    // Actually: M_0 = winner when i%5==0 → i=0,5 → 2 wins * 20 = 40; M_0 never loser. Plus 100 placement → 140.
+    expect(M0.totalPoints).toBe(40 + 100)
+    expect(M0.wins).toBe(2)
+  })
+
+  test('sort by totalPoints desc', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 10)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    for (let i = 1; i < list.length; i++) {
+      expect(list[i - 1].totalPoints).toBeGreaterThanOrEqual(list[i].totalPoints)
+    }
+  })
+
+  test('空数据 → 空数组', async () => {
+    const db = makeFakeDb({ matchResults: [], tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    expect(list).toEqual([])
+  })
+
+  test('tournament_points 集合不存在 → 仅按 match_results 聚合', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 3)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: undefined })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(3 * 30)
+  })
+
+  test('忽略 non-confirmed match', async () => {
+    const matches = [
+      ...generateConfirmedMatches('S1', 'singles', 5),
+      { _id: 'pending_1', tournamentId: 'T1', seasonId: 'S1', tournamentType: 'singles', resultStatus: 'pending', createTime: new Date(), pointsAwarded: null }
+    ]
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(5 * 30) // 只算 5 confirmed
+  })
+})

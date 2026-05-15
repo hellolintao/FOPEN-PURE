@@ -3,11 +3,13 @@ const app = getApp()
 Page({
     data: {
         drafts: [],
+        submittedQueue: [],
         tournamentList: [],
         page: 1,
         pageSize: 10,
         loading: false,
-        hasMore: true
+        hasMore: true,
+        isAdmin: false
     },
 
     onLoad() {
@@ -15,12 +17,35 @@ Page({
     },
 
     onShow() {
+        this.setData({ isAdmin: !!(app.globalData && app.globalData.isAdmin) })
         this.refresh()
     },
 
     async refresh() {
-        this.setData({ page: 1, tournamentList: [], drafts: [], hasMore: true })
-        await Promise.all([this.loadDrafts(), this.loadPublic()])
+        this.setData({ page: 1, tournamentList: [], drafts: [], submittedQueue: [], hasMore: true })
+        await Promise.all([this.loadDrafts(), this.loadSubmittedQueue(), this.loadPublic()])
+    },
+
+    async loadSubmittedQueue() {
+        if (!this.data.isAdmin) {
+            this.setData({ submittedQueue: [] })
+            return
+        }
+        try {
+            const r = await wx.cloud.callFunction({
+                name: 'match-results',
+                data: { action: 'submittedQueue' }
+            })
+            const items = (r.result && r.result.success && r.result.data && r.result.data.items) || []
+            this.setData({ submittedQueue: items })
+        } catch (e) {
+            console.error('loadSubmittedQueue', e)
+        }
+    },
+
+    onOpenScore(e) {
+        const tid = e.currentTarget.dataset.id
+        wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${tid}` })
     },
 
     async loadDrafts() {

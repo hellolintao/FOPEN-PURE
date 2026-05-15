@@ -1,108 +1,143 @@
+const app = getApp()
+
 Page({
   data: {
     tournamentList: [],
+    scorable: [],
     loading: true
   },
 
   onLoad() {
-    this.loadMyTournaments()
+    this.refresh()
+  },
+
+  onShow() {
+    this.refresh()
+  },
+
+  async refresh() {
+    this.setData({ loading: true })
+    await Promise.all([this.loadMyTournaments(), this.loadScorable()])
+    this.setData({ loading: false })
   },
 
   async loadMyTournaments() {
     try {
-      // 1. 获取当前登录用户信息
       const memberRes = await wx.cloud.callFunction({
         name: 'members',
         data: { action: 'get' }
       })
 
       if (!memberRes.result || !memberRes.result.data || memberRes.result.data.length === 0) {
-        console.log('用户未登录')
-        this.setData({ loading: false })
+        this.setData({ tournamentList: [] })
         return
       }
 
       const currentUser = memberRes.result.data[0]
-      console.log('当前用户:', currentUser)
-
-      // 2. 查询当前用户参与的赛事注册记录
       const db = wx.cloud.database()
-      const _ = db.command
 
-      // 查询所有未取消的注册记录，然后在本地筛选
-      // 因为双打情况下，用户可能是 playerId 或 partnerId
+      // Phase 7 起统一使用 registrationStatus（修订 #18）
       const registrationRes = await db.collection('tournament_registrations')
-        .where({
-          status: _.neq('cancelled')
-        })
+        .where({ registrationStatus: 'confirmed' })
         .get()
 
       const allRegistrations = registrationRes.data || []
-
-      // 筛选出包含当前用户ID的注册记录（可能是 playerId 或 partnerId）
       const registrations = allRegistrations.filter(reg => {
-        const isPlayer = reg.playerId === currentUser._id
-        const isPartner = reg.partnerId === currentUser._id
-        return isPlayer || isPartner
+        return reg.playerId === currentUser._id || reg.partnerId === currentUser._id
       })
 
-      console.log('用户的赛事注册记录:', registrations)
-
-      // 如果没有参赛记录，直接返回
       if (registrations.length === 0) {
-        console.log('用户没有参与任何赛事')
-        this.setData({
-          tournamentList: [],
-          loading: false
-        })
+        this.setData({ tournamentList: [] })
         return
       }
 
-      // 3. 获取所有参赛的赛事ID
       const tournamentIds = [...new Set(registrations.map(r => r.tournamentId))]
-      console.log('参赛的赛事ID列表:', tournamentIds)
-
-      // 4. 批量获取赛事详情
-      const tournamentPromises = tournamentIds.map(id => {
-        return db.collection('tournaments').doc(id).get()
-      })
-
+      const tournamentPromises = tournamentIds.map(id => db.collection('tournaments').doc(id).get().catch(() => null))
       const tournamentResults = await Promise.all(tournamentPromises)
       const tournaments = tournamentResults
-        .filter(result => result.data)
-        .map(result => result.data)
+        .filter(r => r && r.data)
+        .map(r => r.data)
 
-      console.log('用户参与的所有赛事:', tournaments)
-
-      // 5. 将注册信息合并到赛事数据中
       const tournamentList = registrations.map(reg => {
         const tournament = tournaments.find(t => t._id === reg.tournamentId)
-        return {
-          tournament,
-          registration: reg
-        }
-      })
+        return { tournament, registration: reg }
+      }).filter(item => item.tournament)
 
-      this.setData({
-        tournamentList,
-        loading: false
-      })
+      this.setData({ tournamentList })
     } catch (err) {
-      console.error('加载我的比赛失败:', err)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
+      console.error('[my-match] loadMyTournaments', err)
+    }
+  },
+
+  async loadScorable() {
+    try {
+      const me = (app.globalData && app.globalData.currentMember) || null
+      if (!me || !me._id) {
+        this.setData({ scorable: [] })
+        return
+      }
+      const r = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'listByPlayer', memberId: me._id }
       })
-      this.setData({ loading: false })
+      const matches = (r.result && r.result.success && r.result.data && r.result.data.matches) || []
+      if (matches.length === 0) {
+        this.setData({ scorable: [] })
+        return
+      }
+      // 过滤掉 BYE 行和 player 缺失的行
+      const playable = matches.filter(m => !m.bye && m.player1 && m.player2 && m.player1.id && m.player2.id)
+      if (playable.length === 0) {
+        this.setData({ scorable: [] })
+        return
+      }
+      const tIds = [...new Set(playable.map(m => m.tournamentId))]
+      let tournaments = []
+      try {
+        const tRes = await wx.cloud.callFunction({
+          name: 'tournaments',
+          data: { action: 'list', ids: tIds, pageSize: tIds.length }
+        })
+        tournaments = (tRes.result && tRes.result.data && tRes.result.data.tournaments) || []
+      } catch (e) {
+        console.error('[my-match] load tournaments by ids', e)
+      }
+      const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
+      const scorable = playable.map(m => ({
+        ...m,
+        tournamentName: (tMap[m.tournamentId] && tMap[m.tournamentId].name) || m.tournamentId,
+        opponentLabel: opponentLabel(m, me._id),
+        statusLabel: m.resultStatus === 'submitted' ? '待确认' : '待录入'
+      }))
+      this.setData({ scorable })
+    } catch (err) {
+      console.error('[my-match] loadScorable', err)
     }
   },
 
   onCardTap(e) {
     const { tournamentId } = e.currentTarget.dataset
     if (tournamentId) {
-      wx.navigateTo({
-        url: `/pages/tournament-view/index?id=${tournamentId}`
-      })
+      wx.navigateTo({ url: `/pages/tournament-view/index?id=${tournamentId}` })
     }
+  },
+
+  onOpenScoreRow(e) {
+    const { tid, mid } = e.currentTarget.dataset
+    if (!tid) return
+    const url = mid
+      ? `/pages/tournament-score/index?tournamentId=${tid}&matchId=${mid}`
+      : `/pages/tournament-score/index?tournamentId=${tid}`
+    wx.navigateTo({ url })
   }
 })
+
+function opponentLabel(m, myId) {
+  const p1 = m.player1 || {}
+  const p2 = m.player2 || {}
+  const onP1 = p1.id === myId || p1.partnerId === myId
+  const otherSide = onP1 ? p2 : p1
+  const a = otherSide.name || '?'
+  const b = otherSide.partnerName || ''
+  return b ? `${a} / ${b}` : a
+}

@@ -102,3 +102,54 @@
 .status-ended {
   color: #999999;
 }
+
+/* ========== Phase 8 可录分块 ========== */
+.scorable-block {
+  background: #fff7ed;
+  margin: 16rpx;
+  padding: 24rpx;
+  border-radius: 16rpx;
+}
+.block-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 28rpx;
+}
+.scorable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx dashed #fed7aa;
+  gap: 12rpx;
+}
+.scorable-row:last-child {
+  border-bottom: 0;
+}
+.scorable-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+  flex: 1;
+}
+.scorable-tournament {
+  font-weight: 500;
+  font-size: 28rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scorable-opponent {
+  font-size: 24rpx;
+  color: #777;
+}
+.scorable-status {
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  flex-shrink: 0;
+}
+.scorable-status.status-pending  { background: rgba(0,0,0,0.06); color: #777; }
+.scorable-status.status-submitted { background: rgba(234,179,8,0.12); color: #ca8a04; }

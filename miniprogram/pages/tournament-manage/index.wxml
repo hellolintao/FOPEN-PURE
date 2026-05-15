@@ -12,6 +12,18 @@
     </view>
   </view>
 
+  <!-- 待确认比分（admin） -->
+  <view wx:if="{{isAdmin && submittedQueue.length > 0}}" class="queue-block">
+    <text class="block-title">待确认比分</text>
+    <view wx:for="{{submittedQueue}}" wx:key="tournamentId" class="queue-row" bindtap="onOpenScore" data-id="{{item.tournamentId}}">
+      <view class="queue-info">
+        <text class="queue-name">{{item.tournamentName}}</text>
+        <text class="text-meta">{{item.submittedCount}} 场待确认</text>
+      </view>
+      <text class="queue-arrow">›</text>
+    </view>
+  </view>
+
   <block wx:for="{{tournamentList}}" wx:key="_id">
     <view class="tournament-card" bindtap="onEditTournament" data-id="{{item._id}}">
       <!-- 卡片左侧装饰条 -->

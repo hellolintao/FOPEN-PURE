@@ -1,0 +1,62 @@
+<view class="row {{canEdit ? '' : 'disabled'}} {{expanded ? 'expanded' : ''}}">
+  <view class="row-head" bindtap="onToggle">
+    <text class="round-tag" wx:if="{{match.round}}">R{{match.round}}</text>
+
+    <!-- 单打：单行展示 -->
+    <view wx:if="{{!isDoubles}}" class="players singles">
+      <text class="player-name">{{match.player1.name || '—'}}</text>
+      <text class="vs">VS</text>
+      <text class="player-name">{{match.player2.name || '—'}}</text>
+    </view>
+
+    <!-- 双打：2 行 A/B vs C/D -->
+    <view wx:else class="players doubles">
+      <view class="doubles-row">
+        <text class="player-name">{{match.player1.name || '—'}}</text>
+        <text class="partner-sep">/</text>
+        <text class="player-name">{{match.player1.partnerName || '—'}}</text>
+      </view>
+      <view class="doubles-row">
+        <text class="player-name">{{match.player2.name || '—'}}</text>
+        <text class="partner-sep">/</text>
+        <text class="player-name">{{match.player2.partnerName || '—'}}</text>
+      </view>
+    </view>
+
+    <view class="right">
+      <text class="score-summary" wx:if="{{match.score && match.score.sets[0]}}">
+        {{match.score.sets[0].a}}:{{match.score.sets[0].b}}{{match.score.tiebreak ? ' (' + match.score.tiebreak + ')' : ''}}
+      </text>
+      <text class="status-chip status-{{match.resultStatus || 'pending'}}">{{statusLabel}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{expanded && canEdit}}" class="row-editor" catchtap="stopBubble">
+    <view class="stepper-block">
+      <view class="stepper-label">{{isDoubles ? (match.player1.name + '/' + match.player1.partnerName) : match.player1.name}}</view>
+      <view class="stepper">
+        <button class="stepper-btn" size="mini" bindtap="onDecA">-</button>
+        <text class="stepper-val">{{draftA}}</text>
+        <button class="stepper-btn" size="mini" bindtap="onIncA">+</button>
+      </view>
+    </view>
+
+    <view class="stepper-block">
+      <view class="stepper-label">{{isDoubles ? (match.player2.name + '/' + match.player2.partnerName) : match.player2.name}}</view>
+      <view class="stepper">
+        <button class="stepper-btn" size="mini" bindtap="onDecB">-</button>
+        <text class="stepper-val">{{draftB}}</text>
+        <button class="stepper-btn" size="mini" bindtap="onIncB">+</button>
+      </view>
+    </view>
+
+    <view wx:if="{{showTbInput}}" class="tiebreak">
+      <text class="text-label">3:3 抢七</text>
+      <input placeholder="如 7-5" bindinput="onTbInput" value="{{draftTb}}" class="tb-input" />
+    </view>
+
+    <view wx:if="{{validationError}}" class="err">{{validationError}}</view>
+
+    <button class="submit" bindtap="onSubmit" disabled="{{submitDisabled}}" type="primary">{{submitLabel}}</button>
+  </view>
+</view>
