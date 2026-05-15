@@ -1,6 +1,6 @@
 <view class="mm-page">
 
-  <!-- HEAD -->
+  <!-- Visual-stream HEAD preserved -->
   <view class="mm-head anim-stage-rise">
     <view class="head-tapes">
       <text class="tape tape-stamped">MY MATCHES · 我的比赛</text>
@@ -11,75 +11,76 @@
     </view>
   </view>
 
-  <!-- LOADING -->
-  <view wx:if="{{loading}}" class="mm-state">
-    <skeleton-loader rows="{{4}}" />
+  <!-- Loading -->
+  <view wx:if="{{loadState === 'loading'}}" class="mm-state">
+    <skeleton-loader rows="{{6}}" />
   </view>
 
-  <!-- SCORABLE BLOCK -->
-  <view wx:if="{{!loading && scorable.length > 0}}" class="scorable-block anim-stage-rise anim-delay-1">
-    <view class="scorable-head">
-      <text class="tape tape-lime tape-stamped-lime">ACTION · 可录分</text>
-      <text class="scorable-count num">{{scorable.length}} 场</text>
-    </view>
-    <view class="scorable-list">
-      <view
-        wx:for="{{scorable}}"
-        wx:key="_id"
-        class="scorable-row tap-scale"
-        bindtap="onOpenScoreRow"
-        data-tid="{{item.tournamentId}}"
-        data-mid="{{item.sourceMatchId}}"
-      >
-        <view class="scorable-info">
-          <text class="scorable-tournament">{{item.tournamentName}}</text>
-          <text class="scorable-opponent">VS {{item.opponentLabel}}</text>
-        </view>
-        <view class="scorable-status-wrap">
-          <text class="scorable-status status-{{item.resultStatus}}">{{item.statusLabel}}</text>
-          <text class="scorable-arrow num">→</text>
-        </view>
-      </view>
-    </view>
+  <!-- Error -->
+  <view wx:elif="{{loadState === 'error'}}" class="mm-state">
+    <empty-state icon="warn" title="加载失败" subtitle="{{error.message || ''}}" action="重新加载" bindaction="onRetry" />
   </view>
 
-  <!-- EMPTY -->
-  <view wx:if="{{!loading && tournamentList.length === 0 && scorable.length === 0}}" class="mm-empty">
-    <text class="tape">暂无参赛记录</text>
-    <text class="mm-empty-hint">从首页报名一场赛事开始你的网球纪录</text>
-  </view>
+  <!-- Loaded -->
+  <block wx:elif="{{loadState === 'loaded'}}">
+    <!-- Empty -->
+    <view wx:if="{{summary.pending.length === 0 && summary.submitted.length === 0 && summary.confirmed.length === 0}}" class="mm-state">
+      <empty-state icon="sprout" title="本周没有比赛" subtitle="加入下一场赛事或查看历史" action="查看赛程" bindaction="onViewSchedule" />
+    </view>
 
-  <!-- TOURNAMENT LIST -->
-  <view wx:if="{{!loading && tournamentList.length > 0}}" class="tournament-list anim-stage-rise anim-delay-2">
-    <view class="section-head">
-      <text class="tape">我的赛事 · MY EVENTS</text>
-      <text class="section-count num">{{tournamentList.length}}</text>
-    </view>
-    <view
-      wx:for="{{tournamentList}}"
-      wx:key="tournament._id"
-      class="tournament-card tap-scale"
-      bindtap="onCardTap"
-      data-tournament-id="{{item.tournament._id}}"
-    >
-      <view class="tc-top">
-        <text class="tc-name">{{item.tournament.name}}</text>
-        <text class="tc-type">{{item.tournament.type === 'singles' ? 'SINGLES' : 'DOUBLES'}}</text>
+    <block wx:else>
+      <!-- Hero -->
+      <view class="mm-hero">
+        <text class="mm-hero-eyebrow">本周</text>
+        <text class="mm-hero-big">{{summary.pending.length > 0 ? ('你有 ' + summary.pending.length + ' 场待录分') : (summary.submitted.length > 0 ? (summary.submitted.length + ' 场等管理员确认') : '本周没有比赛')}}</text>
+        <view wx:if="{{summary.pending.length > 0}}" class="mm-hero-cta" bindtap="onRecordNow">→ 现在录</view>
+        <view wx:else class="mm-hero-cta mm-hero-cta--sec" bindtap="onViewSchedule">查看赛程</view>
       </view>
-      <view class="tc-body">
-        <view wx:if="{{item.registration.teamName}}" class="tc-row">
-          <text class="tc-label">TEAM</text>
-          <text class="tc-value">{{item.registration.teamName}}</text>
+
+      <!-- 待录分 -->
+      <view wx:if="{{summary.pending.length > 0}}" class="mm-block">
+        <view class="mm-block-title">
+          <text>待录分</text>
+          <status-tag type="amber" text="{{summary.pending.length}}" />
         </view>
-        <view class="tc-row">
-          <text class="tc-label">PLAYER</text>
-          <text class="tc-value">{{item.registration.playerName}}{{item.registration.partnerName ? ' / ' + item.registration.partnerName : ''}}</text>
+        <view class="mm-row" wx:for="{{summary.pending}}" wx:key="matchId" data-matchid="{{item.matchId}}" data-tournamentid="{{item.tournamentId}}" bindtap="onPendingRow">
+          <view class="mm-row-l">
+            <text class="mm-row-t">{{item.tournamentName}} {{item.round}}-{{item.position}}</text>
+            <text class="mm-row-s">{{item.courtName}} · vs {{item.p2.name}}</text>
+          </view>
+          <status-tag type="amber" text="录分" />
         </view>
       </view>
-      <view class="tc-cta">
-        <text class="tc-cta-text">查看详情</text>
-        <text class="tc-cta-arrow num">→</text>
+
+      <!-- 确认中 -->
+      <view wx:if="{{summary.submitted.length > 0}}" class="mm-block">
+        <view class="mm-block-title">
+          <text>确认中</text>
+          <status-tag type="amber" text="{{summary.submitted.length}}" />
+        </view>
+        <view class="mm-row" wx:for="{{summary.submitted}}" wx:key="matchId" data-matchid="{{item.matchId}}" data-tournamentid="{{item.tournamentId}}" bindtap="onSubmittedRow">
+          <view class="mm-row-l">
+            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.score.sets[0].a}}:{{item.score.sets[0].b}}</text>
+            <text class="mm-row-s">等管理员确认 · vs {{item.opponentLabel}}</text>
+          </view>
+          <status-tag type="amber" text="确认中" />
+        </view>
       </view>
-    </view>
-  </view>
+
+      <!-- 已确认 -->
+      <view wx:if="{{summary.confirmed.length > 0}}" class="mm-block">
+        <view class="mm-block-title">
+          <text>已确认</text>
+          <text class="mm-block-meta">最近 10 场</text>
+        </view>
+        <view class="mm-row" wx:for="{{summary.confirmed}}" wx:key="matchId">
+          <view class="mm-row-l">
+            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.score.sets[0].a}}:{{item.score.sets[0].b}} {{item.isWinner ? '胜' : '负'}}</text>
+            <text class="mm-row-s">+{{item.pointsEarned}} 积分</text>
+          </view>
+          <status-tag type="ok" text="已确认" />
+        </view>
+      </view>
+    </block>
+  </block>
 </view>

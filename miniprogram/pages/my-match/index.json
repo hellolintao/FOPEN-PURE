@@ -1,6 +1,8 @@
 {
   "navigationBarTitleText": "我的比赛",
   "usingComponents": {
-    "skeleton-loader": "/components/skeleton-loader/index"
+    "skeleton-loader": "/components/skeleton-loader/index",
+    "status-tag": "/components/status-tag/index",
+    "empty-state": "/components/empty-state/index"
   }
 }
