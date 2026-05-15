@@ -297,4 +297,97 @@ Spec 状态：已修订（三次修订待 commit）。如 §4.13 OK，下一步 
 
 ## 后续执行日志
 
-暂无。
+### 2026-05-16 · Codex 夜间监控启动
+
+参与方：用户、Codex。
+
+结论：
+
+- Codex 已检查当前日志末尾；最新决策为“spec 现在通过，开始写 plan”，此刻没有需要用户睡前追加确认的开放事项。
+- 已按用户要求准备每 10 分钟检查本日志一次；发现需要 Codex 执行或确认的事项时，Codex 自行决策并执行，完成后追加记录到本日志。
+
+---
+
+### 2026-05-16 · Claude Plan 执行协议 + Phase 9 启动
+
+参与方：用户、Claude。
+
+协议（用户在 Phase 9 执行开始时设定）：
+
+- Claude 用 subagent-driven-development 自主执行 plan（`docs/superpowers/plans/09-phase-9-v2.1-quality-iteration.md`），无需在每个 task 间等待用户确认。
+- 需要用户手动执行的事项（云函数上传 / DevTools 截图 / 多 admin E2E / 微信开发者工具操作），Claude 写入本日志的「待用户执行」节，附 task id + 具体动作 + 验收方式。
+- 用户定期检查日志，执行后在日志中写入结果（commit SHA / 截图路径 / E2E pass/fail 等）。
+- Claude 在阻塞或自然 checkpoint 时每 30 分钟检查日志一次，读取已执行结果继续推进。
+
+Phase 9 进度（Tasks 1–6 已完成）：
+
+| Task | 描述 | Commit | 状态 |
+|---|---|---|---|
+| 1 | `_request_log` schema + `updateTime` 乐观锁说明 写入 DATABASE_SCHEMA.md | `4f16ff9` | ✅ |
+| 2 | `match-results/lib/handlers/` 4 个 stub 文件 scaffold | `3cda765` | ✅ |
+| 3 | batchConfirm happy + STALE_VERSION 测试（RED） | `407eff0` | ✅ |
+| 4 | batchConfirm 实装 含 expectedUpdateTime 乐观锁（GREEN） | `c36732b` | ✅ |
+| 5 | batchConfirm retry merge + INVALID_PAYLOAD + FORBIDDEN 测试（7/7 绿） | `aabb05e` | ✅ |
+| 6 | batchSubmit 测试 + 实装（11/11 绿） | `c36302e` | ✅ |
+
+待用户执行（目前空）：
+
+- 暂无。Tasks 7–24（pendingReviewItems / mySummary / index.js 路由 / handlers 迁移 / snapshot / finishedRecent / cloud wrapper / 3 个新组件 / 三页重构）全部可自主执行。
+- 预计触达 Tasks 25–31 时（manual smoke / E2E / QA 截图 / 云函数上传 / PROGRESS 更新）会写「待用户执行」清单。
+
+---
+
+## 视觉重构 Stream（Visual Revamp）
+
+> 此处之上是 v2.1 spec/plan 工作流。从这里开始记录一条独立 stream：分支 `feat/visual-revamp`，由 Claude 用 impeccable skill 操刀整个项目 22 页的视觉重构。规则与上方相同（每 10 分钟同步、Codex 自决执行）。
+
+### 2026-05-16 · 视觉重构 Stream 启动（Claude）
+
+参与方：Claude，待同步 Codex 与用户。
+
+**目标**：使用 impeccable skill 将 `miniprogram/` 下 22 个页面全部重做，达到俱乐部专业级视觉水准。`feat/visual-revamp` 分支隔离，不污染 main / v2.1 plan stream。
+
+**Design Context（已落地 `.impeccable.md`，全文请读那里）**：
+
+- 调性：Light-theme Sport Maximalism — 能量 / 球场感 / 不讨好
+- 基色：保留现有 `--color-lime #BEE645` 为唯一品牌强调色；墨黑 + 近白；中性 OKLCH tint 朝品牌色偏 0.005–0.01 chroma
+- 字体：西文/数字 display = **Anton**（远程加载）；中文 = PingFang SC 系统；**绝不用** Inter / DM Sans / Space Mono / Fraunces / Plus Jakarta / IBM Plex
+- 版式：tape 横条 / 超大数字 + 极小标签 / 主动不对称 / 圆角两档
+- 记忆锚：`rank` / `tournament-brackets` / `round-settlement` / `tournament-score` 四页是项目的灵魂，必须像翻一本年鉴
+
+**绝对禁区（impeccable AI slop tells）**：
+
+- `border-left/right > 1px` 任意装饰条 — 在现有项目里要 grep 出来全部干掉
+- `background-clip: text` 渐变文字
+- 全栈 glassmorphism、模板化均匀卡片网格、icon-with-rounded-square-above-heading
+- 单一卡片网格列表 — 必须有节奏
+
+**Claude 自决（不需要 Codex/用户确认，直接做）**：
+
+1. 升级 `miniprogram/styles/tokens.wxss` — 加 OKLCH 色板、display 大字 token、运动语义色（live/win/loss）、tape token、tint 中性色；**保留所有现有 token 名做兼容**，只扩展不重命名。
+2. 升级 `miniprogram/styles/utilities.wxss` + `animations.wxss` — 加 tape / stagger / tick / live pulse / oversize text 工具类。
+3. 各页面 wxml/wxss/js 重构（不动数据接口与状态机），改文案与版面。
+4. 任务清单已在 Claude 会话内 TaskCreate 锁定，按 P0→P1→P2→P3→P4 顺序推进。
+
+**需要 Codex 确认/执行的开放事项（@codex）**：
+
+- **O1（决策）·西文字体托管方案**：
+  - 我打算用 `wx.loadFontFace('Anton', url)` 加载 Anton-Regular（黑体 condensed），用于数字/西文 display。
+  - 微信小程序的 `loadFontFace` 要求 HTTPS 字体直链且域名白名单。Google Fonts 直链（`fonts.gstatic.com`）在小程序里通常被白名单拒绝；可行路径有 (a) 上传到 FOPEN 的微信云存储拿 fileID 转 https 链接、(b) 上传到自建 CDN、(c) 放弃远程字体，纯用 PingFang SC 高字重 + 极大字号 + 极强 letter-spacing 模拟运动场感。
+  - **请 Codex 在本日志回复选择 (a)/(b)/(c)**。若选 (a)，请 Codex 用云开发上传 `Anton-Regular.woff2` 到云存储 `assets/fonts/Anton-Regular.woff2` 并在日志贴出 https 链接；我在前端会兜底 fallback 到 PingFang，加载失败不会破页面。
+  - 默认行为：在 Codex 回复前，所有 display 先按 (c) 实现（PingFang SC + 极重字重），等字体到位再切换。
+
+- **O2（提示）·分支策略**：
+  - 工作分支 `feat/visual-revamp`，从本地 main HEAD 创建。
+  - 本 stream 不动 `cloudfunctions/**`、不改任何云函数接口契约、不改 score-row/empty-state/batch-result-sheet 的 props 与事件（与 v2.1 plan stream 严格不冲突）；只重写它们的 wxss 与必要 wxml 结构。
+  - 若 v2.1 plan stream 后续要重写同一组件，请 Codex 在本日志告知，以便我把视觉部分先 freeze。
+
+- **O3（请求）·真机/工具截图基线**：
+  - 我无法操作开发者工具或真机。建议 Codex 或助理在视觉重构每完成一页时打开微信开发者工具截图存档（路径建议 `docs/ux/snapshots/before/<page>.png` 和 `after/<page>.png`）。不是阻塞项，缺也可以继续推进。
+
+- **O4（提示）·提交节奏**：
+  - 计划按"tokens & utilities → rank → brackets → tournament-detail → home → score → settlement → 剩余批次"的节奏分段 commit，每段一条 conventional commit。不 push（默认）。Codex 如需 push 到 origin 触发 CI，请在日志告知。
+
+**首次需要 Codex 执行的事**：只有 O1（字体托管决策与上传）。其余先标记，我继续推进 token 与 utilities 升级，不阻塞。
+
+下一步 Claude 行动：升级 tokens.wxss → utilities.wxss → animations.wxss → rank 页。完成 token 升级后会再追加一条记录。
