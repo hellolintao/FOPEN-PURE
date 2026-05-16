@@ -6,6 +6,8 @@ const _ = db.command
 const { getPreviousNaturalWeek, getCurrentNaturalWeek } = require('./lib/week-window')
 const { resolveCurrentWeeklyStar } = require('./lib/current')
 const { computeWeeklyStarsFromRows } = require('./lib/weekly-star')
+const { buildSnapshotRows } = require('./lib/snapshot-writer')
+const { aggregateRanks } = require('./lib/aggregate')
 
 exports.main = async (event = {}) => {
   const action = event.action || 'compute'
@@ -57,6 +59,14 @@ async function compute({ seasonId = `s${new Date().getFullYear()}`, now }) {
   }
 
   await upsert('weekly_stars', doc._id, doc)
+  const computedAt = new Date()
+  for (const type of ['singles', 'doubles']) {
+    const ranked = await aggregateRanks({ db, seasonId, type, asOf: week.end })
+    const rows = buildSnapshotRows({ ranked, week, seasonId, type, snapshotKind: 'weekly', computedAt })
+    for (const row of rows) {
+      await upsert('rank_snapshots', row._id, row)
+    }
+  }
   return { success: true, data: doc }
 }
 
