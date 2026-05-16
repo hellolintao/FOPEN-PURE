@@ -647,3 +647,147 @@ Codex 协调结论（已落地）：
 
 - 已执行 `git status --short`、`git log --oneline --decorate -8`。
 - 已检查 `c24c9f7`，确认只提交 `docs/superpowers/plans/PROGRESS.md`。
+
+---
+
+### 2026-05-16 · Rank / Profile / Player Detail 分期口径（Codex）
+
+参与方：用户、Codex，待同步 Claude。
+
+主题：确认下一轮 Phase A / Phase B 拆分，以及 `rank_snapshots`、W0 回填、`weeklySnapshot` 与 player-detail 数据来源。
+
+用户提出的分期：
+
+- Phase A：数据基础 + rank 页 + 资料编辑，包括 `rank_snapshots`、weekly-star cron 双写、W0 回填、`rankList.trendDelta`、rank-row 三列、每周之星卡、空周规则、edit-profile 打法字段、单测。
+- Phase B：player-detail 重做 + H2H + 折线，包括 `playerStats` 扩展、`playerH2H`、`rank-chart`、`h2h-row`、最近比赛行精简、单测。
+
+Codex 结论：
+
+- Phase A / Phase B 拆分接受。Phase A 可独立发版，立刻让 rank 页展示 `WIN% / PTS / TREND` 并让用户补打法；Phase B 集中在 player-detail 与一个新 action，回归面更窄。
+- `rank_snapshots` 建议按“每个选手每周一条”存，而不是“一周一个大文档”。这样 Phase B 的 `rankHistory` 可以直接按 `seasonId + type + memberId + weekStart` 查，不需要扫大数组。
+- 推荐索引：
+  - `seasonId, type, weekStart desc, rank asc`
+  - `seasonId, type, memberId, weekStart asc`
+  - `seasonId, type, weekId, memberId`，用于幂等 upsert
+- weekly-star cron 双写方向正确，但 `rank_snapshots` 写入语义应是“截至该周结束时的累计排名”，不是本周增量。现有 `aggregateRanks` 是实时全量聚合，需要加 `asOf / until` 参数，按 `confirmedAt/createTime <= week.end` 聚合，避免回填或重跑历史周时被未来比赛污染。
+- `rankList.trendDelta` 应比较“当前实时排名”与“上一份快照排名”。首次 W0 回填后 trend 多数为 `0` 或空是正常状态；UI 首周倾向显示 `—`。
+
+三个待确认点的最终建议：
+
+1. **A.3 W0 回填认可**：一次性写“现在 = W0”作为 baseline，让首次发版就有趋势基础。建议标记 `snapshotKind: 'baseline'` 或使用 `weekId: baseline_YYYY-MM-DD`，避免被误解为完整自然周快照。
+2. **`playerStats.weeklySnapshot` 倾向实时扫本周 `match_results`**：不要从 `rank_snapshots` 当周快照减上周快照得到。“本周积分 +85 · W-L 5-1”表达的是周内表现，实时扫本周数据在 cron 尚未跑时也正确。建议抽 `aggregateWeeklyPlayerDelta({ seasonId, type, playerId, week })`，供 weekly star 卡和 player-detail 复用。
+3. **继续按 Phase A / Phase B 执行**：不合并为单期。唯一前置要求是 Phase A 必须把 `rank_snapshots` schema 与查询索引设计到位，避免 Phase B 的 `rankHistory` 返工。
+
+UI 口径补充：
+
+- rank 页去掉冠军 hero 后，每周之星卡可点击进入 player-detail。
+- 每周之星副文展示 `本周积分 +85 · W-L 5-1`，数据源用实时本周聚合。
+- 空周保留上周冠军，标签从 `WEEKLY STAR` 改为 `PREV WEEK · 上周冠军`，副文显示 `等本周首场`。
+- `rank-row` 三列为 `WIN% / PTS / TREND`，`WIN%` 来自实时累计胜负，`TREND` 来自快照对比。
+
+---
+
+### 2026-05-16 · Phase 10 Rank / Player Detail Spec Review（Codex）
+
+参与方：用户、Codex，待同步 Claude。
+
+Review 对象：`docs/superpowers/specs/2026-05-16-rank-and-player-detail-design.md`。
+
+总体判断：
+
+- 文档整体方向与上次确认的 Phase A / Phase B 口径一致，可以作为 Phase 10 的设计基础。
+- 但在写 implementation plan 前必须修正若干后端契约细节；否则 plan 会把 H2H、trend、weekly star 和 edit-profile 写到错误接口或错误字段上。
+
+必须修正：
+
+1. **W0 baseline 排序会让 trend 卡住 baseline**：
+   - spec §5.2 写 `rankList.trendDelta` 查询 `rank_snapshots` 时按 `weekStart DESC` 取第 1 条。
+   - spec §5.9 又把 W0 baseline 的 `weekStart/weekEnd` 都写成部署当天。
+   - 如果周六部署写 baseline，周一 cron 写上一自然周快照（weekStart 是上周一），`weekStart DESC` 会继续取 baseline，而不是刚产生的 weekly snapshot。
+   - 建议：`rank_snapshots` 增加或明确 `snapshotAt` / `effectiveAt`；latest comparison 按 `effectiveAt DESC, computedAt DESC` 取。weekly snapshot 的 `effectiveAt = weekEnd`，baseline 的 `effectiveAt = now`。对应索引改为 `(seasonId, type, memberId, effectiveAt DESC)` 或补该索引。
+
+2. **`aggregateRanks(asOf)` 必须同时过滤 `tournament_points`**：
+   - spec §5.3 只说 asOf 过滤 `match_results`。
+   - 当前 `aggregateRanks` 还会累加 `tournament_points` placement 分；如果不按 `awardedAt/createTime <= asOf` 过滤，历史 weekly snapshot 会吃到未来淘汰赛 placement 分。
+   - 建议：asOf 语义改成“所有积分来源截至 asOf”，包括 `match_results.confirmedAt/createTime` 和 `tournament_points.awardedAt/createTime`。
+
+3. **`playerH2H` 伪代码使用了现有 schema 不可靠字段**：
+   - spec §5.5 过滤 `{ type: 'singles' }`，但当前 `match_results` 字段是 `tournamentType`。
+   - 伪代码依赖 `winnerId/loserId`；当前 Phase 8 `state.confirmOne` 写 `winnerId`，但不写 `loserId`，真实胜负角色更可靠来源是 `pointsAwarded.entries[].role`。
+   - 建议：H2H 查询用 `{ tournamentType: type, playerIds: _.in([playerId]) }`，然后从 `pointsAwarded.entries` 判断当前 player 是 winner/loser；对手从 `player1/player2` 或 `playerIds` 中排除当前 player 后解析。双打若无法明确队伍关系，保持返回空数组并写 PROGRESS。
+
+4. **rank 页 weekly star 数据源不够支撑“本周之星 / 空周降级”**：
+   - spec §2.1 数据加载只调 `weekly-star.latest`，但现有 `latest` 返回最近一条历史 `weekly_stars`，无法判断当前自然周是否已有 confirmed 比赛，也无法返回当前周领先者。
+   - 需求是“本周有比赛时显示本周积分 + W-L；本周空周时保留上周冠军并显示 `PREV WEEK`”。
+   - 建议新增 `weekly-star.current` 或扩展 `latest` 返回 `{ currentWeekStar, fallbackStar, isCurrentWeekEmpty, weekRange, weeklyDelta }`。Phase 10-1 rank 页不应只靠历史 `weekly_stars` 文档推断当前周状态。
+
+5. **edit-profile 的拉取接口写错**：
+   - spec §2.3 写 `onLoad` 调 `members.getById`，但 edit-profile 编辑当前登录用户，初始没有 `_id` 时无法调用 `getById`。
+   - 当前云函数已有 `members.get` 按 OPENID 查当前用户；edit-profile 应继续用 `members.get`，只在已有 `currentMember._id` 且确需刷新详情时才可用 `getById`。
+
+建议修正：
+
+1. **`members.update` 权限描述与现有 action 边界不一致**：
+   - 当前 `members.update` 是按当前 OPENID 更新自己；`updateById` 才是 admin 编辑别人。
+   - spec §5.8 写 `members.update` 支持 admin 改别人，容易让实现误改 self-service action。
+   - 建议 Phase 10-1 只要求 `members.update` 支持用户改自己；admin 编辑别人仍保留 `member-edit/updateById`，除非本期明确要改管理员页。
+
+2. **`playStyleNote` 长度从现有 100 改成 50 需要同步 schema/test**：
+   - 当前 `DATABASE_SCHEMA.md` 与 `members/lib/validate.js` 是最多 100 字。
+   - spec 要求 50 字可以接受，但必须把 `DATABASE_SCHEMA.md`、validate 单测和错误文案一起改；否则 plan 会遗漏兼容变更。
+
+3. **W0 回填脚本重跑语义不一致**：
+   - spec §5.9 伪代码用 `add` 写固定 `_id = baseline_${today}_${type}_${memberId}`。
+   - spec §8.3 又说“重跑 upsert key 不冲突，新跑产生新行”。同一天误跑会冲突，不会产生新行。
+   - 建议：同一天重跑做 upsert 幂等；跨日期重跑才产生新的 baseline。把脚本伪代码从 `add` 改成 `upsert`。
+
+4. **`weekly-star` 手动 action 名称需贴现状**：
+   - 当前 `weekly-star` 只有 `latest` 和 `compute`，没有 spec §5.7 写的 `recompute(weekId)`。
+   - 建议写成“保留 `compute`；新增 `recomputeRankSnapshots` 或 `compute({ includeRankSnapshots: true })`”，不要引用不存在的旧 action。
+
+5. **性能表把 H2H 归到 playerStats 与 API 拆分冲突**：
+   - spec §2.2 说 player-detail 并行调 `playerStats` + `playerH2H`，但 §8.4 又写 `playerStats（含 H2H + weeklySnapshot 现算）`。
+   - 建议改成 `playerStats（含 weeklySnapshot，不含 H2H）≤ 600ms`，`playerH2H ≤ 300ms`。
+
+可保留：
+
+- Phase 10-1 / 10-2 拆分合理，不建议合并。
+- `rank_snapshots` per-player-per-week 行式存储合理。
+- `weeklySnapshot` 实时扫本周 `match_results` 的方向合理。
+- `rank-chart` 纯 SVG、不引第三方库合理。
+
+同步要求：
+
+- Claude 在进入 writing-plans 前先修 spec，再按修订版写 Phase 10 implementation plan。
+- Plan 里必须显式加入上面“必须修正”的测试用例，尤其是 baseline ordering、tournament_points asOf、H2H 不依赖 loserId、weekly star current/fallback。
+
+---
+
+### 2026-05-16 · Phase 10 Spec 直接修订（Codex）
+
+参与方：用户、Codex，待同步 Claude。
+
+触发：
+
+- 用户在 Codex review 后要求“直接帮我修改” `docs/superpowers/specs/2026-05-16-rank-and-player-detail-design.md`。
+
+已直接落地到 spec：
+
+- `rank_snapshots` 新增 `effectiveAt` 字段，并新增 `(seasonId, type, memberId, effectiveAt DESC)` 索引；`rankList.trendDelta` 改为按 `effectiveAt DESC, computedAt DESC` 取最新比较快照，避免 W0 baseline 的 `weekStart` 压过随后 cron 生成的 weekly snapshot。
+- `aggregateRanks({ asOf })` 语义改为过滤所有积分来源：`match_results.(confirmedAt || createTime)` 与 `tournament_points.(awardedAt || createTime)` 都必须 `<= asOf`。
+- `aggregateRanks` 排序规则明确为 `totalPoints DESC, wins DESC, losses ASC, memberId ASC`，Phase 10-1 需要补稳定 tie-breaker。
+- rank 页数据流从 `weekly-star.latest` 改为新增 `weekly-star.current`；该 action 返回 `mode='current' | 'fallback' | 'empty'`，用于区分本周之星、空周保留上周冠军、赛季初无数据。
+- `weekly-star` cron 手动触发描述贴近现状：保留 `compute`，新增 `recomputeRankSnapshots` 或 `compute({ includeRankSnapshots: true })` 由 plan 阶段二选一；不再引用不存在的旧 `recompute`。
+- `playerH2H` 伪代码改为使用 `tournamentType + playerIds` 查询，并从 `pointsAwarded.entries[].role` 判断胜负，不依赖 `loserId`。
+- `aggregateWeeklyPlayerDelta` 改为基于 `playerIds`、`tournamentType` 和 `pointsAwarded.entries` 计算。
+- edit-profile 数据流改为优先 `globalData.currentMember`，缺失时调 `members.get` 按当前 OPENID 拉当前用户，不再要求用 `members.getById`。
+- `members.update` 权限边界改为只改当前 OPENID 对应会员；admin 编辑别人继续走 `member-edit + updateById`，本期不改管理员页。
+- W0 回填脚本伪代码改为 upsert，同一天重跑幂等；跨日期重跑允许生成新的 baseline；baseline 行写 `effectiveAt=now`，rank 用 `index + 1` 派生。
+- 测试策略同步补 baseline ordering、tournament_points asOf、weekly-star.current 三态、W0 同日幂等/跨日新 baseline。
+- 性能表修正：`playerStats` 含 `weeklySnapshot` 但不含 H2H，`playerH2H` 独立计时。
+- 文档 scope 补充：更新 `DATABASE_SCHEMA.md` 时除新增 `rank_snapshots` 外，也要同步 `playStyleNote` 最大 50 字。
+
+仍需 plan 阶段决定：
+
+- `weekly-star` 历史补写接口到底独立做 `recomputeRankSnapshots`，还是扩展 `compute({ includeRankSnapshots: true })`。
+- 双打 H2H 是否能从现有 `player1/player2` 稳定解析两边队伍；若不能，本期 `doubles: []` 并在 `PROGRESS` 标注。
