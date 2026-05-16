@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████████████████] Phase 10-2 代码完成；待 DevTools E2E + 云函数部署
+[████████████████████████████] Phase 10-2 已合并 main，并完成云函数 + 小程序上传
 ```
 
 ## Phase 状态
@@ -22,7 +22,7 @@
 | 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | 4df153f | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
 | 09 | Phase 9 · v2.1 Quality Iteration | 🟦 代码完成，待人工 E2E + 部署 | 2026-05-16 | — | `6c58f87` | 6 个新云函数 action（adminConsoleSnapshot/finishedRecent/batchConfirm/batchSubmit/pendingReviewItems/mySummary）+ `_request_log` 集合 + `expectedUpdateTime` 乐观锁 + match-results 拆 handlers/；3 个新组件（status-tag/empty-state/batch-result-sheet 共 22 单测）+ utils/cloud.call v2 wrapper；tournament-manage/my-match/tournament-score IA 重构 + sheet 集成；score-row 视觉债已由 visual stream `c956f9e` 清理；全量 213 测试绿（云函数 191 + miniprogram 22）；分支 `feat/visual-revamp` 与视觉重构 stream 并发，已用 explicit pathspec 隔离；待用户：Tasks 25-27 manual smoke / 29 E2E-1~10 / 30 性能基线+QA 截图 / 31 云函数上传 |
 | 10 | Phase 10-1 · Rank + Edit Profile | ✅ 已完成 | 2026-05-16 | 2026-05-16 | `a50b7b5` + follow-ups | `rank_snapshots` schema/backfill/cron/recompute；`aggregateRanks(asOf)` + 稳定 tie-breaker；`rankList.winRate/trendDelta`；`weekly-star.current` 三态；rank 页 5 列 + weekly-star 单 hero；edit-profile playStyle + 50 字备注。目标环境确认为 `cloud1-0gthnke69a09f52a`；云函数已部署；索引 4/4 已建；`season_2026` W0 baseline 已写入 10 行；修正运行时默认赛季为现有云端 `_id` 约定 `season_YYYY`。验证：云函数实际 Jest 269/269，小程序 22/22，scripts backfill 3/3，sync-shared-libs 通过；云端 `rankList/current/playerStats` 调用通过；DevTools automator rank + weekly-star tap smoke、真实登录态 edit-profile、趋势箭头 fixture、fallback fixture 均通过且临时数据已清理。 |
-| 11 | Phase 10-2 · Player Detail + H2H | 🟦 代码完成，待 DevTools E2E + 部署 | 2026-05-16 | — | `1513f5e` + follow-ups | `playerStats` 增加 winRate/currentRank/rankHistory/weeklySnapshot/recent enrichment；新增 `playerH2H`；新增 `rank-chart` / `h2h-row`；player-detail 接入 hero rank subtitle、单/双打三卡、12 周 rank chart、H2H 展开、recent +points 行。验证：云函数可运行 Jest 308/308 通过（跳过 `quickstartFunctions` 默认占位 test），小程序 22/22，通过 `scripts/sync-shared-libs.sh`，player-detail 视觉债 grep clean。未完成：DevTools E2E-4/E2E-6 与云函数上传。 |
+| 11 | Phase 10-2 · Player Detail + H2H | ✅ 已完成 | 2026-05-16 | 2026-05-17 | `f032a73` + deploy follow-up | `playerStats` 增加 winRate/currentRank/rankHistory/weeklySnapshot/recent enrichment；新增 `playerH2H`；新增 `rank-chart` / `h2h-row`；player-detail 接入 hero rank subtitle、单/双打三卡、12 周 rank chart、H2H 展开、recent +points 行；合入 score 管理员本地草稿保存与赛事排程视觉优化。验证：云函数可运行 Jest 312/312 通过（跳过 `quickstartFunctions` 默认占位 test），小程序 26/26，通过 `scripts/sync-shared-libs.sh`；DevTools automator smoke 验证 player-detail H2H/recent/E2E-6 空态；`points-engine` / `match-results` 已部署到 `cloud1-0gthnke69a09f52a`；小程序版本 `10.2.0` 已上传。 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -30,13 +30,32 @@
 
 ## 当前应该做什么
 
-**👉 Phase 10-2 代码已完成并通过本地回归；下一步是 DevTools E2E-4/E2E-6 与 points-engine 云函数部署。**
+**👉 Phase 10-2 已合并到 `main`，并完成云函数部署与小程序上传。**
 
-E2E 前置备注：本机有微信开发者工具 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`），但仓库当前未安装 `miniprogram-automator`，本次未写自动 E2E 脚本。
+后续如需继续发版流程，可在微信公众平台提交审核版本 `10.2.0`。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-17 · Phase 10-2 deploy + merge（target env）
+
+- 合并：`codex/phase-10-2-player-detail` 已通过 merge commit `f032a73` 合并到 `main`。
+- 追加提交：
+  - `09f5679`：管理员可保存本地比分草稿，新增 `batchAdminSave`；选手端仅可编辑自己参与的未确认比赛；3:3 抢七改为单边到 7；新增 score-row / tournament-score Jest。
+  - `89eadcb`：合入赛事创建、赛程表、报名阵容与管理页视觉优化。
+  - `2954d86`：部署后 smoke 发现 recent score 对象渲染为 `[object Object]`，已在 `points-engine.enrichRecent` 格式化结构化比分为文本。
+- 云函数部署：`points-engine` / `match-results` 已部署到 `cloud1-0gthnke69a09f52a`。DevTools CLI `--names` 和原始 `--paths` 均命中 `EISDIR`，最终使用临时 esbuild 单文件 deploy bundle + `--paths --remote-npm-install` 上传成功。
+- 小程序上传：DevTools CLI 已上传版本 `10.2.0`，描述 `Phase 10-2 player detail H2H score admin save visual polish`。第一次带 `--info-output` 上传触发 CLI 的二维码输出路径错误；去掉该参数后上传成功，总包体 `560.6 KB`。
+- DevTools automator smoke：
+  - `pages/player-detail/index?id=user_002`：hero 显示 `S2026 · 单打 #1 · 双打 #1`；H2H 单打/双打行出现；recent 行无 `[object Object]`，比分显示为 `4-2` / `4-0` / `0-4` 等文本。
+  - E2E-4：触发首个 `h2h-row` 自定义 tap 事件后跳到 `pages/player-detail/index?id=3bef321d69cc96880273781a4fd6358b`。
+  - E2E-6：找到无比赛会员 `user_013`（黄蓉），打开 player-detail 显示 `未上榜`、`0/0 · — · 0`、rank-chart `数据不足`、recent `暂无近期比赛`。
+- 合并后本地验证：
+  - Cloud Jest（实际可运行套件，跳过 `quickstartFunctions` 默认 `no test specified` 占位脚本）：312/312 通过。
+  - Miniprogram Jest：26/26 通过。
+  - `scripts/sync-shared-libs.sh` 通过。
+  - player-detail 视觉债 grep：颜色 / 粗 border-left / 旧 status badge 均 clean。
 
 ### 2026-05-16 · Phase 10-2 code complete（Player Detail + H2H）
 
