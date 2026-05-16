@@ -368,6 +368,8 @@ git commit -m "feat(points-engine): playerStats returns rankHistory (last 12 wee
 **Files:**
 - Modify: `cloudfunctions/points-engine/__tests__/index.test.js`
 - Modify: `cloudfunctions/points-engine/index.js`
+- Modify: `cloudfunctions/points-engine/lib/weekly-delta.js`
+- Modify: `cloudfunctions/points-engine/lib/__tests__/weekly-delta.test.js`
 - Create: `cloudfunctions/points-engine/lib/week-window.js`
 - Modify: `scripts/sync-shared-libs.sh`
 
@@ -437,16 +439,17 @@ const { aggregateWeeklyPlayerDelta } = require('./lib/weekly-delta')
 const { getCurrentNaturalWeek } = require('./lib/week-window')
 ```
 
-In `playerStatsCompat`, compute the current week and call the helper for both types:
+Update `aggregateWeeklyPlayerDelta` so it supports both production `Date` timestamps and legacy/test date strings. Build a date branch from `week.start/week.end` and a string branch from `week.weekStart/week.weekEnd`; include both in the CloudBase `_.or(...)` date filter for `confirmedAt`, and both fallback branches for `confirmedAt == null && createTime ...`.
+
+Add a unit test in `cloudfunctions/points-engine/lib/__tests__/weekly-delta.test.js` that uses `confirmedAt: new Date(...)` and `week: { start: Date, end: Date, weekStart, weekEnd }`, proving Date production rows are counted.
+
+In `playerStatsCompat`, compute the current week and pass the full week object to the helper for both types:
 
 ```js
 const week = getCurrentNaturalWeek()
-// `aggregateWeeklyPlayerDelta` existing tests and match_results rows use YYYY-MM-DD strings.
-// Keep the query boundary in that same shape to avoid Date-vs-string filtering bugs.
-const weekForDelta = { weekStart: week.weekStart, weekEnd: week.weekEnd }
 const [wsSingles, wsDoubles] = await Promise.all([
-  aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId, week: weekForDelta }),
-  aggregateWeeklyPlayerDelta({ db, seasonId, type: 'doubles', playerId, week: weekForDelta })
+  aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId, week }),
+  aggregateWeeklyPlayerDelta({ db, seasonId, type: 'doubles', playerId, week })
 ])
 const weeklySnapshot = { singles: wsSingles, doubles: wsDoubles }
 // include weeklySnapshot in the response:
@@ -457,8 +460,8 @@ return { success: true, data: { stats: buckets, currentRank, rankHistory, weekly
 - [ ] **Step 6:** Commit.
 
 ```bash
-git add cloudfunctions/points-engine/index.js cloudfunctions/points-engine/__tests__/index.test.js cloudfunctions/points-engine/lib/week-window.js scripts/sync-shared-libs.sh
-git commit -m "feat(points-engine): playerStats returns weeklySnapshot via aggregateWeeklyPlayerDelta" -- cloudfunctions/points-engine/index.js cloudfunctions/points-engine/__tests__/index.test.js cloudfunctions/points-engine/lib/week-window.js scripts/sync-shared-libs.sh
+git add cloudfunctions/points-engine/index.js cloudfunctions/points-engine/__tests__/index.test.js cloudfunctions/points-engine/lib/weekly-delta.js cloudfunctions/points-engine/lib/__tests__/weekly-delta.test.js cloudfunctions/points-engine/lib/week-window.js scripts/sync-shared-libs.sh
+git commit -m "feat(points-engine): playerStats returns weeklySnapshot via aggregateWeeklyPlayerDelta" -- cloudfunctions/points-engine/index.js cloudfunctions/points-engine/__tests__/index.test.js cloudfunctions/points-engine/lib/weekly-delta.js cloudfunctions/points-engine/lib/__tests__/weekly-delta.test.js cloudfunctions/points-engine/lib/week-window.js scripts/sync-shared-libs.sh
 ```
 
 ---
