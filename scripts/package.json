@@ -5,9 +5,17 @@
   "description": "Local maintenance scripts for FOPEN-PURE",
   "license": "UNLICENSED",
   "scripts": {
-    "audit:polish-data": "node audit-polish-data.js"
+    "audit:polish-data": "node audit-polish-data.js",
+    "test": "jest"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^2.10.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
   }
 }
