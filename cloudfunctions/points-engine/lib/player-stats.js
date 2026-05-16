@@ -2,7 +2,9 @@ function deriveRoundLabel(tournament, round) {
   if (!tournament) return null
   if (tournament.format !== 'knockout') return null
 
-  const total = tournament.totalRounds || 0
+  const total = tournament.totalRounds ||
+    (tournament.config && tournament.config.totalRounds) ||
+    (tournament.maxPlayers >= 2 ? Math.ceil(Math.log2(tournament.maxPlayers)) : 0)
   if (!round || total <= 0) return null
 
   const gap = total - round

@@ -22,6 +22,16 @@ describe('deriveRoundLabel', () => {
     expect(deriveRoundLabel({ format: 'knockout', totalRounds: 5 }, 2)).toBe('R2')
   })
 
+  test('knockout legacy config.totalRounds shape -> round labels', () => {
+    expect(deriveRoundLabel({ format: 'knockout', config: { totalRounds: 4 } }, 3)).toBe('SF')
+  })
+
+  test('knockout maxPlayers shape derives total rounds from bracket size', () => {
+    const tournament = { format: 'knockout', maxPlayers: 16 }
+    expect(deriveRoundLabel(tournament, 4)).toBe('F')
+    expect(deriveRoundLabel(tournament, 3)).toBe('SF')
+  })
+
   test('missing tournament -> null (defensive)', () => {
     expect(deriveRoundLabel(null, 3)).toBeNull()
   })
