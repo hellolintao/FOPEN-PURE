@@ -3,6 +3,7 @@ const {
   runE2ERegressionSmoke,
   seedFixture,
   runReadOnlySmoke,
+  formatActorSummary,
 } = require('../e2e-regression-smoke')
 const {
   selectActors,
@@ -11,11 +12,11 @@ const {
 
 const members = [
   { _id: 'admin', name: 'Admin', admin: true, openid: 'oa' },
-  { _id: 'A', name: 'A' },
-  { _id: 'B', name: 'B' },
-  { _id: 'C', name: 'C' },
-  { _id: 'D', name: 'D' },
-  { _id: 'E', name: 'E' },
+  { _id: 'A', name: 'A', openid: 'opA' },
+  { _id: 'B', name: 'B', openid: 'opB' },
+  { _id: 'C', name: 'C', openid: 'opC' },
+  { _id: 'D', name: 'D', openid: 'opD' },
+  { _id: 'E', name: 'E', openid: 'opE' },
 ]
 
 const courts = [
@@ -272,6 +273,29 @@ describe('runE2ERegressionSmoke', () => {
       seasonId: 'season_2026',
       log: () => {},
     })).rejects.toThrow(/at least one season/)
+  })
+})
+
+describe('formatActorSummary', () => {
+  test('prints only DevTools role mapping fields without full member docs', () => {
+    const summary = formatActorSummary({
+      adminMember: { _id: 'admin', name: 'Admin', openid: 'oa', admin: true, phone: 'hidden' },
+      players: [
+        { _id: 'A', name: 'A', openid: 'opA', privateField: 'hidden' },
+        { _id: 'B', name: 'B' },
+      ],
+    })
+
+    expect(summary).toEqual({
+      admin: { memberId: 'admin', name: 'Admin', openid: 'oa' },
+      players: [
+        { label: 'A', memberId: 'A', name: 'A', openid: 'opA' },
+        { label: 'B', memberId: 'B', name: 'B', openid: null },
+      ],
+    })
+    expect(JSON.stringify(summary)).not.toContain('hidden')
+    expect(JSON.stringify(summary)).not.toContain('phone')
+    expect(JSON.stringify(summary)).not.toContain('privateField')
   })
 })
 

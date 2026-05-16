@@ -199,6 +199,26 @@ function requireArray(value, label) {
   return value
 }
 
+function formatActorSummary(actors) {
+  if (!actors) return null
+  return {
+    admin: formatActor(actors.adminMember),
+    players: (actors.players || []).slice(0, 5).map((player, index) => ({
+      label: String.fromCharCode(65 + index),
+      ...formatActor(player),
+    })),
+  }
+}
+
+function formatActor(actor) {
+  if (!actor) return null
+  return {
+    memberId: actor._id || actor.id || null,
+    name: actor.name || '',
+    openid: actor.openid || actor.openId || null,
+  }
+}
+
 async function fetchCollectionRows(db, name) {
   const result = await db.collection(name).limit(PAGE_SIZE).get()
   return result.data || []
@@ -230,6 +250,7 @@ async function main() {
   console.log(JSON.stringify({
     mode: result.mode,
     fixtureIds: result.fixture ? result.fixture.ids : null,
+    actors: result.fixture ? formatActorSummary(result.fixture.actors) : null,
     smoke: result.smoke.map(check => check.name),
   }, null, 2))
 }
@@ -250,4 +271,5 @@ module.exports = {
   runE2ERegressionSmoke,
   seedFixture,
   runReadOnlySmoke,
+  formatActorSummary,
 }
