@@ -159,3 +159,71 @@ describe('weekly-star.compute double-write', () => {
     expect(cloud.__rows.rank_snapshots.length).toBe(1)
   })
 })
+
+describe('weekly-star.recomputeRankSnapshots', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.tournament_points.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__openid = 'admin-openid'
+  })
+
+  test('baseline=true writes baseline rows with weekId baseline_<today>', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'ADMIN', openid: 'admin-openid', admin: true, name: 'Admin' })
+    cloud.__rows.members.push({ _id: 'A', name: 'a' })
+    cloud.__rows.match_results.push({
+      _id: 'm', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+      confirmedAt: d('2026-04-01'), createTime: d('2026-04-01'),
+      pointsAwarded: { entries: [{ memberId: 'A', points: 100, role: 'winner' }] }
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'recomputeRankSnapshots', seasonId: 's2026', baseline: true, now: '2026-05-16T10:00:00' })
+    expect(res.success).toBe(true)
+    expect(res.data.weekId).toBe('baseline_2026-05-16')
+    const row = cloud.__rows.rank_snapshots.find(r => r.memberId === 'A' && r.type === 'singles')
+    expect(row.snapshotKind).toBe('baseline')
+    expect(row.rank).toBe(1)
+  })
+
+  test('baseline=false with weekStart writes weekly rows with proper weekId/weekEnd', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'ADMIN', openid: 'admin-openid', admin: true, name: 'Admin' })
+    cloud.__rows.members.push({ _id: 'A', name: 'a' })
+    cloud.__rows.match_results.push({
+      _id: 'm', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+      confirmedAt: d('2026-04-15'), createTime: d('2026-04-15'),
+      pointsAwarded: { entries: [{ memberId: 'A', points: 100, role: 'winner' }] }
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'recomputeRankSnapshots', seasonId: 's2026', baseline: false, weekStart: '2026-04-13' })
+    expect(res.success).toBe(true)
+    expect(res.data.weekId).toBe('ws_2026-04-13')
+    const row = cloud.__rows.rank_snapshots.find(r => r.memberId === 'A' && r.type === 'singles')
+    expect(row.snapshotKind).toBe('weekly')
+    expect(row.weekStart).toBe('2026-04-13')
+    expect(row.weekEnd).toBe('2026-04-19')
+  })
+
+  test('baseline=false without weekStart returns INVALID_PAYLOAD', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'ADMIN', openid: 'admin-openid', admin: true, name: 'Admin' })
+    const { main } = require('../index')
+    const res = await main({ action: 'recomputeRankSnapshots', seasonId: 's2026', baseline: false })
+    expect(res.success).toBe(false)
+    expect(res.error.code).toBe('INVALID_PAYLOAD')
+  })
+
+  test('non-admin caller returns FORBIDDEN and writes no rows', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__openid = 'member-openid'
+    cloud.__rows.members.push({ _id: 'M', openid: 'member-openid', admin: false, name: 'Member' })
+    const { main } = require('../index')
+    const res = await main({ action: 'recomputeRankSnapshots', seasonId: 's2026', baseline: true, now: '2026-05-16T10:00:00' })
+    expect(res.success).toBe(false)
+    expect(res.error.code).toBe('FORBIDDEN')
+    expect(cloud.__rows.rank_snapshots.length).toBe(0)
+  })
+})
