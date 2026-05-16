@@ -5,6 +5,8 @@ const _ = db.command
 
 const award = require('./lib/award')
 const { aggregateRanks } = require('./lib/aggregate')
+const { aggregateWeeklyPlayerDelta } = require('./lib/weekly-delta')
+const { getCurrentNaturalWeek } = require('./lib/week-window')
 
 exports.main = async (event) => {
   const { action } = event
@@ -136,7 +138,14 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
     fetchRankHistory({ seasonId, type: 'doubles', memberId: playerId })
   ])
   const rankHistory = { singles: rhSingles, doubles: rhDoubles }
-  return { success: true, data: { stats: buckets, currentRank, recent, rankHistory } }
+  const week = getCurrentNaturalWeek()
+  const weekForDelta = { weekStart: week.weekStart, weekEnd: week.weekEnd }
+  const [wsSingles, wsDoubles] = await Promise.all([
+    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId, week: weekForDelta }),
+    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'doubles', playerId, week: weekForDelta })
+  ])
+  const weeklySnapshot = { singles: wsSingles, doubles: wsDoubles }
+  return { success: true, data: { stats: buckets, currentRank, rankHistory, weeklySnapshot, recent } }
 }
 
 async function recalculateMatchCompat({ matchId }) {

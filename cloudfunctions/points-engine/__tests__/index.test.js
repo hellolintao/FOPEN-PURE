@@ -323,3 +323,35 @@ describe('playerStats — rankHistory', () => {
     expect(res.data.rankHistory.singles).toEqual([{ weekStart: '2026-05-04', rank: 3 }])
   })
 })
+
+describe('playerStats — weeklySnapshot (this-week delta)', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+  })
+
+  test('player has 3W 1L worth 70 points this week (singles)', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    const today = new Date()
+    const day = today.toISOString().slice(0, 10)
+    for (let i = 0; i < 3; i++) {
+      cloud.__rows.match_results.push({
+        _id: `w${i}`, seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: day, createTime: day, playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 20, role: 'winner' }] }
+      })
+    }
+    cloud.__rows.match_results.push({
+      _id: 'l1', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+      confirmedAt: day, createTime: day, playerIds: ['P'],
+      pointsAwarded: { entries: [{ memberId: 'P', points: 10, role: 'loser' }] }
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.weeklySnapshot.singles).toEqual({ pointsDelta: 70, wins: 3, losses: 1 })
+    expect(res.data.weeklySnapshot.doubles).toEqual({ pointsDelta: 0, wins: 0, losses: 0 })
+  })
+})
