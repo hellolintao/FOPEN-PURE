@@ -93,18 +93,22 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
   if (!playerId) return { success: false, error: { code: 'INVALID_ARG', message: 'playerId 必填' } }
   const seasonId = currentSeasonId
   const buckets = {
-    singles: { winCount: 0, lossCount: 0, totalPoints: 0 },
-    doubles: { winCount: 0, lossCount: 0, totalPoints: 0 }
+    singles: { winCount: 0, lossCount: 0, totalPoints: 0, winRate: 0 },
+    doubles: { winCount: 0, lossCount: 0, totalPoints: 0, winRate: 0 }
   }
   if (seasonId) {
     for (const t of ['singles', 'doubles']) {
       const list = await aggregateRanks({ db, seasonId, type: t, pageSize: 100 })
       const me = list.find(x => x.memberId === playerId)
       if (me) {
+        const winCount = me.wins || 0
+        const lossCount = me.losses || 0
+        const matches = winCount + lossCount
         buckets[t] = {
-          winCount: me.wins || 0,
-          lossCount: me.losses || 0,
-          totalPoints: me.totalPoints || 0
+          winCount,
+          lossCount,
+          totalPoints: me.totalPoints || 0,
+          winRate: matches > 0 ? winCount / matches : 0
         }
       }
     }

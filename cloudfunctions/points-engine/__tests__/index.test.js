@@ -194,3 +194,43 @@ describe('rankList enhancements', () => {
     expect(res.data.rankList[0].trendDelta).toBe(0)
   })
 })
+
+describe('playerStats — winRate', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+  })
+
+  test('singles 8W/2L → winRate 0.8 (≈0.8 within 5 decimals)', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p', avatarUrl: '' })
+    for (let i = 0; i < 8; i++) {
+      cloud.__rows.match_results.push({
+        _id: `w${i}`, seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-04-01', createTime: '2026-04-01', playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 20, role: 'winner' }] }
+      })
+    }
+    for (let i = 0; i < 2; i++) {
+      cloud.__rows.match_results.push({
+        _id: `l${i}`, seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-04-02', createTime: '2026-04-02', playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 10, role: 'loser' }] }
+      })
+    }
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.stats.singles.winRate).toBeCloseTo(0.8, 5)
+  })
+
+  test('player with 0 matches → winRate = 0 (no divide-by-zero)', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.stats.singles.winRate).toBe(0)
+    expect(res.data.stats.doubles.winRate).toBe(0)
+  })
+})
