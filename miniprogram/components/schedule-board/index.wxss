@@ -1,53 +1,324 @@
-.board { display: flex; flex-direction: column; gap: var(--space-3, 16rpx); }
-.board-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2, 12rpx); }
-.board-title { font-weight: 700; font-size: 32rpx; }
-.board-help { margin-top: 4rpx; }
-.board-regen { flex: 0 0 auto; }
-.board-actions { display: flex; gap: 12rpx; flex: 0 0 auto; }
-.board-action { flex: 0 0 auto; }
-.schedule-scroll { width: 100%; }
-.schedule-table { display: flex; flex-direction: column; min-width: 920rpx; border: 1rpx solid var(--color-border, #e5e7eb); border-radius: 12rpx; overflow: hidden; background: #fff; }
-.schedule-row { display: flex; min-height: 104rpx; border-bottom: 1rpx solid var(--color-border, #e5e7eb); }
-.schedule-row:last-child { border-bottom: 0; }
-.schedule-row.header { min-height: 80rpx; background: #f8fafc; }
-.time-col { flex: 0 0 116rpx; display: flex; align-items: center; justify-content: center; padding: 12rpx 8rpx; box-sizing: border-box; border-right: 1rpx solid var(--color-border, #e5e7eb); color: var(--color-text-muted, #6b7280); font-size: 24rpx; }
-.schedule-cell { position: relative; flex: 0 0 260rpx; min-width: 260rpx; display: flex; align-items: center; justify-content: center; padding: 12rpx; box-sizing: border-box; border-right: 1rpx solid var(--color-border, #e5e7eb); background: #fff; }
-.schedule-cell:last-child { border-right: 0; }
-.schedule-cell.head { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4rpx; }
-.court-name { font-weight: 600; font-size: 28rpx; color: var(--color-text, #111827); }
-.court-slots { font-size: 22rpx; color: var(--color-text-muted, #6b7280); }
-.cell-regularRound { background: #eef7f1; }
-.cell-bracket { background: #eff6ff; }
-.cell-extra { background: #fff7ed; }
-.cell-freePlay { background: #f8fafc; }
-.schedule-cell.cell-duplicate { background: #fee2e2; box-shadow: inset 0 0 0 2rpx var(--color-danger, #dc2626); }
-.schedule-cell.cell-duplicate .player { background: #fff; color: var(--color-danger, #dc2626); }
-.schedule-cell.unavailable { background: #f3f4f6; color: #9ca3af; }
-.match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; padding-right: 28rpx; box-sizing: border-box; }
-.match-line.doubles { flex-direction: column; gap: 4rpx; }
-.match-line.doubles .team-row { display: flex; align-items: center; gap: 6rpx; justify-content: center; max-width: 100%; }
-.match-line.doubles .slash { color: var(--color-text-muted, #6b7280); font-size: 22rpx; }
-.match-line.doubles .vs { font-size: 18rpx; }
-.match-line.doubles .player { max-width: 88rpx; }
-.player { max-width: 92rpx; padding: 6rpx 8rpx; border-radius: 8rpx; background: rgba(255,255,255,0.86); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 24rpx; text-align: center; }
-.vs { flex: 0 0 auto; color: var(--color-text-muted, #6b7280); font-size: 20rpx; }
-.free-line { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4rpx; padding-right: 28rpx; box-sizing: border-box; }
-.free-title { font-weight: 600; font-size: 26rpx; color: #475569; }
-.free-players { max-width: 180rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 22rpx; color: var(--color-text-muted, #6b7280); }
-.row-del { position: absolute; right: 8rpx; top: 8rpx; color: var(--color-danger, #dc2626); padding: 4rpx 8rpx; font-size: 24rpx; }
-.row-del.disabled { color: var(--color-text-muted, #9ca3af); opacity: 0.4; }
-.empty-cell { color: var(--color-text-muted, #9ca3af); font-size: 24rpx; }
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ============================================================
+ * 顶部：tape 标题 + 胶囊操作按钮
+ * ============================================================ */
+.board-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 2rpx solid var(--color-ink);
+}
+
+.board-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.board-tape {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 14rpx;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.board-help {
+  font-size: 20rpx;
+  color: var(--color-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.board-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.board-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 64rpx;
+  padding: 0 28rpx;
+  background: var(--color-lime);
+  color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  font-size: 24rpx;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.board-pill-ghost {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  border: 2rpx solid var(--color-ink);
+}
+
+/* ============================================================
+ * 排程表（CSS Grid · 每列按列内最大 cell 自适应）
+ * ============================================================ */
+.schedule-scroll {
+  width: 100%;
+}
+
+.schedule-table {
+  display: grid;
+  /* grid-template-columns inline:
+     96rpx repeat(N, minmax(240rpx, max-content)) */
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg);
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ============================================================
+ * Cell 通用（time-col + schedule-cell）
+ * ============================================================ */
+.time-col,
+.schedule-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-right: 1rpx solid var(--color-border);
+  border-bottom: 1rpx solid var(--color-border);
+  min-height: 112rpx;
+  background: var(--color-bg);
+}
+
+.time-col {
+  background: var(--color-bg-2);
+  font-family: var(--font-family-num);
+  font-size: 24rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  padding: 8rpx 4rpx;
+  letter-spacing: -0.02em;
+}
+
+.schedule-cell {
+  position: relative;
+  padding: 12rpx 8rpx;
+}
+
+/* 表头行 · ink 黑底 + 白字 */
+.time-col.head,
+.schedule-cell.head {
+  min-height: 72rpx;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-right-color: var(--color-ink-2);
+  border-bottom-color: var(--color-ink);
+}
+
+.time-col.head {
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.schedule-cell.head {
+  flex-direction: column;
+  gap: 4rpx;
+  padding: 8rpx 12rpx;
+}
+
+.court-name {
+  font-size: 24rpx;
+  font-weight: 900;
+  color: var(--color-bg);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.court-slots {
+  font-size: 18rpx;
+  font-family: var(--font-family-num);
+  color: var(--color-muted-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+ * 单元格按类型上色
+ * ============================================================ */
+.schedule-cell.cell-regularRound { background: var(--color-lime-wash); }
+.schedule-cell.cell-bracket { background: var(--color-bg); }
+.schedule-cell.cell-extra { background: var(--color-lime-wash); }
+.schedule-cell.cell-freePlay { background: var(--color-warn-wash); }
+
+.schedule-cell.cell-duplicate {
+  background: #FEE2E2;
+  box-shadow: inset 0 0 0 3rpx var(--color-danger);
+}
+
+.schedule-cell.cell-duplicate .player {
+  background: var(--color-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.schedule-cell.unavailable {
+  background: var(--color-bg-3);
+  color: var(--color-muted-2);
+}
+
+/* ============================================================
+ * 比赛对阵
+ * ============================================================ */
+.match-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  padding-right: 40rpx;
+  box-sizing: border-box;
+}
+
+.match-line.doubles {
+  gap: 4rpx;
+}
+
+.match-line.doubles .team-row {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  justify-content: center;
+}
+
+.match-line.doubles .slash {
+  color: var(--color-muted-2);
+  font-size: 18rpx;
+  font-weight: 800;
+}
+
+.match-line .vs {
+  font-size: 16rpx;
+}
+
+.match-line.doubles .player {
+  max-width: 200rpx;
+  padding: 2rpx 8rpx;
+}
+
+.player {
+  max-width: 320rpx;
+  padding: 4rpx 10rpx;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  text-align: center;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.vs {
+  flex: 0 0 auto;
+  color: var(--color-ink);
+  font-size: 18rpx;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  padding: 0 4rpx;
+}
+
+/* 自由拉球 */
+.free-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  padding-right: 40rpx;
+  box-sizing: border-box;
+}
+
+.free-title {
+  font-weight: 800;
+  font-size: 22rpx;
+  color: var(--color-ink-3);
+  letter-spacing: 0.06em;
+}
+
+.free-players {
+  max-width: 320rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20rpx;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+/* 删除按钮 · 右上角圆形 */
+.row-del {
+  position: absolute;
+  right: 6rpx;
+  top: 6rpx;
+  width: 30rpx;
+  height: 30rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-bg);
+  background: var(--color-ink);
+  border-radius: 50%;
+  font-size: 18rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.row-del.disabled {
+  background: var(--color-bg-3);
+  color: var(--color-muted-2);
+  opacity: 0.5;
+}
+
+.empty-cell {
+  color: var(--color-muted-2);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
 .empty-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10rpx 22rpx;
-  border-radius: 999rpx;
-  border: 1rpx dashed var(--color-primary, #2563eb);
-  color: var(--color-primary, #2563eb);
-  font-size: 24rpx;
-  background: rgba(37, 99, 235, 0.04);
+  height: 56rpx;
+  padding: 0 22rpx;
+  border-radius: var(--radius-pill);
+  border: 2rpx dashed var(--color-ink);
+  color: var(--color-ink);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: transparent;
 }
-.court-actions { display: flex; align-items: center; gap: var(--space-2, 12rpx); }
-.court-action-label { flex: 0 0 148rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted, #6b7280); font-size: 24rpx; }
-.court-action-button { flex: 1; }

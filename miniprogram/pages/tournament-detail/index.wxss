@@ -97,48 +97,6 @@
 }
 
 /* ============================================================
- * CONFIG
- * ============================================================ */
-.config-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-5);
-  background: var(--color-bg-3);
-  border-radius: var(--radius-md);
-}
-
-.config-grid .stat-block {
-  align-items: flex-start;
-}
-
-.config-seed {
-  margin-top: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  background: var(--color-bg);
-  border: 2rpx solid var(--color-ink);
-  border-radius: var(--radius-md);
-}
-
-.config-seed-label {
-  display: block;
-  font-size: 18rpx;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  margin-bottom: var(--space-2);
-}
-
-.config-seed-value {
-  display: block;
-  font-size: var(--font-body-size);
-  font-weight: 700;
-  color: var(--color-ink);
-  line-height: 1.4;
-}
-
-/* ============================================================
  * POINTS RULES
  * ============================================================ */
 .points-row {
@@ -234,13 +192,13 @@
   background: var(--color-bg);
   border: 2rpx solid var(--color-ink);
   border-radius: var(--radius-md);
-  padding: var(--space-6) var(--space-3) var(--space-3);
+  padding: 56rpx var(--space-3) var(--space-4);
   text-align: center;
-  min-height: 180rpx;
+  min-height: 220rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-2);
   box-shadow: 4rpx 4rpx 0 var(--color-ink);
 }
 
@@ -248,10 +206,6 @@
   border-color: var(--color-border-strong);
   box-shadow: 4rpx 4rpx 0 var(--color-border-strong);
   opacity: 0.7;
-}
-
-.roster-card.confirmed {
-  background: var(--color-lime-wash);
 }
 
 .roster-seed {
@@ -273,6 +227,60 @@
   letter-spacing: 0.04em;
 }
 
+/* ============================================================
+ * 头像
+ * ============================================================ */
+.roster-avatar-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-bg-3);
+  border: 2rpx solid var(--color-ink);
+  box-sizing: border-box;
+  flex: 0 0 96rpx;
+}
+
+.roster-avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.roster-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-lime-wash);
+}
+
+.roster-avatar-initial {
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  font-family: var(--font-family-display);
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+/* 双打：两个头像横向叠放 */
+.roster-doubles-avatars {
+  display: inline-flex;
+  align-items: center;
+}
+
+.roster-doubles-avatars .roster-avatar-wrap.stacked {
+  width: 84rpx;
+  height: 84rpx;
+  flex: 0 0 84rpx;
+}
+
+.roster-doubles-avatars .roster-avatar-wrap.overlap {
+  margin-left: -28rpx;
+  border-color: var(--color-ink);
+}
+
+/* 文本 */
 .roster-name {
   display: block;
   font-size: 26rpx;
@@ -285,7 +293,9 @@
   max-width: 100%;
 }
 
-.roster-name.singles { font-size: 30rpx; margin-top: 8rpx; }
+.roster-name.singles {
+  font-size: 28rpx;
+}
 
 .roster-doubles {
   display: flex;
@@ -293,7 +303,6 @@
   align-items: center;
   gap: 4rpx;
   width: 100%;
-  margin-top: 8rpx;
 }
 
 .roster-doubles-row {
@@ -315,17 +324,6 @@
 
 .roster-detail-sep { color: var(--color-muted-2); font-size: 20rpx; }
 
-.roster-status {
-  font-size: 18rpx;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.roster-card.confirmed .roster-status { color: var(--color-ink); }
-.roster-card.withdrew .roster-status { color: var(--color-muted-2); }
-
 /* ============================================================
  * SCHEDULE (scroll-x table)
  * ============================================================ */
@@ -334,71 +332,63 @@
 }
 
 .schedule-table {
-  display: flex;
-  flex-direction: column;
-  min-width: 920rpx;
+  display: grid;
+  /* grid-template-columns inline */
   border: 2rpx solid var(--color-ink);
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-bg);
+  width: max-content;
+  min-width: 100%;
 }
 
-.schedule-row {
+.time-col,
+.schedule-cell {
   display: flex;
-  min-height: 104rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-right: 1rpx solid var(--color-border);
   border-bottom: 1rpx solid var(--color-border);
+  min-height: 104rpx;
+  background: var(--color-bg);
 }
 
-.schedule-row:last-child { border-bottom: 0; }
+.time-col {
+  background: var(--color-bg-2);
+  font-family: var(--font-family-num);
+  font-size: 24rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  padding: 8rpx 4rpx;
+  letter-spacing: -0.02em;
+}
 
-.schedule-row.header {
+.schedule-cell {
+  padding: 12rpx 8rpx;
+}
+
+.time-col.head,
+.schedule-cell.head {
   min-height: 64rpx;
   background: var(--color-ink);
+  color: var(--color-bg);
+  border-right-color: var(--color-ink-2);
+  border-bottom-color: var(--color-ink);
 }
 
-.schedule-row.header .time-col {
-  color: var(--color-bg);
+.time-col.head {
   font-size: 18rpx;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  font-family: inherit;
 }
-
-.schedule-row .time-col {
-  flex: 0 0 116rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8rpx;
-  border-right: 1rpx solid var(--color-border);
-  color: var(--color-muted);
-  font-size: 22rpx;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.schedule-row.header .time-col { border-right-color: var(--color-ink-2); }
-
-.schedule-cell {
-  flex: 0 0 240rpx;
-  min-width: 240rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8rpx;
-  border-right: 1rpx solid var(--color-border);
-  background: var(--color-bg);
-  box-sizing: border-box;
-}
-
-.schedule-cell:last-child { border-right: 0; }
 
 .schedule-cell.head {
   flex-direction: column;
-  align-items: center;
   gap: 4rpx;
   padding: 8rpx 12rpx;
-  background: var(--color-ink);
 }
 
 .schedule-cell.head .court-name {
@@ -411,30 +401,32 @@
 /* row tint by cell kind */
 .schedule-cell.cell-regularRound { background: var(--color-lime-wash); }
 .schedule-cell.cell-bracket { background: var(--color-bg-2); }
-.schedule-cell.cell-extra { background: var(--color-bg-3); }
-.schedule-cell.cell-freePlay { background: var(--color-bg-3); }
+.schedule-cell.cell-extra { background: var(--color-lime-wash); }
+.schedule-cell.cell-freePlay { background: var(--color-warn-wash); }
 .schedule-cell.cell-unavailable { background: var(--color-bg-3); color: var(--color-muted-2); }
 
-.schedule-cell .match-line { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8rpx; }
-.schedule-cell .match-line.doubles { flex-direction: column; gap: 4rpx; }
+.schedule-cell .match-line { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4rpx; }
+.schedule-cell .match-line.doubles { gap: 4rpx; }
 .schedule-cell .match-line.doubles .team-row { display: flex; align-items: center; gap: 6rpx; justify-content: center; }
-.schedule-cell .match-line.doubles .slash { color: var(--color-muted-2); font-size: 22rpx; }
-.schedule-cell .match-line.doubles .vs { font-size: 18rpx; }
-.schedule-cell .match-line.doubles .player { max-width: 88rpx; }
+.schedule-cell .match-line.doubles .slash { color: var(--color-muted-2); font-size: 18rpx; }
+.schedule-cell .match-line .vs { font-size: 16rpx; }
+.schedule-cell .match-line.doubles .player { max-width: 200rpx; padding: 2rpx 8rpx; }
 
 .schedule-cell .player {
-  max-width: 92rpx;
-  padding: 6rpx 8rpx;
-  border-radius: 6rpx;
+  max-width: 320rpx;
+  padding: 4rpx 10rpx;
+  border-radius: var(--radius-sm);
   background: var(--color-bg);
-  border: 1rpx solid var(--color-border);
+  border: 2rpx solid var(--color-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 22rpx;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-ink);
   text-align: center;
+  letter-spacing: 0;
+  line-height: 1.15;
 }
 
 .schedule-cell .vs {

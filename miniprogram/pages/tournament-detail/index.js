@@ -77,12 +77,26 @@ Page({
         })
         .orderBy('seed', 'asc')
         .get()
-      const registrations = (result.data || []).map(reg => {
+      const rawRegs = result.data || []
+
+      // 收集所有 playerId / partnerId 一次性查头像
+      const ids = new Set()
+      rawRegs.forEach(r => {
+        if (r.playerId) ids.add(r.playerId)
+        if (r.partnerId) ids.add(r.partnerId)
+      })
+
+      const avatarMap = await fetchAvatarMap([...ids])
+
+      const registrations = rawRegs.map(reg => {
         const status = reg.registrationStatus || reg.status || 'registered'
         return {
           ...reg,
           displayStatus: status,
-          displayStatusText: status === 'confirmed' ? '已确认' : status === 'withdrew' ? '已退赛' : '已报名'
+          avatarUrl: avatarMap[reg.playerId] || '',
+          partnerAvatarUrl: avatarMap[reg.partnerId || ''] || '',
+          playerInitial: firstChar(reg.playerName),
+          partnerInitial: firstChar(reg.partnerName)
         }
       })
       this.setData({ registrations })
@@ -278,4 +292,27 @@ function playerLabel(p, bye) {
   if (!p) return bye ? 'BYE' : '?'
   if (p.id === 'BYE' || p.name === 'BYE') return 'BYE'
   return (p.name || '') + (p.partnerName ? '/' + p.partnerName : '')
+}
+
+function firstChar(name) {
+  const s = (name || '').trim()
+  return s ? s.charAt(0) : '?'
+}
+
+async function fetchAvatarMap(ids) {
+  if (!ids || ids.length === 0) return {}
+  const db = wx.cloud.database()
+  // 小程序云数据库一次 in 查询限制 ~20，按 20 个一批拉取
+  const chunkSize = 20
+  const map = {}
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize)
+    try {
+      const r = await db.collection('members').where({ _id: db.command.in(chunk) }).field({ avatarUrl: true, name: true }).get()
+      ;(r.data || []).forEach(m => { map[m._id] = m.avatarUrl || '' })
+    } catch (e) {
+      console.error('[tournament-detail] fetchAvatarMap chunk failed', e)
+    }
+  }
+  return map
 }
