@@ -8,11 +8,12 @@
 
 .chart-svg-wrap {
   position: relative;
+  box-sizing: border-box;
 }
 
 .rank-chart-canvas {
   display: block;
-  width: 100%;
+  box-sizing: border-box;
 }
 
 .chart-empty {
@@ -22,6 +23,7 @@
   justify-content: center;
   background: var(--color-bg-2, #fafaf7);
   border-radius: var(--radius-sm, 8rpx);
+  box-sizing: border-box;
 }
 
 .chart-empty-text {
