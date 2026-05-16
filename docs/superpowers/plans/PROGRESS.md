@@ -31,9 +31,8 @@
 
 **👉 Phase 10-1 已部署到目标云环境并完成核心云端验证。** 剩余动作：
 
-1. 用真实会员登录态执行 E2E-1：Mine → Edit Profile → 保存 playStyle/playStyleNote → player-detail 看到字段。
-2. 如要验 E2E-2 的 ▲/▼ 非零趋势，需要临时录入能改变排名的比赛或造一份旧 baseline fixture，验完恢复。
-3. 如要验 E2E-5 的 rank 页空周 fallback UI，需要临时切换到无本周 confirmed 比赛的 fixture；服务端 `weekly-star.current({ now })` fallback 逻辑可单独验证。
+1. 如要验 E2E-2 的 ▲/▼ 非零趋势，需要临时录入能改变排名的比赛或造一份旧 baseline fixture，验完恢复。
+2. 如要验 E2E-5 的 rank 页空周 fallback UI，需要临时切换到无本周 confirmed 比赛的 fixture；服务端 `weekly-star.current({ now })` fallback 逻辑可单独验证。
 
 后续运维 / v3 演进见 spec §9.2。
 
@@ -52,7 +51,8 @@
   - `weekly-star.current({ seasonId:'season_2026', type:'singles' })` 返回 `mode='current'`，star `user_002`，副文 `本周积分 +570 · W-L 10-8`。
   - `points-engine.playerStats({ playerId:'user_002', currentSeasonId:'season_2026' })` 返回 singles 10-8 / 570。
 - DevTools automator smoke：清 compile cache 后 rank 页读取真实云数据；rank list 10 人；weekly-star hero 点击跳到 `pages/player-detail/index?id=user_002`，player-detail 显示 `李四888888` 与 570 points。
-- 仍未执行：E2E-1 需要真实会员登录态；E2E-2 非零趋势与 E2E-5 空周 UI 需要临时造数/fixture，未直接改生产数据。
+- DevTools 真实登录态 E2E-1：当前会员 `3bef321d69cc96880273781a4fd6358b`（美女）进入 edit-profile，保存 `playStyle=baseliner` + 测试备注后，player-detail 立即显示新字段；随后已恢复原值，复核 `playStyle=null`、`playStyleNote=null`。
+- 仍未执行：E2E-2 非零趋势与 E2E-5 空周 UI 需要临时造数/fixture，未直接改生产数据。
 
 ### 2026-05-16 · Phase 10-1 code complete（Rank + Edit Profile）
 
@@ -86,7 +86,8 @@
 - `rank_snapshots` 4 个索引创建与 active 状态确认：✅ 已完成。
 - 真实云端 W0 backfill：✅ 已完成，使用 `season_2026`。
 - Manual E2E-3 weekly-star tap：✅ DevTools automator smoke 已通过。
-- Manual E2E-1/2/5：⚠️ 仍需真实登录态或临时 fixture。
+- Manual E2E-1：✅ 真实登录态已通过，且测试资料已恢复。
+- Manual E2E-2/5：⚠️ 仍需临时 fixture。
 
 Awaiting Phase 10-1 cloud verification, then Phase 10-2 plan kickoff.
 
