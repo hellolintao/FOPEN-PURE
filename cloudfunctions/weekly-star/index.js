@@ -3,12 +3,14 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { getPreviousNaturalWeek } = require('./lib/week-window')
+const { getPreviousNaturalWeek, getCurrentNaturalWeek } = require('./lib/week-window')
+const { resolveCurrentWeeklyStar } = require('./lib/current')
 const { computeWeeklyStarsFromRows } = require('./lib/weekly-star')
 
 exports.main = async (event = {}) => {
   const action = event.action || 'compute'
   try {
+    if (action === 'current') return await current(event)
     if (action === 'latest') return await latest(event)
     if (action === 'compute') return await compute(event)
     return { success: false, error: { code: 'UNKNOWN_ACTION', message: action } }
@@ -25,6 +27,15 @@ async function latest({ seasonId = `s${new Date().getFullYear()}` }) {
     .limit(1)
     .get()).data
   return { success: true, data: rows[0] || null }
+}
+
+async function current({ seasonId = `s${new Date().getFullYear()}`, type = 'singles', now }) {
+  if (type !== 'singles' && type !== 'doubles') {
+    return { success: false, error: { code: 'INVALID_PAYLOAD', message: 'type must be singles|doubles' } }
+  }
+  const week = getCurrentNaturalWeek(now ? new Date(now) : new Date())
+  const data = await resolveCurrentWeeklyStar({ db, seasonId, type, week })
+  return { success: true, data }
 }
 
 async function compute({ seasonId = `s${new Date().getFullYear()}`, now }) {
