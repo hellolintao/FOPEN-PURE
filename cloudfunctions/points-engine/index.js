@@ -175,15 +175,7 @@ async function playerH2HCompat({ playerId, currentSeasonId }) {
 
   if (!currentSeasonId) return { success: true, data: { singles: [], doubles: [] } }
 
-  let rows = []
-  try {
-    rows = (await db.collection('match_results')
-      .where({ seasonId: currentSeasonId, resultStatus: 'confirmed', playerIds: _.in([playerId]) })
-      .limit(1000)
-      .get()).data || []
-  } catch (e) {
-    rows = []
-  }
+  const rows = await fetchH2HRows({ seasonId: currentSeasonId, playerId })
 
   const allOpponentIds = new Set()
   for (const row of rows) {
@@ -211,6 +203,22 @@ async function playerH2HCompat({ playerId, currentSeasonId }) {
       doubles: computeH2H(doublesRows, playerId, membersMap)
     }
   }
+}
+
+async function fetchH2HRows({ seasonId, playerId, pageSize = 100 }) {
+  const out = []
+  for (let skip = 0; ; skip += pageSize) {
+    const page = (await db.collection('match_results')
+      .where({ seasonId, resultStatus: 'confirmed', playerIds: _.in([playerId]) })
+      .orderBy('createTime', 'asc')
+      .orderBy('_id', 'asc')
+      .skip(skip)
+      .limit(pageSize)
+      .get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+  }
+  return out
 }
 
 async function recalculateMatchCompat({ matchId }) {

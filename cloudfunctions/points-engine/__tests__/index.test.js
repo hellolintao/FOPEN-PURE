@@ -421,6 +421,33 @@ describe('playerH2H action', () => {
     expect(res.data.doubles).toEqual([])
   })
 
+  test('aggregates beyond the first page of H2H matches', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a' }, { _id: 'P', name: 'p' })
+    for (let i = 0; i < 1001; i++) {
+      cloud.__rows.match_results.push({
+        _id: `m${String(i).padStart(4, '0')}`,
+        seasonId: 's2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: '2026-05-10',
+        createTime: '2026-05-10',
+        playerIds: ['P', 'A'],
+        pointsAwarded: { entries: [
+          { memberId: 'P', points: 20, role: 'winner' },
+          { memberId: 'A', points: 10, role: 'loser' }
+        ]}
+      })
+    }
+    const { main } = require('../index')
+    const res = await main({ action: 'playerH2H', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.success).toBe(true)
+    expect(res.data.singles).toEqual([
+      { memberId: 'A', name: '甲', avatarUrl: 'a', wins: 1001, losses: 0, lastPlayedAt: '2026-05-10' }
+    ])
+    expect(res.data.doubles).toEqual([])
+  })
+
   test('missing playerId → INVALID_ARG', async () => {
     const { main } = require('../index')
     const res = await main({ action: 'playerH2H', currentSeasonId: 's2026' })
