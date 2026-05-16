@@ -234,3 +234,35 @@ describe('playerStats — winRate', () => {
     expect(res.data.stats.doubles.winRate).toBe(0)
   })
 })
+
+describe('playerStats — currentRank', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+  })
+
+  test('player ranked #2 in singles, unranked in doubles → { singles: 2, doubles: null }', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: 'a' }, { _id: 'B', name: 'b' })
+    cloud.__rows.match_results.push(
+      { _id: 'mA', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-04-01', createTime: '2026-04-01', playerIds: ['A'],
+        pointsAwarded: { entries: [{ memberId: 'A', points: 50, role: 'winner' }] } },
+      { _id: 'mB1', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-04-01', createTime: '2026-04-01', playerIds: ['B'],
+        pointsAwarded: { entries: [{ memberId: 'B', points: 100, role: 'winner' }] } }
+    )
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'A', currentSeasonId: 's2026' })
+    expect(res.data.currentRank.singles).toBe(2)
+    expect(res.data.currentRank.doubles).toBeNull()
+  })
+
+  test('player not on any leaderboard → both ranks null', async () => {
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'GHOST', currentSeasonId: 's2026' })
+    expect(res.data.currentRank).toEqual({ singles: null, doubles: null })
+  })
+})

@@ -96,11 +96,14 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
     singles: { winCount: 0, lossCount: 0, totalPoints: 0, winRate: 0 },
     doubles: { winCount: 0, lossCount: 0, totalPoints: 0, winRate: 0 }
   }
+  const currentRank = { singles: null, doubles: null }
   if (seasonId) {
     for (const t of ['singles', 'doubles']) {
       const list = await aggregateRanks({ db, seasonId, type: t, pageSize: 100 })
-      const me = list.find(x => x.memberId === playerId)
+      const idx = list.findIndex(x => x.memberId === playerId)
+      const me = idx >= 0 ? list[idx] : null
       if (me) {
+        currentRank[t] = idx + 1
         const winCount = me.wins || 0
         const lossCount = me.losses || 0
         const matches = winCount + lossCount
@@ -115,7 +118,7 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
   }
   // recent: 最近 10 场该选手参与的 confirmed match_results
   const recent = await fetchRecentForPlayer(playerId)
-  return { success: true, data: { stats: buckets, recent } }
+  return { success: true, data: { stats: buckets, currentRank, recent } }
 }
 
 async function recalculateMatchCompat({ matchId }) {
