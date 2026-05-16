@@ -139,10 +139,9 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
   ])
   const rankHistory = { singles: rhSingles, doubles: rhDoubles }
   const week = getCurrentNaturalWeek()
-  const weekForDelta = { weekStart: week.weekStart, weekEnd: week.weekEnd }
   const [wsSingles, wsDoubles] = await Promise.all([
-    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId, week: weekForDelta }),
-    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'doubles', playerId, week: weekForDelta })
+    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId, week }),
+    aggregateWeeklyPlayerDelta({ db, seasonId, type: 'doubles', playerId, week })
   ])
   const weeklySnapshot = { singles: wsSingles, doubles: wsDoubles }
   return { success: true, data: { stats: buckets, currentRank, rankHistory, weeklySnapshot, recent } }

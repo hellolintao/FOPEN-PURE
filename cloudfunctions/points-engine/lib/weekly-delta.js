@@ -4,19 +4,33 @@ async function aggregateWeeklyPlayerDelta({ db, seasonId, type, playerId, week }
     return { pointsDelta: 0, wins: 0, losses: 0 }
   }
 
-  const start = week.start || week.weekStart
-  const end = week.end || week.weekEnd
-  const dateClause = _.or([
+  const dateClauses = []
+  if (week.start && week.end) {
+    dateClauses.push(
+      _.and([
+        { confirmedAt: _.gte(week.start) },
+        { confirmedAt: _.lte(week.end) }
+      ]),
+      _.and([
+        { confirmedAt: _.eq(null) },
+        { createTime: _.gte(week.start) },
+        { createTime: _.lte(week.end) }
+      ])
+    )
+  }
+  const stringEnd = `${week.weekEnd}\uffff`
+  dateClauses.push(
     _.and([
-      { confirmedAt: _.gte(start) },
-      { confirmedAt: _.lte(end) }
+      { confirmedAt: _.gte(week.weekStart) },
+      { confirmedAt: _.lte(stringEnd) }
     ]),
     _.and([
       { confirmedAt: _.eq(null) },
-      { createTime: _.gte(start) },
-      { createTime: _.lte(end) }
+      { createTime: _.gte(week.weekStart) },
+      { createTime: _.lte(stringEnd) }
     ])
-  ])
+  )
+  const dateClause = _.or(dateClauses)
 
   const filter = _.and([
     { seasonId },
