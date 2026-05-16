@@ -1,6 +1,8 @@
 {
   "usingComponents": {
-    "skeleton-loader": "/components/skeleton-loader/index"
+    "skeleton-loader": "/components/skeleton-loader/index",
+    "rank-chart": "/components/rank-chart/index",
+    "h2h-row": "/components/h2h-row/index"
   },
   "navigationBarTitleText": "球员详情"
 }
