@@ -120,3 +120,45 @@ test('admin confirmation sheet uses local score drafts instead of loading submit
     }],
   })
 })
+
+test('member bottom button opens submit sheet with dirty local drafts', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {
+    isAdmin: false,
+    tournamentId: 't1',
+    tournament: { _id: 't1', name: '周赛', format: 'regular' },
+    rowsByRound: [{ round: 1, matches: [matchA] }],
+    draftMap: {
+      m1: {
+        matchId: 'm1',
+        canEdit: true,
+        filled: true,
+        dirty: true,
+        isConfirmed: false,
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      },
+    },
+  })
+
+  ctx.onPlayerBatchSheet()
+
+  expect(ctx.data.sheet).toMatchObject({
+    visible: true,
+    title: '提交比分',
+    mode: 'submit',
+    items: [{ matchId: 'result_t1_m1', sourceMatchId: 'm1' }],
+  })
+})
+
+test('sheet close hides sheet and refreshes rows', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {
+    sheet: { visible: true, title: '', mode: 'submit', items: [], result: null, requestId: 'req' },
+  })
+  ctx.refresh = jest.fn()
+
+  ctx.onSheetClose()
+
+  expect(ctx.data.sheet.visible).toBe(false)
+  expect(ctx.refresh).toHaveBeenCalled()
+})
