@@ -38,7 +38,12 @@ async function aggregateRanks({ db, seasonId, type, pageSize = 100, asOf = null 
 
   return [...acc.entries()]
     .map(([memberId, v]) => ({ memberId, ...v }))
-    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
+      if (b.wins !== a.wins) return b.wins - a.wins
+      if (a.losses !== b.losses) return a.losses - b.losses
+      return a.memberId < b.memberId ? -1 : (a.memberId > b.memberId ? 1 : 0)
+    })
 }
 
 async function pageCollection({ db, collectionName, baseFilter, limit, visit, command }) {
