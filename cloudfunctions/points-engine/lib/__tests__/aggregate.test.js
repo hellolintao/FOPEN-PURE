@@ -167,6 +167,25 @@ describe('aggregateRanks', () => {
     expect(M0.wins).toBe(2)
   })
 
+  test('E2E fixture ranking combines match winLoss and placement points', async () => {
+    const seasonId = 'season_2026'
+    const db = makeFakeDb({
+      matchResults: [
+        { _id: 'm1', seasonId, tournamentType: 'singles', resultStatus: 'confirmed', createTime: new Date('2026-05-17T10:00:00Z'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }, { memberId: 'B', points: 10, role: 'loser' }] } },
+        { _id: 'm2', seasonId, tournamentType: 'singles', resultStatus: 'confirmed', createTime: new Date('2026-05-17T11:00:00Z'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }, { memberId: 'C', points: 10, role: 'loser' }] } },
+      ],
+      tournamentPoints: [
+        { _id: 'tp_A', seasonId, tournamentType: 'singles', memberId: 'A', points: 100, rank: 'champion', createTime: new Date('2026-05-17T12:00:00Z') },
+        { _id: 'tp_C', seasonId, tournamentType: 'singles', memberId: 'C', points: 60, rank: 'runnerUp', createTime: new Date('2026-05-17T12:00:00Z') },
+      ],
+    })
+    const list = await aggregateRanks({ db, seasonId, type: 'singles', pageSize: 100 })
+    expect(list[0]).toMatchObject({ memberId: 'A', totalPoints: 140, wins: 2 })
+    expect(list.find(r => r.memberId === 'C')).toMatchObject({ totalPoints: 70, losses: 1 })
+  })
+
   test('sort by totalPoints desc', async () => {
     const matches = generateConfirmedMatches('S1', 'singles', 10)
     const db = makeFakeDb({ matchResults: matches, tournamentPoints: [] })

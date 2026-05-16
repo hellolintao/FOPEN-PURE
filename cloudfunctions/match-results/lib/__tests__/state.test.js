@@ -118,6 +118,41 @@ describe('submitResult', () => {
     expect(r.pointsAwarded.entries.find(e => e.memberId === 'A').role).toBe('winner')
   })
 
+  test('regular doubles confirmation awards both winners and both losers', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = { ...seed.tournaments[0], _id: 'TD', type: 'doubles', format: 'regular' }
+    seed.match_results = [{
+      _id: 'result_TD_d1',
+      tournamentId: 'TD',
+      sourceMatchId: 'd1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'A', partnerId: 'B' },
+      player2: { id: 'C', partnerId: 'D' },
+      playerIds: ['A', 'B', 'C', 'D'],
+      resultStatus: 'pending',
+      tournamentType: 'doubles',
+      seasonId: 'S1',
+      pointsAwarded: null,
+    }]
+    seed.tournament_registrations = ['A', 'B', 'C', 'D'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TD', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'd1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    const row = db.__all().match_results[0]
+    expect(row.pointsAwarded.entries.filter(e => e.role === 'winner').map(e => e.memberId)).toEqual(['A', 'B'])
+    expect(row.pointsAwarded.entries.filter(e => e.role === 'loser').map(e => e.memberId)).toEqual(['C', 'D'])
+  })
+
+  test('regular singles tiebreak 5-7 awards player2 as winner', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+    await svc.submitResult({ matchId: 'r1m1', score: { sets: [{ a: 3, b: 3 }], tiebreak: '5-7' }, submitter: { _id: 'admin1', isAdmin: true } })
+    const row = db.__all().match_results.find(x => x._id === 'result_T1_r1m1')
+    expect(row.winner).toEqual({ id: 'B' })
+  })
+
   test('pending → player submit (是参赛者) → submitted（无 award）', async () => {
     const db = makeDb(seed4Knockout())
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })

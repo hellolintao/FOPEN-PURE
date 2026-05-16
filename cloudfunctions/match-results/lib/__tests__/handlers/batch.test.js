@@ -220,6 +220,22 @@ test('batchSubmit INVALID_SCORE: bad score structure', async () => {
   expect(result.failures[0].code).toBe('INVALID_SCORE')
 })
 
+test('batchSubmit accepts 3-3 tiebreak score using current string schema', async () => {
+  const ctx = makeSubmitCtx({
+    matches: [{ _id: 'mr_tb', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+  ctx.validateScore = (a, b, tiebreak) => {
+    expect([a, b, tiebreak]).toEqual([3, 3, '5-7'])
+    return { valid: true, winner: 'b' }
+  }
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_tb', score: { sets: [{ a: 3, b: 3 }], tiebreak: '5-7' } }],
+    requestId: 'req_tb',
+  })
+  expect(result.successIds).toEqual(['mr_tb'])
+  expect(ctx._state.matchesById.mr_tb.score.tiebreak).toBe('5-7')
+})
+
 test('batchAdminSave confirms pending matches with supplied scores', async () => {
   const ctx = makeCtx({
     matches: [
@@ -251,4 +267,14 @@ test('batchAdminSave confirms pending matches with supplied scores', async () =>
     resultStatus: 'confirmed',
     score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
   })
+})
+
+test('batchAdminSave refuses non-admin caller before validating scores', async () => {
+  const ctx = makeCtx({ matches: [{ _id: 'mr_a', resultStatus: 'pending' }], isAdmin: false })
+  ctx.validateScore = jest.fn()
+  await expect(batchAdminSave(ctx, {
+    matches: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_admin_forbidden',
+  })).rejects.toMatchObject({ code: 'FORBIDDEN' })
+  expect(ctx.validateScore).not.toHaveBeenCalled()
 })

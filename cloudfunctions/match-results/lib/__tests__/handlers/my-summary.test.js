@@ -67,6 +67,20 @@ test('mySummary confirmed pointsEarned aggregates only my entries', async () => 
   expect(result.confirmed[0].pointsEarned).toBe(20)  // 15 + 5
 })
 
+test('mySummary treats admin caller as player and does not include non-participant pending admin work', async () => {
+  const ctx = makeCtx({
+    memberId: 'admin1',
+    allMatches: [
+      { _id: 'mine_pending', tournamentId: 't1', resultStatus: 'pending', playerIds: ['admin1', 'mA'], round: 1, position: 1, player1: { name: 'Admin' }, player2: { name: 'A' } },
+      { _id: 'other_submitted', tournamentId: 't1', resultStatus: 'submitted', playerIds: ['mB', 'mC'], round: 1, position: 2, score: { sets: [{ a: 4, b: 2 }], tiebreak: null } },
+    ],
+    tournaments: { t1: { _id: 't1', name: 'E2E' } },
+  })
+  const result = await mySummary(ctx, { historyLimit: 10 })
+  expect(result.pending.map(x => x.matchId)).toEqual(['mine_pending'])
+  expect(result.submitted).toEqual([])
+})
+
 test('mySummary respects historyLimit', async () => {
   const matches = Array.from({ length: 15 }).map((_, i) => ({
     _id: `mr_${i}`, tournamentId: 't1', resultStatus: 'confirmed', playerIds: ['mA'],

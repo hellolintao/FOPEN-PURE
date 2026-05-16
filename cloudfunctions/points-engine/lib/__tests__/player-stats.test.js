@@ -46,6 +46,10 @@ describe('formatScore', () => {
     expect(formatScore({ sets: [{ a: 4, b: 2 }], tiebreak: null })).toBe('4-2')
     expect(formatScore({ sets: [{ a: 3, b: 3 }], tiebreak: '7-5' })).toBe('3-3 (7-5)')
   })
+
+  test('formatScore keeps current tiebreak string schema', () => {
+    expect(formatScore({ sets: [{ a: 3, b: 3 }], tiebreak: '5-7' })).toBe('3-3 (5-7)')
+  })
 })
 
 describe('enrichRecent', () => {
