@@ -36,7 +36,7 @@ async function mainCli() {
   const cloud = loadCloudSdk()
   cloud.init({ env: process.env.WX_CLOUD_ENV || cloud.DYNAMIC_CURRENT_ENV })
   const db = cloud.database()
-  const seasonId = process.env.SEASON_ID || `s${new Date().getFullYear()}`
+  const seasonId = process.env.SEASON_ID || `season_${new Date().getFullYear()}`
   const { total } = await runBackfill({ db, seasonId, now: new Date() })
   console.log(`[backfill] wrote ${total} baseline rows for seasonId=${seasonId}`)
 }

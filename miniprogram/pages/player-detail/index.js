@@ -24,7 +24,7 @@ Page({
     try {
       const [playerRes, statsRes] = await Promise.all([
         callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
-        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: `s${new Date().getFullYear()}` } })
+        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: `season_${new Date().getFullYear()}` } })
       ]);
       this.setData({
         player: playerRes.result?.data || null,

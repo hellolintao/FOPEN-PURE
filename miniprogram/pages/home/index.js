@@ -42,7 +42,7 @@ Page({
   },
 
   _getCurrentSeasonId() {
-    return `s${this.data.seasonYear}`;
+    return `season_${this.data.seasonYear}`;
   },
 
   onQuickAction(e) {

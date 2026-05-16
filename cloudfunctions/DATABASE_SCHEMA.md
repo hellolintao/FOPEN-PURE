@@ -49,7 +49,7 @@
 | Field | Type | Description |
 |---|---|---|
 | `_id` | string | 推荐格式 `rs_<seasonId>_<weekId>_<type>_<memberId>`；唯一索引由 `(seasonId, type, weekId, memberId)` 兜底 |
-| `seasonId` | string | 赛季，例 `s2026` |
+| `seasonId` | string | 赛季，例 `season_2026`（与现有 `seasons._id` 约定一致） |
 | `weekId` | string | weekly = `ws_YYYY-MM-DD`（Monday key，沿用 `getWeekId`）；baseline = `baseline_YYYY-MM-DD` |
 | `weekStart` | string | yyyy-mm-dd（周一）；baseline 行使用当天日期 |
 | `weekEnd` | string | yyyy-mm-dd（周日）；baseline 行使用当天日期 |

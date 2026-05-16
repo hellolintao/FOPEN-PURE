@@ -23,7 +23,7 @@ exports.main = async (event = {}) => {
   }
 }
 
-async function latest({ seasonId = `s${new Date().getFullYear()}` }) {
+async function latest({ seasonId = `season_${new Date().getFullYear()}` }) {
   const rows = (await db.collection('weekly_stars')
     .where({ seasonId })
     .orderBy('weekStart', 'desc')
@@ -32,7 +32,7 @@ async function latest({ seasonId = `s${new Date().getFullYear()}` }) {
   return { success: true, data: rows[0] || null }
 }
 
-async function current({ seasonId = `s${new Date().getFullYear()}`, type = 'singles', now }) {
+async function current({ seasonId = `season_${new Date().getFullYear()}`, type = 'singles', now }) {
   if (type !== 'singles' && type !== 'doubles') {
     return { success: false, error: { code: 'INVALID_PAYLOAD', message: 'type must be singles|doubles' } }
   }
@@ -41,7 +41,7 @@ async function current({ seasonId = `s${new Date().getFullYear()}`, type = 'sing
   return { success: true, data }
 }
 
-async function recomputeRankSnapshots({ seasonId = `s${new Date().getFullYear()}`, weekStart, baseline = false, now }) {
+async function recomputeRankSnapshots({ seasonId = `season_${new Date().getFullYear()}`, weekStart, baseline = false, now }) {
   const admin = await resolveAdmin()
   if (!admin) return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
 
@@ -91,7 +91,7 @@ async function resolveAdmin() {
   return isAdmin ? member : null
 }
 
-async function compute({ seasonId = `s${new Date().getFullYear()}`, now }) {
+async function compute({ seasonId = `season_${new Date().getFullYear()}`, now }) {
   const week = getPreviousNaturalWeek(now ? new Date(now) : new Date())
   const [matches, placementRows] = await Promise.all([
     fetchAll('match_results', { seasonId, resultStatus: 'confirmed' }),

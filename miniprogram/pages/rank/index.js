@@ -27,7 +27,7 @@ Page({
         data: {
           action: 'rankList',
           type: this.data.activeTab,
-          currentSeasonId: `s${this.data.seasonYear}`
+          currentSeasonId: this._getCurrentSeasonId()
         }
       })
       const list = res.result?.data?.rankList || []
@@ -50,7 +50,7 @@ Page({
         name: 'weekly-star',
         data: {
           action: 'current',
-          seasonId: `s${this.data.seasonYear}`,
+          seasonId: this._getCurrentSeasonId(),
           type: this.data.activeTab
         }
       })
@@ -68,6 +68,10 @@ Page({
     this.setData({ activeTab: tab })
     this.loadRank()
     this.loadHero()
+  },
+
+  _getCurrentSeasonId() {
+    return `season_${this.data.seasonYear}`
   },
 
   onPlayerTap(e) {

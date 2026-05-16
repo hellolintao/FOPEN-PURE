@@ -6,11 +6,11 @@ const PAGE_SIZE = 1000
 
 async function main() {
   const env = process.env.FOPEN_CLOUD_ENV
-  const seasonId = process.env.FOPEN_SEASON_ID || `s${new Date().getFullYear()}`
+  const seasonId = process.env.FOPEN_SEASON_ID || `season_${new Date().getFullYear()}`
 
   if (!env) {
     console.error('[abort] FOPEN_CLOUD_ENV is required')
-    console.error('usage: FOPEN_CLOUD_ENV=<envId> FOPEN_SEASON_ID=s2026 node scripts/audit-polish-data.js')
+    console.error('usage: FOPEN_CLOUD_ENV=<envId> FOPEN_SEASON_ID=season_2026 node scripts/audit-polish-data.js')
     process.exit(1)
   }
 
