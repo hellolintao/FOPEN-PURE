@@ -55,6 +55,35 @@
         maxlength="11"
       />
     </view>
+
+    <view class="form-item">
+      <view class="field-label">
+        <text class="num field-num">04</text>
+        <text class="field-text">打法 <text class="optional">(选填)</text></text>
+      </view>
+      <radio-group class="play-style-group" bindchange="onPlayStyleChange">
+        <label class="ps-radio" wx:for="{{playStyleOptions}}" wx:key="value">
+          <radio value="{{item.value}}" checked="{{formData.playStyle === item.value}}" />
+          <text class="ps-radio-label">{{item.label}}</text>
+        </label>
+      </radio-group>
+    </view>
+
+    <view class="form-item">
+      <view class="field-label">
+        <text class="num field-num">05</text>
+        <text class="field-text">打法备注 <text class="optional">(选填)</text></text>
+      </view>
+      <textarea
+        class="form-textarea"
+        placeholder="例：贝克汉心理 / 喜欢正手暴扣 / 接发抢攻"
+        placeholder-class="form-placeholder"
+        maxlength="{{noteMax}}"
+        value="{{formData.playStyleNote}}"
+        bindinput="onPlayStyleNoteInput"
+      />
+      <text class="form-counter">{{formData.playStyleNote.length || 0}}/{{noteMax}}</text>
+    </view>
   </view>
 
   <!-- FOOTER -->
