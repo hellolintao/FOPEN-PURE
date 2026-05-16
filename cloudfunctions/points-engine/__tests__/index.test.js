@@ -278,20 +278,34 @@ describe('playerStats — rankHistory', () => {
   test('returns up to 12 weeks ordered weekStart ASC for both types', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    const seededRows = []
     for (let i = 0; i < 14; i++) {
       const day = `2026-0${Math.floor((i + 1) / 4) + 1}-${String((i + 1) * 2).padStart(2, '0')}`
-      cloud.__rows.rank_snapshots.push({
+      const row = {
         _id: `s_${i}`, seasonId: 's2026', type: 'singles', memberId: 'P',
         weekId: `ws_${day}`, weekStart: day, weekEnd: day,
         effectiveAt: new Date(day), computedAt: new Date(day),
         rank: 10 - i, totalPoints: 100 + i, wins: i, losses: 0, snapshotKind: 'weekly'
-      })
+      }
+      seededRows.push(row)
+      cloud.__rows.rank_snapshots.push(row)
     }
     const { main } = require('../index')
     const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    const expected = [...seededRows]
+      .sort((a, b) => (a.weekStart < b.weekStart ? 1 : a.weekStart > b.weekStart ? -1 : 0))
+      .slice(0, 12)
+      .map(r => ({ weekStart: r.weekStart, rank: r.rank }))
+      .sort((a, b) => (a.weekStart < b.weekStart ? -1 : a.weekStart > b.weekStart ? 1 : 0))
+
     expect(res.data.rankHistory.singles).toHaveLength(12)
-    expect(res.data.rankHistory.singles[0].weekStart < res.data.rankHistory.singles[11].weekStart).toBe(true)
-    expect(Object.keys(res.data.rankHistory.singles[0]).sort()).toEqual(['rank', 'weekStart'])
+    expect(res.data.rankHistory.singles).toEqual(expected)
+    expect(res.data.rankHistory.singles.map(r => r.weekStart)).toEqual(
+      [...res.data.rankHistory.singles.map(r => r.weekStart)].sort()
+    )
+    res.data.rankHistory.singles.forEach(row => {
+      expect(Object.keys(row).sort()).toEqual(['rank', 'weekStart'])
+    })
     expect(res.data.rankHistory.doubles).toEqual([])
   })
 
