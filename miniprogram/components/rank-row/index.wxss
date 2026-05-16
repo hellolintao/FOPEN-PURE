@@ -1,9 +1,9 @@
 .rank-row {
   display: grid;
-  grid-template-columns: 96rpx 80rpx 1fr 96rpx;
+  grid-template-columns: 64rpx 1fr 80rpx 80rpx 80rpx;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-3);
+  gap: 12rpx;
+  padding: 16rpx 24rpx;
   background: transparent;
   position: relative;
 }
@@ -21,22 +21,11 @@
 
 .rank-row.highlight {
   background: var(--color-lime-wash);
+  border-left: 4rpx solid var(--color-lime);
 }
 
 .rank-row.highlight::before {
   background: transparent;
-}
-
-.rank-row.highlight::after {
-  /* highlight 行右侧贴一个 lime 印章块（非装饰条，是 stamp） */
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 12rpx;
-  height: 60%;
-  background: var(--color-lime);
-  transform: translateY(-50%);
 }
 
 .rank-num-cell {
@@ -46,82 +35,73 @@
 
 .rank-num {
   font-family: var(--font-family-num);
-  font-size: 56rpx;
+  font-size: 32rpx;
   font-weight: 900;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
+  line-height: 1;
+  letter-spacing: 0;
   color: var(--color-ink);
 }
 
-.avatar {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: var(--color-bg-3);
-  border: 2rpx solid var(--color-ink);
-}
-
-.info {
+.player-cell {
   display: flex;
-  flex-direction: column;
-  gap: 4rpx;
+  align-items: center;
+  gap: 12rpx;
   min-width: 0;
 }
 
-.info .name {
+.player-cell .avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: var(--color-bg-3);
+  border: 2rpx solid var(--color-ink);
+  flex: none;
+}
+
+.player-cell .name {
   font-size: 28rpx;
   font-weight: 700;
   color: var(--color-ink);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.meta-row {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6rpx;
+.winrate-cell,
+.pts-cell,
+.trend-cell {
+  text-align: right;
 }
 
-.meta-points {
-  font-family: var(--font-family-num);
+.winrate {
   font-size: 26rpx;
-  font-weight: 800;
-  color: var(--color-ink-3);
-  letter-spacing: -0.01em;
-}
-
-.meta-points-label {
-  font-size: 18rpx;
   font-weight: 700;
-  color: var(--color-muted-2);
-  letter-spacing: 0.16em;
+  color: var(--color-ink-3);
+  letter-spacing: 0;
 }
 
-.trend {
+.pts {
+  font-size: 28rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: 0;
+}
+
+.trend-cell {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6rpx;
-  min-width: 96rpx;
 }
 
 .trend-arrow {
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 700;
   line-height: 1;
 }
 
-.trend-num {
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
 .trend-up { color: var(--color-success); }
-.trend-up + .trend-num { color: var(--color-success); }
-
 .trend-down { color: var(--color-danger); }
-.trend-down + .trend-num { color: var(--color-danger); }
 
 .trend-flat {
   color: var(--color-muted-2);

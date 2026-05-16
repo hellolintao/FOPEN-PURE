@@ -1,26 +1,27 @@
 <view class="rank-row {{highlight ? 'highlight' : ''}}" bindtap="onTap">
   <view class="rank-num-cell">
-    <text class="rank-num">{{rank}}</text>
+    <text class="rank-num num">{{rank < 10 ? '0' + rank : rank}}</text>
   </view>
 
-  <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
-
-  <view class="info">
+  <view class="player-cell">
+    <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
     <text class="name">{{name}}</text>
-    <view class="meta-row">
-      <text class="meta-points">{{utr || '—'}}</text>
-      <text class="meta-points-label">PTS</text>
-    </view>
   </view>
 
-  <view class="trend">
-    <block wx:if="{{trend > 0}}">
-      <text class="trend-arrow trend-up">▲</text>
-      <text class="trend-num num">{{trend}}</text>
+  <view class="winrate-cell">
+    <text class="winrate num">{{winRatePct || '—'}}</text>
+  </view>
+
+  <view class="pts-cell">
+    <text class="pts num">{{totalPoints}}</text>
+  </view>
+
+  <view class="trend-cell">
+    <block wx:if="{{trendDelta !== null && trendDelta > 0}}">
+      <text class="trend-arrow trend-up">▲{{trendDelta}}</text>
     </block>
-    <block wx:elif="{{trend < 0}}">
-      <text class="trend-arrow trend-down">▼</text>
-      <text class="trend-num num">{{-trend}}</text>
+    <block wx:elif="{{trendDelta !== null && trendDelta < 0}}">
+      <text class="trend-arrow trend-down">▼{{-trendDelta}}</text>
     </block>
     <text wx:else class="trend-flat">—</text>
   </view>
