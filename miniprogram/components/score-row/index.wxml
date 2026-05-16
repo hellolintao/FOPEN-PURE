@@ -57,6 +57,6 @@
 
     <view wx:if="{{validationError}}" class="err">{{validationError}}</view>
 
-    <button class="submit" bindtap="onSubmit" disabled="{{submitDisabled}}" type="primary">{{submitLabel}}</button>
+    <button class="submit {{submitDisabled ? 'submit-disabled' : ''}}" bindtap="onSubmit" disabled="{{submitDisabled}}" type="primary">{{submitLabel}}</button>
   </view>
 </view>

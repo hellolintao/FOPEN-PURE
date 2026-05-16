@@ -16,16 +16,21 @@ Page({
     bottomCount: 0,
     bottomDisabled: true,
     anchorMatchId: '',
+    legacyMatchResultId: '',
     loading: false,
     empty: false,
+    error: '',
     sheet: { visible: false, title: '', mode: 'confirm', items: [], result: null, requestId: null }
   },
 
   onLoad(options) {
-    const tid = options.tournamentId || options.id
+    const tid = options.tournamentId || (options.id && options.id.indexOf('tournament_') === 0 ? options.id : '')
     if (!tid) {
-      wx.showToast({ title: '缺少 tournamentId', icon: 'none' })
-      setTimeout(() => wx.navigateBack(), 1500)
+      if (options.id) {
+        this.setData({ legacyMatchResultId: options.id })
+        return
+      }
+      this.setData({ error: '缺少 tournamentId' })
       return
     }
     this.setData({
@@ -36,9 +41,37 @@ Page({
   },
 
   async onShow() {
+    if (!this.data.tournamentId && this.data.legacyMatchResultId) {
+      await this.resolveLegacyEntry()
+    }
     if (!this.data.tournamentId) return
     await this.syncIdentity()
     this.refresh()
+  },
+
+  async resolveLegacyEntry() {
+    this.setData({ loading: true, error: '' })
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'get', id: this.data.legacyMatchResultId }
+      })
+      const row = res && res.result && res.result.data
+      if (!row || !row.tournamentId) {
+        this.setData({ error: '比赛数据异常' })
+        return
+      }
+      this.setData({
+        tournamentId: row.tournamentId,
+        anchorMatchId: row.sourceMatchId || row._id || '',
+        legacyMatchResultId: ''
+      })
+    } catch (e) {
+      console.error('[tournament-score] resolveLegacyEntry', e)
+      this.setData({ error: '比赛数据异常' })
+    } finally {
+      this.setData({ loading: false })
+    }
   },
 
   async syncIdentity() {
@@ -53,7 +86,7 @@ Page({
   },
 
   async refresh() {
-    this.setData({ loading: true, draftMap: {}, bottomDisabled: true, bottomCount: 0 })
+    this.setData({ loading: true, error: '', draftMap: {}, bottomDisabled: true, bottomCount: 0 })
     try {
       const [tRes, rRes] = await Promise.all([
         wx.cloud.callFunction({ name: 'tournaments', data: { action: 'get', id: this.data.tournamentId } }),
@@ -87,7 +120,8 @@ Page({
         submittedCount,
         pendingCount,
         totalCount: sorted.length,
-        empty: sorted.length === 0
+        empty: sorted.length === 0,
+        error: sorted.length === 0 ? '比赛数据异常' : ''
       })
       this.recomputeBottomState()
 
@@ -99,7 +133,7 @@ Page({
       }
     } catch (e) {
       console.error('[tournament-score] refresh', e)
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      this.setData({ error: '比赛数据异常' })
     } finally {
       this.setData({ loading: false })
     }
@@ -214,7 +248,40 @@ Page({
   },
 
   onConfirmAll() {
-    this.onAdminBatchSheet()
+    if (this.data.isAdmin) {
+      this.onAdminBatchSheet()
+      return
+    }
+    this.onPlayerBatchSheet()
+  },
+
+  onPlayerBatchSheet() {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    const rows = this.getAllMatches()
+    const rowBySourceId = {}
+    for (const row of rows) rowBySourceId[row.sourceMatchId] = row
+    const tournament = this.data.tournament || {}
+    const items = this.collectActionableDrafts().map(d => {
+      const row = rowBySourceId[d.matchId]
+      if (!row || !row._id) return null
+      return {
+        matchId: row._id,
+        sourceMatchId: row.sourceMatchId,
+        tournamentId: row.tournamentId,
+        tournamentName: tournament.name || row.tournamentId || '',
+        round: row.round,
+        position: row.position,
+        scheduledStartLabel: '',
+        p1: row.player1 || {},
+        p2: row.player2 || {},
+        score: d.score,
+        isDoubles: !!(row.player1 && row.player1.partnerName)
+      }
+    }).filter(Boolean)
+    if (items.length === 0) return
+    this.setData({
+      sheet: { visible: true, title: '提交比分', mode: 'submit', items, result: null, requestId }
+    })
   },
 
   async onAdminBatchSheet() {
@@ -241,7 +308,11 @@ Page({
       }))
       const res = await call('match-results', { action: 'batchConfirm', payload: { matches, requestId: this.data.sheet.requestId } })
       this._applySheetResult(res, items)
+      return
     }
+    const submissions = items.map(it => ({ matchId: it.matchId, score: it.score }))
+    const res = await call('match-results', { action: 'batchSubmit', payload: { submissions, requestId: this.data.sheet.requestId } })
+    this._applySheetResult(res, items)
   },
 
   _applySheetResult(res, items) {
@@ -268,6 +339,13 @@ Page({
     const { failureIds } = e.detail
     const lastFailures = (this.data.sheet.result && this.data.sheet.result.failures) || []
     const isBatchLevel = lastFailures.every(f => ['BATCH_TIMEOUT', 'NETWORK', 'TIMEOUT'].includes(f.code))
+    if (this.data.sheet.mode === 'submit') {
+      const items = this.data.sheet.items.filter(it => isBatchLevel || failureIds.includes(it.matchId))
+      const submissions = items.map(it => ({ matchId: it.matchId, score: it.score }))
+      const res = await call('match-results', { action: 'batchSubmit', payload: { submissions, requestId: this.data.sheet.requestId } })
+      this._applySheetResult(res, items)
+      return
+    }
     if (isBatchLevel) {
       const items = this.data.sheet.items
       const matches = items.map(it => ({

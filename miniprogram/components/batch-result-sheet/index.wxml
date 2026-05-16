@@ -35,7 +35,7 @@
       <view wx:for="{{items}}" wx:key="matchId" class="brs-card {{result.successIds.indexOf(item.matchId) >= 0 ? 'brs-card--ok' : 'brs-card--err'}}">
         <view class="brs-card-head">
           <text>{{item.tournamentName}} · {{item.round}}-{{item.position}}</text>
-          <status-tag wx:if="{{result.successIds.indexOf(item.matchId) >= 0}}" type="ok" text="✓ 已确认" />
+          <status-tag wx:if="{{result.successIds.indexOf(item.matchId) >= 0}}" type="ok" text="{{mode === 'submit' ? '✓ 已提交' : '✓ 已确认'}}" />
         </view>
         <view class="brs-card-body">
           <text class="brs-player">{{item.p1.name}}</text>

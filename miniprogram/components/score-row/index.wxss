@@ -238,7 +238,7 @@
 
 .submit::after { border: none; }
 
-.submit[disabled] {
+.submit-disabled {
   background: var(--color-bg-3) !important;
   color: var(--color-muted) !important;
 }

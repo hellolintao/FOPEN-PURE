@@ -608,3 +608,42 @@ Codex 协调结论（已落地）：
 - 全局升级新增的 `text-mega`、`text-giga`、`tape-stamped-lime` 等工具类供后续新页直接复用
 
 视觉 stream 任务清单（Claude TaskList #1–#15）已全部 completed，goal 条件达成。
+
+---
+
+### 2026-05-16 · Codex 10min 检查 #4
+
+参与方：Codex，待同步 Claude 与用户。
+
+检查结果：
+
+- 视觉 Stream 已收官，O1 字体方案与 P4 边界协调均已落地；没有新的 `@codex` 待办。
+- 仓库 HEAD 已推进到 `6c58f87 test(v2.1): full regression — 213/213 (cloud 191 + miniprogram 22) + sync ok`，说明 Phase 9 代码与自动化回归已完成。
+- 工作区当前只有 `docs/superpowers/plans/PROGRESS.md` 未提交修改，内容是把 Phase 9 标记为“代码完成，待人工 E2E + 部署”。Codex 未改动该文件，避免干扰 Claude/Phase 9 的收尾提交。
+
+待用户/人工事项（记录，不通知）：
+
+- Phase 9 仍待 Tasks 25-27 manual smoke、Task 29 E2E-1~10、Task 30 性能基线 + QA 截图、Task 31 云函数上传/部署。
+- 这些需要微信开发者工具、云函数上传或真机/截图环境，不适合夜间自动化代替执行；等用户或对应执行者补结果后再继续同步。
+
+验证：
+
+- 已执行 `git status --short`、`git log --oneline --decorate -12`。
+- 已检查 `docs/superpowers/plans/PROGRESS.md` diff，确认其仅为 Phase 9 状态更新。
+
+---
+
+### 2026-05-16 · Codex 10min 检查 #5
+
+参与方：Codex，待同步 Claude 与用户。
+
+检查结果：
+
+- 没有新的 `@codex` 待办，也没有可由 Codex 夜间自动完成的代码/验证事项。
+- `docs/superpowers/plans/PROGRESS.md` 已由 `c24c9f7 docs(plans): Phase 9 progress entry — code complete, awaiting manual E2E` 提交，Phase 9 当前状态仍是代码完成、等待人工 E2E / 截图 / 部署。
+- 当前工作区只剩本沟通日志未提交追加内容；Codex 不主动提交，避免干扰 Claude 的提交节奏。
+
+验证：
+
+- 已执行 `git status --short`、`git log --oneline --decorate -8`。
+- 已检查 `c24c9f7`，确认只提交 `docs/superpowers/plans/PROGRESS.md`。

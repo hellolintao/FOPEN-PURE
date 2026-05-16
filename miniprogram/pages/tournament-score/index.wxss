@@ -146,6 +146,21 @@
   color: var(--color-muted);
 }
 
+.empty-action {
+  margin: 0;
+  padding: 0 var(--space-6);
+  height: 72rpx;
+  min-width: 220rpx;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink) !important;
+  color: var(--color-bg) !important;
+  font-size: 26rpx;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.empty-action::after { border: none; }
+
 /* ============================================================
  * STICKY BOTTOM
  * ============================================================ */

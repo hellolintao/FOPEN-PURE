@@ -115,8 +115,7 @@
 }
 
 /* 抑制动画 — 用户开启系统减少动效时手动加 */
-.no-anim,
-.no-anim * {
+.no-anim {
   animation: none !important;
   transition: none !important;
 }
