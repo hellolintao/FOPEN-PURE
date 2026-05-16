@@ -89,6 +89,19 @@ async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {
   return out
 }
 
+async function fetchRankHistory({ seasonId, type, memberId, limit = 12 }) {
+  if (!seasonId) return []
+  const res = await db.collection('rank_snapshots')
+    .where({ seasonId, type, memberId })
+    .orderBy('weekStart', 'desc')
+    .limit(limit)
+    .get()
+  const rows = (res && res.data) || []
+  return rows
+    .map(r => ({ weekStart: r.weekStart, rank: r.rank }))
+    .sort((a, b) => (a.weekStart < b.weekStart ? -1 : a.weekStart > b.weekStart ? 1 : 0))
+}
+
 async function playerStatsCompat({ playerId, currentSeasonId }) {
   if (!playerId) return { success: false, error: { code: 'INVALID_ARG', message: 'playerId 必填' } }
   const seasonId = currentSeasonId
@@ -118,7 +131,12 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
   }
   // recent: 最近 10 场该选手参与的 confirmed match_results
   const recent = await fetchRecentForPlayer(playerId)
-  return { success: true, data: { stats: buckets, currentRank, recent } }
+  const [rhSingles, rhDoubles] = await Promise.all([
+    fetchRankHistory({ seasonId, type: 'singles', memberId: playerId }),
+    fetchRankHistory({ seasonId, type: 'doubles', memberId: playerId })
+  ])
+  const rankHistory = { singles: rhSingles, doubles: rhDoubles }
+  return { success: true, data: { stats: buckets, currentRank, recent, rankHistory } }
 }
 
 async function recalculateMatchCompat({ matchId }) {

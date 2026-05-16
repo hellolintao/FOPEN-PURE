@@ -266,3 +266,46 @@ describe('playerStats — currentRank', () => {
     expect(res.data.currentRank).toEqual({ singles: null, doubles: null })
   })
 })
+
+describe('playerStats — rankHistory', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+  })
+
+  test('returns up to 12 weeks ordered weekStart ASC for both types', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    for (let i = 0; i < 14; i++) {
+      const day = `2026-0${Math.floor((i + 1) / 4) + 1}-${String((i + 1) * 2).padStart(2, '0')}`
+      cloud.__rows.rank_snapshots.push({
+        _id: `s_${i}`, seasonId: 's2026', type: 'singles', memberId: 'P',
+        weekId: `ws_${day}`, weekStart: day, weekEnd: day,
+        effectiveAt: new Date(day), computedAt: new Date(day),
+        rank: 10 - i, totalPoints: 100 + i, wins: i, losses: 0, snapshotKind: 'weekly'
+      })
+    }
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.rankHistory.singles).toHaveLength(12)
+    expect(res.data.rankHistory.singles[0].weekStart < res.data.rankHistory.singles[11].weekStart).toBe(true)
+    expect(Object.keys(res.data.rankHistory.singles[0]).sort()).toEqual(['rank', 'weekStart'])
+    expect(res.data.rankHistory.doubles).toEqual([])
+  })
+
+  test('fewer than 12 weeks available → returns all', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    cloud.__rows.rank_snapshots.push({
+      _id: 'only', seasonId: 's2026', type: 'singles', memberId: 'P',
+      weekId: 'ws_2026-05-04', weekStart: '2026-05-04', weekEnd: '2026-05-10',
+      effectiveAt: new Date('2026-05-10'), computedAt: new Date('2026-05-11'),
+      rank: 3, totalPoints: 100, wins: 5, losses: 1, snapshotKind: 'weekly'
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.rankHistory.singles).toEqual([{ weekStart: '2026-05-04', rank: 3 }])
+  })
+})
