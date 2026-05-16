@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[████████████████████████████] Phase 10-1 已部署并完成云端验证；剩余少量登录态/造数型 E2E
+[████████████████████████████] Phase 10-1 已部署并完成云端 + 登录态/fixture E2E 验证
 ```
 
 ## Phase 状态
@@ -21,7 +21,7 @@
 | 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 | 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | 4df153f | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
 | 09 | Phase 9 · v2.1 Quality Iteration | 🟦 代码完成，待人工 E2E + 部署 | 2026-05-16 | — | `6c58f87` | 6 个新云函数 action（adminConsoleSnapshot/finishedRecent/batchConfirm/batchSubmit/pendingReviewItems/mySummary）+ `_request_log` 集合 + `expectedUpdateTime` 乐观锁 + match-results 拆 handlers/；3 个新组件（status-tag/empty-state/batch-result-sheet 共 22 单测）+ utils/cloud.call v2 wrapper；tournament-manage/my-match/tournament-score IA 重构 + sheet 集成；score-row 视觉债已由 visual stream `c956f9e` 清理；全量 213 测试绿（云函数 191 + miniprogram 22）；分支 `feat/visual-revamp` 与视觉重构 stream 并发，已用 explicit pathspec 隔离；待用户：Tasks 25-27 manual smoke / 29 E2E-1~10 / 30 性能基线+QA 截图 / 31 云函数上传 |
-| 10 | Phase 10-1 · Rank + Edit Profile | 🟦 已部署，待少量登录态 E2E | 2026-05-16 | — | `bcfb2c4` + follow-up | `rank_snapshots` schema/backfill/cron/recompute；`aggregateRanks(asOf)` + 稳定 tie-breaker；`rankList.winRate/trendDelta`；`weekly-star.current` 三态；rank 页 5 列 + weekly-star 单 hero；edit-profile playStyle + 50 字备注。目标环境确认为 `cloud1-0gthnke69a09f52a`；云函数已部署；索引 4/4 已建；`season_2026` W0 baseline 已写入 10 行；修正运行时默认赛季为现有云端 `_id` 约定 `season_YYYY`。验证：云函数实际 Jest 269/269，小程序 22/22，scripts backfill 3/3，sync-shared-libs 通过；云端 `rankList/current/playerStats` 调用通过；DevTools automator rank + weekly-star tap smoke 通过。 |
+| 10 | Phase 10-1 · Rank + Edit Profile | ✅ 已完成 | 2026-05-16 | 2026-05-16 | `a50b7b5` + follow-ups | `rank_snapshots` schema/backfill/cron/recompute；`aggregateRanks(asOf)` + 稳定 tie-breaker；`rankList.winRate/trendDelta`；`weekly-star.current` 三态；rank 页 5 列 + weekly-star 单 hero；edit-profile playStyle + 50 字备注。目标环境确认为 `cloud1-0gthnke69a09f52a`；云函数已部署；索引 4/4 已建；`season_2026` W0 baseline 已写入 10 行；修正运行时默认赛季为现有云端 `_id` 约定 `season_YYYY`。验证：云函数实际 Jest 269/269，小程序 22/22，scripts backfill 3/3，sync-shared-libs 通过；云端 `rankList/current/playerStats` 调用通过；DevTools automator rank + weekly-star tap smoke、真实登录态 edit-profile、趋势箭头 fixture、fallback fixture 均通过且临时数据已清理。 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -29,12 +29,9 @@
 
 ## 当前应该做什么
 
-**👉 Phase 10-1 已部署到目标云环境并完成核心云端验证。** 剩余动作：
+**👉 Phase 10-1 已部署到目标云环境，并完成核心云端、真实登录态与 fixture E2E 验证。**
 
-1. 如要验 E2E-2 的 ▲/▼ 非零趋势，需要临时录入能改变排名的比赛或造一份旧 baseline fixture，验完恢复。
-2. 如要验 E2E-5 的 rank 页空周 fallback UI，需要临时切换到无本周 confirmed 比赛的 fixture；服务端 `weekly-star.current({ now })` fallback 逻辑可单独验证。
-
-后续运维 / v3 演进见 spec §9.2。
+后续可进入 Phase 10-2；运维 / v3 演进见 spec §9.2。
 
 ---
 
@@ -52,7 +49,8 @@
   - `points-engine.playerStats({ playerId:'user_002', currentSeasonId:'season_2026' })` 返回 singles 10-8 / 570。
 - DevTools automator smoke：清 compile cache 后 rank 页读取真实云数据；rank list 10 人；weekly-star hero 点击跳到 `pages/player-detail/index?id=user_002`，player-detail 显示 `李四888888` 与 570 points。
 - DevTools 真实登录态 E2E-1：当前会员 `3bef321d69cc96880273781a4fd6358b`（美女）进入 edit-profile，保存 `playStyle=baseliner` + 测试备注后，player-detail 立即显示新字段；随后已恢复原值，复核 `playStyle=null`、`playStyleNote=null`。
-- 仍未执行：E2E-2 非零趋势与 E2E-5 空周 UI 需要临时造数/fixture，未直接改生产数据。
+- E2E-2 非零趋势：写入临时 `rank_snapshots` fixture 构造旧排名，rank 页显示 `user_002 trendDelta=1` / `3bef321d69cc96880273781a4fd6358b trendDelta=-1`，页面文本包含 `▲1` 与 `▼1`；fixture 已按前缀清理，残留 0 条。
+- E2E-5 空周 fallback：写入临时 `weekly_stars` fixture，并用 `weekly-star.current({ seasonId:'season_2026', type:'singles', now:'2026-06-16T10:00:00+08:00' })` 验证服务端返回 `mode='fallback'`、`subtitle='等本周首场'`、star `user_002`；rank 页用同等 `starHero` fixture 验证 UI 文案 `PREV WEEK · 上周冠军` 与 `等本周首场`；fixture 已按前缀清理，残留 0 条。
 
 ### 2026-05-16 · Phase 10-1 code complete（Rank + Edit Profile）
 
@@ -87,9 +85,9 @@
 - 真实云端 W0 backfill：✅ 已完成，使用 `season_2026`。
 - Manual E2E-3 weekly-star tap：✅ DevTools automator smoke 已通过。
 - Manual E2E-1：✅ 真实登录态已通过，且测试资料已恢复。
-- Manual E2E-2/5：⚠️ 仍需临时 fixture。
+- Manual E2E-2/5：✅ 临时 fixture 已验证，且测试数据已清理。
 
-Awaiting Phase 10-1 cloud verification, then Phase 10-2 plan kickoff.
+Phase 10-1 cloud verification complete; ready for Phase 10-2 plan kickoff.
 
 ### 2026-05-15 · Phase 6 Post-Phase-8 Polish 完成
 
