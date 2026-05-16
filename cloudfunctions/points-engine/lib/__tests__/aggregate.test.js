@@ -22,6 +22,7 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
     gt(value) { return { __op: 'gt', value } },
     lt(value) { return { __op: 'lt', value } },
     lte(value) { return { __op: 'lte', value } },
+    eq(value) { return { __op: 'eq', value } },
     in(value) { return { __op: 'in', value } },
     neq(value) { return { __op: 'neq', value } }
   }
@@ -34,6 +35,9 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
         if (v.__op === 'gt') { if (!(cell > v.value)) return false }
         else if (v.__op === 'lt') { if (!(cell < v.value)) return false }
         else if (v.__op === 'lte') { if (!(cell <= v.value)) return false }
+        else if (v.__op === 'eq') {
+          if ((cell == null) !== (v.value == null) || (cell != null && cell !== v.value)) return false
+        }
         else if (v.__op === 'in') { if (!v.value.includes(cell)) return false }
         else if (v.__op === 'neq') { if (cell === v.value) return false }
         else return false

@@ -1,12 +1,20 @@
-async function aggregateRanks({ db, seasonId, type, pageSize = 100 }) {
+async function aggregateRanks({ db, seasonId, type, pageSize = 100, asOf = null }) {
   const _ = db.command
   const acc = new Map()
   const limit = Math.max(1, Math.min(Number(pageSize) || 100, 100))
+  const cutoff = asOf ? new Date(asOf) : null
 
   const matchBase = { seasonId, resultStatus: 'confirmed', tournamentType: type }
+  const matchFilter = cutoff
+    ? _.and([matchBase, _.or([
+        { confirmedAt: _.lte(cutoff) },
+        _.and([{ confirmedAt: _.eq(null) }, { createTime: _.lte(cutoff) }])
+      ])])
+    : matchBase
+
   await pageCollection({
     db,
-    baseFilter: matchBase,
+    baseFilter: matchFilter,
     limit,
     collectionName: 'match_results',
     visit: async (m) => {
@@ -16,7 +24,15 @@ async function aggregateRanks({ db, seasonId, type, pageSize = 100 }) {
     command: _
   })
 
-  await safePageTournamentPoints(db, { seasonId, tournamentType: type }, limit, async (p) => {
+  const tpBase = { seasonId, tournamentType: type }
+  const tpFilter = cutoff
+    ? _.and([tpBase, _.or([
+        { awardedAt: _.lte(cutoff) },
+        _.and([{ awardedAt: _.eq(null) }, { createTime: _.lte(cutoff) }])
+      ])])
+    : tpBase
+
+  await safePageTournamentPoints(db, tpFilter, limit, async (p) => {
     accumulate(acc, p.memberId, p.points, null)
   }, _)
 
