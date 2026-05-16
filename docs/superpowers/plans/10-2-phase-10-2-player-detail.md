@@ -553,6 +553,27 @@ describe('enrichRecent', () => {
     })
   })
 
+  test('doubles recent display picks opposite-role opponent, not same-role partner', () => {
+    const row = {
+      _id: 'm2d', tournamentId: 't2', tournamentType: 'doubles', round: 1,
+      score: '6-4',
+      playerIds: ['P', 'M', 'X', 'Y'],
+      pointsAwarded: { entries: [
+        { memberId: 'P', points: 15, role: 'winner' },
+        { memberId: 'M', points: 15, role: 'winner' },
+        { memberId: 'X', points: 5, role: 'loser' },
+        { memberId: 'Y', points: 5, role: 'loser' }
+      ]},
+      confirmedAt: '2026-05-10', createTime: '2026-05-10'
+    }
+    const membersWithPartner = new Map([
+      ...members,
+      ['M', { _id: 'M', name: '搭档' }]
+    ])
+    const out = enrichRecent([row], 'P', tournaments, membersWithPartner)
+    expect(out[0]).toMatchObject({ opponentId: 'X', opponentName: '张昊', won: true, pointsAwarded: 15 })
+  })
+
   test('unknown opponent id → opponentName falls back to id; missing tournament → tournamentName=""', () => {
     const row = {
       _id: 'm3', tournamentId: 't_missing', round: 1, score: '6-0',
