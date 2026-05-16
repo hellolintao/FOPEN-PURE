@@ -5,8 +5,7 @@ Page({
     activeTab: 'singles',
     rankList: [],
     currentMember: null,
-    weeklyStar: null,
-    weeklyStarWeekRange: '',
+    starHero: null,
     loading: false,
     seasonYear: new Date().getFullYear(),
     rankTabOptions: [
@@ -17,7 +16,7 @@ Page({
 
   async onShow() {
     this.setData({ currentMember: getApp().globalData.currentMember })
-    await Promise.all([this.loadRank(), this.loadWeeklyStar()])
+    await Promise.all([this.loadRank(), this.loadHero()])
   },
 
   async loadRank() {
@@ -31,7 +30,12 @@ Page({
           currentSeasonId: `s${this.data.seasonYear}`
         }
       })
-      this.setData({ rankList: res.result?.data?.rankList || [] })
+      const list = res.result?.data?.rankList || []
+      const enriched = list.map(row => ({
+        ...row,
+        winRatePct: row.winRate > 0 ? `${Math.round(row.winRate * 100)}%` : '—'
+      }))
+      this.setData({ rankList: enriched })
     } catch (err) {
       console.error('[rank] loadRank error', err)
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 })
@@ -40,20 +44,21 @@ Page({
     }
   },
 
-  async loadWeeklyStar() {
+  async loadHero() {
     try {
       const res = await callFunction({
         name: 'weekly-star',
-        data: { action: 'latest', seasonId: `s${this.data.seasonYear}` }
+        data: {
+          action: 'current',
+          seasonId: `s${this.data.seasonYear}`,
+          type: this.data.activeTab
+        }
       })
-      const star = res.result?.data || null
-      const selected = this.data.activeTab === 'singles' ? star?.singlesStar : star?.doublesStar
-      this.setData({
-        weeklyStar: selected || null,
-        weeklyStarWeekRange: star ? `${star.weekStart} ~ ${star.weekEnd}` : ''
-      })
+      const data = res.result?.data
+      this.setData({ starHero: data || { mode: 'empty', star: null, subtitle: null } })
     } catch (err) {
-      console.error('[rank] loadWeeklyStar error', err)
+      console.error('[rank] loadHero error', err)
+      this.setData({ starHero: { mode: 'empty', star: null, subtitle: null } })
     }
   },
 
@@ -62,11 +67,18 @@ Page({
     if (!tab || tab === this.data.activeTab) return
     this.setData({ activeTab: tab })
     this.loadRank()
-    this.loadWeeklyStar()
+    this.loadHero()
   },
 
   onPlayerTap(e) {
     const { playerId } = e.detail
+    if (!playerId) return
     wx.navigateTo({ url: `/pages/player-detail/index?id=${playerId}` })
+  },
+
+  onStarTap() {
+    const hero = this.data.starHero
+    if (!hero || !hero.star || !hero.star.memberId) return
+    wx.navigateTo({ url: `/pages/player-detail/index?id=${hero.star.memberId}` })
   }
 })

@@ -56,102 +56,7 @@
 }
 
 /* ============================================================
- * CHAMPION HERO
- * ============================================================ */
-.champion {
-  position: relative;
-  background: var(--color-lime);
-  border-radius: var(--radius-xl);
-  padding: var(--space-7);
-  margin-bottom: var(--space-5);
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.champion-ghost {
-  position: absolute;
-  right: -40rpx;
-  top: -32rpx;
-  font-size: 480rpx;
-  font-weight: 900;
-  line-height: 0.7;
-  letter-spacing: -0.08em;
-  color: var(--color-ink);
-  opacity: 0.08;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.champion-tape {
-  position: relative;
-  z-index: 1;
-  margin-bottom: var(--space-6);
-}
-
-.champion-body {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-5);
-}
-
-.champ-portrait {
-  flex-shrink: 0;
-}
-
-.champ-avatar {
-  width: 144rpx;
-  height: 144rpx;
-  border-radius: 50%;
-  background: var(--color-bg);
-  border: 4rpx solid var(--color-ink);
-  box-shadow: 6rpx 6rpx 0 var(--color-ink);
-}
-
-.champ-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.champ-name {
-  font-size: 48rpx;
-  font-weight: 900;
-  color: var(--color-ink);
-  line-height: 1;
-  letter-spacing: -0.01em;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.champ-stat {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-}
-
-.champ-points {
-  font-size: 88rpx;
-  font-weight: 900;
-  color: var(--color-ink);
-  letter-spacing: -0.04em;
-  line-height: 0.9;
-}
-
-.champ-points-label {
-  font-size: 22rpx;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--color-ink-3);
-  text-transform: uppercase;
-}
-
-/* ============================================================
- * WEEKLY STAR
+ * WEEKLY STAR HERO
  * ============================================================ */
 .star-card {
   background: var(--color-ink);
@@ -160,6 +65,7 @@
   padding: var(--space-5) var(--space-6);
   margin-bottom: var(--space-6);
   position: relative;
+  cursor: pointer;
 }
 
 .star-tape-wrap {
@@ -202,29 +108,23 @@
   font-size: 32rpx;
   font-weight: 800;
   color: var(--color-bg);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.star-points-label {
+.star-subtitle {
   font-size: var(--font-meta-size);
   font-weight: 600;
   color: var(--color-muted-2);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
-.star-points-block {
-  display: flex;
-  align-items: baseline;
-}
-
-.star-points-num {
-  font-size: 56rpx;
-  font-weight: 900;
+.star-cta-arrow {
+  font-size: 36rpx;
+  font-weight: 800;
   color: var(--color-lime);
-  letter-spacing: -0.02em;
   line-height: 1;
 }
 
@@ -233,9 +133,9 @@
  * ============================================================ */
 .list-head {
   display: grid;
-  grid-template-columns: 96rpx 80rpx 1fr 96rpx;
-  gap: var(--space-4);
-  padding: 0 var(--space-3) var(--space-3);
+  grid-template-columns: 64rpx 1fr 80rpx 80rpx 80rpx;
+  gap: 12rpx;
+  padding: 0 24rpx var(--space-3);
   margin-top: var(--space-6);
   align-items: baseline;
   border-bottom: 2rpx solid var(--color-ink);
@@ -245,19 +145,13 @@
 .list-col {
   font-size: 20rpx;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--color-ink);
 }
 
-.list-col-player {
-  grid-column: 2 / 4;
-}
-
-.list-col-pts {
-  display: none;
-}
-
+.list-col-winrate,
+.list-col-pts,
 .list-col-trend {
   text-align: right;
 }

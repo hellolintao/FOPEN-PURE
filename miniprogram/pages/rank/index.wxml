@@ -21,48 +21,28 @@
     />
   </view>
 
-  <!-- CHAMPION HERO -->
-  <view wx:if="{{rankList[0]}}" class="champion anim-stage-rise anim-delay-2">
-    <view class="champion-ghost num">01</view>
-    <view class="champion-tape">
-      <text class="tape tape-stamped">RANK · 01</text>
-    </view>
-    <view class="champion-body">
-      <view class="champ-portrait">
-        <image class="champ-avatar" src="{{rankList[0].avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
-      </view>
-      <view class="champ-info">
-        <text class="champ-name">{{rankList[0].name}}</text>
-        <view class="champ-stat">
-          <text class="champ-points num">{{rankList[0].totalPoints}}</text>
-          <text class="champ-points-label">POINTS</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- WEEKLY STAR -->
-  <view wx:if="{{weeklyStar}}" class="star-card anim-stage-rise anim-delay-3">
+  <!-- WEEKLY STAR HERO -->
+  <view wx:if="{{starHero && starHero.mode !== 'empty'}}" class="star-card anim-stage-rise anim-delay-2" bindtap="onStarTap">
     <view class="star-tape-wrap">
-      <text class="tape tape-lime">WEEKLY STAR</text>
-      <text class="star-range">{{weeklyStarWeekRange}}</text>
+      <text wx:if="{{starHero.mode === 'current'}}" class="tape tape-lime">★ WEEKLY STAR</text>
+      <text wx:else class="tape">PREV WEEK · 上周冠军</text>
+      <text class="star-range">{{starHero.weekStart}} – {{starHero.weekEnd}}</text>
     </view>
     <view class="star-body">
-      <image class="star-avatar" src="{{weeklyStar.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <image class="star-avatar" src="{{(starHero.star && starHero.star.avatarUrl) || '/images/icons/usercenter.png'}}" mode="aspectFill" />
       <view class="star-info">
-        <text class="star-name">{{weeklyStar.name}}</text>
-        <text class="star-points-label">本周积分</text>
+        <text class="star-name">{{starHero.star && starHero.star.name}}</text>
+        <text class="star-subtitle">{{starHero.subtitle}}</text>
       </view>
-      <view class="star-points-block">
-        <text class="star-points-num num">+{{weeklyStar.points}}</text>
-      </view>
+      <view class="star-cta-arrow">→</view>
     </view>
   </view>
 
   <!-- LIST HEADER -->
-  <view class="list-head" wx:if="{{rankList.length > 1 || !weeklyStar}}">
+  <view class="list-head" wx:if="{{rankList.length}}">
     <text class="list-col list-col-rank">RANK</text>
     <text class="list-col list-col-player">PLAYER</text>
+    <text class="list-col list-col-winrate">WIN%</text>
     <text class="list-col list-col-pts">PTS</text>
     <text class="list-col list-col-trend">TREND</text>
   </view>
@@ -73,11 +53,12 @@
   <view wx:else class="rank-list">
     <rank-row
       wx:for="{{rankList}}" wx:key="_id"
-      wx:if="{{weeklyStar || index > 0}}"
       rank="{{index + 1}}"
       name="{{item.name}}"
       avatar-url="{{item.avatarUrl}}"
-      utr="{{item.totalPoints + ''}}"
+      win-rate-pct="{{item.winRatePct}}"
+      total-points="{{item.totalPoints}}"
+      trend-delta="{{item.trendDelta}}"
       player-id="{{item._id}}"
       highlight="{{currentMember && item._id === currentMember._id}}"
       bind:tap="onPlayerTap"
