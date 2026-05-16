@@ -67,6 +67,35 @@
   text-overflow: ellipsis;
 }
 
+.pd-rank-subtitle {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pd-style-pill {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 8rpx 16rpx;
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 22rpx;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .pd-meta {
   display: flex;
   flex-direction: column;
@@ -150,6 +179,14 @@
   line-height: 0.9;
   letter-spacing: -0.04em;
   color: var(--color-ink);
+}
+
+.pd-stat-denom {
+  font-size: 34rpx;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  opacity: 0.72;
 }
 
 .pd-stat-label {

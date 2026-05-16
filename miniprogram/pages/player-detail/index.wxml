@@ -17,10 +17,8 @@
         </view>
         <view class="pd-hero-info">
           <text class="pd-name">{{player.name}}</text>
-          <view class="pd-meta">
-            <text class="pd-meta-label">PLAY STYLE</text>
-            <text class="pd-meta-val">{{player.playStyle || '打法未知'}}</text>
-          </view>
+          <text class="pd-rank-subtitle">{{rankSubtitle}}</text>
+          <text class="pd-style-pill">{{playStyleLabel}}</text>
         </view>
       </view>
     </view>
@@ -40,37 +38,37 @@
       </view>
       <view class="pd-stats-row">
         <view class="pd-stat pd-stat-paper">
-          <text class="pd-stat-num num">{{stats.singles.winCount + stats.singles.lossCount}}</text>
-          <text class="pd-stat-label">MATCHES</text>
+          <text class="pd-stat-num num">{{stats.singles.winCount}}<text class="pd-stat-denom">/{{stats.singles.winCount + stats.singles.lossCount}}</text></text>
+          <text class="pd-stat-label">胜场/总</text>
         </view>
         <view class="pd-stat pd-stat-lime">
-          <text class="pd-stat-num num">{{stats.singles.winCount}}</text>
-          <text class="pd-stat-label">WINS</text>
+          <text class="pd-stat-num num">{{singlesPct}}</text>
+          <text class="pd-stat-label">胜率</text>
         </view>
         <view class="pd-stat pd-stat-ink">
           <text class="pd-stat-num num">{{stats.singles.totalPoints}}</text>
-          <text class="pd-stat-label">POINTS</text>
+          <text class="pd-stat-label">积分</text>
         </view>
       </view>
     </view>
 
     <!-- DOUBLES STATS -->
-    <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-3">
+    <view wx:if="{{stats && hasDoubles}}" class="pd-section anim-stage-rise anim-delay-3">
       <view class="pd-section-head">
         <text class="tape tape-ghost">DOUBLES · 双打</text>
       </view>
       <view class="pd-stats-row">
         <view class="pd-stat pd-stat-paper">
-          <text class="pd-stat-num num">{{stats.doubles.winCount + stats.doubles.lossCount}}</text>
-          <text class="pd-stat-label">MATCHES</text>
+          <text class="pd-stat-num num">{{stats.doubles.winCount}}<text class="pd-stat-denom">/{{stats.doubles.winCount + stats.doubles.lossCount}}</text></text>
+          <text class="pd-stat-label">胜场/总</text>
         </view>
         <view class="pd-stat pd-stat-paper-alt">
-          <text class="pd-stat-num num">{{stats.doubles.winCount}}</text>
-          <text class="pd-stat-label">WINS</text>
+          <text class="pd-stat-num num">{{doublesPct}}</text>
+          <text class="pd-stat-label">胜率</text>
         </view>
         <view class="pd-stat pd-stat-paper-alt">
           <text class="pd-stat-num num">{{stats.doubles.totalPoints}}</text>
-          <text class="pd-stat-label">POINTS</text>
+          <text class="pd-stat-label">积分</text>
         </view>
       </view>
     </view>
