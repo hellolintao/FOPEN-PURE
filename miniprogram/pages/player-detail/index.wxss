@@ -219,6 +219,19 @@
 .pd-stat-ink .pd-stat-label { color: var(--color-muted-2); }
 
 /* ============================================================
+ * RANK CHART
+ * ============================================================ */
+.pd-chart-meta {
+  display: block;
+  margin-top: var(--space-3);
+  font-size: 20rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+/* ============================================================
  * RECENT
  * ============================================================ */
 .pd-recent-list {

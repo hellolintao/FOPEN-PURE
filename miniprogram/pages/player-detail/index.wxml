@@ -73,8 +73,26 @@
       </view>
     </view>
 
-    <!-- RECENT -->
+    <!-- SINGLES RANK CHART -->
     <view class="pd-section anim-stage-rise anim-delay-4">
+      <view class="pd-section-head">
+        <text class="tape tape-lime tape-stamped-lime">排名走势 · 单打 · 12周</text>
+      </view>
+      <rank-chart data="{{rankHistory.singles}}" />
+      <text wx:if="{{rankHistory.singles.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{rankHistory.singles.length}} 周</text>
+    </view>
+
+    <!-- DOUBLES RANK CHART -->
+    <view wx:if="{{hasDoubles && rankHistory.doubles.length > 0}}" class="pd-section anim-stage-rise anim-delay-5">
+      <view class="pd-section-head">
+        <text class="tape tape-ghost">排名走势 · 双打 · 12周</text>
+      </view>
+      <rank-chart data="{{rankHistory.doubles}}" />
+      <text wx:if="{{rankHistory.doubles.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{rankHistory.doubles.length}} 周</text>
+    </view>
+
+    <!-- RECENT -->
+    <view class="pd-section anim-stage-rise anim-delay-6">
       <view class="pd-section-head">
         <text class="tape">最近比赛 · RECENT</text>
         <text wx:if="{{recent.length}}" class="pd-section-count num">{{recent.length}}</text>
