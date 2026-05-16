@@ -91,8 +91,60 @@
       <text wx:if="{{rankHistory.doubles.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{rankHistory.doubles.length}} 周</text>
     </view>
 
+    <!-- SINGLES H2H -->
+    <view wx:if="{{h2h.singles.length > 0}}" class="pd-section anim-stage-rise anim-delay-6">
+      <view class="pd-section-head">
+        <text class="tape tape-lime tape-stamped-lime">交手记录 · H2H · 单打</text>
+        <text class="pd-section-count num">{{h2h.singles.length}}</text>
+      </view>
+      <view class="pd-recent-list">
+        <h2h-row
+          wx:for="{{h2hVisible.singles}}"
+          wx:key="memberId"
+          player-id="{{item.memberId}}"
+          name="{{item.name}}"
+          avatar-url="{{item.avatarUrl}}"
+          wins="{{item.wins}}"
+          losses="{{item.losses}}"
+          bind:tap="onH2HTap"
+        />
+      </view>
+      <button
+        wx:if="{{h2h.singles.length > 5 && !h2hExpanded.singles}}"
+        class="pd-h2h-expand"
+        data-type="singles"
+        bindtap="toggleH2HExpanded"
+      >展开全部 {{h2h.singles.length}} 人 →</button>
+    </view>
+
+    <!-- DOUBLES H2H -->
+    <view wx:if="{{hasDoubles && h2h.doubles.length > 0}}" class="pd-section anim-stage-rise anim-delay-7">
+      <view class="pd-section-head">
+        <text class="tape tape-ghost">交手记录 · H2H · 双打</text>
+        <text class="pd-section-count num">{{h2h.doubles.length}}</text>
+      </view>
+      <view class="pd-recent-list">
+        <h2h-row
+          wx:for="{{h2hVisible.doubles}}"
+          wx:key="memberId"
+          player-id="{{item.memberId}}"
+          name="{{item.name}}"
+          avatar-url="{{item.avatarUrl}}"
+          wins="{{item.wins}}"
+          losses="{{item.losses}}"
+          bind:tap="onH2HTap"
+        />
+      </view>
+      <button
+        wx:if="{{h2h.doubles.length > 5 && !h2hExpanded.doubles}}"
+        class="pd-h2h-expand"
+        data-type="doubles"
+        bindtap="toggleH2HExpanded"
+      >展开全部 {{h2h.doubles.length}} 人 →</button>
+    </view>
+
     <!-- RECENT -->
-    <view class="pd-section anim-stage-rise anim-delay-6">
+    <view class="pd-section anim-stage-rise anim-delay-8">
       <view class="pd-section-head">
         <text class="tape">最近比赛 · RECENT</text>
         <text wx:if="{{recent.length}}" class="pd-section-count num">{{recent.length}}</text>
