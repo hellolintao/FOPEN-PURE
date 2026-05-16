@@ -103,6 +103,47 @@ describe('computeH2H', () => {
     expect(computeH2H([], 'P', new Map())).toEqual([])
   })
 
+  test('doubles row aggregates one win for each opponent', () => {
+    const rows = [{
+      tournamentType: 'doubles',
+      confirmedAt: '2026-05-14',
+      pointsAwarded: { entries: [
+        { memberId: 'P', role: 'winner', team: 'red' },
+        { memberId: 'M', role: 'winner', team: 'red' },
+        { memberId: 'X', role: 'loser', team: 'blue' },
+        { memberId: 'Y', role: 'loser', team: 'blue' }
+      ]}
+    }]
+
+    expect(computeH2H(rows, 'P', new Map())).toEqual([
+      { memberId: 'X', name: 'X', avatarUrl: '', wins: 1, losses: 0, lastPlayedAt: '2026-05-14' },
+      { memberId: 'Y', name: 'Y', avatarUrl: '', wins: 1, losses: 0, lastPlayedAt: '2026-05-14' }
+    ])
+  })
+
+  test('sorts tied total meetings by memberId ascending', () => {
+    const rows = [
+      {
+        tournamentType: 'singles',
+        confirmedAt: '2026-05-10',
+        pointsAwarded: { entries: [
+          { memberId: 'P', role: 'winner' },
+          { memberId: 'Y', role: 'loser' }
+        ]}
+      },
+      {
+        tournamentType: 'singles',
+        confirmedAt: '2026-05-11',
+        pointsAwarded: { entries: [
+          { memberId: 'P', role: 'winner' },
+          { memberId: 'X', role: 'loser' }
+        ]}
+      }
+    ]
+
+    expect(computeH2H(rows, 'P', new Map()).map(row => row.memberId)).toEqual(['X', 'Y'])
+  })
+
   test('unknown member falls back to id name and empty avatarUrl', () => {
     const rows = [{
       tournamentType: 'singles',
