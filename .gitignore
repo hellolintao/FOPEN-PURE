@@ -1,5 +1,6 @@
 .DS_Store
 .superpowers/
+.worktrees/
 node_modules/
 scripts/node_modules/
 project.private.config.json
