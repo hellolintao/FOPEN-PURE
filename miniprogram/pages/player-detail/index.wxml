@@ -150,12 +150,19 @@
         <text wx:if="{{recent.length}}" class="pd-section-count num">{{recent.length}}</text>
       </view>
       <view wx:if="{{recent.length > 0}}" class="pd-recent-list">
-        <view wx:for="{{recent}}" wx:key="_id" class="pd-recent-item">
-          <view class="pd-recent-left">
-            <text class="pd-recent-round num">R{{item.round}}</text>
-            <text class="pd-recent-label">{{item.tournamentName || '赛事'}}</text>
+        <view wx:for="{{recent}}" wx:key="_id" class="pd-recent-row">
+          <view class="pd-recent-top">
+            <text class="pd-recent-badge {{item.tournamentFormat === 'regular' ? 'reg' : ''}}">{{item.tournamentFormat === 'regular' ? '常规赛' : (item.roundLabel || ('R' + item.round))}}</text>
+            <text class="pd-recent-tour">{{item.tournamentName || '赛事'}}</text>
+            <text class="pd-recent-date num">{{item.confirmedAt || item.createTime}}</text>
           </view>
-          <text class="pd-recent-status status-{{item.resultStatus}}">{{item.resultStatus === 'confirmed' ? '已确认' : item.resultStatus === 'submitted' ? '已交' : item.resultStatus === 'disputed' ? '争议' : '待打'}}</text>
+          <view class="pd-recent-result">
+            <view class="pd-recent-result-left">
+              <text class="pd-recent-score num">{{item.score || '比分未录入'}}</text>
+              <text class="pd-recent-opp">vs {{item.opponentName || '对手'}}</text>
+            </view>
+            <text class="pd-recent-points {{item.won ? 'win' : 'loss'}} num">+{{item.pointsAwarded}}</text>
+          </view>
         </view>
       </view>
       <view wx:else class="pd-recent-empty">
