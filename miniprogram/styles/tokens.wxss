@@ -43,6 +43,7 @@ page {
   /* 状态色 */
   --color-danger: #DC2626;
   --color-warn: #F59E0B;
+  --color-warn-wash: #FBF3C9;   /* 浅黄 wash · 自由拉球等中性场景 */
   --color-success: #16A34A;
 
   /* 体育语义色（保留出口给比赛态） */

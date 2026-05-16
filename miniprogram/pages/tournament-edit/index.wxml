@@ -1,15 +1,25 @@
 <view class="wizard">
   <view class="step-bar">
-    <text class="step {{step >= 1 ? 'active' : ''}}">① 基本信息</text>
-    <text class="step {{step >= 2 ? 'active' : ''}}">② 球员 + 球场</text>
-    <text class="step {{step >= 3 ? 'active' : ''}}">③ 排程</text>
-    <text class="step {{step >= 4 ? 'active' : ''}}">④ 积分</text>
+    <view class="step {{step >= 1 ? 'active' : ''}}">
+      <text class="step-num">01</text>
+      <text class="step-name">基本信息</text>
+    </view>
+    <view class="step-rule"></view>
+    <view class="step {{step >= 2 ? 'active' : ''}}">
+      <text class="step-num">02</text>
+      <text class="step-name">球员 · 球场</text>
+    </view>
+    <view class="step-rule"></view>
+    <view class="step {{step >= 3 ? 'active' : ''}}">
+      <text class="step-num">03</text>
+      <text class="step-name">排程</text>
+    </view>
   </view>
 
   <view wx:if="{{step === 1}}" class="step-body">
     <view class="field">
       <text class="label">赛事名称 *</text>
-      <input class="input" bindinput="onFieldChange" data-k="name" value="{{form.name}}" />
+      <input class="input" bindinput="onFieldChange" data-k="name" value="{{form.name}}" placeholder="如：5月例赛" />
     </view>
     <view class="field">
       <text class="label">地点 *</text>
@@ -18,7 +28,10 @@
     <view class="field">
       <text class="label">比赛日期 *</text>
       <picker mode="date" bindchange="onFieldChange" data-k="startDate" value="{{form.startDate}}">
-        <view class="picker-value">{{form.startDate || '选择日期'}}</view>
+        <view class="picker-value">
+          <text class="num">{{form.startDate || '选择日期'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
       </picker>
     </view>
     <view class="field">
@@ -39,31 +52,56 @@
       <text class="label">最大参赛人数</text>
       <input class="input" type="number" bindinput="onFieldChange" data-k="maxPlayers" value="{{form.maxPlayers}}" />
     </view>
+
+    <view class="field field-points">
+      <view class="points-head">
+        <text class="label label-strong">{{form.format === 'knockout' ? '积分 · 按名次' : '积分 · 按胜负'}}</text>
+        <text class="history-pill tap-scale" bindtap="onUseHistory">使用历史</text>
+      </view>
+      <view wx:if="{{form.format === 'knockout'}}" class="points-grid">
+        <view class="points-row"><text class="points-label">冠军</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.champion" value="{{pointsRules.placement.champion}}" /></view>
+        <view class="points-row"><text class="points-label">亚军</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.runnerUp" value="{{pointsRules.placement.runnerUp}}" /></view>
+        <view class="points-row"><text class="points-label">四强</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.semifinal" value="{{pointsRules.placement.semifinal}}" /></view>
+        <view class="points-row"><text class="points-label">八强</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.quarterfinal" value="{{pointsRules.placement.quarterfinal}}" /></view>
+        <view class="points-row"><text class="points-label">参赛</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.participation" value="{{pointsRules.placement.participation}}" /></view>
+      </view>
+      <view wx:else class="points-grid">
+        <view class="points-row"><text class="points-label">胜场</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.winLoss.win" value="{{pointsRules.winLoss.win}}" /></view>
+        <view class="points-row"><text class="points-label">负场</text><input class="num-input num" type="number" bindinput="onFieldChange" data-k="pointsRules.winLoss.loss" value="{{pointsRules.winLoss.loss}}" /></view>
+      </view>
+    </view>
+
     <view class="field">
       <text class="label">描述</text>
-      <textarea class="textarea" bindinput="onFieldChange" data-k="description" value="{{form.description}}" />
+      <textarea class="textarea-2" bindinput="onFieldChange" data-k="description" value="{{form.description}}" placeholder="（选填）" />
     </view>
   </view>
 
   <view wx:if="{{step === 2}}" class="step-body">
     <view class="card">
       <view class="card-head">
-        <text class="card-title">球员</text>
-        <text class="text-meta">{{form.format === 'knockout' ? selectedPlayers.length + '/' + form.maxPlayers : '已选 ' + selectedPlayers.length}}</text>
+        <view class="card-title-row">
+          <text class="card-title">球员</text>
+          <text class="title-pill num">{{form.format === 'knockout' ? selectedPlayers.length + '/' + form.maxPlayers : '已选 ' + selectedPlayers.length}}</text>
+        </view>
+        <view class="head-action tap-scale" bindtap="onAddPlayer">+ 添加球员</view>
       </view>
       <view wx:if="{{selectedPlayers.length === 0}}" class="empty">尚未选择球员</view>
-      <view wx:else class="chips">
-        <text wx:for="{{selectedPlayers}}" wx:key="playerId" class="chip">
-          {{item.playerName}}<text wx:if="{{form.type === 'doubles' && item.partnerName}}"> / {{item.partnerName}}</text>
-          <text class="x" bindtap="onRemovePlayer" data-id="{{item.playerId}}">✕</text>
-        </text>
+      <view wx:else class="player-tags">
+        <view wx:for="{{selectedPlayers}}" wx:key="playerId" class="player-tag">
+          <text class="tag-name">{{item.playerName}}<text wx:if="{{form.type === 'doubles' && item.partnerName}}"> / {{item.partnerName}}</text></text>
+          <view class="tag-x" catchtap="onRemovePlayer" data-id="{{item.playerId}}">
+            <text>×</text>
+          </view>
+        </view>
       </view>
-      <button size="mini" bindtap="onAddPlayer">+ 添加球员</button>
     </view>
     <view class="card">
       <view class="card-head">
-        <text class="card-title">球场与时间</text>
-        <button size="mini" bindtap="onAddCourt">+ 添加球场</button>
+        <view class="card-title-row">
+          <text class="card-title">球场与时间</text>
+        </view>
+        <view class="head-action tap-scale" bindtap="onAddCourt">+ 添加球场</view>
       </view>
       <court-grid
         value="{{ { slotMinutes: 20, courts: schedulePlanCourts } }}"
@@ -89,37 +127,9 @@
     />
   </view>
 
-  <view wx:if="{{step === 4}}" class="step-body">
-    <view class="card" wx:if="{{form.format === 'knockout'}}">
-      <view class="card-head">
-        <text class="card-title">积分（按名次）</text>
-        <button size="mini" bindtap="onUseHistory">使用历史设置</button>
-      </view>
-      <view class="row"><text>冠军</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.champion" value="{{pointsRules.placement.champion}}" /></view>
-      <view class="row"><text>亚军</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.runnerUp" value="{{pointsRules.placement.runnerUp}}" /></view>
-      <view class="row"><text>四强</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.semifinal" value="{{pointsRules.placement.semifinal}}" /></view>
-      <view class="row"><text>八强</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.quarterfinal" value="{{pointsRules.placement.quarterfinal}}" /></view>
-      <view class="row"><text>参赛</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.placement.participation" value="{{pointsRules.placement.participation}}" /></view>
-    </view>
-    <view class="card" wx:else>
-      <view class="card-head"><text class="card-title">积分（按胜负）</text></view>
-      <view class="row"><text>胜场</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.winLoss.win" value="{{pointsRules.winLoss.win}}" /></view>
-      <view class="row"><text>负场</text><input class="input-inline" type="number" bindinput="onFieldChange" data-k="pointsRules.winLoss.loss" value="{{pointsRules.winLoss.loss}}" /></view>
-    </view>
-    <view class="card">
-      <view class="card-head"><text class="card-title">赛事概览</text></view>
-      <view class="row"><text>名称</text><text>{{form.name}}</text></view>
-      <view class="row"><text>日期</text><text>{{form.startDate}}</text></view>
-      <view class="row"><text>类别</text><text>{{form.type === 'singles' ? '单打' : '双打'}}</text></view>
-      <view class="row"><text>参赛人数</text><text>{{selectedPlayers.length}}</text></view>
-      <view class="row"><text>球场数</text><text>{{schedulePlanCourts.length}}</text></view>
-      <view class="row"><text>赛制</text><text>{{form.format === 'knockout' ? '单淘汰' : '常规赛'}}</text></view>
-    </view>
-  </view>
-
   <view class="footer">
-    <button class="back" bindtap="onBack">{{step === 1 ? '取消' : '上一步'}}</button>
-    <button class="next" bindtap="onNext">{{step < 4 ? '下一步' : '创建赛事'}}</button>
+    <view class="back tap-scale" bindtap="onBack">{{step === 1 ? '取消' : '上一步'}}</view>
+    <view class="next tap-scale" bindtap="onNext">{{step < 3 ? '下一步' : '创建赛事'}}</view>
   </view>
 
   <player-picker-sheet

@@ -97,4 +97,40 @@ describe('aggregateWeeklyPlayerDelta', () => {
     const out = await aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId: 'P', week })
     expect(out).toEqual({ pointsDelta: 20, wins: 1, losses: 0 })
   })
+
+  test('production Date confirmedAt rows count with Date week bounds', async () => {
+    const weekWithDates = {
+      start: new Date('2026-05-04T00:00:00.000Z'),
+      end: new Date('2026-05-10T23:59:59.999Z'),
+      weekStart: '2026-05-04',
+      weekEnd: '2026-05-10'
+    }
+    const db = makeFakeDb([
+      { _id: 'm_date', seasonId, tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: new Date('2026-05-10T12:30:00.000Z'), createTime: new Date('2026-05-10T12:30:00.000Z'),
+        playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 20, role: 'winner' }] } },
+      { _id: 'm_late', seasonId, tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: new Date('2026-05-11T00:00:00.000Z'), createTime: new Date('2026-05-11T00:00:00.000Z'),
+        playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 10, role: 'loser' }] } }
+    ])
+    const out = await aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId: 'P', week: weekWithDates })
+    expect(out).toEqual({ pointsDelta: 20, wins: 1, losses: 0 })
+  })
+
+  test('string timestamp on weekEnd later in the day is included', async () => {
+    const db = makeFakeDb([
+      { _id: 'm_end_day', seasonId, tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-05-10T21:15:00.000Z', createTime: '2026-05-10T21:15:00.000Z',
+        playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 10, role: 'loser' }] } },
+      { _id: 'm_next_day', seasonId, tournamentType: 'singles', resultStatus: 'confirmed',
+        confirmedAt: '2026-05-11T00:00:00.000Z', createTime: '2026-05-11T00:00:00.000Z',
+        playerIds: ['P'],
+        pointsAwarded: { entries: [{ memberId: 'P', points: 20, role: 'winner' }] } }
+    ])
+    const out = await aggregateWeeklyPlayerDelta({ db, seasonId, type: 'singles', playerId: 'P', week })
+    expect(out).toEqual({ pointsDelta: 10, wins: 0, losses: 1 })
+  })
 })

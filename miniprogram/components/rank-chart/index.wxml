@@ -1,0 +1,9 @@
+<view class="rank-chart">
+  <view wx:if="{{!hasEnoughData}}" class="chart-empty" style="width: {{width}}rpx; max-width: 100%;">
+    <text class="chart-empty-text">数据不足</text>
+  </view>
+  <view wx:else class="chart-svg-wrap" style="width: {{width}}rpx; max-width: 100%;">
+    <canvas type="2d" id="rank-chart-canvas" class="rank-chart-canvas" style="width: {{width}}rpx; height: {{height}}rpx; max-width: 100%;" />
+    <text class="end-label" style="{{endLabelStyle}}">#{{endRank}}</text>
+  </view>
+</view>

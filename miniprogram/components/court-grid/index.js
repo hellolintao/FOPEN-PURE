@@ -122,8 +122,9 @@ Component({
 })
 
 function buildHours() {
+  // 全天可选：00:00 ~ 23:00（每行覆盖 hh:00 ~ hh+1:00，整体即 00:00 - 24:00）
   const out = []
-  for (let h = 8; h < 22; h++) out.push(`${pad(h)}:00`)
+  for (let h = 0; h < 24; h++) out.push(`${pad(h)}:00`)
   return out
 }
 

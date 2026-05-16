@@ -131,7 +131,10 @@
   color: var(--color-ink);
   font-size: 28rpx;
   font-weight: 700;
-  padding: 22rpx 24rpx;
+  padding: 0 24rpx;
+  min-height: 88rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   box-sizing: border-box;
 }
 

@@ -8,31 +8,58 @@
 }
 
 /* ============================================================
- * STEP BAR (numbered ink ridge)
+ * STEP BAR · 三段路径（编号 + 名称 + 横向印刷线）
  * ============================================================ */
 .step-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: var(--space-3) 0;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-5);
   border-bottom: 2rpx solid var(--color-ink);
   margin-bottom: var(--space-4);
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 
 .step {
-  font-size: 22rpx;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--color-muted-2);
-  text-transform: uppercase;
-  padding: 8rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+  flex: 0 0 auto;
+  opacity: 0.35;
+  transition: opacity var(--dur-base) var(--ease-out);
 }
 
-.step.active {
-  color: var(--color-ink);
+.step.active { opacity: 1; }
+
+.step-num {
+  font-family: var(--font-family-num);
+  font-size: 44rpx;
   font-weight: 900;
+  line-height: 0.9;
+  color: var(--color-ink);
+  letter-spacing: -0.04em;
+}
+
+.step.active .step-num { color: var(--color-ink); }
+
+.step-name {
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.step.active .step-name { color: var(--color-ink); }
+
+.step-rule {
+  flex: 1 1 auto;
+  height: 2rpx;
+  background-image: linear-gradient(to right, var(--color-ink) 50%, transparent 50%);
+  background-size: 14rpx 2rpx;
+  background-repeat: repeat-x;
+  align-self: center;
+  margin-bottom: 8rpx;
 }
 
 .step-body {
@@ -58,6 +85,13 @@
   padding-bottom: var(--space-3);
   border-bottom: 1rpx solid var(--color-border);
   margin-bottom: var(--space-4);
+  gap: var(--space-3);
+}
+
+.card-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .card-title {
@@ -67,57 +101,104 @@
   letter-spacing: 0.02em;
 }
 
+.title-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 36rpx;
+  padding: 0 14rpx;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.head-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 22rpx;
+  background: var(--color-lime);
+  color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  font-size: 24rpx;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
 /* ============================================================
  * FIELD
  * ============================================================ */
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
 }
 
 .label {
   font-size: 22rpx;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
 
+.label-strong { color: var(--color-ink); }
+
 .input,
-.textarea,
-.input-inline {
+.textarea-2 {
   background: var(--color-bg-3);
   border-radius: var(--radius-sm);
   font-size: 28rpx;
   font-weight: 700;
   color: var(--color-ink);
-  padding: 22rpx 24rpx;
+  padding: 0 24rpx;
   box-sizing: border-box;
   width: 100%;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
 }
 
-.textarea { min-height: 168rpx; }
+.input {
+  height: 88rpx;
+  line-height: 88rpx;
+}
 
-.input-inline {
-  flex: 0 0 200rpx;
-  text-align: right;
-  padding: 16rpx 18rpx;
-  font-family: var(--font-family-num);
+.textarea-2 {
+  height: 112rpx;
+  padding: 16rpx 24rpx;
+  line-height: 1.45;
 }
 
 .picker-value {
   background: var(--color-bg-3);
-  padding: 22rpx 24rpx;
+  height: 88rpx;
+  padding: 0 24rpx;
   border-radius: var(--radius-sm);
   font-size: 28rpx;
   font-weight: 700;
   color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.picker-arrow {
+  color: var(--color-muted-2);
+  font-size: 32rpx;
+  line-height: 1;
+  font-weight: 900;
 }
 
 /* ============================================================
- * CHIP ROW
+ * CHIP ROW · 单选切换
  * ============================================================ */
 .chip-row {
   display: flex;
@@ -128,14 +209,17 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  padding: 14rpx 28rpx;
+  justify-content: center;
+  height: 64rpx;
+  padding: 0 28rpx;
   border-radius: var(--radius-pill);
   background: var(--color-bg);
   border: 2rpx solid var(--color-ink);
   font-size: 24rpx;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--color-ink);
+  line-height: 1;
 }
 
 .chip.active {
@@ -143,36 +227,136 @@
   color: var(--color-bg);
 }
 
-.chips {
+/* ============================================================
+ * 球员标签（已选球员胶囊）
+ * ============================================================ */
+.player-tags {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin: var(--space-3) 0;
+  margin: var(--space-2) 0 0;
 }
 
-.chip .x {
-  margin-left: 10rpx;
-  color: var(--color-danger);
+.player-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 8rpx 0 22rpx;
+  gap: 12rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.player-tag .tag-name {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.player-tag .tag-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 22rpx;
   font-weight: 900;
-  padding: 0 6rpx;
+  line-height: 1;
+  padding-top: 2rpx;
+  box-sizing: border-box;
+}
+
+.player-tag .tag-x text {
+  display: inline-block;
+  line-height: 1;
 }
 
 /* ============================================================
- * ROW
+ * 积分块（合并进基本信息倒数第二）
  * ============================================================ */
-.row {
+.field-points {
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3);
+}
+
+.points-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-3) 0;
+  padding-bottom: var(--space-3);
   border-bottom: 1rpx solid var(--color-border);
-  font-size: 26rpx;
-  font-weight: 700;
-  color: var(--color-ink);
 }
 
-.row:last-child { border-bottom: 0; }
+.history-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 48rpx;
+  padding: 0 18rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
 
+.points-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1rpx dashed var(--color-border);
+}
+
+.points-row:last-child { border-bottom: none; }
+
+.points-label {
+  font-size: 26rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+.num-input {
+  flex: 0 0 220rpx;
+  height: 80rpx;
+  background: var(--color-bg-3);
+  border-radius: var(--radius-sm);
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  padding: 0 22rpx;
+  text-align: right;
+  box-sizing: border-box;
+  letter-spacing: -0.02em;
+  line-height: 80rpx;
+}
+
+/* ============================================================
+ * EMPTY
+ * ============================================================ */
 .empty {
   color: var(--color-muted);
   padding: var(--space-4) 0;
@@ -196,20 +380,14 @@
 
 .footer .back,
 .footer .next {
-  margin: 0;
   height: 88rpx;
   border-radius: var(--radius-pill);
   font-size: 28rpx;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.footer .back::after,
-.footer .next::after {
-  border: none;
 }
 
 .footer .back {
@@ -223,9 +401,4 @@
   flex: 2;
   background: var(--color-ink);
   color: var(--color-bg);
-}
-
-.footer .back:active,
-.footer .next:active {
-  transform: scale(0.98);
 }

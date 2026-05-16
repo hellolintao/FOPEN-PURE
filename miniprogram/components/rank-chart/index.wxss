@@ -1,0 +1,48 @@
+.rank-chart {
+  background: var(--color-bg, #fff);
+  border: 1rpx solid var(--color-border, #e5e6dd);
+  border-radius: var(--radius-md, 16rpx);
+  padding: var(--space-4, 16rpx);
+  box-sizing: border-box;
+}
+
+.chart-svg-wrap {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.rank-chart-canvas {
+  display: block;
+  box-sizing: border-box;
+}
+
+.chart-empty {
+  height: 200rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-2, #fafaf7);
+  border-radius: var(--radius-sm, 8rpx);
+  box-sizing: border-box;
+}
+
+.chart-empty-text {
+  font-size: var(--font-label-size, 22rpx);
+  font-weight: var(--font-label-weight, 600);
+  color: var(--color-muted, #6b6e63);
+}
+
+.end-label {
+  position: absolute;
+  padding: 4rpx 10rpx;
+  border-radius: var(--radius-pill, 999rpx);
+  background: rgba(11, 12, 9, 0.78);
+  color: var(--color-bg, #fff);
+  font-family: var(--font-family-num);
+  font-size: var(--font-meta-size, 20rpx);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+  transform: translate(-50%, -120%);
+  pointer-events: none;
+}

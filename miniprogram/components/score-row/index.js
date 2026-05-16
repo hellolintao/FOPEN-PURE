@@ -17,14 +17,21 @@ Component({
       value: null,
       observer(m) {
         this._hydrateDraft(m)
-        this._recomputeFlags(m, this.data.isAdmin)
+        this._recomputeFlags(m, this.data.isAdmin, this.data.currentMemberId)
       }
     },
     isAdmin: {
       type: Boolean,
       value: false,
       observer(v) {
-        this._recomputeFlags(this.data.match, v)
+        this._recomputeFlags(this.data.match, v, this.data.currentMemberId)
+      }
+    },
+    currentMemberId: {
+      type: String,
+      value: '',
+      observer(v) {
+        this._recomputeFlags(this.data.match, this.data.isAdmin, v)
       }
     }
   },
@@ -33,7 +40,9 @@ Component({
     expanded: false,
     draftA: 0,
     draftB: 0,
-    draftTb: '',
+    tbA: '',
+    tbB: '',
+    tbFocus: '',
     validationError: '',
     filled: false,
     dirty: false,
@@ -55,16 +64,17 @@ Component({
         const a = Number.isInteger(s0.a) ? s0.a : 0
         const b = Number.isInteger(s0.b) ? s0.b : 0
         const tb = m.score.tiebreak || ''
+        const [tbA, tbB] = parseTbToDigits(tb)
         const originalScoreKey = this._scoreKey({ sets: [{ a, b }], tiebreak: tb || null })
-        this.setData({ draftA: a, draftB: b, draftTb: tb, showTbInput: a === 3 && b === 3, originalScoreKey })
+        this.setData({ draftA: a, draftB: b, tbA, tbB, tbFocus: '', showTbInput: a === 3 && b === 3, originalScoreKey })
         this.revalidate()
       } else {
-        this.setData({ draftA: 0, draftB: 0, draftTb: '', showTbInput: false, validationError: '', originalScoreKey: '' })
+        this.setData({ draftA: 0, draftB: 0, tbA: '', tbB: '', tbFocus: '', showTbInput: false, validationError: '', originalScoreKey: '' })
         this.revalidate()
       }
     },
 
-    _recomputeFlags(m, isAdmin) {
+    _recomputeFlags(m, isAdmin, currentMemberId) {
       if (!m) {
         this.setData({ canEdit: false })
         return
@@ -73,11 +83,16 @@ Component({
       const isMissingPlayer = !m.player1 || !m.player2 || !m.player1.id || !m.player2.id
       const isConfirmed = m.resultStatus === 'confirmed'
       const isDoubles = !!(m.player1 && m.player1.partnerId)
-      // 普通会员可编辑所有未确认比赛；管理员可修改已确认比赛，但未改动时确认按钮置灰。
+      const isParticipant = !!(currentMemberId && (m.playerIds || []).includes(currentMemberId))
+        || !!(currentMemberId && (
+          (m.player1 && (m.player1.id === currentMemberId || m.player1.partnerId === currentMemberId)) ||
+          (m.player2 && (m.player2.id === currentMemberId || m.player2.partnerId === currentMemberId))
+        ))
+      // 普通会员仅可编辑自己参与的未确认比赛；管理员可修改已确认比赛，但未改动时确认按钮置灰。
       let canEdit
       if (isBye || isMissingPlayer) canEdit = false
       else if (isConfirmed) canEdit = !!isAdmin
-      else canEdit = true
+      else canEdit = !!isAdmin || isParticipant
       const statusLabel = isBye ? '轮空'
         : isMissingPlayer ? '未开打'
         : isConfirmed ? '已确认'
@@ -114,14 +129,25 @@ Component({
       this.revalidate()
     },
 
-    onTbInput(e) {
-      this.setData({ draftTb: e.detail.value })
+    onTbADigit(e) {
+      const digit = pickSingleDigit(e.detail.value)
+      const advance = !!digit
+      this.setData({ tbA: digit, tbFocus: advance ? 'b' : 'a' })
       this.revalidate()
+      return digit
+    },
+
+    onTbBDigit(e) {
+      const digit = pickSingleDigit(e.detail.value)
+      this.setData({ tbB: digit, tbFocus: digit ? '' : 'b' })
+      this.revalidate()
+      return digit
     },
 
     revalidate() {
-      const { draftA, draftB, draftTb } = this.data
-      const tb = (draftA === 3 && draftB === 3) ? (draftTb || null) : null
+      const { draftA, draftB, tbA, tbB } = this.data
+      const tbStr = (tbA !== '' && tbB !== '') ? `${tbA}-${tbB}` : ''
+      const tb = (draftA === 3 && draftB === 3) ? (tbStr || null) : null
       const r = validateScore(draftA, draftB, tb)
       const score = { sets: [{ a: draftA, b: draftB }], tiebreak: tb }
       const scoreKey = this._scoreKey(score)
@@ -166,28 +192,31 @@ Component({
         case 'NEED_TB': return '3:3 时填抢七比分；4:3 不允许直接录'
         case 'TB_REQUIRED': return '3:3 需填抢七比分（如 7-5）'
         case 'TB_FORMAT': return '抢七格式为 X-Y（数字）'
-        case 'TB_UNDER_7': return '抢七至少有一方 ≥ 7'
-        case 'TB_DIFF': return '抢七必须领先 2 分'
+        case 'TB_UNDER_7': return '抢七赢家需到 7 分'
+        case 'TB_NEEDS_7': return '抢七赢家需到 7 分'
+        case 'TB_BOTH_7': return '抢七仅一方能到 7 分'
+        case 'TB_DIFF': return '抢七赢家需到 7 分'
         case '4_4': return '4:4 不合法'
         default: return '比分不合法'
       }
     },
 
     onSubmit() {
-      const { draftA, draftB, draftTb } = this.data
-      const tb = (draftA === 3 && draftB === 3) ? (draftTb || null) : null
+      const { draftA, draftB, tbA, tbB } = this.data
+      const tbStr = (tbA !== '' && tbB !== '') ? `${tbA}-${tbB}` : ''
+      const tb = (draftA === 3 && draftB === 3) ? (tbStr || null) : null
       const r = validateScore(draftA, draftB, tb)
       if (!r.valid) {
         wx.showToast({ title: this._friendlyError(r.error), icon: 'none' })
         return
       }
-      const m = this.data.match
-      if (!m) return
+      const finalMatch = this.data.match
+      if (!finalMatch) return
       const score = { sets: [{ a: draftA, b: draftB }], tiebreak: tb }
-      const matchId = m.sourceMatchId
+      const matchId = finalMatch.sourceMatchId
       if (this.data.submitDisabled) return
 
-      if (m.resultStatus === 'confirmed' && this.data.isAdmin) {
+      if (finalMatch.resultStatus === 'confirmed' && this.data.isAdmin) {
         // 二次确认
         wx.showModal({
           title: '修改已确认的比分？',
@@ -206,3 +235,15 @@ Component({
     }
   }
 })
+
+function pickSingleDigit(raw) {
+  const s = String(raw == null ? '' : raw)
+  const m = s.match(/\d/)
+  return m ? m[0] : ''
+}
+
+function parseTbToDigits(tb) {
+  const m = /^(\d+)-(\d+)$/.exec(tb || '')
+  if (!m) return ['', '']
+  return [m[1].slice(0, 1), m[2].slice(0, 1)]
+}

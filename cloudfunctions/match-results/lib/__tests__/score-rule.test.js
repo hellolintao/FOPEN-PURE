@@ -27,19 +27,19 @@ describe('validateScore', () => {
   test('3:3 + tb 5-7 → valid，winner=b', () => {
     expect(validateScore(3, 3, '5-7')).toEqual({ valid: true, winner: 'b' })
   })
-  test('3:3 + tb 8-6 → valid，winner=a', () => {
-    expect(validateScore(3, 3, '8-6')).toEqual({ valid: true, winner: 'a' })
+  test('3:3 + tb 7-6 → valid（先到 7 即可，不需领先 2 分）', () => {
+    expect(validateScore(3, 3, '7-6')).toEqual({ valid: true, winner: 'a' })
   })
-  test('3:3 + tb 10-12 → valid，winner=b', () => {
-    expect(validateScore(3, 3, '10-12')).toEqual({ valid: true, winner: 'b' })
+  test('3:3 + tb 6-7 → valid，winner=b', () => {
+    expect(validateScore(3, 3, '6-7')).toEqual({ valid: true, winner: 'b' })
+  })
+  test('3:3 + tb 8-6 → invalid（单边最高 7）', () => {
+    expect(validateScore(3, 3, '8-6').valid).toBe(false)
   })
   test('3:3 + tb 6-4 → invalid（max<7）', () => {
     expect(validateScore(3, 3, '6-4').valid).toBe(false)
   })
-  test('3:3 + tb 8-7 → invalid（差<2）', () => {
-    expect(validateScore(3, 3, '8-7').valid).toBe(false)
-  })
-  test('3:3 + tb 7-7 → invalid（差<2）', () => {
+  test('3:3 + tb 7-7 → invalid（两边都 7）', () => {
     expect(validateScore(3, 3, '7-7').valid).toBe(false)
   })
   test('3:3 + tb 格式错 → invalid', () => {

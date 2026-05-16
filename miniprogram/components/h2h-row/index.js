@@ -1,0 +1,47 @@
+Component({
+  properties: {
+    playerId: String,
+    name: String,
+    avatarUrl: String,
+    wins: { type: Number, value: 0 },
+    losses: { type: Number, value: 0 }
+  },
+
+  data: {
+    pillClass: 'neutral',
+    record: '0-0'
+  },
+
+  observers: {
+    'wins, losses': function(wins, losses) {
+      this.updateRecord(wins, losses)
+    }
+  },
+
+  lifetimes: {
+    attached() {
+      this.updateRecord(this.data.wins, this.data.losses)
+    }
+  },
+
+  methods: {
+    updateRecord(wins, losses) {
+      const w = Number(wins) || 0
+      const l = Number(losses) || 0
+      let pillClass = 'neutral'
+
+      if (w > l) pillClass = 'win'
+      else if (l > w) pillClass = 'loss'
+
+      this.setData({
+        pillClass,
+        record: `${w}-${l}`
+      })
+    },
+
+    onTap() {
+      if (!this.data.playerId) return
+      this.triggerEvent('tap', { playerId: this.data.playerId })
+    }
+  }
+})

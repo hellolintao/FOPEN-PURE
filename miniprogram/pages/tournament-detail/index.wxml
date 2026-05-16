@@ -32,31 +32,6 @@
       </view>
     </view>
 
-    <!-- CONFIG · stat grid -->
-    <view class="td-section anim-stage-rise anim-delay-1">
-      <view class="td-section-head">
-        <text class="tape">配置 · CONFIG</text>
-      </view>
-      <view class="config-grid">
-        <view class="stat-block">
-          <text class="stat-num num">{{tournamentDisplay.maxPlayers}}</text>
-          <text class="stat-label">最大人数</text>
-        </view>
-        <view class="stat-block">
-          <text class="stat-num num">{{tournamentDisplay.playersPerMatch}}</text>
-          <text class="stat-label">每场人数</text>
-        </view>
-        <view wx:if="{{tournamentDisplay.showRoundInfo}}" class="stat-block">
-          <text class="stat-num num">R{{tournamentDisplay.currentRound}}/{{tournamentDisplay.totalRounds}}</text>
-          <text class="stat-label">当前/总轮</text>
-        </view>
-      </view>
-      <view wx:if="{{tournamentDisplay.hasSeedPlayers}}" class="config-seed">
-        <text class="config-seed-label">种子选手</text>
-        <text class="config-seed-value">{{tournamentDisplay.seedPlayersText}}</text>
-      </view>
-    </view>
-
     <!-- POINTS RULES -->
     <view class="td-section anim-stage-rise anim-delay-2">
       <view class="td-section-head">
@@ -85,36 +60,8 @@
       </view>
     </view>
 
-    <!-- REGISTRATIONS -->
-    <view class="td-section anim-stage-rise anim-delay-3">
-      <view class="td-section-head">
-        <text class="tape">参赛人员 · ROSTER</text>
-        <text class="td-section-count num">{{registrations.length}}</text>
-      </view>
-      <view wx:if="{{registrations.length === 0}}" class="td-empty">
-        <text>暂无报名</text>
-      </view>
-      <view wx:else class="roster-grid">
-        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
-          <view class="roster-seed">
-            <text class="num">{{item.seed}}</text>
-          </view>
-          <text class="roster-name singles" wx:if="{{tournament.type === 'singles'}}">{{item.playerName}}</text>
-          <view wx:if="{{tournament.type === 'doubles'}}" class="roster-doubles">
-            <text class="roster-name">{{item.teamName || item.playerName}}</text>
-            <view class="roster-doubles-row">
-              <text class="roster-detail">{{item.playerName}}</text>
-              <text class="roster-detail-sep">/</text>
-              <text class="roster-detail">{{item.partnerName}}</text>
-            </view>
-          </view>
-          <view class="roster-status">{{item.displayStatusText}}</view>
-        </view>
-      </view>
-    </view>
-
     <!-- SCHEDULE -->
-    <view class="td-section anim-stage-rise anim-delay-4">
+    <view class="td-section anim-stage-rise anim-delay-3">
       <view class="td-section-head">
         <text class="tape">赛程 · SCHEDULE</text>
       </view>
@@ -122,14 +69,14 @@
         <text>暂无排程</text>
       </view>
       <scroll-view wx:else scroll-x class="schedule-scroll" enhanced="{{true}}" show-scrollbar="{{false}}">
-        <view class="schedule-table">
-          <view class="schedule-row header">
-            <view class="time-col">TIME</view>
-            <view wx:for="{{scheduleCourts}}" wx:key="courtId" class="schedule-cell head">
-              <text class="court-name">{{item.name}}</text>
-            </view>
+        <view class="schedule-table" style="grid-template-columns: 96rpx repeat({{scheduleCourts.length}}, minmax(240rpx, max-content));">
+          <!-- Header · TIME label + court cells -->
+          <view class="time-col head">TIME</view>
+          <view wx:for="{{scheduleCourts}}" wx:key="courtId" class="schedule-cell head">
+            <text class="court-name">{{item.name}}</text>
           </view>
-          <view wx:for="{{scheduleRows}}" wx:for-item="row" wx:key="slotKey" class="schedule-row">
+          <!-- Data · flat under grid -->
+          <block wx:for="{{scheduleRows}}" wx:for-item="row" wx:key="slotKey">
             <view class="time-col num">{{row.slotLabel}}</view>
             <view
               wx:for="{{row.cells}}"
@@ -168,9 +115,60 @@
                 <text class="empty-cell">—</text>
               </block>
             </view>
-          </view>
+          </block>
         </view>
       </scroll-view>
+    </view>
+
+    <!-- REGISTRATIONS -->
+    <view class="td-section anim-stage-rise anim-delay-4">
+      <view class="td-section-head">
+        <text class="tape">参赛人员 · ROSTER</text>
+        <text class="td-section-count num">{{registrations.length}}</text>
+      </view>
+      <view wx:if="{{registrations.length === 0}}" class="td-empty">
+        <text>暂无报名</text>
+      </view>
+      <view wx:else class="roster-grid">
+        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
+          <view class="roster-seed">
+            <text class="num">{{item.seed}}</text>
+          </view>
+          <block wx:if="{{tournament.type === 'singles'}}">
+            <view class="roster-avatar-wrap">
+              <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="roster-avatar roster-avatar-fallback">
+                <text class="roster-avatar-initial">{{item.playerInitial}}</text>
+              </view>
+            </view>
+            <text class="roster-name singles">{{item.playerName}}</text>
+          </block>
+          <block wx:if="{{tournament.type === 'doubles'}}">
+            <view class="roster-doubles-avatars">
+              <view class="roster-avatar-wrap stacked">
+                <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+                <view wx:else class="roster-avatar roster-avatar-fallback">
+                  <text class="roster-avatar-initial">{{item.playerInitial}}</text>
+                </view>
+              </view>
+              <view class="roster-avatar-wrap stacked overlap">
+                <image wx:if="{{item.partnerAvatarUrl}}" class="roster-avatar" src="{{item.partnerAvatarUrl}}" mode="aspectFill" />
+                <view wx:else class="roster-avatar roster-avatar-fallback">
+                  <text class="roster-avatar-initial">{{item.partnerInitial}}</text>
+                </view>
+              </view>
+            </view>
+            <view class="roster-doubles">
+              <text class="roster-name">{{item.teamName || item.playerName}}</text>
+              <view class="roster-doubles-row">
+                <text class="roster-detail">{{item.playerName}}</text>
+                <text class="roster-detail-sep">/</text>
+                <text class="roster-detail">{{item.partnerName}}</text>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
     </view>
 
     <!-- DELETE -->

@@ -1,4 +1,4 @@
-const { batchConfirm } = require('../../handlers/batch')
+const { batchConfirm, batchAdminSave } = require('../../handlers/batch')
 
 function makeCtx({ matches = [], requestLog = {}, isAdmin = true, openid = 'oA', memberId = 'mA' } = {}) {
   const matchesById = Object.fromEntries(matches.map(m => [m._id, { ...m }]))
@@ -218,4 +218,37 @@ test('batchSubmit INVALID_SCORE: bad score structure', async () => {
     requestId: 'req_s4',
   })
   expect(result.failures[0].code).toBe('INVALID_SCORE')
+})
+
+test('batchAdminSave confirms pending matches with supplied scores', async () => {
+  const ctx = makeCtx({
+    matches: [
+      { _id: 'mr_a', resultStatus: 'pending', playerIds: ['mA', 'mB'] },
+      { _id: 'mr_b', resultStatus: 'submitted', playerIds: ['mA', 'mC'], score: { sets: [{ a: 4, b: 1 }], tiebreak: null } },
+    ],
+  })
+  ctx.validateScore = () => ({ valid: true })
+  ctx.confirmOne = async function (match, score) {
+    this._state.matchesById[match._id] = {
+      ...this._state.matchesById[match._id],
+      score,
+      resultStatus: 'confirmed',
+      confirmedBy: this.callerMemberId,
+    }
+  }
+
+  const result = await batchAdminSave(ctx, {
+    matches: [
+      { matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } },
+      { matchId: 'mr_b', score: { sets: [{ a: 4, b: 1 }], tiebreak: null } },
+    ],
+    requestId: 'req_a1',
+  })
+
+  expect(result.successIds).toEqual(['mr_a', 'mr_b'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_a).toMatchObject({
+    resultStatus: 'confirmed',
+    score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+  })
 })

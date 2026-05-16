@@ -50,3 +50,13 @@ if [ "$(shasum256 "$AGG_SRC")" != "$(shasum256 "$AGG_COPY")" ]; then
   exit 1
 fi
 echo "[sync] aggregate.js ok"
+
+WEEK_SRC="$ROOT/cloudfunctions/weekly-star/lib/week-window.js"
+WEEK_COPY="$ROOT/cloudfunctions/points-engine/lib/week-window.js"
+if [ ! -f "$WEEK_COPY" ]; then echo "[sync] missing: $WEEK_COPY"; exit 1; fi
+if [ "$(shasum256 "$WEEK_SRC")" != "$(shasum256 "$WEEK_COPY")" ]; then
+  echo "[sync] week-window.js mismatch: $WEEK_SRC ↔ $WEEK_COPY"
+  diff "$WEEK_SRC" "$WEEK_COPY" || true
+  exit 1
+fi
+echo "[sync] week-window.js ok"

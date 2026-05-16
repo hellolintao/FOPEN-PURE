@@ -11,6 +11,7 @@ Page({
     pendingCount: 0,
     totalCount: 0,
     isAdmin: false,
+    currentMemberId: '',
     draftMap: {},
     bottomLabel: '确认全部',
     bottomCount: 0,
@@ -82,7 +83,11 @@ Page({
     } catch (e) {
       console.warn('[tournament-score] syncIdentity', e)
     }
-    this.setData({ isAdmin: !!(app.globalData && app.globalData.isAdmin) })
+    const currentMember = app.globalData && app.globalData.currentMember
+    this.setData({
+      isAdmin: !!(app.globalData && app.globalData.isAdmin),
+      currentMemberId: (currentMember && currentMember._id) || ''
+    })
   },
 
   async refresh() {
@@ -181,25 +186,14 @@ Page({
   },
 
   computeBottomState(draftMapOverride) {
-    const tournament = this.data.tournament || {}
     const matches = this.getAllMatches().filter(m => this.isPlayableMatch(m))
     const draftMap = draftMapOverride || this.data.draftMap || {}
     const actionable = this.collectActionableDrafts(draftMap)
-    const isRegularAdmin = this.data.isAdmin && tournament.format !== 'knockout'
-
-    let bottomDisabled = actionable.length < 1
-    if (isRegularAdmin) {
-      const allFilled = matches.length > 0 && matches.every(m => {
-        const d = draftMap[m.sourceMatchId]
-        return d && d.filled
-      })
-      bottomDisabled = !allFilled || actionable.length < 1
-    }
 
     return {
-      bottomLabel: this.data.isAdmin ? '保存比赛结果' : '确认全部',
+      bottomLabel: this.data.isAdmin ? '确认和保存比赛' : '确认全部',
       bottomCount: actionable.length,
-      bottomDisabled
+      bottomDisabled: actionable.length < 1 || matches.length < 1
     }
   },
 
@@ -286,16 +280,35 @@ Page({
 
   async onAdminBatchSheet() {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    const items = this.buildAdminDraftItems()
+    if (items.length === 0) return
     this.setData({
-      sheet: { visible: true, title: '待确认比分', mode: 'confirm', items: [], result: null, requestId }
+      sheet: { visible: true, title: '确认和保存比赛', mode: 'adminSave', items, result: null, requestId }
     })
-    const res = await call('match-results', { action: 'pendingReviewItems', payload: { tournamentId: this.data.tournamentId, limit: 50 } })
-    if (!res.ok) {
-      this.setData({ 'sheet.visible': false })
-      wx.showModal({ title: '加载失败', content: (res.error && res.error.message) || '', showCancel: false })
-      return
-    }
-    this.setData({ 'sheet.items': res.data.items })
+  },
+
+  buildAdminDraftItems() {
+    const rows = this.getAllMatches()
+    const rowBySourceId = {}
+    for (const row of rows) rowBySourceId[row.sourceMatchId] = row
+    const tournament = this.data.tournament || {}
+    return this.collectActionableDrafts().map(d => {
+      const row = rowBySourceId[d.matchId]
+      if (!row || !row._id) return null
+      return {
+        matchId: row._id,
+        sourceMatchId: row.sourceMatchId,
+        tournamentId: row.tournamentId,
+        tournamentName: tournament.name || row.tournamentId || '',
+        round: row.round,
+        position: row.position,
+        scheduledStartLabel: '',
+        p1: row.player1 || {},
+        p2: row.player2 || {},
+        score: d.score,
+        isDoubles: !!(row.player1 && row.player1.partnerName)
+      }
+    }).filter(Boolean)
   },
 
   async onSheetCommit(e) {
@@ -307,6 +320,12 @@ Page({
         expectedUpdateTime: it.updateTime instanceof Date ? it.updateTime.toISOString() : it.updateTime
       }))
       const res = await call('match-results', { action: 'batchConfirm', payload: { matches, requestId: this.data.sheet.requestId } })
+      this._applySheetResult(res, items)
+      return
+    }
+    if (this.data.sheet.mode === 'adminSave') {
+      const matches = items.map(it => ({ matchId: it.matchId, score: it.score }))
+      const res = await call('match-results', { action: 'batchAdminSave', payload: { matches, requestId: this.data.sheet.requestId } })
       this._applySheetResult(res, items)
       return
     }
@@ -343,6 +362,13 @@ Page({
       const items = this.data.sheet.items.filter(it => isBatchLevel || failureIds.includes(it.matchId))
       const submissions = items.map(it => ({ matchId: it.matchId, score: it.score }))
       const res = await call('match-results', { action: 'batchSubmit', payload: { submissions, requestId: this.data.sheet.requestId } })
+      this._applySheetResult(res, items)
+      return
+    }
+    if (this.data.sheet.mode === 'adminSave') {
+      const items = this.data.sheet.items.filter(it => isBatchLevel || failureIds.includes(it.matchId))
+      const matches = items.map(it => ({ matchId: it.matchId, score: it.score }))
+      const res = await call('match-results', { action: 'batchAdminSave', payload: { matches, requestId: this.data.sheet.requestId } })
       this._applySheetResult(res, items)
       return
     }

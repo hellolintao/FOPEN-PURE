@@ -8,8 +8,8 @@ Page({
     tournamentId: null,
     form: {
       name: '',
-      location: '',
-      startDate: '',
+      location: '海峡奥体网球场',
+      startDate: todayISODate(),
       type: 'singles',
       format: 'regular',
       maxPlayers: 8,
@@ -115,7 +115,6 @@ Page({
     if (this.data.step === 1) return this.commitStep1()
     if (this.data.step === 2) return this.commitStep2()
     if (this.data.step === 3) return this.commitStep3()
-    if (this.data.step === 4) return this.commitStep4()
   },
 
   onBack() {
@@ -130,7 +129,8 @@ Page({
       return
     }
     const seasonId = await this.resolveSeasonId(f.startDate)
-    const payload = { ...f, seasonId, status: 'draft' }
+    const pointsRules = this._normalizePointsRules(this.data.pointsRules)
+    const payload = { ...f, seasonId, pointsRules, status: 'draft' }
     let r
     if (this.data.tournamentId) {
       r = await wx.cloud.callFunction({
@@ -247,29 +247,25 @@ Page({
       // 自由拉球失败不阻塞主流程，仅提示
       wx.showToast({ title: _errMsg(r4, '保存自由拉球失败'), icon: 'none' })
     }
-    this.setData({ step: 4 })
-  },
 
-  async commitStep4() {
-    // 校验器要求 winLoss.{win,loss,walkover} 与 placement.{...} 都是数字。
-    // UI 只展示部分字段，剩余字段在这里补默认值，避免「数据校验失败」。
+    // 最后一步：finalize 赛事状态 → upcoming（积分在 step1 已保存）
     const pointsRules = this._normalizePointsRules(this.data.pointsRules)
-    const r = await wx.cloud.callFunction({
+    const r5 = await wx.cloud.callFunction({
       name: 'tournaments',
       data: {
         action: 'updateNew',
-        id: this.data.tournamentId,
+        id: tid,
         data: { pointsRules, status: 'upcoming' }
       }
     })
-    if (!(r.result && r.result.success)) {
-      console.error('[commitStep4] update failed', r && r.result)
-      const msg = _errMsg(r, '创建失败')
+    if (!_isSuccess(r5)) {
+      console.error('[commitStep3] finalize failed', r5 && r5.result)
+      const msg = _errMsg(r5, '创建失败')
       return wx.showToast({ title: msg, icon: 'none' })
     }
     wx.showToast({ title: '已创建', icon: 'success' })
     setTimeout(() => {
-      wx.redirectTo({ url: `/pages/tournament-detail/index?id=${this.data.tournamentId}` })
+      wx.redirectTo({ url: `/pages/tournament-detail/index?id=${tid}` })
     }, 800)
   },
 
@@ -565,4 +561,12 @@ function unpackList(res, dataFields) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
+}
+
+function todayISODate() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
