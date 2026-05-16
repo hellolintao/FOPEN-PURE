@@ -1,0 +1,6 @@
+<view class="h2h-row" bindtap="onTap" hover-class="h2h-row--active" hover-stay-time="80">
+  <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
+  <text class="name">{{name}}</text>
+  <text class="pill pill-{{pillClass}} num">{{record}}</text>
+  <text class="arrow">→</text>
+</view>
