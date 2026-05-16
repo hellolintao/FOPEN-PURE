@@ -355,3 +355,41 @@ describe('playerStats — weeklySnapshot (this-week delta)', () => {
     expect(res.data.weeklySnapshot.doubles).toEqual({ pointsDelta: 0, wins: 0, losses: 0 })
   })
 })
+
+describe('playerStats.recent enrichment', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.tournaments = cloud.__rows.tournaments || []
+    cloud.__rows.tournaments.length = 0
+  })
+
+  test('recent rows carry tournamentName/Format, roundLabel, opponent, pointsAwarded, confirmedAt', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' }, { _id: 'X', name: '张昊' })
+    cloud.__rows.tournaments.push({ _id: 't1', name: '春季锦标赛', format: 'knockout', totalRounds: 4 })
+    cloud.__rows.match_results.push({
+      _id: 'm1', tournamentId: 't1', round: 3, score: '6-4, 6-2',
+      seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+      playerIds: ['P', 'X'],
+      confirmedAt: '2026-05-14', createTime: '2026-05-14',
+      pointsAwarded: { entries: [
+        { memberId: 'P', points: 20, role: 'winner' },
+        { memberId: 'X', points: 10, role: 'loser' }
+      ]}
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.data.recent[0]).toMatchObject({
+      tournamentName: '春季锦标赛',
+      tournamentFormat: 'knockout',
+      roundLabel: 'SF',
+      opponentId: 'X',
+      opponentName: '张昊',
+      won: true,
+      pointsAwarded: 20,
+      confirmedAt: '2026-05-14'
+    })
+  })
+})

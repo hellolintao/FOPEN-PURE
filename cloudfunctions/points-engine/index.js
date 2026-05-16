@@ -7,6 +7,7 @@ const award = require('./lib/award')
 const { aggregateRanks } = require('./lib/aggregate')
 const { aggregateWeeklyPlayerDelta } = require('./lib/weekly-delta')
 const { getCurrentNaturalWeek } = require('./lib/week-window')
+const { enrichRecent } = require('./lib/player-stats')
 
 exports.main = async (event) => {
   const { action } = event
@@ -132,7 +133,22 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
     }
   }
   // recent: 最近 10 场该选手参与的 confirmed match_results
-  const recent = await fetchRecentForPlayer(playerId)
+  const rawRecent = await fetchRecentForPlayer(playerId)
+  const tournamentIds = [...new Set(rawRecent.map(r => r.tournamentId).filter(Boolean))]
+  const memberIds = [...new Set(rawRecent.flatMap(r => (
+    ((r.pointsAwarded && r.pointsAwarded.entries) || []).map(e => e.memberId)
+  )).filter(Boolean))]
+  const [tRows, mRows] = await Promise.all([
+    tournamentIds.length > 0
+      ? db.collection('tournaments').where({ _id: _.in(tournamentIds) }).get().then(r => r.data || [])
+      : Promise.resolve([]),
+    memberIds.length > 0
+      ? db.collection('members').where({ _id: _.in(memberIds) }).get().then(r => r.data || [])
+      : Promise.resolve([])
+  ])
+  const tournamentsMap = new Map(tRows.map(t => [t._id, t]))
+  const membersMap = new Map(mRows.map(m => [m._id, m]))
+  const recent = enrichRecent(rawRecent, playerId, tournamentsMap, membersMap)
   const [rhSingles, rhDoubles] = await Promise.all([
     fetchRankHistory({ seasonId, type: 'singles', memberId: playerId }),
     fetchRankHistory({ seasonId, type: 'doubles', memberId: playerId })
