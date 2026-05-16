@@ -393,3 +393,54 @@ describe('playerStats.recent enrichment', () => {
     })
   })
 })
+
+describe('playerH2H action', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.members.length = 0
+  })
+
+  test('returns { singles: [...], doubles: [...] } shaped per spec', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a' }, { _id: 'P', name: 'p' })
+    cloud.__rows.match_results.push({
+      _id: 'm1', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
+      confirmedAt: '2026-05-10', createTime: '2026-05-10', playerIds: ['P', 'A'],
+      pointsAwarded: { entries: [
+        { memberId: 'P', points: 20, role: 'winner' },
+        { memberId: 'A', points: 10, role: 'loser' }
+      ]}
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerH2H', playerId: 'P', currentSeasonId: 's2026' })
+    expect(res.success).toBe(true)
+    expect(res.data.singles).toEqual([
+      { memberId: 'A', name: '甲', avatarUrl: 'a', wins: 1, losses: 0, lastPlayedAt: '2026-05-10' }
+    ])
+    expect(res.data.doubles).toEqual([])
+  })
+
+  test('missing playerId → INVALID_ARG', async () => {
+    const { main } = require('../index')
+    const res = await main({ action: 'playerH2H', currentSeasonId: 's2026' })
+    expect(res.success).toBe(false)
+    expect(res.error.code).toBe('INVALID_ARG')
+  })
+
+  test('non-existent playerId → NOT_FOUND', async () => {
+    const { main } = require('../index')
+    const res = await main({ action: 'playerH2H', playerId: 'GHOST', currentSeasonId: 's2026' })
+    expect(res.success).toBe(false)
+    expect(res.error.code).toBe('NOT_FOUND')
+  })
+
+  test('existing player with missing seasonId → empty arrays', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'P', name: 'p' })
+    const { main } = require('../index')
+    const res = await main({ action: 'playerH2H', playerId: 'P' })
+    expect(res.success).toBe(true)
+    expect(res.data).toEqual({ singles: [], doubles: [] })
+  })
+})

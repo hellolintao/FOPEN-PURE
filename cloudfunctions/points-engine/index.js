@@ -8,6 +8,7 @@ const { aggregateRanks } = require('./lib/aggregate')
 const { aggregateWeeklyPlayerDelta } = require('./lib/weekly-delta')
 const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
+const { computeH2H } = require('./lib/player-h2h')
 
 exports.main = async (event) => {
   const { action } = event
@@ -18,6 +19,7 @@ exports.main = async (event) => {
     // 兼容 wrappers (旧前端契约保持)
     if (action === 'rankList')         return await rankListCompat(event)
     if (action === 'playerStats')      return await playerStatsCompat(event)
+    if (action === 'playerH2H')        return await playerH2HCompat(event)
     if (action === 'recalculateMatch') return await recalculateMatchCompat(event)
 
     return { success: false, error: { code: 'UNKNOWN_ACTION', message: action } }
@@ -161,6 +163,54 @@ async function playerStatsCompat({ playerId, currentSeasonId }) {
   ])
   const weeklySnapshot = { singles: wsSingles, doubles: wsDoubles }
   return { success: true, data: { stats: buckets, currentRank, rankHistory, weeklySnapshot, recent } }
+}
+
+async function playerH2HCompat({ playerId, currentSeasonId }) {
+  if (!playerId) return { success: false, error: { code: 'INVALID_ARG', message: 'playerId 必填' } }
+
+  const memberRes = await db.collection('members').doc(playerId).get().catch(() => ({ data: null }))
+  if (!memberRes || !memberRes.data) {
+    return { success: false, error: { code: 'NOT_FOUND', message: playerId } }
+  }
+
+  if (!currentSeasonId) return { success: true, data: { singles: [], doubles: [] } }
+
+  let rows = []
+  try {
+    rows = (await db.collection('match_results')
+      .where({ seasonId: currentSeasonId, resultStatus: 'confirmed', playerIds: _.in([playerId]) })
+      .limit(1000)
+      .get()).data || []
+  } catch (e) {
+    rows = []
+  }
+
+  const allOpponentIds = new Set()
+  for (const row of rows) {
+    const entries = (row.pointsAwarded && row.pointsAwarded.entries) || []
+    for (const entry of entries) {
+      if (entry.memberId && entry.memberId !== playerId) allOpponentIds.add(entry.memberId)
+    }
+  }
+
+  const membersMap = new Map()
+  const ids = [...allOpponentIds]
+  const chunkSize = 50
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize)
+    const res = await db.collection('members').where({ _id: _.in(chunk) }).get()
+    for (const member of (res.data || [])) membersMap.set(member._id, member)
+  }
+
+  const singlesRows = rows.filter(row => row.tournamentType === 'singles')
+  const doublesRows = rows.filter(row => row.tournamentType === 'doubles')
+  return {
+    success: true,
+    data: {
+      singles: computeH2H(singlesRows, playerId, membersMap),
+      doubles: computeH2H(doublesRows, playerId, membersMap)
+    }
+  }
 }
 
 async function recalculateMatchCompat({ matchId }) {
