@@ -1,14 +1,18 @@
 .tab-bar {
   display: flex;
-  height: 124rpx;
-  background: var(--color-bg);
-  border-top: 2rpx solid var(--color-ink);
-  padding-bottom: env(safe-area-inset-bottom);
+  height: 128rpx;
+  box-sizing: border-box;
+  background-color: #BEE645;
+  border: 3rpx solid #0B0C09;
+  border-radius: 56rpx 56rpx 0 0;
+  box-shadow: 0 10rpx 28rpx rgba(11, 12, 9, 0.14);
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  padding-bottom: 18rpx;
   z-index: 100;
+  overflow: hidden;
 }
 
 .tab {
@@ -17,46 +21,41 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
-  color: var(--color-muted);
+  gap: 2rpx;
+  min-width: 0;
+  color: #0B0C09;
   position: relative;
-  transition: color 160ms var(--ease-out);
-}
-
-.tab.on {
-  color: var(--color-ink);
-}
-
-/* lime underline ridge for active tab (顶部，紧贴 ink hairline) */
-.tab.on::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56rpx;
-  height: 6rpx;
-  background: var(--color-lime);
-  border-radius: 0 0 6rpx 6rpx;
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
 }
 
 .tab-icon {
-  width: 44rpx;
-  height: 44rpx;
+  width: 42rpx;
+  height: 42rpx;
+  display: block;
+  transition: transform 160ms var(--ease-out);
+}
+
+.tab.on .tab-icon {
+  transform: translateY(-2rpx);
 }
 
 .tab-text {
-  font-size: 20rpx;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  font-size: 18rpx;
+  line-height: 22rpx;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #0B0C09;
 }
 
 .tab.on .tab-text {
   font-weight: 900;
-  color: var(--color-ink);
 }
 
 .tab-text-on {
-  color: var(--color-ink);
+  color: #0B0C09;
   font-weight: 900;
 }

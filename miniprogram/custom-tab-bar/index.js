@@ -13,11 +13,11 @@ Component({
     refresh() {
       const isAdmin = getApp().globalData.isAdmin;
       const baseList = [
-        { pagePath: '/pages/home/index',   text: '首页', iconPath: '/images/icons/home.png',       selectedIconPath: '/images/icons/home-active.png' },
-        { pagePath: '/pages/match/index',  text: '赛事', iconPath: '/images/icons/goods.png',      selectedIconPath: '/images/icons/goods-active.png' },
-        { pagePath: '/pages/manage/index', text: '管理', iconPath: '/images/icons/goods.png',      selectedIconPath: '/images/icons/goods-active.png', adminOnly: true },
-        { pagePath: '/pages/rank/index',   text: '排行', iconPath: '/images/icons/business.png',   selectedIconPath: '/images/icons/business-active.png' },
-        { pagePath: '/pages/mine/index',   text: '我的', iconPath: '/images/icons/usercenter.png', selectedIconPath: '/images/icons/usercenter-active.png' }
+        { pagePath: '/pages/home/index',   text: '首页', iconPath: '/images/icons/ri/home-line.png',           selectedIconPath: '/images/icons/ri/home-fill.png' },
+        { pagePath: '/pages/match/index',  text: '赛事', iconPath: '/images/icons/ri/calendar-event-line.png', selectedIconPath: '/images/icons/ri/calendar-event-fill.png' },
+        { pagePath: '/pages/rank/index',   text: '排行', iconPath: '/images/icons/ri/trophy-line.png',         selectedIconPath: '/images/icons/ri/trophy-fill.png' },
+        { pagePath: '/pages/manage/index', text: '管理', iconPath: '/images/icons/ri/settings-3-line.png',     selectedIconPath: '/images/icons/ri/settings-3-fill.png', adminOnly: true },
+        { pagePath: '/pages/mine/index',   text: '我的', iconPath: '/images/icons/ri/user-line.png',           selectedIconPath: '/images/icons/ri/user-fill.png' }
       ];
       const list = baseList.filter(item => !item.adminOnly || isAdmin);
       const pages = getCurrentPages();

@@ -1,11 +1,11 @@
-<view class="tab-bar">
-  <view
+<cover-view class="tab-bar">
+  <cover-view
     wx:for="{{list}}" wx:key="pagePath"
     class="tab {{selected === item.pagePath ? 'on' : ''}}"
     data-index="{{index}}"
     bindtap="onTap"
   >
-    <image class="tab-icon" src="{{selected === item.pagePath ? item.selectedIconPath : item.iconPath}}" mode="aspectFit" />
-    <text class="tab-text {{selected === item.pagePath ? 'tab-text-on' : ''}}">{{item.text}}</text>
-  </view>
-</view>
+    <cover-image class="tab-icon" src="{{selected === item.pagePath ? item.selectedIconPath : item.iconPath}}" />
+    <cover-view class="tab-text {{selected === item.pagePath ? 'tab-text-on' : ''}}">{{item.text}}</cover-view>
+  </cover-view>
+</cover-view>
