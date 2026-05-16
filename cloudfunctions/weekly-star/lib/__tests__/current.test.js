@@ -88,3 +88,30 @@ describe("weekly-star.current - mode='current'", () => {
     expect(out.subtitle).toBe('本周积分 +50 · W-L 1-0')
   })
 })
+
+describe('weekly-star.current fallback and empty modes', () => {
+  test("mode='fallback' when this week is empty but historical weekly_stars exist", async () => {
+    const week = { weekStart: '2026-05-11', weekEnd: '2026-05-17' }
+    const db = makeFakeDb({
+      members: [{ _id: 'X', name: '王浩', avatarUrl: 'x.png' }],
+      matches: [],
+      stars: [
+        { _id: 'ws_2026-05-04', seasonId: 's2026', weekStart: '2026-05-04', weekEnd: '2026-05-10',
+          singlesStar: { memberId: 'X', points: 60, wins: 3, losses: 1 } }
+      ]
+    })
+    const out = await resolveCurrentWeeklyStar({ db, seasonId: 's2026', type: 'singles', week })
+    expect(out.mode).toBe('fallback')
+    expect(out.star.memberId).toBe('X')
+    expect(out.subtitle).toBe('等本周首场')
+  })
+
+  test("mode='empty' when this week and history are both empty", async () => {
+    const week = { weekStart: '2026-05-11', weekEnd: '2026-05-17' }
+    const db = makeFakeDb({ members: [], matches: [], stars: [] })
+    const out = await resolveCurrentWeeklyStar({ db, seasonId: 's2026', type: 'singles', week })
+    expect(out.mode).toBe('empty')
+    expect(out.star).toBeNull()
+    expect(out.subtitle).toBeNull()
+  })
+})
