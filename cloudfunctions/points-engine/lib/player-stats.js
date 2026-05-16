@@ -14,6 +14,27 @@ function deriveRoundLabel(tournament, round) {
   return `R${round}`
 }
 
+function formatScore(score) {
+  if (!score) return ''
+  if (typeof score === 'string') return score
+
+  const sets = Array.isArray(score.sets) ? score.sets : []
+  if (sets.length === 0) return ''
+
+  const parts = sets
+    .map(set => {
+      if (!set || set.a == null || set.b == null) return ''
+      return `${set.a}-${set.b}`
+    })
+    .filter(Boolean)
+
+  if (score.tiebreak) {
+    parts.push(`(${score.tiebreak})`)
+  }
+
+  return parts.join(' ')
+}
+
 function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
   return (rows || []).map(row => {
     const tournament = tournamentsMap.get(row.tournamentId) || null
@@ -32,7 +53,7 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
       tournamentFormat: tournament ? (tournament.format || null) : null,
       round: row.round,
       roundLabel: deriveRoundLabel(tournament, row.round),
-      score: row.score || '',
+      score: formatScore(row.score),
       opponentId,
       opponentName: opponentMember ? (opponentMember.name || opponentId) : (opponentId || ''),
       won: mine ? mine.role === 'winner' : false,
@@ -43,4 +64,4 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
   })
 }
 
-module.exports = { deriveRoundLabel, enrichRecent }
+module.exports = { deriveRoundLabel, enrichRecent, formatScore }

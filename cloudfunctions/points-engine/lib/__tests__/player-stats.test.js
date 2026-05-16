@@ -1,4 +1,4 @@
-const { deriveRoundLabel, enrichRecent } = require('../player-stats')
+const { deriveRoundLabel, enrichRecent, formatScore } = require('../player-stats')
 
 describe('deriveRoundLabel', () => {
   test('regular format -> null', () => {
@@ -34,6 +34,17 @@ describe('deriveRoundLabel', () => {
 
   test('missing tournament -> null (defensive)', () => {
     expect(deriveRoundLabel(null, 3)).toBeNull()
+  })
+})
+
+describe('formatScore', () => {
+  test('keeps legacy string scores unchanged', () => {
+    expect(formatScore('6-4, 6-2')).toBe('6-4, 6-2')
+  })
+
+  test('formats structured score objects for recent display', () => {
+    expect(formatScore({ sets: [{ a: 4, b: 2 }], tiebreak: null })).toBe('4-2')
+    expect(formatScore({ sets: [{ a: 3, b: 3 }], tiebreak: '7-5' })).toBe('3-3 (7-5)')
   })
 })
 
@@ -84,6 +95,21 @@ describe('enrichRecent', () => {
     expect(out[0]).toMatchObject({
       roundLabel: null, won: false, opponentId: 'Y', opponentName: '陈思远', pointsAwarded: 10
     })
+  })
+
+  test('structured score object is formatted as display text', () => {
+    const row = {
+      _id: 'm_score', tournamentId: 't2', round: 1,
+      score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      playerIds: ['P', 'Y'],
+      pointsAwarded: { entries: [
+        { memberId: 'P', points: 20, role: 'winner' },
+        { memberId: 'Y', points: 10, role: 'loser' }
+      ]},
+      confirmedAt: '2026-05-10', createTime: '2026-05-10'
+    }
+    const out = enrichRecent([row], 'P', tournaments, members)
+    expect(out[0].score).toBe('4-2')
   })
 
   test('doubles recent display picks opposite-role opponent, not same-role partner', () => {
