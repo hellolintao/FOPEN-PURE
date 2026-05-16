@@ -7,12 +7,12 @@ const POINTS_RULES = deepFreeze({
 const DEFAULT_FIXTURE_NOW = deepFreeze(new Date('2026-05-17T10:00:00.000Z'))
 
 function selectActors({ members = [], courts = [] } = {}) {
-  const adminMember = members.find(isAdminMember)
-  const players = members.filter(m => m && !isAdminMember(m)).slice(0, 5)
+  const adminMember = members.find(m => isAdminMember(m) && hasLoginOpenid(m))
+  const players = members.filter(m => m && !isAdminMember(m) && hasLoginOpenid(m)).slice(0, 5)
   const enabledCourts = courts.filter(c => c && c.enabled === true).slice(0, 2)
 
-  if (!adminMember) throw new Error('Fixture requires one admin member')
-  if (players.length < 5) throw new Error('Fixture requires five normal members')
+  if (!adminMember) throw new Error('Fixture requires one admin member with openid/openId')
+  if (players.length < 5) throw new Error('Fixture requires five normal members with openid/openId')
   if (enabledCourts.length < 2) throw new Error('Fixture requires two enabled courts')
 
   return { adminMember, players, courts: enabledCourts }
@@ -133,6 +133,13 @@ function isAdminMember(member) {
   return member && (member.admin === true || member.isAdmin === true)
 }
 
+function hasLoginOpenid(member) {
+  return !!(member && (
+    (typeof member.openid === 'string' && member.openid.trim()) ||
+    (typeof member.openId === 'string' && member.openId.trim())
+  ))
+}
+
 function normalizeActors(actors) {
   if (actors.adminMember || actors.players || actors.courts) {
     const selected = {
@@ -140,8 +147,12 @@ function normalizeActors(actors) {
       players: (actors.players || []).slice(0, 5),
       courts: (actors.courts || []).slice(0, 2),
     }
-    if (!selected.adminMember) throw new Error('Fixture requires one admin member')
-    if (selected.players.length < 5) throw new Error('Fixture requires five normal members')
+    if (!selected.adminMember || !hasLoginOpenid(selected.adminMember)) {
+      throw new Error('Fixture requires one admin member with openid/openId')
+    }
+    if (selected.players.length < 5 || selected.players.some(player => !hasLoginOpenid(player))) {
+      throw new Error('Fixture requires five normal members with openid/openId')
+    }
     if (selected.courts.filter(c => c && c.enabled === true).length < 2) throw new Error('Fixture requires two enabled courts')
     return selected
   }

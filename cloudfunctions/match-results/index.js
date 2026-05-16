@@ -37,10 +37,22 @@ function generateMatchId(tournamentId, round, matchIndex) {
 async function resolveSubmitter() {
   const wxContext = cloud.getWXContext()
   if (!wxContext || !wxContext.OPENID) return null
-  const r = await db.collection('members').where({ openid: wxContext.OPENID }).get()
+  return resolveSubmitterByOpenid(wxContext.OPENID)
+}
+
+async function resolveSubmitterByOpenid(openid, database = db, command = _) {
+  if (!openid) return null
+  const r = await database.collection('members').where(command.or([
+    { openid },
+    { openId: openid }
+  ])).get()
   const m = r.data[0]
   if (!m) return null
-  return { _id: m._id, isAdmin: (typeof m.admin === 'boolean') ? m.admin : !!m.isAdmin }
+  return {
+    _id: m._id,
+    openid: m.openid || m.openId || openid,
+    isAdmin: (typeof m.admin === 'boolean') ? m.admin : !!m.isAdmin
+  }
 }
 
 function ok(data) { return { success: true, data } }
@@ -836,4 +848,8 @@ async function pagedFetchSubmitted() {
     last = { createTime: page[page.length - 1].createTime, _id: page[page.length - 1]._id }
   }
   return out
+}
+
+exports.__test__ = {
+  resolveSubmitterByOpenid,
 }

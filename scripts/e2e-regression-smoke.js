@@ -40,6 +40,16 @@ async function runE2ERegressionSmoke({
   }
   assertFixturePrerequisites(prerequisites)
 
+  const selectedSeasonId = seasonId || prerequisites.seasons[0]._id || prerequisites.seasons[0].id
+  if (mode !== 'cleanup-only') {
+    if (!selectedSeasonId) throw new Error('E2E regression smoke requires seasonId')
+    if (!hasSeason(prerequisites.seasons, selectedSeasonId)) {
+      throw new Error(`Fixture prerequisites failed: season "${selectedSeasonId}" not found`)
+    }
+  }
+
+  const actors = mode === 'cleanup-only' ? null : selectActors(prerequisites)
+
   if (mode === 'cleanup-only' || mode === 'cleanup-seed-smoke') {
     await cleanupBusinessCollections(db, BUSINESS_COLLECTIONS, log)
   }
@@ -47,10 +57,6 @@ async function runE2ERegressionSmoke({
     return { mode, fixture: null, smoke: [] }
   }
 
-  const selectedSeasonId = seasonId || prerequisites.seasons[0]._id || prerequisites.seasons[0].id
-  if (!selectedSeasonId) throw new Error('E2E regression smoke requires seasonId')
-
-  const actors = selectActors(prerequisites)
   const fixture = buildE2EFixture({ actors, seasonId: selectedSeasonId, now })
   await seedFixture(db, fixture.collections, log)
 
@@ -59,6 +65,10 @@ async function runE2ERegressionSmoke({
     : []
 
   return { mode, fixture, smoke }
+}
+
+function hasSeason(seasons, seasonId) {
+  return (seasons || []).some(season => season && (season._id === seasonId || season.id === seasonId))
 }
 
 async function seedFixture(db, collections, log = console.log) {

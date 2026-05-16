@@ -52,6 +52,8 @@ Season: `season_2026`
 
 The implemented CLI env var is `SMOKE_MODE`, not `FOPEN_E2E_MODE`.
 
+For seed modes, `SEASON_ID` must match an existing row in `seasons` by `_id` or `id`. The script aborts before cleanup if the requested season is missing.
+
 In cleanup modes, the command clears all rows in these business collections in the target env:
 
 - `tournaments`
@@ -83,11 +85,13 @@ Expected smoke checks:
 - `playerStats.A`
 - `playerH2H.A`
 
+This cloud smoke intentionally seeds deterministic fixture documents directly, then checks read-only aggregation. It does not call login-state write actions such as `batchSubmit` or `batchAdminSave`; those write paths are covered by the cloud handler tests, page tests, and the DevTools login-state smoke below.
+
 Credential note: local runs of `@cloudbase/node-sdk` require Tencent Cloud credentials. If the shell does not already have `TENCENTCLOUD_SECRETID` / `TENCENTCLOUD_SECRETKEY` / `TENCENTCLOUD_SESSIONTOKEN`, refresh them from an existing CloudBase CLI login with `cloudbase secrets get --json` and inject them into only the smoke child process. Do not print secrets in logs.
 
 The command prints generated fixture ids and an actor mapping. Keep those ids for manual verification and retain the fixture after smoke unless manual verification is complete and cleanup is explicitly requested.
 
-Use the printed `actors.admin` member id/name/openid for admin DevTools login-state checks. Use printed `actors.players` labels A-E for member role checks: player A is the primary rank/player-detail smoke subject, players A-D are tournament participants, and player E is the non-participant for E2E-08. When an `openid` is present, use it for DevTools login-state switching; otherwise use the printed member id/name to identify the member row.
+Use the printed `actors.admin` member id/name/openid for admin DevTools login-state checks. Use printed `actors.players` labels A-E for member role checks: player A is the primary rank/player-detail smoke subject, players A-D are tournament participants, and player E is the non-participant for E2E-08. Seed modes require the selected admin and five selected players to have login ids in `members.openid` or legacy `members.openId`; the write cloud functions now resolve both fields from `cloud.getWXContext().OPENID`.
 
 Cleanup only after manual verification:
 
@@ -116,6 +120,8 @@ Expected result: non-zero exit with a safety error requiring `FOPEN_CLOUD_ENV`, 
 
 Keep the seeded fixture data in place for role switching. Do not run cleanup between these checks unless reseeding immediately afterward.
 
+When validating against deployed cloud functions, deploy this branch's `match-results` and `tournaments` functions to the target env before running login-state write checks. This branch includes identity fallback for both `members.openid` and legacy `members.openId`; older deployed functions may only resolve one field.
+
 Use the fixture ids and actor mapping printed by `SMOKE_MODE=cleanup-seed-smoke`. The important interactive tournament id starts with `e2e_interactive_`.
 
 1. Run E2E-02 from the checklist as a normal member participant.
@@ -140,12 +146,12 @@ Verified on 2026-05-17 against `cloud1-0gthnke69a09f52a` / `season_2026`.
 
 Local checks passed:
 
-- `scripts`: 4 suites / 36 tests
+- `scripts`: 4 suites / 38 tests
 - `cloudfunctions/_shared`: 1 suite / 22 tests
-- `cloudfunctions/match-results`: 6 suites / 80 tests
+- `cloudfunctions/match-results`: 7 suites / 82 tests
 - `cloudfunctions/points-engine`: 6 suites / 73 tests
 - `cloudfunctions/tournament-brackets`: 4 suites / 44 tests
-- `cloudfunctions/tournaments`: 3 suites / 30 tests
+- `cloudfunctions/tournaments`: 4 suites / 32 tests
 - `cloudfunctions/weekly-star`: 5 suites / 19 tests
 - `miniprogram`: 9 suites / 39 tests
 - `bash scripts/sync-shared-libs.sh`: all mirrors ok
@@ -171,10 +177,10 @@ Smoke checks passed:
 
 Seeded fixture ids:
 
-- `e2e_regular_singles_20260516_1927`
-- `e2e_knockout_singles_20260516_1927`
-- `e2e_regular_doubles_20260516_1927`
-- `e2e_interactive_20260516_1927`
+- `e2e_regular_singles_20260516_1947`
+- `e2e_knockout_singles_20260516_1947`
+- `e2e_regular_doubles_20260516_1947`
+- `e2e_interactive_20260516_1947`
 
 Seeded actors:
 
@@ -185,11 +191,18 @@ Seeded actors:
 - D: `user_007` / `孙伟` / `wx_openid_007`
 - E: `user_008` / `周杰` / `wx_openid_008`
 
-DevTools smoke passed in WeChat DevTools Stable v2.01.2510280:
+Automated write-path coverage in this branch:
+
+- cloud handler tests cover member `batchSubmit`, admin `batchAdminSave`, admin confirm/reconfirm, stale version handling, invalid score handling, score schema, point awards, and participant/permission checks
+- miniprogram page/component tests cover score draft entry, member submit sheet, admin save sheet, close-refresh behavior, rank display, my-match rows, and player-detail recent records
+
+DevTools display smoke passed in WeChat DevTools Stable v2.01.2510280:
 
 - Admin home showed the admin role and create-tournament entry.
 - Rank page showed the seeded singles table: `张三 160`, `赵敏 100`, `孙伟 60`, `刘洋 50`.
 - Player detail for `张三` showed singles `3/3`, `160` points, and recent regular/knockout/doubles match records.
+
+The DevTools login-state write smoke in the previous section remains the manual end-to-end check for a real member submit followed by admin confirmation. Keep the fixture in place until that pass is done or rerun `cleanup-seed-smoke` immediately before executing it.
 
 Observed DevTools noise not blocking the smoke result:
 

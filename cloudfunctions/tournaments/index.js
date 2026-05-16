@@ -40,6 +40,22 @@ function fail(code, message, errors) {
   }
 }
 
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveMemberByOpenid(openid, database = db, command = _) {
+  if (!openid) return null
+  const memberRes = await database.collection('members').where(command.or([
+    { openid },
+    { openId: openid }
+  ])).get()
+  const members = memberRes.data || []
+  const member = members[0]
+  if (!member) return null
+  return { ...member, openid: member.openid || member.openId || openid }
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -111,11 +127,8 @@ async function actionCreate(event) {
     const wxContext = cloud.getWXContext()
     createdByOpenid = wxContext.OPENID || null
     if (createdByOpenid) {
-      const memberRes = await db.collection('members')
-        .where({ openid: createdByOpenid })
-        .get()
-      const members = memberRes.data || []
-      createdBy = members.length > 0 ? members[0]._id : null
+      const member = await resolveMemberByOpenid(createdByOpenid)
+      createdBy = member ? member._id : null
     }
   } catch (e) {
     console.error('获取创建者信息失败:', e)
@@ -452,12 +465,10 @@ exports.main = async (event, context) => {
         const wxContext = cloud.getWXContext()
         const openid = wxContext.OPENID || null
         if (!openid) return fail('FORBIDDEN', '需要登录')
-        const memberRes = await db.collection('members').where({ openid }).get()
-        const members = memberRes.data || []
-        if (!members.length) return fail('FORBIDDEN', '成员不存在')
-        const member = members[0]
-        if (!member.isAdmin) return fail('FORBIDDEN', '需要管理员权限')
-        const ctx = buildAdminConsoleCtx({ isAdmin: member.isAdmin, openid, _id: member._id })
+        const member = await resolveMemberByOpenid(openid)
+        if (!member) return fail('FORBIDDEN', '成员不存在')
+        if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+        const ctx = buildAdminConsoleCtx({ isAdmin: true, openid: member.openid, _id: member._id })
         const data = await Promise.race([
           adminConsoleSnapshot(ctx, event),
           new Promise((_, rej) => setTimeout(() => {
@@ -476,11 +487,9 @@ exports.main = async (event, context) => {
         const wxContext = cloud.getWXContext()
         const openid = wxContext.OPENID || null
         if (!openid) return fail('FORBIDDEN', '需要登录')
-        const memberRes = await db.collection('members').where({ openid }).get()
-        const members = memberRes.data || []
-        if (!members.length) return fail('FORBIDDEN', '成员不存在')
-        const member = members[0]
-        if (!member.isAdmin) return fail('FORBIDDEN', '需要管理员权限')
+        const member = await resolveMemberByOpenid(openid)
+        if (!member) return fail('FORBIDDEN', '成员不存在')
+        if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
         const ctx = {
           isAdmin: true,
           db: {
@@ -513,4 +522,9 @@ exports.main = async (event, context) => {
     default:
       return { errMsg: 'invalid action' }
   }
+}
+
+exports.__test__ = {
+  resolveMemberByOpenid,
+  isAdminMember,
 }

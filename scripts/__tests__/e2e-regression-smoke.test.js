@@ -274,6 +274,23 @@ describe('runE2ERegressionSmoke', () => {
       log: () => {},
     })).rejects.toThrow(/at least one season/)
   })
+
+  test('rejects an unknown seasonId before destructive cleanup', async () => {
+    const db = makeFakeDb({
+      tournaments: [{ _id: 'old_tournament', name: 'old' }],
+    })
+
+    await expect(runE2ERegressionSmoke({
+      db,
+      callFunction: makeSmokeCallFunction([]),
+      mode: 'cleanup-seed-smoke',
+      seasonId: 'season_missing',
+      now: new Date('2026-05-17T10:00:00.000Z'),
+      log: () => {},
+    })).rejects.toThrow(/season "season_missing" not found/)
+
+    expect(db.rows.tournaments).toEqual([{ _id: 'old_tournament', name: 'old' }])
+  })
 })
 
 describe('formatActorSummary', () => {

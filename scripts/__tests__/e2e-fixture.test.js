@@ -7,11 +7,11 @@ const {
 
 const members = [
   { _id: 'admin', name: 'Admin', admin: true, openid: 'oa' },
-  { _id: 'A', name: 'A' },
-  { _id: 'B', name: 'B' },
-  { _id: 'C', name: 'C' },
-  { _id: 'D', name: 'D' },
-  { _id: 'E', name: 'E' },
+  { _id: 'A', name: 'A', openid: 'opA' },
+  { _id: 'B', name: 'B', openid: 'opB' },
+  { _id: 'C', name: 'C', openid: 'opC' },
+  { _id: 'D', name: 'D', openid: 'opD' },
+  { _id: 'E', name: 'E', openid: 'opE' },
 ]
 const courts = [
   { _id: 'court1', courtId: 'court1', name: 'Court 1', enabled: true },
@@ -32,6 +32,23 @@ describe('selectActors', () => {
     expect(actors.adminMember._id).toBe('admin')
     expect(actors.players.map(p => p._id)).toEqual(['A', 'B', 'C', 'D', 'E'])
     expect(actors.courts.map(c => c.courtId)).toEqual(['court1', 'court2'])
+  })
+
+  test('requires selected DevTools actors to have login openid fields', () => {
+    const missingAdminOpenid = members.map(member => (
+      member._id === 'admin' ? { ...member, openid: '' } : member
+    ))
+    const missingPlayerOpenid = members.map(member => (
+      member._id === 'A' ? { ...member, openid: '' } : member
+    ))
+    const openIdOnly = members.map(member => {
+      const { openid, ...rest } = member
+      return { ...rest, openId: openid }
+    })
+
+    expect(() => selectActors({ members: missingAdminOpenid, courts })).toThrow(/one admin member with openid\/openId/)
+    expect(() => selectActors({ members: missingPlayerOpenid, courts })).toThrow(/five normal members with openid\/openId/)
+    expect(selectActors({ members: openIdOnly, courts }).players.map(p => p._id)).toEqual(['A', 'B', 'C', 'D', 'E'])
   })
 })
 
