@@ -13,6 +13,18 @@ describe('resolveOpponentIds', () => {
     expect(resolveOpponentIds(row, 'P')).toEqual(['A'])
   })
 
+  test('singles returns empty when player is not present in entries', () => {
+    const row = {
+      tournamentType: 'singles',
+      pointsAwarded: { entries: [
+        { memberId: 'A', role: 'winner' },
+        { memberId: 'B', role: 'loser' }
+      ]}
+    }
+
+    expect(resolveOpponentIds(row, 'P')).toEqual([])
+  })
+
   test('doubles with team metadata returns entries from different team', () => {
     const row = {
       tournamentType: 'doubles',
@@ -173,5 +185,29 @@ describe('computeH2H', () => {
     expect(computeH2H(rows, 'P', new Map())).toEqual([
       { memberId: 'A', name: 'A', avatarUrl: '', wins: 0, losses: 1, lastPlayedAt: '2026-05-08' }
     ])
+  })
+
+  test('lastPlayedAt compares mixed string and Date timestamps while preserving the selected value', () => {
+    const newerDate = new Date('2026-05-12T00:00:00.000Z')
+    const rows = [
+      {
+        tournamentType: 'singles',
+        confirmedAt: '2026-05-10T00:00:00.000Z',
+        pointsAwarded: { entries: [
+          { memberId: 'P', role: 'loser' },
+          { memberId: 'A', role: 'winner' }
+        ]}
+      },
+      {
+        tournamentType: 'singles',
+        confirmedAt: newerDate,
+        pointsAwarded: { entries: [
+          { memberId: 'P', role: 'winner' },
+          { memberId: 'A', role: 'loser' }
+        ]}
+      }
+    ]
+
+    expect(computeH2H(rows, 'P', new Map())[0].lastPlayedAt).toBe(newerDate)
   })
 })

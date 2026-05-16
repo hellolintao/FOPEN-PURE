@@ -3,6 +3,7 @@ function resolveOpponentIds(row, playerId) {
   const entries = (row && row.pointsAwarded && row.pointsAwarded.entries) || []
 
   if (type === 'singles') {
+    if (!entries.some(entry => entry.memberId === playerId)) return []
     return entries
       .filter(entry => entry.memberId !== playerId)
       .map(entry => entry.memberId)
@@ -30,6 +31,12 @@ function resolveOpponentIds(row, playerId) {
   return []
 }
 
+function toTimestamp(value) {
+  if (!value) return null
+  const timestamp = new Date(value).getTime()
+  return Number.isNaN(timestamp) ? null : timestamp
+}
+
 function computeH2H(rows, playerId, membersMap) {
   const byOpponent = new Map()
 
@@ -40,6 +47,7 @@ function computeH2H(rows, playerId, membersMap) {
 
     const opponentIds = resolveOpponentIds(row, playerId)
     const playedAt = row.confirmedAt || row.createTime || null
+    const playedAtTime = toTimestamp(playedAt)
 
     for (const opponentId of opponentIds) {
       const current = byOpponent.get(opponentId) || {
@@ -52,7 +60,8 @@ function computeH2H(rows, playerId, membersMap) {
       if (mine.role === 'winner') current.wins += 1
       else if (mine.role === 'loser') current.losses += 1
 
-      if (!current.lastPlayedAt || (playedAt && playedAt > current.lastPlayedAt)) {
+      const currentTime = toTimestamp(current.lastPlayedAt)
+      if (!current.lastPlayedAt || (playedAtTime != null && (currentTime == null || playedAtTime > currentTime))) {
         current.lastPlayedAt = playedAt
       }
 
