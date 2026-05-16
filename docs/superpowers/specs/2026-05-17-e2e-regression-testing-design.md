@@ -2,7 +2,7 @@
 
 - 日期：2026-05-17
 - 范围版本：Post Phase 10-2 回归测试体系
-- 状态：设计已审定，等待写实施 plan
+- 状态：设计已审定，review 修订后等待写实施 plan
 - 上游文档：
   - 录分与积分引擎：`docs/superpowers/plans/08-phase-8-score-engine.md`
   - v2.1 质量迭代：`docs/superpowers/specs/2026-05-15-fopen-v2-quality-iteration-design.md`
@@ -55,9 +55,9 @@
 | 2 | 小程序页面逻辑回归全绿 | `cd miniprogram && npm test` 全部通过，新增 tournament-score/my-match/rank/player-detail 逻辑用例通过 |
 | 3 | 数据清理保护有效 | 未设置确认变量时，清理脚本拒绝执行并输出目标环境 |
 | 4 | 云端 fixture 可重建 | 清空 8 个业务集合后，脚本能写入固定赛事、报名、签表、录分行、确认结果和积分数据 |
-| 5 | 云端聚合正确 | `points-engine.rankList/playerStats/playerH2H` 返回的积分、胜负、recent 与 fixture 预期一致 |
+| 5 | 云端聚合正确 | 数据库级 smoke 调用 `points-engine.rankList/playerStats/playerH2H`，返回的积分、胜负、recent 与 fixture 预期一致 |
 | 6 | 会员摘要正确 | 登录态验证下，`my-match` 的 pending/submitted/confirmed 三段与 fixture 状态一致 |
-| 7 | 管理员确认正确 | 登录态验证下，管理员保存/确认后，`match_results.resultStatus`、`pointsAwarded.entries`、`rankList`、`playerStats.recent` 同步更新 |
+| 7 | 管理员确认正确 | 登录态验证下，管理员保存/确认后，`match_results.resultStatus` 与 `pointsAwarded.entries` 同步更新；排行榜和用户详情聚合结果由 #5 再做只读校验 |
 | 8 | 混合角色正确 | admin 作为参赛者在 `my-match` 看到会员视图，在管理入口看到待确认视图 |
 | 9 | 负向权限正确 | 非参赛会员提交失败；普通会员覆盖 confirmed 失败；非 admin 调管理员接口失败 |
 | 10 | 手工清单可执行 | 每条用例包含前置数据、操作步骤、预期结果、可查询的数据断言 |
@@ -193,8 +193,8 @@ fixture 分两组：
 - 4 名会员：A/B/C/D。
 - 2 个场地。
 - 2 场 regularRound：
-  - M1：A vs B，A 胜 4-2。
-  - M2：C vs D，D 胜 3-3，抢七 7-5。
+  - M1：A vs B，A 胜，`score = { sets: [{ a: 4, b: 2 }], tiebreak: null }`。
+  - M2：C vs D，D 胜，`score = { sets: [{ a: 3, b: 3 }], tiebreak: '5-7' }`。
 - pointsRules：
   - win = 20
   - loss = 10
@@ -207,6 +207,7 @@ fixture 分两组：
 - B、C 负场 +1，积分 +10。
 - `rankList(singles)` 中 A/D 排在 B/C 前。
 - A 的 `playerStats.recent[0]` 包含赛事名、比分、对手 B、`pointsAwarded=20`。
+- 抢七断言遵循当前 `score-rule.js`：`tiebreak` 是字符串 `"X-Y"`，先到 7 分获胜，不要求净胜 2 分，单边最高 7。
 
 ### 3.3 淘汰赛单打
 
@@ -272,6 +273,22 @@ fixture 分两组：
 ---
 
 ## 4. 云端清理与重建策略
+
+### 4.0 现有脚本扩展口径
+
+仓库已存在 `scripts/cleanup-test-data.js`。本轮不是另起一个互不相干的清理脚本，而是在现有脚本基础上扩展为“cleanup + seed + smoke”能力，并保留当前防误删思路。
+
+实施 plan 的第一个任务必须列出现状脚本到目标脚本的差异，并先用测试锁住这些差异：
+
+| 项目 | 当前脚本 | 目标脚本 |
+|---|---|---|
+| 清理集合 | 6 个：`tournaments`、`tournament_brackets`、`tournament_registrations`、`match_results`、`tournament_points`、`free_plays` | 8 个：当前 6 个 + `rank_snapshots`、`weekly_stars` |
+| 保护变量 | `FOPEN_CLOUD_ENV` + `FOPEN_CLEANUP_CONFIRM` | 当前 2 个 + `FOPEN_RESET_BUSINESS_DATA=YES` |
+| 前置校验 | 无基础数据校验 | 清理前校验至少 1 个 admin、5 个普通会员、2 个可用场地 |
+| 执行模式 | cleanup-only | cleanup-only、seed-only、cleanup-seed-smoke |
+| 输出 | 删除数量 | 删除数量、fixture id、聚合断言报告、失败时保留现场提示 |
+
+不得在重写过程中遗忘当前 6 个集合的删除逻辑；目标脚本只是在其上补齐清理范围、保护变量、fixture 重建和 smoke 报告。
 
 ### 4.1 清理边界
 
@@ -381,6 +398,8 @@ fixture 分两组：
   - 对应 `match_results.resultStatus=submitted`。
   - `score={ sets:[{a:4,b:2}], tiebreak:null }`。
   - `pointsAwarded=null`。
+
+当前 `score-row` 的实际产物会在非抢七比分中带 `tiebreak: null`；云端直接 seed 的 fixture 也按这个形态写入，避免 `null` / `undefined` 混用造成断言歧义。
 
 ### E2E-03 管理员确认会员提交比分
 
