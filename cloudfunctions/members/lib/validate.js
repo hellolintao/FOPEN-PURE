@@ -5,6 +5,7 @@ const VALID_PLAY_STYLES = [
   'counter-puncher',
   'aggressive-baseliner'
 ];
+const MAX_NOTE_LENGTH = 50;
 
 function validateMemberData(data) {
   const errors = [];
@@ -13,11 +14,11 @@ function validateMemberData(data) {
     errors.push(`playStyle 必须是 ${VALID_PLAY_STYLES.join('/')} 之一`);
   }
 
-  if (data.playStyleNote != null && typeof data.playStyleNote === 'string' && data.playStyleNote.length > 100) {
-    errors.push('playStyleNote 不能超过 100 字符');
+  if (data.playStyleNote != null && typeof data.playStyleNote === 'string' && data.playStyleNote.length > MAX_NOTE_LENGTH) {
+    errors.push(`备注最多 ${MAX_NOTE_LENGTH} 字`);
   }
 
   return { valid: errors.length === 0, errors };
 }
 
-module.exports = { validateMemberData, VALID_PLAY_STYLES };
+module.exports = { validateMemberData, VALID_PLAY_STYLES, MAX_NOTE_LENGTH };

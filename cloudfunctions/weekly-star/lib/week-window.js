@@ -33,8 +33,22 @@ function getPreviousNaturalWeek(now = new Date()) {
   }
 }
 
+function getCurrentNaturalWeek(now = new Date()) {
+  const today = startOfLocalDay(now)
+  const dow = today.getDay() === 0 ? 7 : today.getDay()
+  const thisMonday = new Date(today)
+  thisMonday.setDate(today.getDate() - (dow - 1))
+  return {
+    start: thisMonday,
+    end: now,
+    weekStart: toDateKey(thisMonday),
+    weekEnd: toDateKey(now),
+    weekId: getWeekId(thisMonday)
+  }
+}
+
 function getWeekId(mondayDate) {
   return `ws_${toDateKey(mondayDate)}`
 }
 
-module.exports = { getPreviousNaturalWeek, getWeekId, toDateKey }
+module.exports = { getPreviousNaturalWeek, getCurrentNaturalWeek, getWeekId, toDateKey }

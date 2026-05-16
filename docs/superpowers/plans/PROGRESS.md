@@ -5,7 +5,7 @@
 ## 总进度
 
 ```
-[██████████████████████████░░] 6/7 Phase 完成 + Phase 9 代码完成等人工验收
+[███████████████████████████░] Phase 10-1 代码完成，本地回归通过；待云端索引 + DevTools E2E
 ```
 
 ## Phase 状态
@@ -21,6 +21,7 @@
 | 07 | Phase 7 · Create+Schedule | ✅ 已完成 | 2026-05-13 | 2026-05-14 | 63ee6f5 + 2026-05-15 修订 | 4 步 wizard / 20min schedulePlan / 1h court-grid 日程表 / step 3 schedule-board 日程表 / player-picker-sheet / 常规赛自动填满每小时 2 场比赛 + 1 个自由拉球；generator + scheduler 迁入 brackets，scheduler-engine 标 @deprecated；新增 free-plays、courts 云函数；旧 Phase 5/6 暂置后 |
 | 08 | Phase 8 · Score Engine | ✅ 完成 | 2026-05-15 | 2026-05-15 | 4df153f | _shared/award.js + sync 脚本（award+score-rule+bracket-generator+scheduler-mirror hash 比对）；match-results state machine（submitResult/confirmAll/reconfirmMatch/clearDownstream/maybeAwardPlacement，含修订 #1 confirmed 硬拦、#10 playerIds 校验、#2 推进同步 R+1）；score-rule 4 局制 + 3:3 抢七（100% 覆盖率，29 测试）；points-engine 重写 rankAggregate/recompute + 兼容 wrapper（rankList/playerStats/recalculateMatch）；aggregate 复合游标分页（2500 条测试通过）；score-row 组件 + tournament-score 页重写（轮次分组 / 内联编辑 / admin 一键确认）；tournament-manage 加待确认比分队列；my-match 加可录分比赛行；DATABASE_SCHEMA 同步 tournament_points 集合 + slotMinutes=20 + winLoss.walkover 字段说明 |
 | 09 | Phase 9 · v2.1 Quality Iteration | 🟦 代码完成，待人工 E2E + 部署 | 2026-05-16 | — | `6c58f87` | 6 个新云函数 action（adminConsoleSnapshot/finishedRecent/batchConfirm/batchSubmit/pendingReviewItems/mySummary）+ `_request_log` 集合 + `expectedUpdateTime` 乐观锁 + match-results 拆 handlers/；3 个新组件（status-tag/empty-state/batch-result-sheet 共 22 单测）+ utils/cloud.call v2 wrapper；tournament-manage/my-match/tournament-score IA 重构 + sheet 集成；score-row 视觉债已由 visual stream `c956f9e` 清理；全量 213 测试绿（云函数 191 + miniprogram 22）；分支 `feat/visual-revamp` 与视觉重构 stream 并发，已用 explicit pathspec 隔离；待用户：Tasks 25-27 manual smoke / 29 E2E-1~10 / 30 性能基线+QA 截图 / 31 云函数上传 |
+| 10 | Phase 10-1 · Rank + Edit Profile | 🟦 代码完成，待云端 E2E | 2026-05-16 | — | `bcfb2c4` | `rank_snapshots` schema/backfill/cron/recompute；`aggregateRanks(asOf)` + 稳定 tie-breaker；`rankList.winRate/trendDelta`；`weekly-star.current` 三态；rank 页 5 列 + weekly-star 单 hero；edit-profile playStyle + 50 字备注。验证：云函数实际 Jest 269/269，小程序 22/22，scripts backfill 3/3，sync-shared-libs 通过；未执行云端索引创建、真实 W0 backfill、WeChat DevTools E2E。 |
 
 **状态图例**：⬜ 待开始 / 🟦 进行中 / ✅ 已完成 / ⚠️ 阻塞
 
@@ -28,17 +29,52 @@
 
 ## 当前应该做什么
 
-**👉 Phase 6 Post-Phase-8 Polish 已完成并已提交。** 剩余动作：
+**👉 Phase 10-1 代码已完成并通过本地回归。** 剩余动作：
 
-1. 按 `superpowers:finishing-a-development-branch` 做收尾验证并选择集成方式。
-2. 如需真实业务数据审计，在有腾讯云 `secretId/secretKey` 的终端环境执行 `cd scripts && FOPEN_CLOUD_ENV=cloud1-0gthnke69a09f52a FOPEN_SEASON_ID=s2026 npm run audit:polish-data`。
-3. `weekly-star` 云函数已上传到 `cloud1-0gthnke69a09f52a`；含 `lib/` 目录的源码包会触发 DevTools CLI `EISDIR`，本次使用临时 deploy-only bundle + `--paths` 成功部署，仓库源码结构不变。
+1. 在目标云环境创建 `rank_snapshots` 4 个索引：`rank_snapshots_week_rank`、`rank_snapshots_member_history`、`rank_snapshots_latest`、`rank_snapshots_unique_week_member`。
+2. 上传 `points-engine`、`weekly-star`、`members` 云函数后，运行 `WX_CLOUD_ENV=<env-id> SEASON_ID=s2026 node scripts/backfill-rank-snapshots-W0.js`。
+3. 在 WeChat DevTools 执行 Phase 10-1 E2E-1/2/3/5；通过后再启动 Phase 10-2（player-detail rewrite + H2H + rank chart）。
 
 后续运维 / v3 演进见 spec §9.2。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-16 · Phase 10-1 code complete（Rank + Edit Profile）
+
+| Task | Description | Commit | Status |
+|---|---|---|---|
+| 1 | DATABASE_SCHEMA rank_snapshots + 50-char note | `73ae5d1` | ✅ |
+| 2-4 | aggregateRanks asOf + tiebreaker | `26438f8` / `59415fc` / `b812305` | ✅ |
+| 5-6 | aggregateWeeklyPlayerDelta | `160508d` / `e37a215` | ✅ |
+| 7 | getCurrentNaturalWeek helper | `fd38963` | ✅ |
+| 8-9 | weekly-star.current 3 modes | `2161a50` / `99b1828` | ✅ |
+| 10 | snapshot-writer helper | `2f7d983` | ✅ |
+| 11 | weekly-star current action | `4cb1544` | ✅ |
+| 12 | weekly-star cron double-write | `83a53e3` | ✅ |
+| 13 | weekly-star recomputeRankSnapshots | `e4d60fa` | ✅ |
+| 14 | rankList winRate + trendDelta | `6848d1f` | ✅ |
+| 15 | members validate 50-char cap | `26e9a11` | ✅ |
+| 16 | W0 backfill script | `70d5aba` | ✅ |
+| 17 | rank-row 5-col layout | `e623d9f` | ✅ |
+| 18 | rank page hero + 5-col list | `46f2ce0` | ✅ |
+| 19 | edit-profile playStyle inputs | `bcfb2c4` | ✅ |
+
+本地验证：
+
+- Cloud Jest（实际可运行套件，跳过 `quickstartFunctions` / `seasons` 的默认 `no test specified` 脚本）：269/269 通过。
+- Miniprogram Jest：22/22 通过。
+- Scripts Jest：`backfill-rank-snapshots-W0.test.js` 3/3 通过（用显式 node testEnvironment config；repo root 无 Jest config）。
+- `scripts/sync-shared-libs.sh` 通过：award.js、front-end mirrors、`points-engine/lib/aggregate.js` ↔ `weekly-star/lib/aggregate.js` hash 一致。
+
+未执行（需要目标云环境 / WeChat DevTools）：
+
+- `rank_snapshots` 4 个索引创建与 active 状态确认。
+- `WX_CLOUD_ENV=<env-id> SEASON_ID=s2026 node scripts/backfill-rank-snapshots-W0.js` 真实云端 W0 backfill。
+- Manual E2E-1/2/3/5：edit-profile 保存打法、baseline 后趋势、weekly-star tap、空周 fallback。
+
+Awaiting Phase 10-1 cloud verification, then Phase 10-2 plan kickoff.
 
 ### 2026-05-15 · Phase 6 Post-Phase-8 Polish 完成
 

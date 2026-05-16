@@ -40,3 +40,13 @@ for pair in "${FE_MIRRORS[@]}"; do
   fi
 done
 echo "[sync] mirrors ok"
+
+AGG_SRC="$ROOT/cloudfunctions/points-engine/lib/aggregate.js"
+AGG_COPY="$ROOT/cloudfunctions/weekly-star/lib/aggregate.js"
+if [ ! -f "$AGG_COPY" ]; then echo "[sync] missing: $AGG_COPY"; exit 1; fi
+if [ "$(shasum256 "$AGG_SRC")" != "$(shasum256 "$AGG_COPY")" ]; then
+  echo "[sync] aggregate.js mismatch: $AGG_SRC ↔ $AGG_COPY"
+  diff "$AGG_SRC" "$AGG_COPY" || true
+  exit 1
+fi
+echo "[sync] aggregate.js ok"

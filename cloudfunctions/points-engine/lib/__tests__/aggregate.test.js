@@ -20,6 +20,9 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
     and(clauses) { return { __op: 'and', clauses } },
     or(clauses) { return { __op: 'or', clauses } },
     gt(value) { return { __op: 'gt', value } },
+    lt(value) { return { __op: 'lt', value } },
+    lte(value) { return { __op: 'lte', value } },
+    eq(value) { return { __op: 'eq', value } },
     in(value) { return { __op: 'in', value } },
     neq(value) { return { __op: 'neq', value } }
   }
@@ -30,6 +33,11 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
       const cell = row[k]
       if (v && typeof v === 'object' && v.__op) {
         if (v.__op === 'gt') { if (!(cell > v.value)) return false }
+        else if (v.__op === 'lt') { if (!(cell < v.value)) return false }
+        else if (v.__op === 'lte') { if (!(cell <= v.value)) return false }
+        else if (v.__op === 'eq') {
+          if ((cell == null) !== (v.value == null) || (cell != null && cell !== v.value)) return false
+        }
         else if (v.__op === 'in') { if (!v.value.includes(cell)) return false }
         else if (v.__op === 'neq') { if (cell === v.value) return false }
         else return false
@@ -191,5 +199,118 @@ describe('aggregateRanks', () => {
     const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
     const total = list.reduce((s, x) => s + x.totalPoints, 0)
     expect(total).toBe(5 * 30) // 只算 5 confirmed
+  })
+})
+
+describe('aggregateRanks asOf parameter', () => {
+  const seasonId = 's2026'
+  const type = 'singles'
+  const d = (key) => new Date(`${key}T00:00:00`)
+
+  test('without asOf -> equivalent to historical behavior (aggregates all)', async () => {
+    const db = makeFakeDb({
+      matchResults: [
+        { _id: 'm1', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-01-10'), createTime: d('2026-01-10'),
+          pointsAwarded: { entries: [
+            { memberId: 'A', points: 20, role: 'winner' },
+            { memberId: 'B', points: 10, role: 'loser' }
+          ] } },
+        { _id: 'm2', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-03-10'), createTime: d('2026-03-10'),
+          pointsAwarded: { entries: [
+            { memberId: 'A', points: 20, role: 'winner' },
+            { memberId: 'C', points: 10, role: 'loser' }
+          ] } }
+      ],
+      tournamentPoints: []
+    })
+    const out = await aggregateRanks({ db, seasonId, type })
+    expect(out.find(r => r.memberId === 'A').totalPoints).toBe(40)
+  })
+
+  test('asOf cuts off future match_results by confirmedAt', async () => {
+    const db = makeFakeDb({
+      matchResults: [
+        { _id: 'm1', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-01-10'), createTime: d('2026-01-09'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } },
+        { _id: 'm2', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-03-10'), createTime: d('2026-03-09'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } }
+      ],
+      tournamentPoints: []
+    })
+    const out = await aggregateRanks({ db, seasonId, type, asOf: d('2026-02-01') })
+    expect(out.find(r => r.memberId === 'A').totalPoints).toBe(20)
+  })
+
+  test('asOf cuts off tournament_points by awardedAt (fallback createTime)', async () => {
+    const db = makeFakeDb({
+      matchResults: [],
+      tournamentPoints: [
+        { _id: 'p1', seasonId, tournamentType: type, memberId: 'A', points: 50,
+          awardedAt: d('2026-01-15'), createTime: d('2026-01-15') },
+        { _id: 'p2', seasonId, tournamentType: type, memberId: 'A', points: 30,
+          awardedAt: d('2026-04-15'), createTime: d('2026-04-15') }
+      ]
+    })
+    const out = await aggregateRanks({ db, seasonId, type, asOf: d('2026-02-01') })
+    expect(out.find(r => r.memberId === 'A').totalPoints).toBe(50)
+  })
+})
+
+describe('aggregateRanks stable tiebreaker', () => {
+  test('ties broken by wins DESC, then losses ASC, then memberId ASC', async () => {
+    const seasonId = 's2026'
+    const type = 'singles'
+    const db = makeFakeDb({
+      matchResults: [
+        // B is intentionally seeded first. Old totalPoints-only sort preserves insertion order,
+        // so the RED test fails until wins/losses/memberId tiebreakers are added.
+        // B: 100 pts, 4W, 0L
+        { _id: 'b1', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: '2026-01-01', createTime: '2026-01-01',
+          pointsAwarded: { entries: [
+            { memberId: 'B', points: 100, role: 'winner' },
+            { memberId: 'Y', points: 0, role: 'loser' }
+          ] } },
+        ...[1, 2, 3].map((i) => ({
+          _id: `b${i + 1}`, seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: '2026-01-02', createTime: '2026-01-02',
+          pointsAwarded: { entries: [
+            { memberId: 'B', points: 0, role: 'winner' },
+            { memberId: 'Y', points: 0, role: 'loser' }
+          ] }
+        })),
+        // A: 100 pts, 5W, 1L
+        { _id: 'a1', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: '2026-01-03', createTime: '2026-01-03',
+          pointsAwarded: { entries: [
+            { memberId: 'A', points: 100, role: 'winner' },
+            { memberId: 'X', points: 0, role: 'loser' }
+          ] } },
+        // Aux to push A win=5 loss=1
+        ...[1, 2, 3, 4].map((i) => ({
+          _id: `a${i + 1}`, seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: '2026-01-04', createTime: '2026-01-04',
+          pointsAwarded: { entries: [
+            { memberId: 'A', points: 0, role: 'winner' },
+            { memberId: 'X', points: 0, role: 'loser' }
+          ] }
+        })),
+        { _id: 'a6', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: '2026-01-05', createTime: '2026-01-05',
+          pointsAwarded: { entries: [
+            { memberId: 'A', points: 0, role: 'loser' },
+            { memberId: 'X', points: 0, role: 'winner' }
+          ] } }
+      ],
+      tournamentPoints: []
+    })
+    const out = await aggregateRanks({ db, seasonId, type })
+    // A=100/5/1, B=100/4/0 -> B has more "losses=0" but fewer wins. wins DESC ranks A first.
+    expect(out[0].memberId).toBe('A')
+    expect(out[1].memberId).toBe('B')
   })
 })

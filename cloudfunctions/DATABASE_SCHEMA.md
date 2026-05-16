@@ -20,7 +20,7 @@
 | `status` | String | 否 | 会员状态，默认为 'active' |
 | `admin` | Boolean | 否 | 是否为管理员，默认为 false |
 | `playStyle` | String | 否 | 打法风格枚举：baseliner/serve-volleyer/all-court/counter-puncher/aggressive-baseliner |
-| `playStyleNote` | String | 否 | 打法备注，最多 100 字 |
+| `playStyleNote` | String | 否 | 打法备注，最多 50 字 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
@@ -39,6 +39,38 @@
   "updateTime": "2024-01-01T00:00:00.000Z"
 }
 ```
+
+---
+
+## rank_snapshots
+
+每位上榜选手每周一行的历史排名快照。用于 trendDelta（与 latest 快照比对）和 rankHistory（折线图）；未产生积分来源、尚未上榜的成员不写合成 0 分快照。
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | string | 推荐格式 `rs_<seasonId>_<weekId>_<type>_<memberId>`；唯一索引由 `(seasonId, type, weekId, memberId)` 兜底 |
+| `seasonId` | string | 赛季，例 `s2026` |
+| `weekId` | string | weekly = `ws_YYYY-MM-DD`（Monday key，沿用 `getWeekId`）；baseline = `baseline_YYYY-MM-DD` |
+| `weekStart` | string | yyyy-mm-dd（周一）；baseline 行使用当天日期 |
+| `weekEnd` | string | yyyy-mm-dd（周日）；baseline 行使用当天日期 |
+| `effectiveAt` | Date | trend/latest 排序的权威字段。weekly=weekEnd 23:59:59；baseline=回填时刻 |
+| `type` | string | `singles` \| `doubles` |
+| `memberId` | string | 选手 ID |
+| `rank` | number | 截至该周结束时的排名（数组下标 + 1） |
+| `totalPoints` | number | 截至该周结束累计积分 |
+| `wins` | number | 累计胜场 |
+| `losses` | number | 累计负场 |
+| `snapshotKind` | string | `weekly` \| `baseline` |
+| `computedAt` | Date | 写入时间 |
+
+**索引（必建）：**
+
+1. `(seasonId, type, weekStart DESC, rank ASC)` — rank 折线图按周倒序、单周内按 rank 升序
+2. `(seasonId, type, memberId, weekStart ASC)` — 单玩家 rankHistory（折线图数据源）
+3. `(seasonId, type, memberId, effectiveAt DESC, computedAt DESC)` — `rankList.trendDelta` 查最近一份有效快照
+4. `(seasonId, type, weekId, memberId)` UNIQUE — cron / backfill 幂等 upsert
+
+**容量估算：** 100 人 × 52 周 × 2 type = 10400 文档/年。
 
 ---
 

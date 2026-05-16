@@ -55,8 +55,38 @@ async function rankListCompat({ type = 'singles', currentSeasonId }) {
   if (!currentSeasonId) return { success: true, data: { rankList: [] } }
   const list = await aggregateRanks({ db, seasonId: currentSeasonId, type, pageSize: 100 })
   const joined = await joinMembers(list)
-  // joinMembers already maps {memberId, totalPoints, wins, losses} → {_id, name, avatarUrl, totalPoints, winCount, lossCount}
-  return { success: true, data: { rankList: joined } }
+  const withWinRate = joined.map(row => {
+    const matches = (row.winCount || 0) + (row.lossCount || 0)
+    return { ...row, winRate: matches > 0 ? row.winCount / matches : 0 }
+  })
+  const memberIds = withWinRate.map(row => row._id)
+  const snapshotMap = await fetchLatestSnapshotMap({ seasonId: currentSeasonId, type, memberIds })
+  const out = withWinRate.map((row, i) => {
+    const currentRank = i + 1
+    const snap = snapshotMap.get(row._id)
+    return { ...row, trendDelta: snap ? (snap.rank - currentRank) : null }
+  })
+  return { success: true, data: { rankList: out } }
+}
+
+async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {
+  if (!memberIds || memberIds.length === 0) return new Map()
+  const out = new Map()
+  const chunkSize = 20
+  for (let i = 0; i < memberIds.length; i += chunkSize) {
+    const chunk = memberIds.slice(i, i + chunkSize)
+    for (const memberId of chunk) {
+      const res = await db.collection('rank_snapshots')
+        .where({ seasonId, type, memberId })
+        .orderBy('effectiveAt', 'desc')
+        .orderBy('computedAt', 'desc')
+        .limit(1)
+        .get()
+      const row = res && res.data && res.data[0]
+      if (row) out.set(memberId, row)
+    }
+  }
+  return out
 }
 
 async function playerStatsCompat({ playerId, currentSeasonId }) {

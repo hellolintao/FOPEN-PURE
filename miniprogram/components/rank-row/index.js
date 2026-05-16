@@ -3,8 +3,9 @@ Component({
     rank: Number,
     name: String,
     avatarUrl: String,
-    utr: String,
-    trend: { type: Number, value: 0 },
+    winRatePct: String,
+    totalPoints: { type: Number, value: 0 },
+    trendDelta: { type: null, value: null },
     highlight: Boolean,
     playerId: String
   },

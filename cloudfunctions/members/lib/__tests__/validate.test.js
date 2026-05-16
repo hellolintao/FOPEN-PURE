@@ -1,4 +1,4 @@
-const { validateMemberData } = require('../validate');
+const { validateMemberData, VALID_PLAY_STYLES } = require('../validate');
 
 describe('validateMemberData', () => {
   test('正常数据通过', () => {
@@ -8,6 +8,13 @@ describe('validateMemberData', () => {
     });
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+
+  test('all playStyle enum values pass', () => {
+    for (const playStyle of VALID_PLAY_STYLES) {
+      const result = validateMemberData({ playStyle });
+      expect(result.valid).toBe(true);
+    }
   });
 
   test('playStyle 取值必须在枚举内', () => {
@@ -24,12 +31,25 @@ describe('validateMemberData', () => {
     expect(result.valid).toBe(true);
   });
 
-  test('playStyleNote 超过 100 字符不通过', () => {
+  test('playStyleNote 50 字符通过', () => {
     const result = validateMemberData({
       name: '张三',
-      playStyleNote: 'x'.repeat(101)
+      playStyleNote: 'x'.repeat(50)
+    });
+    expect(result.valid).toBe(true);
+  });
+
+  test('playStyleNote 超过 50 字符不通过', () => {
+    const result = validateMemberData({
+      name: '张三',
+      playStyleNote: 'x'.repeat(51)
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('playStyleNote 不能超过 100 字符');
+    expect(result.errors[0]).toMatch(/50/);
+  });
+
+  test('playStyleNote null 合法', () => {
+    const result = validateMemberData({ playStyleNote: null });
+    expect(result.valid).toBe(true);
   });
 });
