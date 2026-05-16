@@ -8,7 +8,7 @@ const PLAY_STYLE_LABEL = {
   'aggressive-baseliner': '进攻底线型'
 }
 
-const DEFAULT_BUCKET = { winCount: 0, lossCount: 0, totalPoints: 0, winRate: 0 }
+const DEFAULT_BUCKET = { winCount: 0, lossCount: 0, totalPoints: 0 }
 const DEFAULT_RANK = { singles: null, doubles: null }
 const DEFAULT_HISTORY = { singles: [], doubles: [] }
 const DEFAULT_WEEKLY = { singles: null, doubles: null }
@@ -69,7 +69,6 @@ Page({
         callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
         callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } })
       ]);
-      const h2hData = await this._loadH2H(playerId, seasonId);
 
       if (statsRes?.result?.success === false) {
         console.error('[player-detail] playerStats error', statsRes.result);
@@ -78,7 +77,10 @@ Page({
       this.setStateFromResponses({
         player: playerRes?.result?.data || null,
         statsData: statsRes?.result?.success === false ? {} : (statsRes?.result?.data || {}),
-        h2hData
+        h2hData: DEFAULT_H2H
+      });
+      this._loadH2H(playerId, seasonId).then((h2hData) => {
+        this._applyH2HData(h2hData);
       });
     } catch (err) {
       console.error('[player-detail] loadAll error', err);
@@ -135,6 +137,15 @@ Page({
     });
   },
 
+  _applyH2HData(h2hData) {
+    const h2h = normalizePair(h2hData, DEFAULT_H2H);
+    this.setData({
+      h2h,
+      h2hVisible: this._getH2HVisible(h2h, this.data.h2hExpanded),
+      hasDoubles: this._hasDoubles(this.data.stats?.doubles || {}, h2h.doubles, this.data.rankHistory.doubles)
+    });
+  },
+
   onH2HTap(e) {
     const playerId = e.detail && e.detail.playerId;
     if (!playerId) return;
@@ -185,7 +196,10 @@ Page({
     const matches = (bucket.winCount || 0) + (bucket.lossCount || 0);
     if (matches === 0) return '—';
 
-    const winRate = Number.isFinite(bucket.winRate) ? bucket.winRate : (bucket.winCount || 0) / matches;
+    const rawWinRate = bucket.winRate;
+    const hasProvidedWinRate = rawWinRate !== null && rawWinRate !== undefined && rawWinRate !== '';
+    const numericWinRate = Number(rawWinRate);
+    const winRate = hasProvidedWinRate && Number.isFinite(numericWinRate) ? numericWinRate : (bucket.winCount || 0) / matches;
     return `${Math.round(winRate * 100)}%`;
   },
 
