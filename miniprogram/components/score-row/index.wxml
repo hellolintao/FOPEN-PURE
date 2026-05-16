@@ -51,8 +51,30 @@
     </view>
 
     <view wx:if="{{showTbInput}}" class="tiebreak">
-      <text class="text-label">3:3 抢七</text>
-      <input placeholder="如 7-5" bindinput="onTbInput" value="{{draftTb}}" class="tb-input" />
+      <text class="tb-label">3:3 抢七</text>
+      <view class="tb-inputs">
+        <input
+          class="tb-digit"
+          type="number"
+          maxlength="1"
+          value="{{tbA}}"
+          bindinput="onTbADigit"
+          focus="{{tbFocus === 'a'}}"
+          cursor-spacing="20"
+          placeholder="—"
+        />
+        <text class="tb-dash">—</text>
+        <input
+          class="tb-digit"
+          type="number"
+          maxlength="1"
+          value="{{tbB}}"
+          bindinput="onTbBDigit"
+          focus="{{tbFocus === 'b'}}"
+          cursor-spacing="20"
+          placeholder="—"
+        />
+      </view>
     </view>
 
     <view wx:if="{{validationError}}" class="err">{{validationError}}</view>

@@ -237,7 +237,6 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
 
 function buildBatchCtx(submitter, isAdminFlag) {
   const scoreRule = require('./lib/score-rule')
-  const stateLib = require('./lib/state')
   return {
     callerOpenid: submitter.openid,
     callerMemberId: submitter._id,
@@ -265,15 +264,13 @@ function buildBatchCtx(submitter, isAdminFlag) {
         }
       },
     },
-    confirmOne: async (current) => {
-      // Reuse Phase 8 state machine
-      if (typeof stateLib.confirmOne === 'function') {
-        return stateLib.confirmOne({ matchId: current._id, db })
+    confirmOne: async (current, scoreOverride) => {
+      const score = scoreOverride || current.score
+      const sourceMatchId = current.sourceMatchId || current._id
+      if (current.resultStatus === 'confirmed') {
+        return stateSvc.reconfirmMatch({ matchId: sourceMatchId, newScore: score, admin: submitter })
       }
-      // Fallback: direct update to confirmed (logic should mirror state.confirmOne)
-      await db.collection('match_results').doc(current._id).update({
-        data: { resultStatus: 'confirmed', updateTime: new Date(), confirmedAt: new Date() }
-      })
+      return stateSvc.submitResult({ matchId: sourceMatchId, score, submitter })
     },
     validateScore: scoreRule.validateScore,
   }
@@ -705,30 +702,48 @@ exports.main = async (event, context) => {
 
     case 'batchConfirm': {
       const { batchConfirm } = require('./lib/handlers/batch')
+      const payload = event.payload || event
       try {
         const submitter = await resolveSubmitter()
         if (!submitter || !submitter.isAdmin) {
-          return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限', requestId: event && event.requestId } }
+          return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限', requestId: payload && payload.requestId } }
         }
         const ctx = buildBatchCtx(submitter, true)
-        const data = await batchConfirm(ctx, event)
+        const data = await batchConfirm(ctx, payload)
         return { success: true, data }
       } catch (e) {
-        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: event && event.requestId } }
-        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: event && event.requestId } }
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: payload && payload.requestId } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: payload && payload.requestId } }
       }
     }
     case 'batchSubmit': {
       const { batchSubmit } = require('./lib/handlers/batch')
+      const payload = event.payload || event
       try {
         const submitter = await resolveSubmitter()
-        if (!submitter) return { success: false, error: { code: 'FORBIDDEN', message: '请登录', requestId: event && event.requestId } }
+        if (!submitter) return { success: false, error: { code: 'FORBIDDEN', message: '请登录', requestId: payload && payload.requestId } }
         const ctx = buildBatchCtx(submitter, false)
-        const data = await batchSubmit(ctx, event)
+        const data = await batchSubmit(ctx, payload)
         return { success: true, data }
       } catch (e) {
-        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: event && event.requestId } }
-        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: event && event.requestId } }
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: payload && payload.requestId } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: payload && payload.requestId } }
+      }
+    }
+    case 'batchAdminSave': {
+      const { batchAdminSave } = require('./lib/handlers/batch')
+      const payload = event.payload || event
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) {
+          return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限', requestId: payload && payload.requestId } }
+        }
+        const ctx = buildBatchCtx(submitter, true)
+        const data = await batchAdminSave(ctx, payload)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: payload && payload.requestId } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: payload && payload.requestId } }
       }
     }
     case 'pendingReviewItems': {
@@ -737,7 +752,7 @@ exports.main = async (event, context) => {
         const submitter = await resolveSubmitter()
         if (!submitter || !submitter.isAdmin) return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
         const ctx = buildQueryCtx(submitter)
-        const data = await pendingReviewItems(ctx, event)
+        const data = await pendingReviewItems(ctx, event.payload || event)
         return { success: true, data }
       } catch (e) {
         if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }
@@ -750,7 +765,7 @@ exports.main = async (event, context) => {
         const submitter = await resolveSubmitter()
         if (!submitter) return { success: false, error: { code: 'FORBIDDEN', message: '请登录' } }
         const ctx = buildSummaryCtx(submitter)
-        const data = await mySummary(ctx, event)
+        const data = await mySummary(ctx, event.payload || event)
         return { success: true, data }
       } catch (e) {
         if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }

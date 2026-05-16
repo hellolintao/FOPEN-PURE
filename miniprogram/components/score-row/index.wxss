@@ -201,19 +201,45 @@
   border-top: 1rpx solid var(--color-border);
 }
 
-.tiebreak .text-label {
+.tb-label {
+  flex: 1;
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.tb-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
-.tb-input {
-  flex: 1;
+.tb-digit {
+  width: 96rpx;
+  height: 96rpx;
   background: var(--color-bg-3);
-  padding: 14rpx 18rpx;
   border-radius: var(--radius-sm);
+  border: 2rpx solid var(--color-ink);
   font-family: var(--font-family-num);
-  font-size: 26rpx;
-  font-weight: 700;
+  font-size: 48rpx;
+  font-weight: 900;
   color: var(--color-ink);
+  text-align: center;
+  letter-spacing: -0.04em;
+  line-height: 96rpx;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.tb-dash {
+  font-family: var(--font-family-num);
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--color-muted-2);
+  line-height: 1;
 }
 
 .err {

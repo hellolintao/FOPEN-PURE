@@ -5,8 +5,11 @@ function validateScore(a, b, tiebreak) {
     const m = /^(\d+)-(\d+)$/.exec(tiebreak)
     if (!m) return { valid: false, error: 'TB_FORMAT' }
     const x = Number(m[1]), y = Number(m[2])
-    if (Math.max(x, y) < 7) return { valid: false, error: 'TB_UNDER_7' }
-    if (Math.abs(x - y) < 2) return { valid: false, error: 'TB_DIFF' }
+    // 抢七规则：先到 7 分获胜（不需要领先 2 分），单边最高 7
+    const max = Math.max(x, y)
+    const min = Math.min(x, y)
+    if (max !== 7) return { valid: false, error: 'TB_NEEDS_7' }
+    if (min >= 7) return { valid: false, error: 'TB_BOTH_7' }
     return { valid: true, winner: x > y ? 'a' : 'b' }
   }
   const max = Math.max(a, b)

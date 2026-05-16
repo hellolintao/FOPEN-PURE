@@ -8,16 +8,16 @@
     <text class="head-title">{{tournament.name}}</text>
 
     <view class="progress-block">
-      <view class="progress-bar-wrap">
-        <view class="progress-bar">
-          <view class="progress-fill" style="width: {{totalCount > 0 ? (confirmedCount * 100 / totalCount) : 0}}%"></view>
-        </view>
-      </view>
       <view class="progress-meta">
         <text class="progress-num num">{{confirmedCount}}</text>
         <text class="progress-slash">/</text>
         <text class="progress-total num">{{totalCount}}</text>
         <text class="progress-label">CONFIRMED</text>
+      </view>
+      <view class="progress-bar-wrap">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{totalCount > 0 ? (confirmedCount * 100 / totalCount) : 0}}%"></view>
+        </view>
       </view>
     </view>
 
@@ -48,6 +48,7 @@
           <score-row
             match="{{m}}"
             is-admin="{{isAdmin}}"
+            current-member-id="{{currentMemberId}}"
             bindsubmit="onSubmit"
             bindreconfirm="onReconfirm"
             binddraftchange="onDraftChange"
