@@ -65,29 +65,45 @@ Page({
     this.setData({ loading: true });
     const seasonId = this._getCurrentSeasonId();
     try {
-      const [playerRes, statsRes, h2hRes] = await Promise.all([
+      const [playerRes, statsRes] = await Promise.all([
         callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
-        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } }),
-        callFunction({ name: 'points-engine', data: { action: 'playerH2H', playerId, currentSeasonId: seasonId } })
+        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } })
       ]);
+      const h2hData = await this._loadH2H(playerId, seasonId);
 
       if (statsRes?.result?.success === false) {
         console.error('[player-detail] playerStats error', statsRes.result);
-      }
-      if (h2hRes?.result?.success === false) {
-        console.error('[player-detail] playerH2H error', h2hRes.result);
       }
 
       this.setStateFromResponses({
         player: playerRes?.result?.data || null,
         statsData: statsRes?.result?.success === false ? {} : (statsRes?.result?.data || {}),
-        h2hData: h2hRes?.result?.success === false ? DEFAULT_H2H : (h2hRes?.result?.data || DEFAULT_H2H)
+        h2hData
       });
     } catch (err) {
       console.error('[player-detail] loadAll error', err);
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 });
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  async _loadH2H(playerId, seasonId) {
+    try {
+      const res = await callFunction({
+        name: 'points-engine',
+        data: { action: 'playerH2H', playerId, currentSeasonId: seasonId }
+      });
+
+      if (res?.result?.success === false) {
+        console.error('[player-detail] playerH2H error', res.result);
+        return DEFAULT_H2H;
+      }
+
+      return res?.result?.data || DEFAULT_H2H;
+    } catch (err) {
+      console.error('[player-detail] playerH2H error', err);
+      return DEFAULT_H2H;
     }
   },
 
@@ -167,7 +183,10 @@ Page({
 
   _formatWinRate(bucket) {
     const matches = (bucket.winCount || 0) + (bucket.lossCount || 0);
-    return matches > 0 ? `${Math.round((bucket.winRate || 0) * 100)}%` : '—';
+    if (matches === 0) return '—';
+
+    const winRate = Number.isFinite(bucket.winRate) ? bucket.winRate : (bucket.winCount || 0) / matches;
+    return `${Math.round(winRate * 100)}%`;
   },
 
   _hasDoubles(doublesStats, doublesH2H, doublesRankHistory) {
