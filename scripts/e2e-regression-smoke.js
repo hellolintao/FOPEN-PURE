@@ -68,7 +68,7 @@ async function seedFixture(db, collections, log = console.log) {
         throw new Error(`Fixture collection "${name}" requires _id for every document`)
       }
       const { _id, ...data } = doc
-      await db.collection(name).doc(_id).set({ data })
+      await db.collection(name).doc(_id).set(data)
     }
     log(`[seed] ${name}: ${docs.length}`)
   }

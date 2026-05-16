@@ -55,7 +55,7 @@ function makeFakeDb(extraRows = {}) {
         get: async () => ({ data: rows[name].map(row => ({ ...row })) }),
         doc: id => ({
           get: async () => ({ data: rows[name].find(row => row._id === id) || null }),
-          set: async ({ data }) => {
+          set: async data => {
             writes.push({ collection: name, _id: id, data })
             const row = { _id: id, ...data }
             const index = rows[name].findIndex(existing => existing._id === id)

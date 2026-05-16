@@ -83,6 +83,8 @@ Expected smoke checks:
 - `playerStats.A`
 - `playerH2H.A`
 
+Credential note: local runs of `@cloudbase/node-sdk` require Tencent Cloud credentials. If the shell does not already have `TENCENTCLOUD_SECRETID` / `TENCENTCLOUD_SECRETKEY` / `TENCENTCLOUD_SESSIONTOKEN`, refresh them from an existing CloudBase CLI login with `cloudbase secrets get --json` and inject them into only the smoke child process. Do not print secrets in logs.
+
 The command prints generated fixture ids and an actor mapping. Keep those ids for manual verification and retain the fixture after smoke unless manual verification is complete and cleanup is explicitly requested.
 
 Use the printed `actors.admin` member id/name/openid for admin DevTools login-state checks. Use printed `actors.players` labels A-E for member role checks: player A is the primary rank/player-detail smoke subject, players A-D are tournament participants, and player E is the non-participant for E2E-08. When an `openid` is present, use it for DevTools login-state switching; otherwise use the printed member id/name to identify the member row.
@@ -131,3 +133,66 @@ Use the fixture ids and actor mapping printed by `SMOKE_MODE=cleanup-seed-smoke`
    - Switch DevTools login state to admin.
    - Verify admin sees participant context and admin review/save controls.
    - Save or confirm a score and verify points are awarded once.
+
+## Last Verified
+
+Verified on 2026-05-17 against `cloud1-0gthnke69a09f52a` / `season_2026`.
+
+Local checks passed:
+
+- `scripts`: 4 suites / 36 tests
+- `cloudfunctions/_shared`: 1 suite / 22 tests
+- `cloudfunctions/match-results`: 6 suites / 80 tests
+- `cloudfunctions/points-engine`: 6 suites / 73 tests
+- `cloudfunctions/tournament-brackets`: 4 suites / 44 tests
+- `cloudfunctions/tournaments`: 3 suites / 30 tests
+- `cloudfunctions/weekly-star`: 5 suites / 19 tests
+- `miniprogram`: 9 suites / 39 tests
+- `bash scripts/sync-shared-libs.sh`: all mirrors ok
+
+Safe failure passed: running `node scripts/e2e-regression-smoke.js` without safety env exited non-zero before cloud writes with `FOPEN_CLEANUP_CONFIRM must be set and equal to FOPEN_CLOUD_ENV`.
+
+Cloud cleanup, seed, and read-only smoke passed after loading temporary credentials from the local CloudBase CLI session and injecting them only into the child process. Cleanup removed the pre-existing rows from the 8 business collections, then seeded:
+
+- `tournaments`: 4
+- `tournament_brackets`: 5
+- `tournament_registrations`: 16
+- `match_results`: 8
+- `tournament_points`: 4
+- `free_plays`: 0
+- `rank_snapshots`: 0
+- `weekly_stars`: 0
+
+Smoke checks passed:
+
+- `rankList.singles`
+- `playerStats.A`
+- `playerH2H.A`
+
+Seeded fixture ids:
+
+- `e2e_regular_singles_20260516_1927`
+- `e2e_knockout_singles_20260516_1927`
+- `e2e_regular_doubles_20260516_1927`
+- `e2e_interactive_20260516_1927`
+
+Seeded actors:
+
+- admin: `user_002` / `李四888888` / `wx_openid_002`
+- A: `user_001` / `张三` / `wx_openid_001`
+- B: `user_005` / `刘洋` / `wx_openid_005`
+- C: `user_006` / `赵敏` / `wx_openid_006`
+- D: `user_007` / `孙伟` / `wx_openid_007`
+- E: `user_008` / `周杰` / `wx_openid_008`
+
+DevTools smoke passed in WeChat DevTools Stable v2.01.2510280:
+
+- Admin home showed the admin role and create-tournament entry.
+- Rank page showed the seeded singles table: `张三 160`, `赵敏 100`, `孙伟 60`, `刘洋 50`.
+- Player detail for `张三` showed singles `3/3`, `160` points, and recent regular/knockout/doubles match records.
+
+Observed DevTools noise not blocking the smoke result:
+
+- remote avatar image loads from `avatar.example.com` failed in the simulator network layer
+- WeChat DevTools warns that `__tests__` folders are reserved and ignored by the simulator
+- `components/rank-chart/index` warned once that property `data` received a non-array value before rendering an empty chart state
