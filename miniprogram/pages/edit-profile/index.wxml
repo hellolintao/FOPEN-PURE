@@ -2,19 +2,22 @@
 
   <view class="ep-head anim-stage-rise">
     <view class="head-tapes">
-      <text class="tape tape-stamped">PROFILE · 编辑</text>
+      <text class="tape tape-stamped">{{isRegister ? 'PROFILE · 注册' : 'PROFILE · 编辑'}}</text>
     </view>
-    <text class="head-title">编辑资料</text>
+    <text class="head-title">{{isRegister ? '注册' : '编辑资料'}}</text>
   </view>
 
-  <!-- FORM -->
   <view class="ep-form anim-stage-rise anim-delay-1">
     <view class="form-item form-item-avatar">
       <view class="field-label">
         <text class="num field-num">01</text>
-        <text class="field-text">头像 <text class="required">*</text></text>
+        <text class="field-text">头像 <text class="optional">(选填)</text></text>
       </view>
-      <view class="avatar-row tap-scale" bindtap="onChooseAvatar">
+      <button
+        class="avatar-row tap-scale"
+        open-type="chooseAvatar"
+        bindchooseavatar="onChooseAvatar"
+      >
         <view class="avatar-wrap">
           <image class="avatar-img" src="{{formData.avatarUrl || defaultAvatar}}" mode="aspectFill" />
         </view>
@@ -22,7 +25,7 @@
           <text class="avatar-meta-label">CHANGE</text>
           <text class="avatar-meta-val">点击更换 →</text>
         </view>
-      </view>
+      </button>
     </view>
 
     <view class="form-item">
@@ -32,6 +35,7 @@
       </view>
       <input
         class="form-input"
+        type="nickname"
         placeholder="请输入姓名"
         placeholder-class="form-placeholder"
         value="{{formData.name}}"
@@ -59,7 +63,7 @@
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">04</text>
-        <text class="field-text">打法 <text class="optional">(选填)</text></text>
+        <text class="field-text">打法 <text wx:if="{{isRegister}}" class="required">*</text><text wx:else class="optional">(选填)</text></text>
       </view>
       <radio-group class="play-style-group" bindchange="onPlayStyleChange">
         <label class="ps-radio" wx:for="{{playStyleOptions}}" wx:key="value">
@@ -68,27 +72,10 @@
         </label>
       </radio-group>
     </view>
-
-    <view class="form-item">
-      <view class="field-label">
-        <text class="num field-num">05</text>
-        <text class="field-text">打法备注 <text class="optional">(选填)</text></text>
-      </view>
-      <textarea
-        class="form-textarea"
-        placeholder="例：贝克汉心理 / 喜欢正手暴扣 / 接发抢攻"
-        placeholder-class="form-placeholder"
-        maxlength="{{noteMax}}"
-        value="{{formData.playStyleNote}}"
-        bindinput="onPlayStyleNoteInput"
-      />
-      <text class="form-counter">{{formData.playStyleNote.length || 0}}/{{noteMax}}</text>
-    </view>
   </view>
 
-  <!-- FOOTER -->
   <view class="ep-footer">
-    <view class="footer-btn footer-btn-ghost tap-scale" bindtap="onCancel">取消</view>
-    <view class="footer-btn footer-btn-primary tap-scale" bindtap="onSave">保存</view>
+    <view wx:if="{{!isRegister}}" class="footer-btn footer-btn-ghost tap-scale" bindtap="onCancel">取消</view>
+    <view class="footer-btn footer-btn-primary tap-scale" bindtap="onSave">{{isRegister ? '完成注册' : '保存'}}</view>
   </view>
 </view>

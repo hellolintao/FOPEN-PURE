@@ -166,27 +166,6 @@
   letter-spacing: 0;
 }
 
-.form-textarea {
-  width: 100%;
-  min-height: 160rpx;
-  background: var(--color-bg-3);
-  border-radius: var(--radius-sm);
-  color: var(--color-ink);
-  font-size: 28rpx;
-  font-weight: 700;
-  line-height: 1.45;
-  padding: 22rpx 24rpx;
-  box-sizing: border-box;
-}
-
-.form-counter {
-  align-self: flex-end;
-  font-size: 20rpx;
-  font-weight: 700;
-  color: var(--color-muted-2);
-  letter-spacing: 0;
-}
-
 /* ============================================================
  * FOOTER
  * ============================================================ */
@@ -222,4 +201,15 @@
 .footer-btn-primary {
   background: var(--color-ink);
   color: var(--color-bg);
+}
+
+button.avatar-row {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  line-height: 1.4;
+}
+
+button.avatar-row::after {
+  border: none;
 }

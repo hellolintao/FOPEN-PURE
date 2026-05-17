@@ -88,10 +88,8 @@ Page({
 		}
 	},
 	onLogin() {
-		// 显示加载提示
 		wx.showLoading({ title: '登录中...' })
 
-		// 检查数据库是否有该openid会员
 		wx.cloud.callFunction({
 			name: 'members',
 			data: { action: 'get' },
@@ -99,7 +97,6 @@ Page({
 				wx.hideLoading()
 
 				if (getRes.result && getRes.result.data && getRes.result.data.length > 0) {
-					// 已注册
 					const user = getRes.result.data[0]
 					this.setData({
 						isLogin: true,
@@ -112,48 +109,10 @@ Page({
 					})
 					app.globalData.currentMember = user
 					app.globalData.isAdmin = !!user.admin
-					// 获取积分
 					this.loadUserPoints(user._id)
 					wx.showToast({ title: '登录成功', icon: 'success' })
 				} else {
-					// 未注册，注册会员（使用默认信息）
-					wx.cloud.callFunction({
-						name: 'members',
-						data: {
-							action: 'add',
-							data: {
-								name: '微信用户',
-								avatarUrl: DEFAULT_AVATAR
-							}
-						},
-						success: addRes => {
-							const member = {
-								_id: addRes.result && addRes.result._id,
-								name: '微信用户',
-								avatarUrl: DEFAULT_AVATAR,
-								admin: false
-							}
-							this.setData({
-								isLogin: true,
-								isAdmin: false,
-								userInfo: {
-									avatarUrl: DEFAULT_AVATAR,
-									name: '微信用户'
-								},
-								currentMemberId: member._id || ''
-							})
-							app.globalData.currentMember = member._id ? member : null
-							app.globalData.isAdmin = false
-							wx.showToast({ title: '注册成功', icon: 'success' })
-							// 跳转到编辑资料页面
-							setTimeout(() => {
-								wx.navigateTo({ url: '/pages/edit-profile/index' })
-							}, 1000)
-						},
-						fail: () => {
-							wx.showToast({ title: '注册失败', icon: 'error' })
-						}
-					})
+					wx.navigateTo({ url: '/pages/edit-profile/index?mode=register' })
 				}
 			},
 			fail: () => {

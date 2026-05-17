@@ -1,0 +1,162 @@
+function loadPage(overrides = {}) {
+  jest.resetModules()
+  let pageDef
+  const app = { globalData: { currentMember: null, isAdmin: false, ...overrides } }
+  global.wx = {
+    navigateBack: jest.fn(),
+    navigateTo: jest.fn(),
+    reLaunch: jest.fn(),
+    showToast: jest.fn(),
+    showLoading: jest.fn(),
+    hideLoading: jest.fn(),
+    setNavigationBarTitle: jest.fn(),
+    cloud: { uploadFile: jest.fn() }
+  }
+  global.getApp = () => app
+  global.Page = (def) => { pageDef = def }
+  jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
+  require('../index')
+  return { pageDef, app }
+}
+
+function makeCtx(def, data = {}) {
+  const ctx = {
+    ...def,
+    data: JSON.parse(JSON.stringify(def.data)),
+    setData(patch) {
+      for (const key of Object.keys(patch)) {
+        if (key.includes('.')) {
+          const [head, ...rest] = key.split('.')
+          let cur = this.data[head]
+          for (let i = 0; i < rest.length - 1; i += 1) cur = cur[rest[i]]
+          cur[rest[rest.length - 1]] = patch[key]
+        } else {
+          this.data[key] = patch[key]
+        }
+      }
+    }
+  }
+  Object.assign(ctx.data, data)
+  return ctx
+}
+
+describe('edit-profile mode handling', () => {
+  test('mode=register sets register title and does not load member', () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLoad({ mode: 'register' })
+
+    expect(ctx.data.isRegister).toBe(true)
+    expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '注册' })
+    expect(callFunction).not.toHaveBeenCalled()
+  })
+
+  test('default mode edits and loads current member without members.get', () => {
+    const { pageDef } = loadPage({
+      currentMember: { name: '李四', phone: '13800000000', avatarUrl: 'cloud://avatar', playStyle: 'vers' }
+    })
+    const { callFunction } = require('../../../utils/cloud')
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLoad({})
+
+    expect(ctx.data.isRegister).toBe(false)
+    expect(ctx.data.formData.name).toBe('李四')
+    expect(ctx.data.formData.playStyle).toBe('vers')
+    expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '编辑资料' })
+    expect(callFunction).not.toHaveBeenCalled()
+  })
+})
+
+describe('edit-profile validation and save', () => {
+  test('register mode requires playStyle', async () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: null }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请选择打法', icon: 'none' })
+  })
+
+  test('edit mode does not require playStyle and calls update', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { stats: { updated: 1 } } })
+    const ctx = makeCtx(pageDef, { isRegister: false })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: null }
+
+    await ctx.onSave()
+
+    expect(callFunction).toHaveBeenCalledTimes(1)
+    expect(callFunction.mock.calls[0][0].data.action).toBe('update')
+  })
+
+  test('register success stores new member with _id and reLaunches to mine', async () => {
+    jest.useFakeTimers()
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { _id: 'm1' } })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(app.globalData.currentMember).toMatchObject({
+      _id: 'm1',
+      name: '张三',
+      playStyle: 'ice-cow'
+    })
+    expect(app.globalData.isAdmin).toBe(false)
+    expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
+    jest.useRealTimers()
+  })
+
+  test('already registered response stores existing member and reLaunches', async () => {
+    jest.useFakeTimers()
+    const existing = { _id: 'existing', name: '老用户', admin: true, playStyle: 'vers' }
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { errMsg: 'already registered', data: existing } })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(app.globalData.currentMember).toEqual(existing)
+    expect(app.globalData.isAdmin).toBe(true)
+    expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
+    jest.useRealTimers()
+  })
+
+  test('validation failure response shows server error and does not reLaunch', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({
+      result: { success: false, error: { code: 'VALIDATION_FAILED', message: '打法为必填项' } }
+    })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '打法为必填项', icon: 'none' })
+    expect(wx.reLaunch).not.toHaveBeenCalled()
+  })
+})
+
+describe('edit-profile avatar', () => {
+  test('onChooseAvatar calls uploadAvatar', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    ctx.uploadAvatar = jest.fn()
+
+    ctx.onChooseAvatar({ detail: { avatarUrl: 'wxfile://temp-path' } })
+
+    expect(ctx.uploadAvatar).toHaveBeenCalledWith('wxfile://temp-path')
+  })
+})
