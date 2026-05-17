@@ -90,6 +90,54 @@
       {
         "type": "folder",
         "value": "scripts/node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "components/batch-result-sheet/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "components/empty-state/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "components/score-row/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "custom-tab-bar/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/edit-profile/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/member-edit/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/mine/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/my-match/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/player-detail/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/rank/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/tournament-score/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "utils/__tests__"
       }
     ],
     "include": []
