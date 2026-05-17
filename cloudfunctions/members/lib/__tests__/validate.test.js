@@ -55,6 +55,12 @@ describe('validateMemberData', () => {
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
   });
+
+  test('null and non-object payloads are valid for common validation', () => {
+    expect(validateMemberData(null)).toEqual({ valid: true, errors: [] });
+    expect(validateMemberData('invalid')).toEqual({ valid: true, errors: [] });
+    expect(validateMemberData(123)).toEqual({ valid: true, errors: [] });
+  });
 });
 
 describe('validateMemberAdd', () => {
@@ -101,6 +107,16 @@ describe('validateMemberAdd', () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('playStyle 必须是 ice-cow/vers/iron-lady/moon-queen/grinder/slicer 之一');
   });
+
+  test('null and non-object payloads fail with missing required field errors', () => {
+    for (const payload of [null, 'invalid', 123]) {
+      const result = validateMemberAdd(payload);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('name 不能为空');
+      expect(result.errors).toContain('playStyle 不能为空');
+    }
+  });
 });
 
 describe('sanitizeMemberPayload', () => {
@@ -140,5 +156,11 @@ describe('sanitizeMemberPayload', () => {
       name: '张三',
       playStyle: 'ice-cow'
     });
+  });
+
+  test('null and non-object payloads return an empty payload', () => {
+    expect(sanitizeMemberPayload(null)).toEqual({});
+    expect(sanitizeMemberPayload('invalid')).toEqual({});
+    expect(sanitizeMemberPayload(123)).toEqual({});
   });
 });

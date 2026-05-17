@@ -16,7 +16,16 @@ const ALLOWED_MEMBER_FIELDS = [
   'playStyle'
 ];
 
+function normalizePayload(data) {
+  if (data == null || typeof data !== 'object' || Array.isArray(data)) {
+    return {};
+  }
+
+  return data;
+}
+
 function validateMemberData(data = {}) {
+  data = normalizePayload(data);
   const errors = [];
 
   if (data.playStyle != null && data.playStyle !== '' && !VALID_PLAY_STYLES.includes(data.playStyle)) {
@@ -27,6 +36,7 @@ function validateMemberData(data = {}) {
 }
 
 function validateMemberAdd(data = {}) {
+  data = normalizePayload(data);
   const errors = [];
 
   if (typeof data.name !== 'string' || data.name.trim() === '') {
@@ -43,6 +53,7 @@ function validateMemberAdd(data = {}) {
 }
 
 function sanitizeMemberPayload(data = {}) {
+  data = normalizePayload(data);
   const payload = {};
 
   for (const field of ALLOWED_MEMBER_FIELDS) {
