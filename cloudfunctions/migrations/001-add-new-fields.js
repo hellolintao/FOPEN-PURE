@@ -17,11 +17,11 @@ const _ = db.command
 exports.main = async () => {
   const report = {}
 
-  // members: 补 playStyle/playStyleNote
+  // members: 补 playStyle；打法备注字段已废弃，不再写入
   const membersRes = await db.collection('members').where({
     playStyle: _.exists(false)
   }).update({
-    data: { playStyle: '', playStyleNote: '' }
+    data: { playStyle: '' }
   })
   report.members = membersRes.stats
 

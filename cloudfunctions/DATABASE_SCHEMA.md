@@ -19,8 +19,7 @@
 | `phone` | String | 否 | 联系电话 |
 | `status` | String | 否 | 会员状态，默认为 'active' |
 | `admin` | Boolean | 否 | 是否为管理员，默认为 false |
-| `playStyle` | String | 否 | 打法风格枚举：baseliner/serve-volleyer/all-court/counter-puncher/aggressive-baseliner |
-| `playStyleNote` | String | 否 | 打法备注，最多 50 字 |
+| `playStyle` | String | 是 | 打法风格枚举：ice-cow/vers/iron-lady/moon-queen/grinder/slicer；注册必填，之后可编辑 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
@@ -35,6 +34,7 @@
   "phone": "13800138000",
   "status": "active",
   "admin": false,
+  "playStyle": "vers",
   "createTime": "2024-01-01T00:00:00.000Z",
   "updateTime": "2024-01-01T00:00:00.000Z"
 }
