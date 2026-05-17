@@ -227,3 +227,86 @@ button.avatar-row {
 button.avatar-row::after {
   border: none;
 }
+
+/* ============================================================
+ * PRIVACY
+ * ============================================================ */
+.privacy-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.privacy-card {
+  width: 100%;
+  max-width: 640rpx;
+  padding: var(--space-5);
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: 8rpx 8rpx 0 var(--color-ink);
+}
+
+.privacy-title {
+  display: block;
+  margin-bottom: var(--space-3);
+  color: var(--color-ink);
+  font-size: 32rpx;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.privacy-copy {
+  color: var(--color-muted);
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.privacy-link {
+  color: var(--color-ink);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.privacy-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.privacy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  border-radius: var(--radius-pill);
+  font-size: 28rpx;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.privacy-btn-ghost {
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-ink);
+}
+
+.privacy-btn-primary {
+  color: var(--color-bg);
+  background: var(--color-ink);
+  border: 2rpx solid var(--color-ink);
+}
+
+button.privacy-btn::after {
+  border: none;
+}

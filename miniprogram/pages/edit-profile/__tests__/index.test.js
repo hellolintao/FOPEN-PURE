@@ -7,9 +7,12 @@ function loadPage(overrides = {}) {
     navigateTo: jest.fn(),
     reLaunch: jest.fn(),
     showToast: jest.fn(),
+    showModal: jest.fn(),
     showLoading: jest.fn(),
     hideLoading: jest.fn(),
     setNavigationBarTitle: jest.fn(),
+    openPrivacyContract: jest.fn(),
+    onNeedPrivacyAuthorization: jest.fn(),
     cloud: { uploadFile: jest.fn() }
   }
   global.getApp = () => app
@@ -162,6 +165,45 @@ describe('edit-profile validation and save', () => {
 })
 
 describe('edit-profile avatar', () => {
+  test('privacy authorization prompt resolves pending chooseAvatar after user agrees', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    const resolve = jest.fn()
+
+    ctx.onLoad({ mode: 'register' })
+    const handler = wx.onNeedPrivacyAuthorization.mock.calls[0][0]
+    handler(resolve, { referrer: 'chooseAvatar' })
+
+    expect(ctx.data.showPrivacyDialog).toBe(true)
+
+    ctx.onAgreePrivacyAuthorization({ target: { id: 'edit-profile-privacy-agree' } })
+
+    expect(resolve).toHaveBeenCalledWith({
+      event: 'agree',
+      buttonId: 'edit-profile-privacy-agree'
+    })
+    expect(ctx.data.showPrivacyDialog).toBe(false)
+  })
+
+  test('chooseAvatar privacy declaration errors are surfaced with an actionable modal', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+
+    ctx.onAvatarButtonError({
+      detail: {
+        errMsg: '[Component] <button>: chooseAvatar:fail api scope is not declared in the privacy agreement'
+      }
+    })
+
+    expect(wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '头像上传未启用',
+      showCancel: false
+    }))
+    expect(wx.showModal.mock.calls[0][0].content).toContain('用户隐私保护指引')
+    consoleSpy.mockRestore()
+  })
+
   test('onChooseAvatar previews temp avatar and calls uploadAvatar', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)

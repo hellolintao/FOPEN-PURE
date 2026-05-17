@@ -2,12 +2,16 @@ const { callFunction } = require('../../utils/cloud')
 const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-style')
 const { DEFAULT_AVATAR_URL } = require('../../config')
 
+const PRIVACY_AGREE_BUTTON_ID = 'edit-profile-privacy-agree'
+
 Page({
   data: {
     isRegister: false,
     defaultAvatar: DEFAULT_AVATAR_URL,
     avatarPreviewUrl: '',
     avatarUploading: false,
+    showPrivacyDialog: false,
+    privacyContractName: '用户隐私保护指引',
     formData: {
       name: '',
       phone: '',
@@ -19,11 +23,58 @@ Page({
 
   onLoad(query) {
     const isRegister = (query && query.mode) === 'register'
+    this.setupPrivacyAuthorization()
     this.setData({ isRegister })
     wx.setNavigationBarTitle({ title: isRegister ? '注册' : '编辑资料' })
     if (!isRegister) {
       this.loadUserInfo()
     }
+  },
+
+  setupPrivacyAuthorization() {
+    if (!wx.onNeedPrivacyAuthorization || this.privacyAuthorizationReady) return
+    this.privacyAuthorizationReady = true
+    wx.onNeedPrivacyAuthorization((resolve) => {
+      this.privacyResolve = resolve
+      this.setData({ showPrivacyDialog: true })
+    })
+  },
+
+  resolvePrivacyAuthorization(result) {
+    if (typeof this.privacyResolve === 'function') {
+      this.privacyResolve(result)
+      this.privacyResolve = null
+    }
+    this.setData({ showPrivacyDialog: false })
+  },
+
+  onOpenPrivacyContract() {
+    if (!wx.openPrivacyContract) {
+      wx.showToast({ title: '当前微信不支持查看隐私指引', icon: 'none' })
+      return
+    }
+
+    wx.openPrivacyContract({
+      fail: err => {
+        console.error('[edit-profile] openPrivacyContract', err)
+        wx.showToast({ title: '隐私指引打开失败', icon: 'none' })
+      }
+    })
+  },
+
+  onAgreePrivacyAuthorization(e) {
+    const buttonId = e && e.target && e.target.id
+      ? e.target.id
+      : PRIVACY_AGREE_BUTTON_ID
+    this.resolvePrivacyAuthorization({
+      event: 'agree',
+      buttonId
+    })
+  },
+
+  onRejectPrivacyAuthorization() {
+    this.resolvePrivacyAuthorization({ event: 'disagree' })
+    wx.showToast({ title: '需同意隐私指引后上传头像', icon: 'none' })
   },
 
   async loadUserInfo() {
@@ -69,6 +120,24 @@ Page({
     }
     this.setData({ avatarPreviewUrl: tempPath })
     this.uploadAvatar(tempPath)
+  },
+
+  onAvatarButtonError(e) {
+    const detail = e && e.detail ? e.detail : {}
+    const errMsg = detail.errMsg || ''
+    console.error('[edit-profile] chooseAvatar', detail)
+
+    if (/privacy|隐私|api scope is not declared/i.test(errMsg)) {
+      wx.showModal({
+        title: '头像上传未启用',
+        content: '请先在小程序后台「服务内容声明 > 用户隐私保护指引」声明用户头像、用户昵称，并让用户同意隐私指引后再上传。',
+        showCancel: false,
+        confirmText: '知道了'
+      })
+      return
+    }
+
+    wx.showToast({ title: '头像选择失败', icon: 'none' })
   },
 
   uploadAvatar(filePath) {
