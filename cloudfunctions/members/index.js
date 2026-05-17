@@ -18,6 +18,11 @@ function sanitizeAndTrimMemberPayload(data) {
   return payload
 }
 
+function stripSelfServiceOnlyFields(payload) {
+  const { admin, status, ...selfServicePayload } = payload
+  return selfServicePayload
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
@@ -26,7 +31,7 @@ exports.main = async (event, context) => {
   switch (action) {
     case 'add': {
       // 新增会员，openid唯一
-      const payload = sanitizeAndTrimMemberPayload(data)
+      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
       const v = validateMemberAdd(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
@@ -40,8 +45,8 @@ exports.main = async (event, context) => {
         data: {
           ...payload,
           openid,
-          status: payload.status || 'active',
-          admin: payload.admin || false,
+          status: 'active',
+          admin: false,
           createTime: now,
           updateTime: now
         }
@@ -53,7 +58,7 @@ exports.main = async (event, context) => {
     }
     case 'update': {
       // 更新会员信息 by openid
-      const payload = sanitizeAndTrimMemberPayload(data)
+      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
       const v = validateMemberData(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }

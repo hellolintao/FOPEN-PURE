@@ -110,6 +110,8 @@ describe('members cloud function', () => {
         phone: '13800000000',
         avatarUrl: 'https://x.com/a.jpg',
         playStyle: 'grinder',
+        status: 'inactive',
+        admin: true,
         playStyleNote: 'drop this',
         arbitrary: 'drop me'
       }
@@ -136,6 +138,8 @@ describe('members cloud function', () => {
       data: {
         name: '  王五  ',
         openid: 'malicious-openid',
+        status: 'inactive',
+        admin: true,
         playStyle: 'slicer',
         playStyleNote: 'drop this',
         arbitrary: 'drop me'
@@ -162,12 +166,14 @@ describe('members cloud function', () => {
     expect(mockCollection.doc).not.toHaveBeenCalled();
   });
 
-  test('action=updateById strips playStyleNote and preserves playStyle', async () => {
+  test('action=updateById strips playStyleNote and preserves admin, status, and playStyle', async () => {
     await main({
       action: 'updateById',
       _id: 'member-1',
       data: {
         name: '  赵六  ',
+        status: 'inactive',
+        admin: true,
         playStyle: 'moon-queen',
         playStyleNote: 'drop this',
         arbitrary: 'drop me'
@@ -178,6 +184,8 @@ describe('members cloud function', () => {
     expect(mockDoc.update).toHaveBeenCalledWith({
       data: {
         name: '赵六',
+        status: 'inactive',
+        admin: true,
         playStyle: 'moon-queen',
         updateTime: mockState.serverDate
       }
