@@ -87,9 +87,9 @@
 - `mode === 'register'`
   - 页面标题：`注册`
   - 头像：直接显示默认头像，允许通过原生按钮更换
-  - 表单：留空（不再调 `members.get`，或调用后忽略空记录）
+  - 表单：留空，不调用 `members.get`（避免无意义请求）
   - 主按钮：`完成注册`
-  - 取消按钮：隐藏
+  - 取消按钮：隐藏（系统手势返回回到 mine 页，无副作用）
   - 校验：姓名 + 打法必填，手机号格式校验仅在填写时生效
   - 保存：`callFunction members add`；成功后 `wx.reLaunch` 到 `/pages/mine/index`
 - 默认（`edit`）
@@ -182,8 +182,7 @@ const VALID_PLAY_STYLES = ['ice-cow', 'vers', 'iron-lady', 'moon-queen', 'grinde
 - [ ] 打法 6 个新选项展示与保存正常；旧 slug 不再接受
 - [ ] 单元 / 集成测试通过；覆盖率不下降
 
-## 10. 待办（实施计划阶段细化）
+## 10. 实施期待细化项
 
-- 默认头像常量定义位置（`config.js` 还是 page 内常量）
-- 注册模式下「返回」/系统手势返回的行为细节（直接返回 mine 还是再次提示）
-- `mine.onLogin` 失败 Toast 文案是否区分「未注册」与「未登录」
+- 默认头像常量定义位置（`config.js` 还是 edit-profile 内 const）— 推荐 `config.js` 暴露 `DEFAULT_AVATAR_URL`，便于日后替换图片
+- `mine.onLogin` 错误 Toast 文案在实施时按现有 i18n 风格统一
