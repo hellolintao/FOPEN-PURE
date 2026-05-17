@@ -15,9 +15,7 @@
       </view>
       <button
         class="avatar-row tap-scale"
-        open-type="chooseAvatar"
-        bindchooseavatar="onChooseAvatar"
-        binderror="onAvatarButtonError"
+        bindtap="onAvatarActionTap"
         disabled="{{avatarUploading}}"
         loading="{{avatarUploading}}"
       >

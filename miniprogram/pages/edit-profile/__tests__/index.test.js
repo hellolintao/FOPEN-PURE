@@ -13,6 +13,8 @@ function loadPage(overrides = {}) {
     setNavigationBarTitle: jest.fn(),
     openPrivacyContract: jest.fn(),
     onNeedPrivacyAuthorization: jest.fn(),
+    chooseMedia: jest.fn(),
+    chooseImage: jest.fn(),
     cloud: { uploadFile: jest.fn() }
   }
   global.getApp = () => app
@@ -165,6 +167,46 @@ describe('edit-profile validation and save', () => {
 })
 
 describe('edit-profile avatar', () => {
+  test('avatar tap uses wx.chooseMedia and uploads returned image path', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    ctx.uploadAvatar = jest.fn()
+    wx.chooseMedia.mockImplementationOnce(({ success }) => {
+      success({ tempFiles: [{ tempFilePath: 'http://tmp/avatar.jpg' }] })
+    })
+
+    ctx.onAvatarActionTap()
+
+    expect(wx.chooseMedia).toHaveBeenCalledWith(expect.objectContaining({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed']
+    }))
+    expect(ctx.data.avatarPreviewUrl).toBe('http://tmp/avatar.jpg')
+    expect(ctx.uploadAvatar).toHaveBeenCalledWith('http://tmp/avatar.jpg')
+  })
+
+  test('avatar tap falls back to wx.chooseImage when chooseMedia is unavailable', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    ctx.uploadAvatar = jest.fn()
+    wx.chooseMedia = undefined
+    wx.chooseImage.mockImplementationOnce(({ success }) => {
+      success({ tempFilePaths: ['http://tmp/fallback.jpg'] })
+    })
+
+    ctx.onAvatarActionTap()
+
+    expect(wx.chooseImage).toHaveBeenCalledWith(expect.objectContaining({
+      count: 1,
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed']
+    }))
+    expect(ctx.data.avatarPreviewUrl).toBe('http://tmp/fallback.jpg')
+    expect(ctx.uploadAvatar).toHaveBeenCalledWith('http://tmp/fallback.jpg')
+  })
+
   test('privacy authorization prompt resolves pending chooseAvatar after user agrees', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)

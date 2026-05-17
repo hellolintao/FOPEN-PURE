@@ -112,14 +112,64 @@ Page({
     })
   },
 
-  onChooseAvatar(e) {
-    const tempPath = e.detail && e.detail.avatarUrl
+  onAvatarActionTap() {
+    if (this.data.avatarUploading) return
+
+    if (typeof wx.chooseMedia === 'function') {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+        success: res => {
+          const file = res.tempFiles && res.tempFiles[0]
+          this.handleAvatarPicked(file && (file.tempFilePath || file.path))
+        },
+        fail: err => this.handleAvatarPickFail(err)
+      })
+      return
+    }
+
+    if (typeof wx.chooseImage === 'function') {
+      wx.chooseImage({
+        count: 1,
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+        success: res => {
+          const tempPath = res.tempFilePaths && res.tempFilePaths[0]
+          this.handleAvatarPicked(tempPath)
+        },
+        fail: err => this.handleAvatarPickFail(err)
+      })
+      return
+    }
+
+    wx.showToast({ title: '当前微信不支持选择图片', icon: 'none' })
+  },
+
+  handleAvatarPicked(tempPath) {
     if (!tempPath) {
       wx.showToast({ title: '未选择头像', icon: 'none' })
       return
     }
     this.setData({ avatarPreviewUrl: tempPath })
     this.uploadAvatar(tempPath)
+  },
+
+  handleAvatarPickFail(err) {
+    const errMsg = err && err.errMsg ? err.errMsg : ''
+    if (/cancel/i.test(errMsg)) return
+    if (/privacy|隐私|api scope is not declared/i.test(errMsg)) {
+      this.onAvatarButtonError({ detail: err })
+      return
+    }
+    console.error('[edit-profile] choose avatar media', err)
+    wx.showToast({ title: '头像选择失败', icon: 'none' })
+  },
+
+  onChooseAvatar(e) {
+    const tempPath = e.detail && e.detail.avatarUrl
+    this.handleAvatarPicked(tempPath)
   },
 
   onAvatarButtonError(e) {
