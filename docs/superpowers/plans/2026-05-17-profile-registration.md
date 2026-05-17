@@ -4,7 +4,7 @@
 
 **Goal:** 改造小程序「我的」注册入口、edit-profile / member-edit / player-detail 与 members 云函数，使新用户走「先收集姓名+打法+头像」流程，全面切换微信原生头像/昵称组件，移除「打法备注」，并把打法替换为 6 个新 slug。
 
-**Architecture:** 复用 `edit-profile` 页面，引入 `mode=register|edit` query；新增前端共享 `play-style` 常量；云函数 `members` 增加 `add` 必填校验与 `playStyleNote` 白名单清理；同步更新 `member-edit`（后台新增/编辑会员）和 `player-detail`（展示端）以及 `DATABASE_SCHEMA.md`、mock 数据、测试 fixture。
+**Architecture:** 复用 `edit-profile` 页面，引入 `mode=register|edit` query；新增前端共享 `play-style` 常量；云函数 `members` 增加微信自助注册 `add` 必填校验与 `playStyleNote` 白名单清理；后台不提供新增会员入口，`member-edit` 仅编辑已有会员；同步更新 `player-detail`（展示端）以及 `DATABASE_SCHEMA.md`、mock 数据、测试 fixture。
 
 **Tech Stack:** 微信小程序（WXML / WXSS / JS）、wx-server-sdk 云函数（Node.js）、Jest 29 单测、wx.cloud.uploadFile（COS）。
 
@@ -18,13 +18,14 @@
 - `miniprogram/utils/play-style.js` —— 单一打法 slug/label 常量源，被 edit-profile / member-edit / player-detail 引用
 - `cloudfunctions/members/__tests__/index.test.js` —— `members` 云函数 handler 集成测试
 - `miniprogram/pages/edit-profile/__tests__/index.test.js` —— edit-profile 页面单测（注册/编辑模式分支）
-- `miniprogram/pages/member-edit/__tests__/index.test.js` —— member-edit 页面单测（新增必填打法）
+- `miniprogram/pages/member-edit/__tests__/index.test.js` —— member-edit 页面单测（仅编辑已有会员、同步打法）
 
 ### 修改
 - `miniprogram/config.js` —— 暴露 `DEFAULT_AVATAR_URL`
 - `miniprogram/pages/mine/index.js` —— 未注册分支改为 `navigateTo edit-profile?mode=register`
 - `miniprogram/pages/edit-profile/index.{js,wxml,wxss,json}` —— 原生 chooseAvatar / nickname、mode 分支、6 项新打法、移除「打法备注」
-- `miniprogram/pages/member-edit/index.{js,wxml}` —— 增加打法 picker（新增模式必填）
+- `miniprogram/pages/member-edit/index.{js,wxml}` —— 增加打法 picker，移除后台新增会员路径
+- `miniprogram/pages/member-manage/index.js` —— 列表缓存更新同步 `playStyle`
 - `miniprogram/pages/player-detail/index.js` —— `PLAY_STYLE_LABEL` 替换为新 6 项
 - `miniprogram/pages/player-detail/index.wxml` —— 删除「关于」区域 `playStyleNote` 展示
 - `miniprogram/pages/player-detail/__tests__/index.test.js` —— fixture 改用新 slug
@@ -881,12 +882,20 @@ Page({
         return
       }
 
+      const result = res.result || {}
       const app = getApp()
+      const currentMember = app && app.globalData ? app.globalData.currentMember : null
+      const savedMember = result.errMsg === 'already registered' && result.data
+        ? result.data
+        : {
+            ...(currentMember || {}),
+            ...payload,
+            _id: result._id || (currentMember && currentMember._id)
+          }
+
       if (app && app.globalData) {
-        app.globalData.currentMember = {
-          ...(app.globalData.currentMember || {}),
-          ...payload
-        }
+        app.globalData.currentMember = savedMember
+        app.globalData.isAdmin = !!savedMember.admin
       }
 
       wx.hideLoading()
@@ -1144,13 +1153,14 @@ git commit -m "feat(mine): route unregistered users to register form instead of 
 
 ---
 
-## Task 8：member-edit 增加打法 picker（后台新增/编辑会员）
+## Task 8：member-edit 改为仅编辑已有会员 + 增加打法 picker
 
 **Files:**
 - Modify: `miniprogram/pages/member-edit/index.js`
 - Modify: `miniprogram/pages/member-edit/index.wxml`
+- Modify: `miniprogram/pages/member-manage/index.js`
 
-- [ ] **Step 1: 修改 JS 引入打法选项并校验**
+- [ ] **Step 1: 修改 JS 引入打法选项，移除后台新增会员路径**
 
 把 `miniprogram/pages/member-edit/index.js` 全文替换为：
 
@@ -1159,7 +1169,7 @@ const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-styl
 
 Page({
   data: {
-    isEdit: false,
+    isEdit: true,
     member: { name: '', phone: '', avatarUrl: '', status: '', admin: false, playStyle: '' },
     memberId: '',
     statusOptions: [
@@ -1172,25 +1182,32 @@ Page({
   },
 
   onLoad(options) {
-    if (options.member) {
+    if (!options || !options.member) {
+      this.redirectInvalidEntry()
+      return
+    }
+
+    try {
       const member = JSON.parse(decodeURIComponent(options.member))
       const statusIndex = this.data.statusOptions.findIndex((s) => s.value === member.status)
-      const playStyleIndex = PLAY_STYLE_VALUES.indexOf(member.playStyle || '')
+      const playStyle = PLAY_STYLE_VALUES.includes(member.playStyle) ? member.playStyle : ''
+      const playStyleIndex = PLAY_STYLE_VALUES.indexOf(playStyle)
       this.setData({
         isEdit: true,
-        member: { ...this.data.member, ...member },
+        member: { ...this.data.member, ...member, playStyle },
         memberId: member._id,
         statusIndex: statusIndex >= 0 ? statusIndex : 0,
         playStyleIndex
       })
-    } else {
-      this.setData({
-        'member.status': 'active',
-        'member.admin': false,
-        statusIndex: 0,
-        playStyleIndex: -1
-      })
+    } catch (err) {
+      console.error('[member-edit] invalid member query', err)
+      this.redirectInvalidEntry()
     }
+  },
+
+  redirectInvalidEntry() {
+    wx.showToast({ title: '请选择要编辑的会员', icon: 'none' })
+    setTimeout(() => wx.navigateBack(), 500)
   },
 
   onInput(e) {
@@ -1255,10 +1272,6 @@ Page({
       wx.showToast({ title: '请填写必填项', icon: 'none' })
       return
     }
-    if (!this.data.isEdit && !member.playStyle) {
-      wx.showToast({ title: '请选择打法', icon: 'none' })
-      return
-    }
     if (member.playStyle && !PLAY_STYLE_VALUES.includes(member.playStyle)) {
       wx.showToast({ title: '打法选项不合法', icon: 'none' })
       return
@@ -1266,62 +1279,41 @@ Page({
 
     wx.showLoading({ title: '保存中...' })
 
-    if (this.data.isEdit) {
-      wx.cloud.callFunction({
-        name: 'members',
+    wx.cloud.callFunction({
+      name: 'members',
+      data: {
+        action: 'updateById',
+        _id: this.data.memberId,
         data: {
-          action: 'updateById',
+          name: member.name,
+          phone: member.phone,
+          status: member.status,
+          admin: member.admin,
+          playStyle: member.playStyle || ''
+        }
+      },
+      success: (res) => {
+        wx.hideLoading()
+        if (res.result && res.result.success === false) {
+          wx.showToast({ title: (res.result.error && res.result.error.message) || '保存失败', icon: 'none' })
+          return
+        }
+        wx.showToast({ title: '保存成功', icon: 'success' })
+        getApp().globalData.memberUpdate = {
           _id: this.data.memberId,
-          data: {
-            name: member.name,
-            phone: member.phone,
-            status: member.status,
-            admin: member.admin,
-            playStyle: member.playStyle || ''
-          }
-        },
-        success: () => {
-          wx.hideLoading()
-          wx.showToast({ title: '保存成功', icon: 'success' })
-          getApp().globalData.memberUpdate = {
-            _id: this.data.memberId,
-            name: member.name,
-            phone: member.phone,
-            status: member.status,
-            admin: member.admin,
-            playStyle: member.playStyle || ''
-          }
-          setTimeout(() => wx.navigateBack(), 500)
-        },
-        fail: () => {
-          wx.hideLoading()
-          wx.showToast({ title: '保存失败', icon: 'error' })
+          name: member.name,
+          phone: member.phone,
+          status: member.status,
+          admin: member.admin,
+          playStyle: member.playStyle || ''
         }
-      })
-    } else {
-      wx.cloud.callFunction({
-        name: 'members',
-        data: { action: 'add', data: member },
-        success: (res) => {
-          wx.hideLoading()
-          if (res.result && res.result.success === false) {
-            wx.showToast({ title: (res.result.error && res.result.error.message) || '新增失败', icon: 'none' })
-            return
-          }
-          if (res.result.errMsg === 'already registered') {
-            wx.showToast({ title: '会员已存在', icon: 'none' })
-          } else {
-            wx.showToast({ title: '新增成功', icon: 'success' })
-            getApp().globalData.memberRefresh = true
-            setTimeout(() => wx.navigateBack(), 500)
-          }
-        },
-        fail: () => {
-          wx.hideLoading()
-          wx.showToast({ title: '新增失败', icon: 'error' })
-        }
-      })
-    }
+        setTimeout(() => wx.navigateBack(), 500)
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({ title: '保存失败', icon: 'error' })
+      }
+    })
   },
 
   onCancel() {
@@ -1336,9 +1328,13 @@ Page({
 })
 ```
 
-- [ ] **Step 2: 修改 WXML 增加打法 picker 项**
+- [ ] **Step 2: 修改 WXML 增加打法 picker，并去掉新增会员文案**
 
-在 `miniprogram/pages/member-edit/index.wxml` 中，把原 `04 管理员权限` 那一项前面插入一个新的 form-item（编号顺延），同时把 `04 → 05`：
+在 `miniprogram/pages/member-edit/index.wxml` 中：
+
+- 把页头固定为 `EDIT MEMBER · 编辑` / `编辑会员`
+- 把底部主按钮固定为 `保存修改`
+- 在原 `04 管理员权限` 那一项前面插入一个新的 form-item（编号顺延），同时把 `04 → 05`
 
 替换 `<view class="form-item">` 中 04 项块（管理员权限）改为 05，并在其前插入：
 
@@ -1346,7 +1342,7 @@ Page({
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">04</text>
-        <text class="field-text">打法 <text wx:if="{{!isEdit}}" class="required">*</text><text wx:else class="optional">(选填)</text></text>
+        <text class="field-text">打法 <text class="optional">(选填)</text></text>
       </view>
       <picker mode="selector" range="{{playStyleOptions}}" range-key="label" value="{{playStyleIndex}}" bindchange="onPickPlayStyle">
         <view class="form-input picker-input">
@@ -1359,16 +1355,30 @@ Page({
 
 完整修改后该段 form 的编号顺序应为 01 姓名 → 02 手机 → 03 状态 → 04 打法 → 05 管理员权限。
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: 同步 member-manage 列表缓存中的 playStyle**
+
+在 `miniprogram/pages/member-manage/index.js` 的 `updateMemberItem(updateData)` 中，把解构和回写字段都加上 `playStyle`：
+
+```js
+const { _id, name, phone, status, admin, playStyle } = updateData
+```
+
+并在命中项返回对象中加入：
+
+```js
+playStyle
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add miniprogram/pages/member-edit/index.js miniprogram/pages/member-edit/index.wxml
-git commit -m "feat(member-edit): require play style for new members in admin form"
+git add miniprogram/pages/member-edit/index.js miniprogram/pages/member-edit/index.wxml miniprogram/pages/member-manage/index.js
+git commit -m "feat(member-edit): edit existing member play style only"
 ```
 
 ---
 
-## Task 9：member-edit 页面单测（新增必填打法）
+## Task 9：member-edit 页面单测（仅编辑已有会员）
 
 **Files:**
 - Create: `miniprogram/pages/member-edit/__tests__/index.test.js`
@@ -1414,33 +1424,47 @@ function makeCtx(def, data = {}) {
   }
 }
 
-describe('member-edit add mode', () => {
-  test('新增模式缺打法时拒绝提交', () => {
+describe('member-edit entry', () => {
+  test('无 member query 时提示并返回，且不调用 members.add', () => {
+    jest.useFakeTimers()
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.isEdit = false
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: '' }
-    ctx.onSubmit()
-    expect(wx.showToast).toHaveBeenCalledWith({ title: '请选择打法', icon: 'none' })
+    ctx.onLoad({})
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请选择要编辑的会员', icon: 'none' })
+    jest.runAllTimers()
+    expect(wx.navigateBack).toHaveBeenCalled()
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
+    jest.useRealTimers()
   })
 
-  test('选择打法后提交 payload 携带 playStyle', () => {
+  test('有效 member query 设置 playStyleIndex', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.isEdit = false
+    const member = { _id: 'm1', name: '张三', status: 'active', admin: false, playStyle: 'iron-lady' }
+    ctx.onLoad({ member: encodeURIComponent(JSON.stringify(member)) })
+    expect(ctx.data.memberId).toBe('m1')
+    expect(ctx.data.playStyleIndex).toBe(2)
+    expect(ctx.data.member.playStyle).toBe('iron-lady')
+  })
+})
+
+describe('member-edit submit', () => {
+  test('编辑提交 payload 携带 playStyle，且不调用 add', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    ctx.data.memberId = 'm1'
     ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
     ctx.onSubmit()
     expect(wx.cloud.callFunction).toHaveBeenCalledTimes(1)
     const call = wx.cloud.callFunction.mock.calls[0][0]
-    expect(call.data.action).toBe('add')
+    expect(call.data.action).toBe('updateById')
+    expect(call.data.action).not.toBe('add')
     expect(call.data.data.playStyle).toBe('vers')
   })
 
-  test('编辑模式不强制打法', () => {
+  test('编辑已有会员不强制打法', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.isEdit = true
     ctx.data.memberId = 'm1'
     ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: '' }
     ctx.onSubmit()
@@ -1452,7 +1476,6 @@ describe('member-edit add mode', () => {
   test('非法打法 slug 被前端拦截', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.isEdit = false
     ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'baseliner' }
     ctx.onSubmit()
     expect(wx.showToast).toHaveBeenCalledWith({ title: '打法选项不合法', icon: 'none' })
@@ -1480,7 +1503,7 @@ Expected: 所有用例 PASS。
 
 ```bash
 git add miniprogram/pages/member-edit/__tests__/index.test.js
-git commit -m "test(member-edit): cover required play style on new member"
+git commit -m "test(member-edit): cover edit-only play style behavior"
 ```
 
 ---
@@ -1620,8 +1643,8 @@ Expected: 全部 PASS。
 
 - [ ] **Step 3: 全仓库残留扫描**
 
-Run: `grep -rn "playStyleNote\|baseliner\|serve-volleyer\|all-court\|counter-puncher\|aggressive-baseliner" miniprogram cloudfunctions --include="*.js" --include="*.wxml" --include="*.json" --include="*.md" 2>&1 | grep -v node_modules | grep -v package-lock`
-Expected: 无匹配输出。如有遗漏，定位并补 commit。
+Run: `grep -rn "playStyleNote\|baseliner\|serve-volleyer\|all-court\|counter-puncher\|aggressive-baseliner" miniprogram cloudfunctions --include="*.js" --include="*.wxml" --include="*.json" --include="*.md" 2>&1 | grep -v node_modules | grep -v package-lock | grep -v "__tests__"`
+Expected: 生产代码无匹配输出；测试目录允许保留旧 slug 作为拒绝用例。
 
 - [ ] **Step 4: 微信开发者工具手动 E2E（参照 spec §7.3）**
 
@@ -1629,13 +1652,14 @@ Expected: 无匹配输出。如有遗漏，定位并补 commit。
 1. 清空 openid 对应 members 记录 → 点「登录/注册」 → 注册页 → 选头像/填昵称/选打法 → 「完成注册」 → 回到「我的」头像/姓名展示正确，members 集合新增一条且无 `playStyleNote` 字段。
 2. 已注册用户 → 点「编辑资料」 → 改姓名/打法 → 保存 → 再次进入仍正确。
 3. 注册中途关闭 → 重新进入仍触发注册流程（无脏数据）。
-4. 后台「会员管理」新增会员：不选打法时拒绝提交；选择后新增成功；进入「球员详情」展示对应中文打法。
+4. 后台「会员管理」编辑已有会员：可修改打法；返回列表后缓存同步；进入「球员详情」展示对应中文打法；后台无新增会员入口。
 
 - [ ] **Step 5: Commit 残留修复（若有）**
 
 ```bash
-git add -A
-git status   # 确认无意外文件
+# 先确认残留修复只涉及本计划范围，再逐个 stage 明确文件；不要使用 git add -A。
+git status --short
+git add <explicit-related-files>
 git commit -m "chore(profile-registration): final regression sweep"
 ```
 
@@ -1652,4 +1676,4 @@ Expected: 看到本计划 11 + N 次 commit；按设计文档 §9 验收清单�
 - 单元/集成测试 PASS，覆盖率不下降
 - spec §9 验收清单全部满足
 - 手动 E2E 四个场景通过
-- 仓库无旧 slug 与 `playStyleNote` 残留
+- 生产代码无旧 slug 与 `playStyleNote` 残留（测试中允许保留拒绝旧 slug 的断言）
