@@ -1,55 +1,144 @@
-const { validateMemberData, VALID_PLAY_STYLES } = require('../validate');
+const {
+  validateMemberData,
+  validateMemberAdd,
+  sanitizeMemberPayload,
+  VALID_PLAY_STYLES
+} = require('../validate');
 
 describe('validateMemberData', () => {
-  test('正常数据通过', () => {
+  test('normal data passes', () => {
     const result = validateMemberData({
       name: '张三',
-      avatarUrl: 'https://x.com/a.jpg'
+      avatarUrl: 'https://x.com/a.jpg',
+      playStyle: 'ice-cow'
     });
+
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
   });
 
-  test('all playStyle enum values pass', () => {
+  test('all current playStyle enum values pass', () => {
+    expect(VALID_PLAY_STYLES).toEqual([
+      'ice-cow',
+      'vers',
+      'iron-lady',
+      'moon-queen',
+      'grinder',
+      'slicer'
+    ]);
+
     for (const playStyle of VALID_PLAY_STYLES) {
       const result = validateMemberData({ playStyle });
       expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
     }
   });
 
-  test('playStyle 取值必须在枚举内', () => {
-    const result = validateMemberData({
-      name: '张三',
-      playStyle: 'invalid-style'
-    });
+  test('old baseliner slug is rejected', () => {
+    const result = validateMemberData({ playStyle: 'baseliner' });
+
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('playStyle 必须是 baseliner/serve-volleyer/all-court/counter-puncher/aggressive-baseliner 之一');
+    expect(result.errors).toContain('playStyle 必须是 ice-cow/vers/iron-lady/moon-queen/grinder/slicer 之一');
   });
 
-  test('playStyle 空值合法', () => {
-    const result = validateMemberData({ name: '张三' });
-    expect(result.valid).toBe(true);
+  test('empty, null, and missing playStyle are valid for common validation', () => {
+    expect(validateMemberData({ playStyle: '' }).valid).toBe(true);
+    expect(validateMemberData({ playStyle: null }).valid).toBe(true);
+    expect(validateMemberData({}).valid).toBe(true);
   });
 
-  test('playStyleNote 50 字符通过', () => {
+  test('long playStyleNote no longer triggers an error', () => {
     const result = validateMemberData({
-      name: '张三',
-      playStyleNote: 'x'.repeat(50)
+      playStyleNote: 'x'.repeat(200)
     });
+
     expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+});
+
+describe('validateMemberAdd', () => {
+  test('name and new playStyle pass', () => {
+    const result = validateMemberAdd({
+      name: '张三',
+      playStyle: 'ice-cow'
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
   });
 
-  test('playStyleNote 超过 50 字符不通过', () => {
-    const result = validateMemberData({
-      name: '张三',
-      playStyleNote: 'x'.repeat(51)
-    });
+  test('missing name fails', () => {
+    const result = validateMemberAdd({ playStyle: 'ice-cow' });
+
     expect(result.valid).toBe(false);
-    expect(result.errors[0]).toMatch(/50/);
+    expect(result.errors).toContain('name 不能为空');
   });
 
-  test('playStyleNote null 合法', () => {
-    const result = validateMemberData({ playStyleNote: null });
-    expect(result.valid).toBe(true);
+  test('missing playStyle fails', () => {
+    const result = validateMemberAdd({ name: '张三' });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('playStyle 不能为空');
+  });
+
+  test('blank name fails', () => {
+    const result = validateMemberAdd({
+      name: '   ',
+      playStyle: 'ice-cow'
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('name 不能为空');
+  });
+
+  test('old baseliner slug fails', () => {
+    const result = validateMemberAdd({
+      name: '张三',
+      playStyle: 'baseliner'
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('playStyle 必须是 ice-cow/vers/iron-lady/moon-queen/grinder/slicer 之一');
+  });
+});
+
+describe('sanitizeMemberPayload', () => {
+  test('retains only allowed member fields', () => {
+    const result = sanitizeMemberPayload({
+      name: '张三',
+      phone: '13800000000',
+      avatarUrl: 'https://x.com/a.jpg',
+      status: 'active',
+      admin: true,
+      playStyle: 'ice-cow',
+      playStyleNote: 'removed',
+      createTime: 1,
+      updateTime: 2,
+      openid: 'openid',
+      arbitrary: 'field'
+    });
+
+    expect(result).toEqual({
+      name: '张三',
+      phone: '13800000000',
+      avatarUrl: 'https://x.com/a.jpg',
+      status: 'active',
+      admin: true,
+      playStyle: 'ice-cow'
+    });
+  });
+
+  test('missing fields are omitted', () => {
+    const result = sanitizeMemberPayload({
+      name: '张三',
+      playStyle: 'ice-cow',
+      openid: 'openid'
+    });
+
+    expect(result).toEqual({
+      name: '张三',
+      playStyle: 'ice-cow'
+    });
   });
 });
