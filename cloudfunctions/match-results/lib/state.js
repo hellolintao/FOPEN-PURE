@@ -122,10 +122,11 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
 
   async function confirmOne(result, tournament, score, winner, admin) {
     const effectiveWinner = winner || result.winner
+    const matchType = resolveMatchType(result, tournament)
     const entries = awardLib.buildAwardEntries(
       { ...result, score, winner: effectiveWinner },
       tournament.pointsRules.winLoss,
-      tournament.type
+      matchType
     )
     await removeResultFields(result._id, ['score', 'winner', 'pointsAwarded'])
     await db.collection('match_results').doc(result._id).update({
@@ -183,7 +184,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
             const other = nextRow[otherSlotKey]
             const newPlayerIds = collectPlayerIdsFromMatch(
               { player1: slot === 'player1' ? winner : other, player2: slot === 'player1' ? other : winner },
-              tournament.type
+              resolveMatchType(nextRow || result, tournament)
             )
             await removeResultFields(nextResultId, [slot])
             await db.collection('match_results').doc(nextResultId).update({
@@ -361,6 +362,10 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
       if (type === 'doubles' && m.player2.partnerId) ids.push(m.player2.partnerId)
     }
     return ids
+  }
+
+  function resolveMatchType(match, tournament) {
+    return (match && (match.type || match.tournamentType)) || (tournament && tournament.type) || 'singles'
   }
 
   function bracketDocId(tournamentId, round) {

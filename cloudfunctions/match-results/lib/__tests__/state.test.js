@@ -203,6 +203,66 @@ describe('submitResult', () => {
     expect(row.pointsAwarded.entries.filter(e => e.role === 'loser').map(e => e.memberId)).toEqual(['C', 'D'])
   })
 
+  test('mixed regular singles confirmation awards 2 entries as singles', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = { ...seed.tournaments[0], _id: 'TM', type: 'mixed', format: 'regular' }
+    seed.match_results = [{
+      _id: 'result_TM_s1',
+      tournamentId: 'TM',
+      sourceMatchId: 's1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'A' },
+      player2: { id: 'B' },
+      playerIds: ['A', 'B'],
+      resultStatus: 'pending',
+      tournamentType: 'singles',
+      seasonId: 'S1',
+      pointsAwarded: null,
+    }]
+    seed.tournament_registrations = ['A', 'B', 'C', 'D'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TM', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 's1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    const row = db.__all().match_results[0]
+    expect(row.pointsAwarded.entries).toEqual([
+      { memberId: 'A', points: 20, role: 'winner' },
+      { memberId: 'B', points: 10, role: 'loser' }
+    ])
+  })
+
+  test('mixed regular doubles confirmation awards 4 entries as doubles', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = { ...seed.tournaments[0], _id: 'TM', type: 'mixed', format: 'regular' }
+    seed.match_results = [{
+      _id: 'result_TM_d1',
+      tournamentId: 'TM',
+      sourceMatchId: 'd1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'A', partnerId: 'B' },
+      player2: { id: 'C', partnerId: 'D' },
+      playerIds: ['A', 'B', 'C', 'D'],
+      resultStatus: 'pending',
+      tournamentType: 'doubles',
+      seasonId: 'S1',
+      pointsAwarded: null,
+    }]
+    seed.tournament_registrations = ['A', 'B', 'C', 'D'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TM', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'd1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    const row = db.__all().match_results[0]
+    expect(row.pointsAwarded.entries.filter(e => e.role === 'winner').map(e => e.memberId)).toEqual(['A', 'B'])
+    expect(row.pointsAwarded.entries.filter(e => e.role === 'loser').map(e => e.memberId)).toEqual(['C', 'D'])
+  })
+
   test('regular singles tiebreak 5-7 awards player2 as winner', async () => {
     const db = makeDb(seed4Knockout())
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })

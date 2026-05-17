@@ -71,7 +71,7 @@ Page({
         }
       })
 
-      const registrations = (registrationRes.result && registrationRes.result.data) || []
+      const registrations = buildRosterPeople((registrationRes.result && registrationRes.result.data) || [])
 
       // 4. 获取对位信息（通过云函数）
       const bracketsRes = await wx.cloud.callFunction({
@@ -163,7 +163,8 @@ function buildTournamentDisplay(tournament, brackets) {
 
   return {
     maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
-    playersPerMatch: config.playersPerMatch || (tournament.type === 'doubles' ? 4 : 2),
+    playersPerMatch: config.playersPerMatch || (tournament.type === 'mixed' ? '2 / 4' : (tournament.type === 'doubles' ? 4 : 2)),
+    typeText: tournamentTypeText(tournament.type),
     showRoundInfo: isKnockout,
     totalRounds: config.totalRounds || (brackets || []).length || '-',
     currentRound: config.currentRound || 1,
@@ -181,4 +182,30 @@ function playerLabel(player) {
   if (!player) return '待定'
   if (player.name) return player.partnerName ? `${player.name} / ${player.partnerName}` : player.name
   return '待定'
+}
+
+function buildRosterPeople(rawRegs) {
+  const seen = new Set()
+  const people = []
+  const push = (id, name, reg) => {
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    people.push({
+      _id: id,
+      playerId: id,
+      playerName: name || '',
+      seed: reg && reg.seed
+    })
+  }
+  ;(rawRegs || []).forEach(reg => {
+    push(reg.playerId, reg.playerName, reg)
+    push(reg.partnerId, reg.partnerName, reg)
+  })
+  return people
+}
+
+function tournamentTypeText(type) {
+  if (type === 'mixed') return '混合'
+  if (type === 'doubles') return '双打'
+  return '单打'
 }

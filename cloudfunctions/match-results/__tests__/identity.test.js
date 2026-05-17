@@ -53,3 +53,13 @@ test('resolveStateMatchId prefers exact match_results document id', () => {
   expect(__test__.resolveStateMatchId({ _id: 'result_T2_shared', sourceMatchId: 'shared' })).toBe('result_T2_shared')
   expect(__test__.resolveStateMatchId({ sourceMatchId: 'legacy_source' })).toBe('legacy_source')
 })
+
+test('collectPlayerIds uses per-match doubles type inside mixed tournament', () => {
+  const ids = __test__.collectPlayerIds({
+    type: 'doubles',
+    player1: { id: 'A', partnerId: 'B' },
+    player2: { id: 'C', partnerId: 'D' }
+  }, { type: 'mixed' })
+
+  expect(ids).toEqual(['A', 'B', 'C', 'D'])
+})

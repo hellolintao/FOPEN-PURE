@@ -37,7 +37,7 @@
 
       <view class="info-item">
         <text class="info-label">赛事类型</text>
-        <text class="info-value">{{tournament.type === 'singles' ? '单打' : '双打'}}</text>
+        <text class="info-value">{{tournamentDisplay.typeText}}</text>
       </view>
 
       <view class="info-item" wx:if="{{tournament.description}}">
@@ -115,11 +115,8 @@
 
       <view wx:else class="player-list">
         <view wx:for="{{registrations}}" wx:key="_id" class="player-item">
-          <view wx:if="{{item.teamName}}" class="team-info">
-            <text class="team-name">{{item.teamName}}</text>
-          </view>
           <view class="player-info">
-            <text class="player-name">{{item.playerName}} {{item.partnerName}}</text>
+            <text class="player-name">{{item.playerName}}</text>
             <text class="player-seed" wx:if="{{item.seed}}">#{{item.seed}}</text>
           </view>
         </view>

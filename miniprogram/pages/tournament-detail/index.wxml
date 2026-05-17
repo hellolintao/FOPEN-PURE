@@ -10,7 +10,7 @@
     <view class="td-hero anim-stage-rise">
       <view class="hero-tapes">
         <text class="tape tape-stamped">TOURNAMENT</text>
-        <text class="tape tape-ghost">{{tournament.type === 'singles' ? 'SINGLES · 单打' : 'DOUBLES · 双打'}}</text>
+        <text class="tape tape-ghost">{{tournamentDisplay.typeText}}</text>
       </view>
       <text class="hero-title">{{tournament.name}}</text>
       <view class="hero-meta">
@@ -134,39 +134,13 @@
           <view class="roster-seed">
             <text class="num">{{item.seed}}</text>
           </view>
-          <block wx:if="{{tournament.type === 'singles'}}">
-            <view class="roster-avatar-wrap">
-              <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-              <view wx:else class="roster-avatar roster-avatar-fallback">
-                <text class="roster-avatar-initial">{{item.playerInitial}}</text>
-              </view>
+          <view class="roster-avatar-wrap">
+            <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="roster-avatar roster-avatar-fallback">
+              <text class="roster-avatar-initial">{{item.playerInitial}}</text>
             </view>
-            <text class="roster-name singles">{{item.playerName}}</text>
-          </block>
-          <block wx:if="{{tournament.type === 'doubles'}}">
-            <view class="roster-doubles-avatars">
-              <view class="roster-avatar-wrap stacked">
-                <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-                <view wx:else class="roster-avatar roster-avatar-fallback">
-                  <text class="roster-avatar-initial">{{item.playerInitial}}</text>
-                </view>
-              </view>
-              <view class="roster-avatar-wrap stacked overlap">
-                <image wx:if="{{item.partnerAvatarUrl}}" class="roster-avatar" src="{{item.partnerAvatarUrl}}" mode="aspectFill" />
-                <view wx:else class="roster-avatar roster-avatar-fallback">
-                  <text class="roster-avatar-initial">{{item.partnerInitial}}</text>
-                </view>
-              </view>
-            </view>
-            <view class="roster-doubles">
-              <text class="roster-name">{{item.teamName || item.playerName}}</text>
-              <view class="roster-doubles-row">
-                <text class="roster-detail">{{item.playerName}}</text>
-                <text class="roster-detail-sep">/</text>
-                <text class="roster-detail">{{item.partnerName}}</text>
-              </view>
-            </view>
-          </block>
+          </view>
+          <text class="roster-name singles">{{item.playerName}}</text>
         </view>
       </view>
     </view>

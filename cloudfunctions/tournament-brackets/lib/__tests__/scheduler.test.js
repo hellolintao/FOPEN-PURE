@@ -106,6 +106,64 @@ describe('buildRegularSchedule · 常规赛填满日程', () => {
     expect(freePlays.map(fp => fp.queueOrder)).toEqual([2, 5])
   })
 
+  test('混合常规赛：1 小时 → 单打 + 双打 + 自由拉球', () => {
+    const courts = [{
+      courtId: 'c1',
+      name: '1 号场',
+      slots: [
+        '2026-05-25T08:00',
+        '2026-05-25T08:20',
+        '2026-05-25T08:40'
+      ]
+    }]
+    const { matches, queues, freePlays } = buildRegularSchedule({
+      registrations: reg(['p1', 'p2', 'p3', 'p4']),
+      courts,
+      type: 'mixed',
+      now: 789
+    })
+
+    expect(matches).toHaveLength(2)
+    expect(matches.map(m => m.type)).toEqual(['singles', 'doubles'])
+    expect(matches[0].player1.partnerId).toBeUndefined()
+    expect(matches[1].player1.partnerId).toBeDefined()
+    expect(matches[1].player2.partnerId).toBeDefined()
+    expect(freePlays).toHaveLength(1)
+    expect(queues[0].items.map(it => it.kind)).toEqual(['match', 'match', 'freePlay'])
+  })
+
+  test('混合常规赛：2 小时 → 每小时重复单打 + 双打 + 自由拉球', () => {
+    const courts = [{
+      courtId: 'c1',
+      name: '1 号场',
+      slots: [
+        '2026-05-25T08:00',
+        '2026-05-25T08:20',
+        '2026-05-25T08:40',
+        '2026-05-25T09:00',
+        '2026-05-25T09:20',
+        '2026-05-25T09:40'
+      ]
+    }]
+    const { matches, queues, freePlays } = buildRegularSchedule({
+      registrations: reg(['p1', 'p2', 'p3', 'p4', 'p5', 'p6']),
+      courts,
+      type: 'mixed',
+      now: 790
+    })
+
+    expect(matches.map(m => m.type)).toEqual(['singles', 'doubles', 'singles', 'doubles'])
+    expect(freePlays.map(fp => fp.queueOrder)).toEqual([2, 5])
+    expect(queues[0].items.map(it => it.kind)).toEqual([
+      'match',
+      'match',
+      'freePlay',
+      'match',
+      'match',
+      'freePlay'
+    ])
+  })
+
   test('平衡配对让每位选手场次差不超过 1', () => {
     const matches = generateBalancedRegularMatches({
       registrations: reg(['p1', 'p2', 'p3', 'p4', 'p5']),

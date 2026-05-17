@@ -45,3 +45,52 @@ test('isAdminMember accepts admin and isAdmin flags', () => {
   expect(__test__.isAdminMember({ isAdmin: true })).toBe(true)
   expect(__test__.isAdminMember({ admin: false, isAdmin: false })).toBe(false)
 })
+
+test('validateTournament accepts regular mixed tournament', () => {
+  const errors = __test__.validateTournament({
+    name: '混合常规赛',
+    type: 'mixed',
+    format: 'regular',
+    startDate: '2026-05-25',
+    seasonId: 'season_2026',
+    schedulePlan: validSchedulePlan(),
+    pointsRules: validPointsRules()
+  }, { isDraft: false })
+
+  expect(errors).toEqual([])
+})
+
+test('validateTournament rejects knockout mixed tournament', () => {
+  const errors = __test__.validateTournament({
+    name: '混合淘汰赛',
+    type: 'mixed',
+    format: 'knockout',
+    startDate: '2026-05-25',
+    seasonId: 'season_2026',
+    maxPlayers: 8,
+    schedulePlan: validSchedulePlan(),
+    pointsRules: validPointsRules()
+  }, { isDraft: false })
+
+  expect(errors).toContain('淘汰赛不支持 mixed 类型')
+})
+
+function validSchedulePlan() {
+  return {
+    slotMinutes: 20,
+    courts: [
+      {
+        courtId: 'c1',
+        name: '1号场',
+        slots: ['2026-05-25T08:00', '2026-05-25T08:20', '2026-05-25T08:40']
+      }
+    ]
+  }
+}
+
+function validPointsRules() {
+  return {
+    winLoss: { win: 20, loss: 10, walkover: 0 },
+    placement: { champion: 100, runnerUp: 60, semifinal: 30, quarterfinal: 10, participation: 5 }
+  }
+}

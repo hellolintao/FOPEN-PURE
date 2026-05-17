@@ -11,8 +11,16 @@ const awardLib = require('./lib/award')
 const scoreRule = require('./lib/score-rule')
 const stateSvc = createMatchStateService({ db, awardLib, scoreRule })
 
+function resolveMatchType(match, tournamentOrType) {
+  const fallback = typeof tournamentOrType === 'string'
+    ? tournamentOrType
+    : (tournamentOrType && tournamentOrType.type)
+  return (match && (match.type || match.tournamentType)) || fallback || 'singles'
+}
+
 // 收集选手 ID（兼容 singles/doubles，跳过 BYE）
-function collectPlayerIds(m, type) {
+function collectPlayerIds(m, tournamentOrType) {
+  const type = resolveMatchType(m, tournamentOrType)
   const ids = []
   const push = obj => {
     if (obj && obj.id && obj.id !== 'BYE') {
@@ -144,13 +152,14 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
       seen.add(docId)
       const isBye = m.bye === true
       const q = queueMap.get(m.matchId)
-      const playerIds = collectPlayerIds(m, tournament.type)
+      const matchType = resolveMatchType(m, tournament)
+      const playerIds = collectPlayerIds(m, matchType)
 
       const doc = {
         _id: docId,
         tournamentId,
         seasonId: tournament.seasonId,
-        tournamentType: tournament.type,
+        tournamentType: matchType,
         matchKind: m.matchKind || 'bracket',
         sourceMatchId: m.matchId,
         round: m.round,
@@ -192,12 +201,13 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
         const docId = `result_${prefix}_${m.matchId}`
         if (seen.has(docId)) continue
         seen.add(docId)
-        const playerIds = collectPlayerIds(m, tournament.type)
+        const matchType = resolveMatchType(m, tournament)
+        const playerIds = collectPlayerIds(m, matchType)
         const doc = {
           _id: docId,
           tournamentId,
           seasonId: tournament.seasonId,
-          tournamentType: tournament.type,
+          tournamentType: matchType,
           matchKind: 'bracket',
           sourceMatchId: m.matchId,
           round: m.round,
@@ -861,6 +871,8 @@ async function pagedFetchSubmitted() {
 }
 
 exports.__test__ = {
+  collectPlayerIds,
+  resolveMatchType,
   resolveSubmitterByOpenid,
   resolveStateMatchId,
 }

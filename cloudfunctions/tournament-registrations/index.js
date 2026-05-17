@@ -27,8 +27,8 @@ function validateRegistration(data, isUpdate = false) {
     errors.push('赛季ID不能为空')
   }
 
-  if (!data.type || !['singles', 'doubles'].includes(data.type)) {
-    errors.push('参赛类型必须是 singles 或 doubles')
+  if (!data.type || !['singles', 'doubles', 'mixed'].includes(data.type)) {
+    errors.push('参赛类型必须是 singles、doubles 或 mixed')
   }
 
   if (!data.playerId) {
@@ -436,4 +436,8 @@ exports.main = async (event, context) => {
       error: err
     }
   }
+}
+
+exports.__test__ = {
+  validateRegistration,
 }

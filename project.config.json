@@ -105,6 +105,10 @@
       },
       {
         "type": "folder",
+        "value": "components/schedule-board/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "custom-tab-bar/__tests__"
       },
       {
@@ -134,6 +138,10 @@
       {
         "type": "folder",
         "value": "pages/tournament-score/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/tournament-edit/__tests__"
       },
       {
         "type": "folder",

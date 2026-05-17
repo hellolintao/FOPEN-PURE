@@ -60,15 +60,19 @@ function assignToCourtsWithOverflow(matches, courts) {
 
 function buildRegularSchedule({ registrations, courts, type, now }) {
   const timestamp = now || Date.now()
-  const plan = buildRegularSlotPlan(courts || [])
+  const plan = buildRegularSlotPlan(courts || [], type)
   // 随机打乱报名顺序，避免 balanced pair 算法因稳定排序产生相同结果
   const shuffledRegs = shuffleArray(registrations || [])
-  const matches = generateBalancedRegularMatches({
-    registrations: shuffledRegs,
-    matchCount: plan.matchCells.length,
-    type,
-    now: timestamp
-  })
+  const counts = new Map(shuffledRegs.map(p => [p.playerId, 0]))
+  const matches = plan.matchCells
+    .map((cell, index) => generateBalancedRegularMatch({
+      registrations: shuffledRegs,
+      counts,
+      index,
+      type: cell.matchType || type,
+      now: timestamp
+    }))
+    .filter(Boolean)
   const freePlays = []
   const queues = (courts || []).map(court => ({ courtId: court.courtId, items: [] }))
   let matchIndex = 0
@@ -92,7 +96,7 @@ function buildRegularSchedule({ registrations, courts, type, now }) {
   return { matches, queues, freePlays }
 }
 
-function buildRegularSlotPlan(courts) {
+function buildRegularSlotPlan(courts, type) {
   const cells = []
   const matchCells = []
 
@@ -101,7 +105,10 @@ function buildRegularSlotPlan(courts) {
     grouped.forEach(group => {
       group.slots.forEach((slot, index) => {
         const kind = index < 2 ? 'match' : 'freePlay'
-        const cell = { courtId: court.courtId, slot, kind }
+        const matchType = type === 'mixed'
+          ? (index === 0 ? 'singles' : index === 1 ? 'doubles' : null)
+          : (kind === 'match' ? type : null)
+        const cell = { courtId: court.courtId, slot, kind, matchType }
         cells.push(cell)
         if (kind === 'match') matchCells.push(cell)
       })
@@ -113,19 +120,27 @@ function buildRegularSlotPlan(courts) {
 
 function generateBalancedRegularMatches({ registrations, matchCount, type, now }) {
   const players = [...(registrations || [])]
-  const perMatch = type === 'doubles' ? 4 : 2
-  if (players.length < perMatch || matchCount <= 0) return []
+  if (matchCount <= 0) return []
 
   const counts = new Map(players.map(p => [p.playerId, 0]))
   const matches = []
 
   for (let i = 0; i < matchCount; i++) {
-    const picked = pickBalancedNPlayers(players, counts, perMatch)
-    picked.forEach(p => counts.set(p.playerId, (counts.get(p.playerId) || 0) + 1))
-    matches.push(regularMatchFromGroup(picked, i, type, now))
+    const matchType = type === 'mixed' ? (i % 2 === 0 ? 'singles' : 'doubles') : type
+    const match = generateBalancedRegularMatch({ registrations: players, counts, index: i, type: matchType, now })
+    if (match) matches.push(match)
   }
 
   return matches
+}
+
+function generateBalancedRegularMatch({ registrations, counts, index, type, now }) {
+  const players = [...(registrations || [])]
+  const perMatch = type === 'doubles' ? 4 : 2
+  if (players.length < perMatch) return null
+  const picked = pickBalancedNPlayers(players, counts, perMatch)
+  picked.forEach(p => counts.set(p.playerId, (counts.get(p.playerId) || 0) + 1))
+  return regularMatchFromGroup(picked, index, type, now)
 }
 
 function pickBalancedNPlayers(players, counts, N) {
@@ -145,6 +160,7 @@ function regularMatchFromGroup(group, index, type, now) {
       matchId: `match_regular_p${index + 1}_${now}_${index}`,
       round: 1,
       position: index + 1,
+      type: 'doubles',
       player1: doublesTeam(s[0], s[1]),
       player2: doublesTeam(s[2], s[3]),
       bye: false,
@@ -161,6 +177,7 @@ function regularMatchFromGroup(group, index, type, now) {
     matchId: `match_regular_p${index + 1}_${now}_${index}`,
     round: 1,
     position: index + 1,
+    type: 'singles',
     player1: singlesPlayer(p1),
     player2: singlesPlayer(p2),
     bye: false,

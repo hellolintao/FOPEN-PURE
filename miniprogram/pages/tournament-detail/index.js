@@ -88,17 +88,7 @@ Page({
 
       const avatarMap = await fetchAvatarMap([...ids])
 
-      const registrations = rawRegs.map(reg => {
-        const status = reg.registrationStatus || reg.status || 'registered'
-        return {
-          ...reg,
-          displayStatus: status,
-          avatarUrl: avatarMap[reg.playerId] || '',
-          partnerAvatarUrl: avatarMap[reg.partnerId || ''] || '',
-          playerInitial: firstChar(reg.playerName),
-          partnerInitial: firstChar(reg.partnerName)
-        }
-      })
+      const registrations = buildRosterPeople(rawRegs, avatarMap)
       this.setData({ registrations })
     } catch (err) {
       console.error('加载参赛人员失败:', err)
@@ -200,7 +190,8 @@ function buildTournamentDisplay(tournament) {
 
   return {
     maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
-    playersPerMatch: config.playersPerMatch || (tournament.type === 'doubles' ? 4 : 2),
+    playersPerMatch: config.playersPerMatch || (tournament.type === 'mixed' ? '2 / 4' : (tournament.type === 'doubles' ? 4 : 2)),
+    typeText: tournamentTypeText(tournament.type),
     showRoundInfo: isKnockout,
     currentRound: config.currentRound || 1,
     totalRounds: config.totalRounds || '-',
@@ -213,6 +204,36 @@ function buildTournamentDisplay(tournament) {
     walkover: typeof winLoss.walkover === 'number' ? winLoss.walkover : undefined,
     placementRows
   }
+}
+
+function buildRosterPeople(rawRegs, avatarMap) {
+  const seen = new Set()
+  const people = []
+  const push = (id, name, reg) => {
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    const status = (reg && (reg.registrationStatus || reg.status)) || 'registered'
+    people.push({
+      _id: id,
+      playerId: id,
+      playerName: name || '',
+      seed: reg && reg.seed,
+      displayStatus: status,
+      avatarUrl: avatarMap[id] || '',
+      playerInitial: firstChar(name)
+    })
+  }
+  ;(rawRegs || []).forEach(reg => {
+    push(reg.playerId, reg.playerName, reg)
+    push(reg.partnerId, reg.partnerName, reg)
+  })
+  return people
+}
+
+function tournamentTypeText(type) {
+  if (type === 'mixed') return 'MIXED · 混合'
+  if (type === 'doubles') return 'DOUBLES · 双打'
+  return 'SINGLES · 单打'
 }
 
 function buildScheduleView(tournament, brackets, freePlays) {

@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournaments')
+const TOURNAMENT_TYPES = ['singles', 'doubles', 'mixed']
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,11 +74,14 @@ function validateTournament(data, { isDraft = false } = {}) {
 
   // Always-required fields
   if (!data.name || data.name.trim() === '') errors.push('赛事名称不能为空')
-  if (!data.type || !['singles', 'doubles'].includes(data.type)) {
-    errors.push('赛事类型必须是 singles 或 doubles')
+  if (!data.type || !TOURNAMENT_TYPES.includes(data.type)) {
+    errors.push('赛事类型必须是 singles、doubles 或 mixed')
   }
   if (!data.format || !['regular', 'knockout'].includes(data.format)) {
     errors.push('赛制必须是 regular(常规赛) 或 knockout(淘汰赛)')
+  }
+  if (data.format === 'knockout' && data.type === 'mixed') {
+    errors.push('淘汰赛不支持 mixed 类型')
   }
   if (!data.startDate) errors.push('开始日期不能为空')
   if (!data.seasonId) errors.push('所属赛季不能为空')
@@ -527,4 +531,5 @@ exports.main = async (event, context) => {
 exports.__test__ = {
   resolveMemberByOpenid,
   isAdminMember,
+  validateTournament,
 }

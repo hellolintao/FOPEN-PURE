@@ -231,15 +231,9 @@ Component({
         wx.showToast({ title: '仅常规赛可加场次', icon: 'none' }); return
       }
       const courtId = e.currentTarget.dataset.courtId
-      const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
-      this.setData({
-        pickerShow: true,
-        pickerCtx: { kind: 'addExtra', courtId },
-        pickerRequiredCount: isDoubles ? 4 : 2,
-        pickerExclude: [],
-        pickerMembers: this.properties.members || [],
-        pickerTitle: '选择比赛球员'
-      })
+      const tournamentType = this.properties.tournament && this.properties.tournament.type
+      const matchType = tournamentType === 'doubles' ? 'doubles' : 'singles'
+      this.openAddMatchPicker({ kind: 'addExtra', courtId, matchType })
     },
 
     onPickerConfirm(e) {
@@ -257,23 +251,33 @@ Component({
       const courtId = e.currentTarget.dataset.courtId
       const slotIndex = parseInt(e.currentTarget.dataset.slotIndex, 10)
       if (isNaN(slotIndex) || slotIndex < 0) return
+      const isRegular = this.properties.tournament && this.properties.tournament.format === 'regular'
+      const itemList = isRegular ? ['单打', '双打', '自由拉球'] : ['自由拉球']
       wx.showActionSheet({
-        itemList: ['添加对局', '添加自由拉球'],
+        itemList,
         success: ({ tapIndex }) => {
-          if (tapIndex === 0) {
-            const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
-            this.setData({
-              pickerShow: true,
-              pickerCtx: { kind: 'addMatchAt', courtId, slotIndex },
-              pickerRequiredCount: isDoubles ? 4 : 2,
-              pickerExclude: [],
-              pickerMembers: this.properties.members || [],
-              pickerTitle: '选择对局球员'
-            })
+          if (!isRegular) {
+            this.applyAddFreePlayAt(courtId, slotIndex)
+          } else if (tapIndex === 0) {
+            this.openAddMatchPicker({ kind: 'addMatchAt', courtId, slotIndex, matchType: 'singles' })
           } else if (tapIndex === 1) {
+            this.openAddMatchPicker({ kind: 'addMatchAt', courtId, slotIndex, matchType: 'doubles' })
+          } else if (tapIndex === 2) {
             this.applyAddFreePlayAt(courtId, slotIndex)
           }
         }
+      })
+    },
+
+    openAddMatchPicker({ kind, courtId, slotIndex, matchType }) {
+      const isDoubles = matchType === 'doubles'
+      this.setData({
+        pickerShow: true,
+        pickerCtx: { kind, courtId, slotIndex, matchType },
+        pickerRequiredCount: isDoubles ? 4 : 2,
+        pickerExclude: [],
+        pickerMembers: this.properties.members || [],
+        pickerTitle: isDoubles ? '选择双打球员' : '选择单打球员'
       })
     },
 
@@ -289,14 +293,14 @@ Component({
       this.emitChange({ queues, freePlays })
     },
 
-    applyAddMatchAt({ courtId, slotIndex }, memberIds) {
+    applyAddMatchAt({ courtId, slotIndex, matchType }, memberIds) {
       const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
       q.items = asArray(q.items)
       if (q.items.some(it => it.order === slotIndex)) return
       const newId = `match_extra_${Date.now()}`
       q.items.push({ kind: 'match', matchId: newId, sourceMatchId: newId, order: slotIndex })
-      const match = this.assemblePlayerObjects(memberIds, newId)
+      const match = this.assemblePlayerObjects(memberIds, newId, matchType)
       if (!match) return
       const matches = [...asArray(this.data.matches), match]
       this.emitChange({ queues, matches })
@@ -411,21 +415,21 @@ Component({
       this.emitChange({ queues, freePlays })
     },
 
-    applyAddExtra({ courtId }, memberIds) {
+    applyAddExtra({ courtId, matchType }, memberIds) {
       const queues = cloneArray(this.data.queues)
       const q = queues.find(x => x.courtId === courtId); if (!q) return
       q.items = asArray(q.items)
       const newId = `match_extra_${Date.now()}`
       q.items.push({ kind: 'match', matchId: newId, sourceMatchId: newId, order: q.items.length })
-      const match = this.assemblePlayerObjects(memberIds, newId)
+      const match = this.assemblePlayerObjects(memberIds, newId, matchType)
       if (!match) return
       const matches = [...asArray(this.data.matches), match]
       this.emitChange({ queues, matches })
     },
 
-    assemblePlayerObjects(memberIds, matchId) {
+    assemblePlayerObjects(memberIds, matchId, matchType) {
       const ms = asArray(memberIds).map(id => asArray(this.properties.members).find(x => x._id === id)).filter(Boolean)
-      const isDoubles = this.properties.tournament && this.properties.tournament.type === 'doubles'
+      const isDoubles = matchType === 'doubles'
       if ((!isDoubles && ms.length < 2) || (isDoubles && ms.length < 4)) return null
       const player1 = isDoubles
         ? { id: ms[0]._id, name: ms[0].name, partnerId: ms[1]._id, partnerName: ms[1].name }
@@ -433,7 +437,7 @@ Component({
       const player2 = isDoubles
         ? { id: ms[2]._id, name: ms[2].name, partnerId: ms[3]._id, partnerName: ms[3].name }
         : { id: ms[1]._id, name: ms[1].name }
-      return { matchId, round: 1, position: 999, player1, player2, bye: false, status: 'pending', resultStatus: 'pending', winner: null, courtId: null, queueOrder: null, matchKind: 'extra' }
+      return { matchId, round: 1, position: 999, type: matchType, player1, player2, bye: false, status: 'pending', resultStatus: 'pending', winner: null, courtId: null, queueOrder: null, matchKind: 'extra' }
     },
 
     collectMatchPlayerIds(m, excludeSlot) {

@@ -30,8 +30,8 @@ function validateBracket(data) {
     errors.push('轮数必须大于0')
   }
 
-  if (!data.type || !['singles', 'doubles'].includes(data.type)) {
-    errors.push('类型必须是 singles 或 doubles')
+  if (!data.type || !['singles', 'doubles', 'mixed'].includes(data.type)) {
+    errors.push('类型必须是 singles、doubles 或 mixed')
   }
 
   if (!data.matches || !Array.isArray(data.matches)) {
@@ -522,4 +522,8 @@ async function handleRegenerateDraft({ tournamentId }) {
   }).catch(() => null)
 
   return { success: true }
+}
+
+exports.__test__ = {
+  validateBracket,
 }

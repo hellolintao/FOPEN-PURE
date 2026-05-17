@@ -10,7 +10,7 @@ Page({
       name: '',
       location: '海峡奥体网球场',
       startDate: todayISODate(),
-      type: 'singles',
+      type: 'mixed',
       format: 'regular',
       maxPlayers: 8,
       description: ''
@@ -301,6 +301,16 @@ Page({
 
   onChipTap(e) {
     const { k, v } = e.currentTarget.dataset
+    if (k === 'format') {
+      const patch = { 'form.format': v }
+      if (v === 'knockout' && this.data.form.type === 'mixed') patch['form.type'] = 'singles'
+      this.setData(patch)
+      return
+    }
+    if (k === 'type' && v === 'mixed' && this.data.form.format === 'knockout') {
+      wx.showToast({ title: '淘汰赛不支持混合', icon: 'none' })
+      return
+    }
     this.setData({ [`form.${k}`]: v })
   },
 
@@ -359,6 +369,11 @@ Page({
       for (let i = 0; i < items.length; i++) {
         const expected = (i % 3 === 2) ? 'freePlay' : 'match'
         if (items[i].kind !== expected) return true
+        if (this.data.form.type === 'mixed' && expected === 'match') {
+          const match = (this.data.matches || []).find(m => m.matchId === items[i].matchId)
+          const expectedType = (i % 3 === 0) ? 'singles' : 'doubles'
+          if (!match || match.type !== expectedType) return true
+        }
       }
       return false
     })
@@ -382,6 +397,7 @@ Page({
 
   _minPlayers() {
     // 单打 / knockout 双打：至少 2（个人 or 队伍）；regular 双打：至少 4 人。
+    if (this.data.form.type === 'mixed') return 4
     if (this.data.form.type === 'doubles' && this.data.form.format === 'regular') return 4
     return 2
   },
