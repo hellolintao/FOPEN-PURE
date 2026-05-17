@@ -4,7 +4,7 @@
   </view>
 
   <view class="player-cell">
-    <image class="avatar" src="{{avatarUrl || '/images/icons/avatar.png'}}" mode="aspectFill" />
+    <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
     <text class="name">{{name}}</text>
   </view>
 

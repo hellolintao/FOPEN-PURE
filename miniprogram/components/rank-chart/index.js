@@ -170,7 +170,7 @@ Component({
 
       const endPoint = canvasPoints[canvasPoints.length - 1]
       ctx.save()
-      ctx.fillStyle = '#BEE645'
+      ctx.fillStyle = '#BEF500'
       ctx.strokeStyle = this.data.color || '#0A0A0A'
       ctx.lineWidth = 2
       ctx.beginPath()

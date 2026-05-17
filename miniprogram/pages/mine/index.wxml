@@ -7,7 +7,7 @@
         <text class="tape tape-stamped">PROFILE · {{isAdmin ? 'ADMIN' : 'MEMBER'}}</text>
       </view>
       <view class="mine-hero-row">
-        <image class="mine-avatar" src="{{userInfo.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+        <image class="mine-avatar" src="{{userInfo.avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
         <view class="mine-hero-info">
           <text class="mine-name">{{userInfo.name}}</text>
           <view class="mine-points-row">

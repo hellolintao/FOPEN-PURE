@@ -13,7 +13,7 @@
       </view>
       <view class="pd-hero-main">
         <view class="pd-avatar-wrap">
-          <image class="pd-avatar" src="{{player.avatarUrl || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+          <image class="pd-avatar" src="{{player.avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
         </view>
         <view class="pd-hero-info">
           <text class="pd-name">{{player.name}}</text>

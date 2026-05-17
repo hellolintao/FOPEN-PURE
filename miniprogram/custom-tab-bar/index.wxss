@@ -2,10 +2,10 @@
   display: flex;
   height: 128rpx;
   box-sizing: border-box;
-  background-color: #BEE645;
-  border: 3rpx solid #0B0C09;
+  background-color: #BEF500;
+  border: none;
   border-radius: 56rpx 56rpx 0 0;
-  box-shadow: 0 10rpx 28rpx rgba(11, 12, 9, 0.14);
+  box-shadow: none;
   position: fixed;
   bottom: 0;
   left: 0;

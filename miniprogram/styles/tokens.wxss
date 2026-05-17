@@ -14,10 +14,10 @@ page {
    * ========================================================= */
 
   /* 品牌青柠 — 唯一强调色，全屏稀缺使用 */
-  --color-lime: #BEE645;          /* base */
-  --color-lime-strong: #A8CC2F;   /* 按压 / 深一档 */
-  --color-lime-soft: #DDF099;     /* 浅色背景 / 阶段高亮 */
-  --color-lime-wash: #EEF7CB;     /* 极浅 wash，hero 底层 */
+  --color-lime: #BEF500;          /* base */
+  --color-lime-strong: #A6D900;   /* 按压 / 深一档 */
+  --color-lime-soft: #E7FF85;     /* 浅色背景 / 阶段高亮 */
+  --color-lime-wash: #F4FFD6;     /* 极浅 wash，hero 底层 */
 
   /* 墨色（轻微暖偏） */
   --color-ink: #0B0C09;           /* 主文字 / 强边 / 计分牌字 */

@@ -29,7 +29,7 @@
       <text class="star-range">{{starHero.weekStart}} – {{starHero.weekEnd}}</text>
     </view>
     <view class="star-body">
-      <image class="star-avatar" src="{{(starHero.star && starHero.star.avatarUrl) || '/images/icons/usercenter.png'}}" mode="aspectFill" />
+      <image class="star-avatar" src="{{(starHero.star && starHero.star.avatarUrl) || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
       <view class="star-info">
         <text class="star-name">{{starHero.star && starHero.star.name}}</text>
         <text class="star-subtitle">{{starHero.subtitle}}</text>

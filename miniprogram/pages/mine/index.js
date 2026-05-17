@@ -1,5 +1,5 @@
 const app = getApp()
-const DEFAULT_AVATAR = '/images/icons/usercenter.png'
+const DEFAULT_AVATAR = '/images/icons/default-avatar.png'
 
 Page({
 	data: {

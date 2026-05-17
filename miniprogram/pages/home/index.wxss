@@ -61,30 +61,24 @@
   position: relative;
   background: var(--color-lime);
   border-radius: var(--radius-xl);
-  padding: var(--space-7) var(--space-6) var(--space-6);
-  margin-bottom: var(--space-7);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  margin-bottom: var(--space-6);
   overflow: hidden;
   isolation: isolate;
 }
 
 .hero-bg-num {
   position: absolute;
-  right: -32rpx;
-  bottom: -56rpx;
-  font-size: 480rpx;
+  right: -24rpx;
+  bottom: -44rpx;
+  font-size: 360rpx;
   font-weight: 900;
   line-height: 0.8;
-  letter-spacing: -0.08em;
+  letter-spacing: 0;
   color: var(--color-ink);
   opacity: 0.08;
   pointer-events: none;
   z-index: 0;
-}
-
-.hero-tapes-row {
-  position: relative;
-  z-index: 1;
-  margin-bottom: var(--space-6);
 }
 
 .hero-headline {
@@ -92,19 +86,15 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .hero-line {
-  font-size: 96rpx;
+  font-size: 76rpx;
   font-weight: 900;
-  line-height: 0.96;
-  letter-spacing: -0.02em;
+  line-height: 1;
+  letter-spacing: 0;
   color: var(--color-ink);
-}
-
-.hero-line:nth-child(2) {
-  padding-left: var(--space-4);
 }
 
 .hero-foot {
@@ -112,23 +102,24 @@
   z-index: 1;
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-3);
-  padding-top: var(--space-4);
+  padding-top: var(--space-3);
   border-top: 2rpx solid var(--color-ink);
 }
 
 .hero-foot-zh {
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 700;
   color: var(--color-ink);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .hero-foot-en {
   font-size: 22rpx;
   font-weight: 800;
   color: var(--color-ink-3);
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
 }
 
 /* ============================================================
