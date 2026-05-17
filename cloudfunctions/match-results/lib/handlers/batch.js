@@ -149,6 +149,9 @@ async function batchSubmit(ctx, payload) {
       continue
     }
     try {
+      if (ctx.db.clearMatchFields) {
+        await ctx.db.clearMatchFields(matchId, ['score'])
+      }
       await ctx.db.updateMatch(matchId, { resultStatus: 'submitted', score, submittedBy: ctx.callerMemberId, submittedAt: now, updateTime: now })
       successIds.push(matchId)
       mergedResults[matchId] = { state: 'success', confirmedAt: now, attemptCount: (prior && prior.attemptCount || 0) + 1 }

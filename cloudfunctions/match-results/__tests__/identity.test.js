@@ -48,3 +48,8 @@ test('resolveSubmitterByOpenid normalizes admin from admin or isAdmin flags', as
   await expect(__test__.resolveSubmitterByOpenid('ob', makeMemberDb({ _id: 'adminB', openId: 'ob', isAdmin: true }), command))
     .resolves.toEqual({ _id: 'adminB', openid: 'ob', isAdmin: true })
 })
+
+test('resolveStateMatchId prefers exact match_results document id', () => {
+  expect(__test__.resolveStateMatchId({ _id: 'result_T2_shared', sourceMatchId: 'shared' })).toBe('result_T2_shared')
+  expect(__test__.resolveStateMatchId({ sourceMatchId: 'legacy_source' })).toBe('legacy_source')
+})

@@ -118,6 +118,64 @@ describe('submitResult', () => {
     expect(r.pointsAwarded.entries.find(e => e.memberId === 'A').role).toBe('winner')
   })
 
+  test('admin submit by exact result id does not collide with reused sourceMatchId', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments.push({
+      _id: 'T2',
+      seasonId: 'S1',
+      type: 'singles',
+      format: 'regular',
+      pointsRules: { winLoss: { win: 20, loss: 10, walkover: 0 }, placement: { champion: 100, runnerUp: 70, semifinal: 50, quarterfinal: 30, participation: 10 } },
+      status: 'ongoing'
+    })
+    seed.match_results.unshift({
+      _id: 'result_T0_shared',
+      tournamentId: 'T0',
+      sourceMatchId: 'shared_m1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'OLD_A' },
+      player2: { id: 'OLD_B' },
+      playerIds: ['OLD_A', 'OLD_B'],
+      resultStatus: 'pending',
+      winner: null,
+      pointsAwarded: null,
+      tournamentType: 'singles',
+      seasonId: 'S1',
+      confirmedBy: null,
+      confirmedAt: null
+    })
+    seed.match_results.push({
+      _id: 'result_T2_shared',
+      tournamentId: 'T2',
+      sourceMatchId: 'shared_m1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'NEW_A' },
+      player2: { id: 'NEW_B' },
+      playerIds: ['NEW_A', 'NEW_B'],
+      resultStatus: 'pending',
+      winner: null,
+      pointsAwarded: null,
+      tournamentType: 'singles',
+      seasonId: 'S1',
+      confirmedBy: null,
+      confirmedAt: null
+    })
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'result_T2_shared', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    const oldRow = db.__all().match_results.find(x => x._id === 'result_T0_shared')
+    const newRow = db.__all().match_results.find(x => x._id === 'result_T2_shared')
+    expect(oldRow.resultStatus).toBe('pending')
+    expect(newRow.resultStatus).toBe('confirmed')
+    expect(newRow.winnerId).toBe('NEW_A')
+  })
+
   test('regular doubles confirmation awards both winners and both losers', async () => {
     const seed = seed4Knockout()
     seed.tournaments[0] = { ...seed.tournaments[0], _id: 'TD', type: 'doubles', format: 'regular' }

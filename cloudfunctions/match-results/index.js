@@ -263,6 +263,12 @@ function buildBatchCtx(submitter, isAdminFlag) {
       updateMatch: async (id, patch) => {
         await db.collection('match_results').doc(id).update({ data: patch })
       },
+      clearMatchFields: async (id, fields) => {
+        const data = {}
+        for (const field of fields || []) data[field] = _.remove()
+        if (Object.keys(data).length === 0) return
+        await db.collection('match_results').doc(id).update({ data })
+      },
       getRequestLog: async (id) => {
         const r = await db.collection('_request_log').doc(id).get().catch(() => null)
         return r ? r.data : null
@@ -278,14 +284,18 @@ function buildBatchCtx(submitter, isAdminFlag) {
     },
     confirmOne: async (current, scoreOverride) => {
       const score = scoreOverride || current.score
-      const sourceMatchId = current.sourceMatchId || current._id
+      const matchId = resolveStateMatchId(current)
       if (current.resultStatus === 'confirmed') {
-        return stateSvc.reconfirmMatch({ matchId: sourceMatchId, newScore: score, admin: submitter })
+        return stateSvc.reconfirmMatch({ matchId, newScore: score, admin: submitter })
       }
-      return stateSvc.submitResult({ matchId: sourceMatchId, score, submitter })
+      return stateSvc.submitResult({ matchId, score, submitter })
     },
     validateScore: scoreRule.validateScore,
   }
+}
+
+function resolveStateMatchId(current) {
+  return current && (current._id || current.sourceMatchId)
 }
 
 function buildQueryCtx(submitter) {
@@ -852,4 +862,5 @@ async function pagedFetchSubmitted() {
 
 exports.__test__ = {
   resolveSubmitterByOpenid,
+  resolveStateMatchId,
 }

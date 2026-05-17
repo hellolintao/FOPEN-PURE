@@ -308,6 +308,8 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   async function findResultByMatchId(matchId) {
+    const byId = await getDocOrNull('match_results', matchId)
+    if (byId) return byId
     const rows = (await db.collection('match_results').where({ sourceMatchId: matchId }).get()).data
     return rows[0] || null
   }

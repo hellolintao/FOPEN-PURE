@@ -144,9 +144,10 @@ test('batchConfirm writes _request_log with merged results', async () => {
 
 const { batchSubmit } = require('../../handlers/batch')
 
-function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA' } = {}) {
+function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA', emulateCloudNestedScoreUpdate = false } = {}) {
   const matchesById = Object.fromEntries(matches.map(m => [m._id, { ...m }]))
   const requestLogById = {}
+  const clearedFields = []
   return {
     callerOpenid: openid,
     callerMemberId: memberId,
@@ -155,12 +156,19 @@ function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA' } = {}) {
     db: {
       getMatch: async (id) => matchesById[id] || null,
       updateMatch: async (id, patch) => {
+        if (emulateCloudNestedScoreUpdate && Object.prototype.hasOwnProperty.call(patch, 'score') && matchesById[id] && matchesById[id].score === null) {
+          throw new Error("Cannot create field 'sets' in element {score: null}")
+        }
         matchesById[id] = { ...matchesById[id], ...patch }
+      },
+      clearMatchFields: async (id, fields) => {
+        clearedFields.push({ id, fields })
+        for (const field of fields || []) delete matchesById[id][field]
       },
       getRequestLog: async (id) => requestLogById[id] || null,
       upsertRequestLog: async (id, doc) => { requestLogById[id] = doc },
     },
-    _state: { matchesById, requestLogById },
+    _state: { matchesById, requestLogById, clearedFields },
     validateScore: () => ({ valid: true }),
   }
 }
@@ -183,6 +191,25 @@ test('batchSubmit happy: member submits multiple scores', async () => {
   expect(result.failures).toEqual([])
   expect(ctx._state.matchesById.mr_a.resultStatus).toBe('submitted')
   expect(ctx._state.matchesById.mr_a.score).toEqual({ sets: [{ a: 4, b: 2 }], tiebreak: null })
+})
+
+test('batchSubmit replaces nullable score before writing score object', async () => {
+  const ctx = makeSubmitCtx({
+    emulateCloudNestedScoreUpdate: true,
+    matches: [
+      { _id: 'mr_null_score', resultStatus: 'pending', playerIds: ['mA', 'mB'], score: null },
+    ],
+  })
+  const result = await batchSubmit(ctx, {
+    submissions: [
+      { matchId: 'mr_null_score', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } },
+    ],
+    requestId: 'req_null_score',
+  })
+  expect(result.successIds).toEqual(['mr_null_score'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.clearedFields).toEqual([{ id: 'mr_null_score', fields: ['score'] }])
+  expect(ctx._state.matchesById.mr_null_score.score).toEqual({ sets: [{ a: 4, b: 2 }], tiebreak: null })
 })
 
 test('batchSubmit FORBIDDEN: caller not in playerIds', async () => {
