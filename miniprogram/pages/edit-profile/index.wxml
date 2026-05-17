@@ -17,13 +17,15 @@
         class="avatar-row tap-scale"
         open-type="chooseAvatar"
         bindchooseavatar="onChooseAvatar"
+        disabled="{{avatarUploading}}"
+        loading="{{avatarUploading}}"
       >
         <view class="avatar-wrap">
-          <image class="avatar-img" src="{{formData.avatarUrl || defaultAvatar}}" mode="aspectFill" />
+          <image class="avatar-img" src="{{avatarPreviewUrl || formData.avatarUrl || defaultAvatar}}" mode="aspectFill" />
         </view>
         <view class="avatar-meta">
           <text class="avatar-meta-label">CHANGE</text>
-          <text class="avatar-meta-val">点击更换 →</text>
+          <text class="avatar-meta-val">{{avatarUploading ? '上传中...' : '点击更换 →'}}</text>
         </view>
       </button>
     </view>
@@ -41,6 +43,8 @@
         value="{{formData.name}}"
         bindinput="onNameInput"
         maxlength="20"
+        confirm-type="done"
+        cursor-spacing="24"
       />
     </view>
 
@@ -57,6 +61,8 @@
         value="{{formData.phone}}"
         bindinput="onPhoneInput"
         maxlength="11"
+        confirm-type="done"
+        cursor-spacing="24"
       />
     </view>
 

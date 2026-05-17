@@ -6,6 +6,8 @@ Page({
   data: {
     isRegister: false,
     defaultAvatar: DEFAULT_AVATAR_URL,
+    avatarPreviewUrl: '',
+    avatarUploading: false,
     formData: {
       name: '',
       phone: '',
@@ -49,6 +51,7 @@ Page({
 
   setUserForm(user) {
     this.setData({
+      avatarPreviewUrl: '',
       formData: {
         name: user.name || '',
         phone: user.phone || '',
@@ -60,30 +63,63 @@ Page({
 
   onChooseAvatar(e) {
     const tempPath = e.detail && e.detail.avatarUrl
-    if (!tempPath) return
+    if (!tempPath) {
+      wx.showToast({ title: '未选择头像', icon: 'none' })
+      return
+    }
+    this.setData({ avatarPreviewUrl: tempPath })
     this.uploadAvatar(tempPath)
   },
 
   uploadAvatar(filePath) {
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+      this.setData({ avatarPreviewUrl: this.data.formData.avatarUrl || '' })
+      wx.showToast({ title: '当前微信不支持上传', icon: 'none' })
+      return
+    }
+
+    this.setData({ avatarUploading: true })
     wx.showLoading({ title: '上传中...' })
 
-    const cloudPath = `avatar/${Date.now()}.jpg`
-
-    wx.cloud.uploadFile({
+    const extMatch = typeof filePath === 'string' && filePath.match(/\.([a-zA-Z0-9]+)(?:\?|$)/)
+    const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg'
+    const cloudPath = `avatars/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const app = getApp()
+    const env = app && app.globalData && app.globalData.env
+    const uploadOptions = {
       cloudPath,
       filePath,
       success: uploadRes => {
+        if (!uploadRes || !uploadRes.fileID) {
+          this.setData({
+            avatarPreviewUrl: this.data.formData.avatarUrl || '',
+            avatarUploading: false
+          })
+          wx.hideLoading()
+          wx.showToast({ title: '头像上传失败', icon: 'none' })
+          return
+        }
+
         this.setData({
-          'formData.avatarUrl': uploadRes.fileID
+          'formData.avatarUrl': uploadRes.fileID,
+          avatarPreviewUrl: uploadRes.fileID,
+          avatarUploading: false
         })
         wx.hideLoading()
         wx.showToast({ title: '上传成功', icon: 'success' })
       },
-      fail: () => {
+      fail: err => {
+        console.error('[edit-profile] uploadAvatar', err)
+        this.setData({
+          avatarPreviewUrl: this.data.formData.avatarUrl || '',
+          avatarUploading: false
+        })
         wx.hideLoading()
-        wx.showToast({ title: '上传失败', icon: 'error' })
+        wx.showToast({ title: '头像上传失败', icon: 'none' })
       }
-    })
+    }
+    if (env) uploadOptions.config = { env }
+    wx.cloud.uploadFile(uploadOptions)
   },
 
   onNameInput(e) {
@@ -126,6 +162,11 @@ Page({
 
     if (isRegister && !playStyle) {
       wx.showToast({ title: '请选择打法', icon: 'none' })
+      return
+    }
+
+    if (this.data.avatarUploading) {
+      wx.showToast({ title: '头像上传中', icon: 'none' })
       return
     }
 

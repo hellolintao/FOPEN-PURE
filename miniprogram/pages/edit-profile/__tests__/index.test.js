@@ -1,7 +1,7 @@
 function loadPage(overrides = {}) {
   jest.resetModules()
   let pageDef
-  const app = { globalData: { currentMember: null, isAdmin: false, ...overrides } }
+  const app = { globalData: { env: 'test-env', currentMember: null, isAdmin: false, ...overrides } }
   global.wx = {
     navigateBack: jest.fn(),
     navigateTo: jest.fn(),
@@ -81,6 +81,18 @@ describe('edit-profile validation and save', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请选择打法', icon: 'none' })
   })
 
+  test('saving is blocked while avatar is uploading', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    const ctx = makeCtx(pageDef, { isRegister: false, avatarUploading: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: null }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '头像上传中', icon: 'none' })
+    expect(callFunction).not.toHaveBeenCalled()
+  })
+
   test('edit mode does not require playStyle and calls update', async () => {
     const { pageDef } = loadPage()
     const { callFunction } = require('../../../utils/cloud')
@@ -150,13 +162,53 @@ describe('edit-profile validation and save', () => {
 })
 
 describe('edit-profile avatar', () => {
-  test('onChooseAvatar calls uploadAvatar', () => {
+  test('onChooseAvatar previews temp avatar and calls uploadAvatar', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)
     ctx.uploadAvatar = jest.fn()
 
     ctx.onChooseAvatar({ detail: { avatarUrl: 'wxfile://temp-path' } })
 
+    expect(ctx.data.avatarPreviewUrl).toBe('wxfile://temp-path')
     expect(ctx.uploadAvatar).toHaveBeenCalledWith('wxfile://temp-path')
+  })
+
+  test('uploadAvatar uploads to current cloud env and stores fileID', () => {
+    const { pageDef } = loadPage({ env: 'cloud-test-env' })
+    wx.cloud.uploadFile.mockImplementationOnce(({ success }) => {
+      success({ fileID: 'cloud://avatar-file-id' })
+    })
+    const ctx = makeCtx(pageDef)
+
+    ctx.uploadAvatar('wxfile://temp-avatar.png')
+
+    expect(wx.cloud.uploadFile).toHaveBeenCalledWith(expect.objectContaining({
+      cloudPath: expect.stringMatching(/^avatars\/\d+-[a-z0-9]+\.png$/),
+      filePath: 'wxfile://temp-avatar.png',
+      config: { env: 'cloud-test-env' }
+    }))
+    expect(ctx.data.formData.avatarUrl).toBe('cloud://avatar-file-id')
+    expect(ctx.data.avatarPreviewUrl).toBe('cloud://avatar-file-id')
+    expect(ctx.data.avatarUploading).toBe(false)
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '上传成功', icon: 'success' })
+  })
+
+  test('uploadAvatar failure restores previous avatar and shows readable error', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const { pageDef } = loadPage()
+    wx.cloud.uploadFile.mockImplementationOnce(({ fail }) => {
+      fail(new Error('denied'))
+    })
+    const ctx = makeCtx(pageDef)
+    ctx.data.formData.avatarUrl = 'cloud://old-avatar'
+    ctx.data.avatarPreviewUrl = 'wxfile://temp-avatar'
+
+    ctx.uploadAvatar('wxfile://temp-avatar')
+
+    expect(ctx.data.formData.avatarUrl).toBe('cloud://old-avatar')
+    expect(ctx.data.avatarPreviewUrl).toBe('cloud://old-avatar')
+    expect(ctx.data.avatarUploading).toBe(false)
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '头像上传失败', icon: 'none' })
+    consoleSpy.mockRestore()
   })
 })

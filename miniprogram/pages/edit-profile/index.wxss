@@ -79,11 +79,21 @@
 .avatar-row {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: var(--space-5);
+  width: 100%;
+  min-height: 176rpx;
   padding: var(--space-5);
   background: var(--color-bg);
   border: 2rpx solid var(--color-ink);
   border-radius: var(--radius-md);
+  box-sizing: border-box;
+  overflow: visible;
+  line-height: 1.2;
+}
+
+.avatar-row[disabled] {
+  opacity: 0.72;
 }
 
 .avatar-wrap {
@@ -126,13 +136,17 @@
  * INPUT
  * ============================================================ */
 .form-input {
+  display: block;
   width: 100%;
+  min-height: 88rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   background: var(--color-bg-3);
   border-radius: var(--radius-sm);
   color: var(--color-ink);
   font-size: 28rpx;
   font-weight: 700;
-  padding: 22rpx 24rpx;
+  padding: 0 24rpx;
   box-sizing: border-box;
 }
 
