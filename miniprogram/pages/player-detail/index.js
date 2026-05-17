@@ -1,12 +1,5 @@
 const { callFunction } = require('../../utils/cloud')
-
-const PLAY_STYLE_LABEL = {
-  baseliner: '底线型',
-  'serve-volleyer': '发球上网',
-  'all-court': '全场型',
-  'counter-puncher': '反击型',
-  'aggressive-baseliner': '进攻底线型'
-}
+const { getPlayStyleLabel } = require('../../utils/play-style')
 
 const DEFAULT_BUCKET = { winCount: 0, lossCount: 0, totalPoints: 0 }
 const DEFAULT_RANK = { singles: null, doubles: null }
@@ -187,9 +180,8 @@ Page({
   },
 
   _formatPlayStyle(player) {
-    const playStyle = player && player.playStyle;
-    if (!playStyle) return '打法未设置';
-    return PLAY_STYLE_LABEL[playStyle] || '打法未设置';
+    const label = getPlayStyleLabel(player && player.playStyle);
+    return label || '打法未设置';
   },
 
   _formatWinRate(bucket) {

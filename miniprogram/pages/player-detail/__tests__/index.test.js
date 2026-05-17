@@ -34,7 +34,7 @@ test('setStateFromResponses maps stats, rank subtitle, h2h visible list, and rec
   const recent = [{ matchId: 'm1', result: 'W' }]
 
   ctx.setStateFromResponses({
-    player: { _id: 'A', name: 'Alice', playStyle: 'all-court' },
+    player: { _id: 'A', name: 'Alice', playStyle: 'moon-queen' },
     statsData: {
       stats: {
         singles: { winCount: 3, lossCount: 1, totalPoints: 40, winRate: 0.75 },
@@ -62,4 +62,13 @@ test('onH2HTap navigates to player detail', () => {
   ctx.onH2HTap({ detail: { playerId: 'B' } })
 
   expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/player-detail/index?id=B' })
+})
+
+test('_formatPlayStyle returns label for new slug, fallback for unknown', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def)
+
+  expect(ctx._formatPlayStyle({ playStyle: 'vers' })).toBe('Vers')
+  expect(ctx._formatPlayStyle({ playStyle: 'baseliner' })).toBe('打法未设置')
+  expect(ctx._formatPlayStyle({})).toBe('打法未设置')
 })

@@ -23,14 +23,6 @@
       </view>
     </view>
 
-    <!-- ABOUT -->
-    <view wx:if="{{player.playStyleNote}}" class="pd-section pd-about anim-stage-rise anim-delay-1">
-      <view class="pd-section-head">
-        <text class="tape">关于 · ABOUT</text>
-      </view>
-      <text class="pd-about-text">{{player.playStyleNote}}</text>
-    </view>
-
     <!-- SINGLES STATS -->
     <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-2">
       <view class="pd-section-head">
