@@ -1,16 +1,17 @@
 const PLAY_STYLE_OPTIONS = [
-  { value: 'baseliner', label: '底线型' },
-  { value: 'serve-volleyer', label: '发球上网' },
-  { value: 'all-court', label: '全场型' },
-  { value: 'counter-puncher', label: '反击型' },
-  { value: 'aggressive-baseliner', label: '进攻底线型' }
+  { value: 'ice-cow', label: '冰上母牛' },
+  { value: 'vers', label: 'Vers' },
+  { value: 'iron-lady', label: '女金刚' },
+  { value: 'moon-queen', label: '月亮女王' },
+  { value: 'grinder', label: '磨女' },
+  { value: 'slicer', label: '削削乐' }
 ]
 
-const PLAY_STYLE_VALUES = PLAY_STYLE_OPTIONS.map((option) => option.value)
+const PLAY_STYLE_VALUES = PLAY_STYLE_OPTIONS.map((o) => o.value)
 
-const PLAY_STYLE_LABEL = PLAY_STYLE_OPTIONS.reduce((labels, option) => {
-  labels[option.value] = option.label
-  return labels
+const PLAY_STYLE_LABEL = PLAY_STYLE_OPTIONS.reduce((map, item) => {
+  map[item.value] = item.label
+  return map
 }, {})
 
 function getPlayStyleLabel(value) {
