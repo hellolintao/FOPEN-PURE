@@ -1,10 +1,22 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
-const { validateMemberData } = require('./lib/validate')
+const {
+  validateMemberData,
+  validateMemberAdd,
+  sanitizeMemberPayload
+} = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('members')
+
+function sanitizeAndTrimMemberPayload(data) {
+  const payload = sanitizeMemberPayload(data || {})
+  if (typeof payload.name === 'string') {
+    payload.name = payload.name.trim()
+  }
+  return payload
+}
 
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
@@ -14,7 +26,8 @@ exports.main = async (event, context) => {
   switch (action) {
     case 'add': {
       // 新增会员，openid唯一
-      const v = validateMemberData(data || {})
+      const payload = sanitizeAndTrimMemberPayload(data)
+      const v = validateMemberAdd(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
@@ -25,14 +38,10 @@ exports.main = async (event, context) => {
       const now = db.serverDate()
       return await collection.add({
         data: {
+          ...payload,
           openid,
-          name: data.name,
-          avatarUrl: data.avatarUrl,
-          phone: data.phone || '',
-          status: data.status || 'active',
-          admin: data.admin || false,
-          playStyle: data.playStyle || '',
-          playStyleNote: data.playStyleNote || '',
+          status: payload.status || 'active',
+          admin: payload.admin || false,
           createTime: now,
           updateTime: now
         }
@@ -44,14 +53,15 @@ exports.main = async (event, context) => {
     }
     case 'update': {
       // 更新会员信息 by openid
-      const v = validateMemberData(data || {})
+      const payload = sanitizeAndTrimMemberPayload(data)
+      const v = validateMemberData(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
       const now = db.serverDate()
       return await collection.where({ openid }).update({
         data: {
-          ...data,
+          ...payload,
           updateTime: now
         }
       })
@@ -96,14 +106,15 @@ exports.main = async (event, context) => {
       if (!_id) {
         return { errMsg: '_id is required' }
       }
-      const v = validateMemberData(data || {})
+      const payload = sanitizeAndTrimMemberPayload(data)
+      const v = validateMemberData(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
       const now = db.serverDate()
       return await collection.doc(_id).update({
         data: {
-          ...data,
+          ...payload,
           updateTime: now
         }
       })
