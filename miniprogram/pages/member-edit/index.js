@@ -1,33 +1,53 @@
+const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-style')
+
 Page({
   data: {
-    isEdit: false,
-    member: { name: '', phone: '', avatarUrl: '', status: '', admin: false },
+    isEdit: true,
+    member: { name: '', phone: '', avatarUrl: '', status: '', admin: false, playStyle: '' },
     memberId: '',
     statusOptions: [
       { label: '活跃', value: 'active' },
       { label: '不活跃', value: 'inactive' }
     ],
-    statusIndex: 0
+    statusIndex: 0,
+    playStyleOptions: PLAY_STYLE_OPTIONS,
+    playStyleIndex: -1
   },
 
   onLoad(options) {
-    if (options.member) {
+    if (!options || !options.member) {
+      this.redirectInvalidEntry()
+      return
+    }
+
+    try {
       const member = JSON.parse(decodeURIComponent(options.member))
+      if (!member || !member._id) {
+        this.redirectInvalidEntry()
+        return
+      }
+
       const statusIndex = this.data.statusOptions.findIndex(s => s.value === member.status)
+      const playStyle = PLAY_STYLE_VALUES.includes(member.playStyle) ? member.playStyle : ''
+      const playStyleIndex = PLAY_STYLE_VALUES.indexOf(playStyle)
       this.setData({
         isEdit: true,
-        member,
+        member: { ...this.data.member, ...member, playStyle },
         memberId: member._id,
-        statusIndex: statusIndex >= 0 ? statusIndex : 0
+        statusIndex: statusIndex >= 0 ? statusIndex : 0,
+        playStyleIndex
       })
-    } else {
-      // 默认设置为活跃状态
-      this.setData({
-        'member.status': 'active',
-        'member.admin': false,
-        statusIndex: 0
-      })
+    } catch (err) {
+      console.error('[member-edit] invalid member query', err)
+      this.redirectInvalidEntry()
     }
+  },
+
+  redirectInvalidEntry() {
+    wx.showToast({ title: '请选择要编辑的会员', icon: 'none' })
+    setTimeout(() => {
+      wx.navigateBack()
+    }, 500)
   },
 
   // 输入
@@ -42,6 +62,18 @@ Page({
     this.setData({
       statusIndex: idx,
       'member.status': this.data.statusOptions[idx].value
+    })
+  },
+
+  // 选择打法
+  onPickPlayStyle(e) {
+    const idx = Number(e.detail.value)
+    const option = this.data.playStyleOptions[idx]
+    if (!option) return
+
+    this.setData({
+      playStyleIndex: idx,
+      'member.playStyle': option.value
     })
   },
 
@@ -99,71 +131,57 @@ Page({
       return
     }
 
+    if (member.playStyle && !PLAY_STYLE_VALUES.includes(member.playStyle)) {
+      wx.showToast({ title: '打法选项不合法', icon: 'none' })
+      return
+    }
+
     wx.showLoading({ title: '保存中...' })
 
-    if (this.data.isEdit) {
-      // 编辑模式 - 更新会员信息
-      wx.cloud.callFunction({
-        name: 'members',
+    wx.cloud.callFunction({
+      name: 'members',
+      data: {
+        action: 'updateById',
+        _id: this.data.memberId,
         data: {
-          action: 'updateById',
+          name: member.name,
+          phone: member.phone,
+          status: member.status,
+          admin: member.admin,
+          playStyle: member.playStyle || ''
+        }
+      },
+      success: res => {
+        wx.hideLoading()
+        if (res.result && res.result.success === false) {
+          wx.showToast({
+            title: (res.result.error && res.result.error.message) || '保存失败',
+            icon: 'none'
+          })
+          return
+        }
+
+        wx.showToast({ title: '保存成功', icon: 'success' })
+
+        // 更新全局存储，通知列表页更新单个项目
+        getApp().globalData.memberUpdate = {
           _id: this.data.memberId,
-          data: {
-            name: member.name,
-            phone: member.phone,
-            status: member.status,
-            admin: member.admin
-          }
-        },
-        success: res => {
-          wx.hideLoading()
-          wx.showToast({ title: '保存成功', icon: 'success' })
-
-          // 更新全局存储，通知列表页更新单个项目
-          getApp().globalData.memberUpdate = {
-            _id: this.data.memberId,
-            name: member.name,
-            phone: member.phone,
-            status: member.status,
-            admin: member.admin
-          }
-
-          setTimeout(() => {
-            wx.navigateBack()
-          }, 500)
-        },
-        fail: () => {
-          wx.hideLoading()
-          wx.showToast({ title: '保存失败', icon: 'error' })
+          name: member.name,
+          phone: member.phone,
+          status: member.status,
+          admin: member.admin,
+          playStyle: member.playStyle || ''
         }
-      })
-    } else {
-      // 新增模式
-      wx.cloud.callFunction({
-        name: 'members',
-        data: {
-          action: 'add',
-          data: member
-        },
-        success: res => {
-          wx.hideLoading()
-          if (res.result.errMsg === 'already registered') {
-            wx.showToast({ title: '会员已存在', icon: 'none' })
-          } else {
-            wx.showToast({ title: '新增成功', icon: 'success' })
-            // 新增成功后，通知列表页刷新
-            getApp().globalData.memberRefresh = true
-            setTimeout(() => {
-              wx.navigateBack()
-            }, 500)
-          }
-        },
-        fail: () => {
-          wx.hideLoading()
-          wx.showToast({ title: '新增失败', icon: 'error' })
-        }
-      })
-    }
+
+        setTimeout(() => {
+          wx.navigateBack()
+        }, 500)
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({ title: '保存失败', icon: 'error' })
+      }
+    })
   },
 
   // 取消

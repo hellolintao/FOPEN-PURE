@@ -3,9 +3,9 @@
   <!-- HEAD -->
   <view class="me-head anim-stage-rise">
     <view class="head-tapes">
-      <text class="tape tape-stamped">{{isEdit ? 'EDIT MEMBER · 编辑' : 'NEW MEMBER · 新增'}}</text>
+      <text class="tape tape-stamped">EDIT MEMBER · 编辑</text>
     </view>
-    <text class="head-title">{{isEdit ? '编辑会员' : '新增会员'}}</text>
+    <text class="head-title">编辑会员</text>
   </view>
 
   <!-- AVATAR -->
@@ -56,6 +56,19 @@
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">04</text>
+        <text class="field-text">打法 <text class="optional">(选填)</text></text>
+      </view>
+      <picker mode="selector" range="{{playStyleOptions}}" range-key="label" value="{{playStyleIndex}}" bindchange="onPickPlayStyle">
+        <view class="form-input picker-input">
+          <text class="{{member.playStyle ? '' : 'form-placeholder'}}">{{member.playStyle ? playStyleOptions[playStyleIndex].label : '选择打法'}}</text>
+          <text class="picker-arrow num">→</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <view class="field-label">
+        <text class="num field-num">05</text>
         <text class="field-text">管理员权限</text>
       </view>
       <view class="switch-row">
@@ -69,6 +82,6 @@
   <view class="me-actions anim-stage-rise anim-delay-3">
     <view wx:if="{{isEdit}}" class="me-btn me-btn-danger tap-scale" bindtap="onDeleteMember">删除会员</view>
     <view class="me-btn me-btn-ghost tap-scale" bindtap="onCancel">取消</view>
-    <view class="me-btn me-btn-primary tap-scale" bindtap="onSubmit">{{isEdit ? '保存修改' : '确认新增'}}</view>
+    <view class="me-btn me-btn-primary tap-scale" bindtap="onSubmit">保存修改</view>
   </view>
 </view>
