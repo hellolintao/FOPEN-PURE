@@ -25,7 +25,7 @@ function makeCtx(def, data = {}) {
 test('loadRank maps decimal win rate to percent label', async () => {
   const def = loadPage()
   const { callFunction } = require('../../../utils/cloud')
-  callFunction.mockResolvedValue({ result: { data: { rankList: [{ memberId: 'A', winRate: 0.75 }] } } })
+  callFunction.mockResolvedValue({ result: { data: { rankList: [{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75 }] } } })
   const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
 
   await ctx.loadRank()
@@ -34,8 +34,29 @@ test('loadRank maps decimal win rate to percent label', async () => {
     name: 'points-engine',
     data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
   })
-  expect(ctx.data.rankList).toEqual([{ memberId: 'A', winRate: 0.75, winRatePct: '75%' }])
+  expect(ctx.data.rankList).toEqual([{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75, winRatePct: '75%' }])
   expect(ctx.data.loading).toBe(false)
+})
+
+test('loadRank shows 0% for played matches and dash only for no matches', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { memberId: 'A', winCount: 0, lossCount: 8, winRate: 0 },
+          { memberId: 'B', winCount: 0, lossCount: 0, winRate: 0 },
+        ],
+      },
+    },
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(ctx.data.rankList[0].winRatePct).toBe('0%')
+  expect(ctx.data.rankList[1].winRatePct).toBe('—')
 })
 
 test('onStarTap navigates to player detail', () => {

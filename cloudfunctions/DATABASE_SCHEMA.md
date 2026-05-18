@@ -13,12 +13,14 @@
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | `_id` | String | 否 | 主键，系统自动生成 |
-| `openid` | String | 是 | 微信用户唯一标识 |
+| `openid` | String | 否 | 微信用户唯一标识；待认领会员为空，注册认领后写入 |
 | `name` | String | 是 | 会员姓名 |
 | `avatarUrl` | String | 否 | 头像 URL |
 | `phone` | String | 否 | 联系电话 |
 | `status` | String | 否 | 会员状态，默认为 'active' |
+| `claimStatus` | String | 否 | `claimed` / `unclaimed`；基线导入创建的占位会员为 `unclaimed` |
 | `admin` | Boolean | 否 | 是否为管理员，默认为 false |
+| `isAdmin` | Boolean | 否 | 旧管理员字段；新逻辑会同时识别 `admin` / `isAdmin` |
 | `playStyle` | String | 是 | 打法风格枚举：ice-cow/vers/iron-lady/moon-queen/grinder/slicer；注册必填，之后可编辑 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
@@ -33,6 +35,7 @@
   "avatarUrl": "https://example.com/avatar.jpg",
   "phone": "13800138000",
   "status": "active",
+  "claimStatus": "claimed",
   "admin": false,
   "playStyle": "vers",
   "createTime": "2024-01-01T00:00:00.000Z",
@@ -40,11 +43,32 @@
 }
 ```
 
+待认领会员由一次性基线导入脚本创建，示例：
+
+```json
+{
+  "_id": "unclaimed_标子",
+  "name": "标子",
+  "avatarUrl": "/images/icons/usercenter.png",
+  "status": "active",
+  "claimStatus": "unclaimed",
+  "admin": false,
+  "source": "baseline_import",
+  "createdBy": "baseline_import",
+  "createTime": "2026-05-18T00:00:00.000Z",
+  "updateTime": "2026-05-18T00:00:00.000Z"
+}
+```
+
+注册认领规则：`members.add` 先按当前 `openid` 幂等返回已有会员；若未注册，则用 trim 后的 `name` 精确查找 `claimStatus: "unclaimed"` 且没有 `openid/openId` 的会员。唯一匹配时原地写入 `openid`、注册资料并改为 `claimStatus: "claimed"`；多条匹配返回 `CLAIM_CONFLICT`。
+
 ---
 
 ## rank_snapshots
 
 每位上榜选手每周一行的历史排名快照。用于 trendDelta（与 latest 快照比对）和 rankHistory（折线图）；未产生积分来源、尚未上榜的成员不写合成 0 分快照。
+
+注意：2026 FUOPEN `baseline_standings` 一次性导入不写 `rank_snapshots`。下方 `baseline_*` / `snapshotKind: baseline` 仅保留给历史 backfill 或其它兼容流程；本次基线积分导入后没有快照时，`trendDelta` 返回 `null`。
 
 | Field | Type | Description |
 |---|---|---|
@@ -452,7 +476,59 @@ Phase 8 起，淘汰赛决赛 confirmed 后由 `match-results/lib/state.maybeAwa
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 
-排行榜聚合（`points-engine.rankAggregate / rankList`）按 `(createTime asc, _id asc)` 复合游标分页拉取本表 + `match_results` 已 confirmed 行，累加每位选手的 `totalPoints / wins / losses`。
+排行榜聚合（`points-engine.rankAggregate / rankList`）按 `(createTime asc, _id asc)` 复合游标分页拉取 `baseline_standings` + 本表 + `match_results` 已 confirmed 行，累加每位选手的 `totalPoints / wins / losses`。
+
+---
+
+## 10. baseline_standings（一次性基线积分）
+
+2026 FUOPEN 手工积分表的一次性导入结果。后续新增积分只通过小程序比赛录入产生，本集合只作为赛季起始累计基线参与排行聚合。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `_id` | String | 是 | 固定格式：`baseline_{seasonId}_{type}_{playerName}` |
+| `seasonId` | String | 是 | 赛季ID，当前为 `season_2026` |
+| `type` | String | 是 | `singles` / `doubles` |
+| `memberId` | String | 是 | 对应 `members._id`；未注册选手指向 `unclaimed_{playerName}` |
+| `playerName` | String | 是 | 截图中的选手名，用于审计和导入匹配 |
+| `rank` | Number | 是 | 基线表内排名 |
+| `totalPoints` | Number | 是 | 基线总积分 |
+| `wins` | Number | 是 | 基线胜场 |
+| `losses` | Number | 是 | 基线负场 |
+| `source` | String | 是 | 固定 `baseline_import` |
+| `baseline` | Boolean | 是 | 固定 `true` |
+| `createTime` | Date | 是 | 首次导入时间，重复导入保留 |
+| `updateTime` | Date | 是 | 最近导入更新时间 |
+| `createdAt` | Date | 否 | 脚本兼容字段，首次导入时间 |
+| `updatedAt` | Date | 否 | 脚本兼容字段，最近导入更新时间 |
+
+### 数据示例
+
+```json
+{
+  "_id": "baseline_season_2026_singles_标子",
+  "seasonId": "season_2026",
+  "type": "singles",
+  "memberId": "unclaimed_标子",
+  "playerName": "标子",
+  "rank": 5,
+  "totalPoints": 1560,
+  "wins": 1,
+  "losses": 1,
+  "source": "baseline_import",
+  "baseline": true,
+  "createTime": "2026-05-18T00:00:00.000Z",
+  "updateTime": "2026-05-18T00:00:00.000Z"
+}
+```
+
+**索引建议：**
+
+1. `(seasonId, type, memberId)` — 聚合去重与审计
+2. `(seasonId, type, createTime ASC, _id ASC)` — 排行聚合分页
+3. `(seasonId, type, totalPoints DESC)` — 人工核查
+
+导入脚本：`scripts/import-baseline-standings.js`。脚本幂等写入 `baseline_standings` 和待认领 `members`；只在直接执行脚本时连接 CloudBase，单元测试不连接真实云数据库。
 
 ---
 

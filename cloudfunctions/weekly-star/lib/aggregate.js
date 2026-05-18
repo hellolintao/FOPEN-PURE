@@ -4,6 +4,11 @@ async function aggregateRanks({ db, seasonId, type, pageSize = 100, asOf = null 
   const limit = Math.max(1, Math.min(Number(pageSize) || 100, 100))
   const cutoff = asOf ? new Date(asOf) : null
 
+  await safePageBaselineStandings(db, { seasonId, type }, limit, async (row) => {
+    if (!row.memberId) return
+    accumulateBaseline(acc, row.memberId, row.totalPoints, row.wins, row.losses)
+  }, _)
+
   const matchBase = { seasonId, resultStatus: 'confirmed', tournamentType: type }
   const matchFilter = cutoff
     ? _.and([matchBase, _.or([
@@ -76,10 +81,25 @@ async function safePageTournamentPoints(db, filter, pageSize, visit, command) {
   try {
     await pageCollection({ db, collectionName: 'tournament_points', baseFilter: filter, limit: pageSize, visit, command })
   } catch (e) {
-    const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
-    if ((e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)) return
+    if (isMissingCollectionError(e)) return
     throw e
   }
+}
+
+async function safePageBaselineStandings(db, filter, pageSize, visit, command) {
+  try {
+    await pageCollection({ db, collectionName: 'baseline_standings', baseFilter: filter, limit: pageSize, visit, command })
+  } catch (e) {
+    if (isMissingCollectionError(e)) return
+    throw e
+  }
+}
+
+function isMissingCollectionError(e) {
+  if (e && e.errCode === -502005) return true
+  const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+  return /\bcollection\s+(?:not\s+exists|does\s+not\s+exist)\b/i.test(text) ||
+    /\b(?:Db or Table|table)\s+not\s+exist\b/i.test(text)
 }
 
 function accumulate(acc, memberId, points, role) {
@@ -87,6 +107,14 @@ function accumulate(acc, memberId, points, role) {
   cur.totalPoints += points || 0
   if (role === 'winner') cur.wins += 1
   if (role === 'loser') cur.losses += 1
+  acc.set(memberId, cur)
+}
+
+function accumulateBaseline(acc, memberId, points, wins, losses) {
+  const cur = acc.get(memberId) || { totalPoints: 0, wins: 0, losses: 0 }
+  cur.totalPoints += points || 0
+  cur.wins += wins || 0
+  cur.losses += losses || 0
   acc.set(memberId, cur)
 }
 

@@ -1,5 +1,4 @@
 const config = require('../config')
-const { callMockFunction } = require('../mock/index')
 
 function getMockScenario(data = {}) {
   return data.__mockScenario || config.MOCK_SCENARIO || 'success'
@@ -17,6 +16,7 @@ async function callFunction(options) {
     return getNativeCallFunction()(options)
   }
 
+  const { callMockFunction } = require('../mock/index')
   return callMockFunction({
     ...options,
     data: {

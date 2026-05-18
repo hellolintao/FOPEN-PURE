@@ -150,6 +150,58 @@ describe('edit-profile validation and save', () => {
     jest.useRealTimers()
   })
 
+  test('register claimed member response stores backend member data', async () => {
+    jest.useFakeTimers()
+    const claimedMember = {
+      _id: 'unclaimed_标子',
+      name: '标子',
+      claimStatus: 'claimed',
+      playStyle: 'vers',
+      admin: false
+    }
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { data: claimedMember } })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '标子', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(app.globalData.currentMember).toMatchObject({
+      _id: 'unclaimed_标子',
+      name: '标子',
+      claimStatus: 'claimed',
+      playStyle: 'vers'
+    })
+    expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
+    jest.useRealTimers()
+  })
+
+  test('register claim conflict shows contact admin message and does not reLaunch', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({
+      result: {
+        success: false,
+        error: {
+          code: 'CLAIM_CONFLICT',
+          message: '姓名匹配到多条待认领会员，请联系管理员处理'
+        }
+      }
+    })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '标子', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({
+      title: '姓名匹配到多条待认领会员，请联系管理员处理',
+      icon: 'none'
+    })
+    expect(wx.reLaunch).not.toHaveBeenCalled()
+  })
+
   test('validation failure response shows server error and does not reLaunch', async () => {
     const { pageDef } = loadPage()
     const { callFunction } = require('../../../utils/cloud')

@@ -27,7 +27,9 @@ Page({
         name: 'points-engine',
         data: { action: 'playerStats', playerId: member._id, currentSeasonId: this._getCurrentSeasonId() }
       });
-      const s = stats.result?.data?.stats?.singles || {};
+      const statsData = stats && stats.result && stats.result.data;
+      const allStats = statsData && statsData.stats;
+      const s = (allStats && allStats.singles) || {};
       const total = (s.winCount || 0) + (s.lossCount || 0);
       const winRate = total > 0 ? Math.round((s.winCount / total) * 100) : 0;
       this.setData({

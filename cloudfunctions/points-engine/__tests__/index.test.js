@@ -10,7 +10,7 @@ jest.mock('wx-server-sdk', () => {
     eq: (v) => op('eq', v),
     remove: () => ({ __op: 'remove' })
   }
-  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [] }
+  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [] }
   function rowMatches(row, f) {
     if (!f) return true
     if (f.__op === 'and') return f.clauses.every(c => rowMatches(row, c))
@@ -91,6 +91,7 @@ describe('rankList enhancements', () => {
     cloud.__rows.tournament_points.length = 0
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   function seedMatchesForMember(memberId, wins, losses, points = 20) {
@@ -127,6 +128,39 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 's2026' })
     expect(res.data.rankList[0]._id).toBe('A')
     expect(res.data.rankList[0].winRate).toBeCloseTo(0.8, 5)
+  })
+
+  test('rankList includes unclaimed baseline member rows', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({
+      _id: 'unclaimed_标子',
+      name: '标子',
+      avatarUrl: '/images/icons/usercenter.png',
+      status: 'active',
+      claimStatus: 'unclaimed'
+    })
+    cloud.__rows.baseline_standings.push({
+      _id: 'baseline_season_2026_singles_标子',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'unclaimed_标子',
+      totalPoints: 1560,
+      wins: 1,
+      losses: 1,
+      createTime: '2026-05-18'
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+    const row = res.data.rankList.find(r => r._id === 'unclaimed_标子')
+    expect(row).toMatchObject({
+      _id: 'unclaimed_标子',
+      name: '标子',
+      totalPoints: 1560,
+      winCount: 1,
+      lossCount: 1,
+      winRate: 0.5
+    })
+    expect(row).not.toHaveProperty('claimStatus')
   })
 
   test('winRate is 0 when member has 0 matches', async () => {
@@ -201,6 +235,7 @@ describe('playerStats — winRate', () => {
     cloud.__rows.match_results.length = 0
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('singles 8W/2L → winRate 0.8 (≈0.8 within 5 decimals)', async () => {
@@ -233,6 +268,55 @@ describe('playerStats — winRate', () => {
     expect(res.data.stats.singles.winRate).toBe(0)
     expect(res.data.stats.doubles.winRate).toBe(0)
   })
+
+  test('playerStats includes baseline singles and doubles buckets', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({
+      _id: 'unclaimed_标子',
+      name: '标子',
+      avatarUrl: '/images/icons/usercenter.png',
+      status: 'active',
+      claimStatus: 'unclaimed'
+    })
+    cloud.__rows.baseline_standings.push(
+      {
+        _id: 'baseline_season_2026_singles_标子',
+        seasonId: 'season_2026',
+        type: 'singles',
+        memberId: 'unclaimed_标子',
+        totalPoints: 1560,
+        wins: 1,
+        losses: 1,
+        createTime: '2026-05-18'
+      },
+      {
+        _id: 'baseline_season_2026_doubles_标子',
+        seasonId: 'season_2026',
+        type: 'doubles',
+        memberId: 'unclaimed_标子',
+        totalPoints: 880,
+        wins: 2,
+        losses: 0,
+        createTime: '2026-05-18'
+      }
+    )
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'unclaimed_标子', currentSeasonId: 'season_2026' })
+    expect(res.data.stats.singles).toEqual({
+      winCount: 1,
+      lossCount: 1,
+      totalPoints: 1560,
+      winRate: 0.5
+    })
+    expect(res.data.stats.doubles).toEqual({
+      winCount: 2,
+      lossCount: 0,
+      totalPoints: 880,
+      winRate: 1
+    })
+    expect(res.data.currentRank).toEqual({ singles: 1, doubles: 1 })
+    expect(res.data.recent).toEqual([])
+  })
 })
 
 describe('playerStats — currentRank', () => {
@@ -241,6 +325,7 @@ describe('playerStats — currentRank', () => {
     cloud.__rows.match_results.length = 0
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('player ranked #2 in singles, unranked in doubles → { singles: 2, doubles: null }', async () => {
@@ -273,6 +358,7 @@ describe('playerStats — rankHistory', () => {
     cloud.__rows.match_results.length = 0
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('returns up to 12 weeks ordered weekStart ASC for both types', async () => {
@@ -330,6 +416,7 @@ describe('playerStats — weeklySnapshot (this-week delta)', () => {
     cloud.__rows.match_results.length = 0
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('player has 3W 1L worth 70 points this week (singles)', async () => {
@@ -363,6 +450,7 @@ describe('playerStats.recent enrichment', () => {
     cloud.__rows.members.length = 0
     cloud.__rows.tournaments = cloud.__rows.tournaments || []
     cloud.__rows.tournaments.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('recent rows carry tournamentName/Format, roundLabel, opponent, pointsAwarded, confirmedAt', async () => {
@@ -399,6 +487,7 @@ describe('playerH2H action', () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.match_results.length = 0
     cloud.__rows.members.length = 0
+    cloud.__rows.baseline_standings.length = 0
   })
 
   test('returns { singles: [...], doubles: [...] } shaped per spec', async () => {

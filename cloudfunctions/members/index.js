@@ -1,14 +1,76 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
-const {
-  validateMemberData,
-  validateMemberAdd,
-  sanitizeMemberPayload
-} = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('members')
+
+const VALID_PLAY_STYLES = [
+  'ice-cow',
+  'vers',
+  'iron-lady',
+  'moon-queen',
+  'grinder',
+  'slicer'
+]
+
+const ALLOWED_MEMBER_FIELDS = [
+  'name',
+  'phone',
+  'avatarUrl',
+  'status',
+  'admin',
+  'playStyle'
+]
+
+function normalizePayload(data) {
+  if (data == null || typeof data !== 'object' || Array.isArray(data)) {
+    return {}
+  }
+
+  return data
+}
+
+function validateMemberData(data = {}) {
+  data = normalizePayload(data)
+  const errors = []
+
+  if (data.playStyle != null && data.playStyle !== '' && !VALID_PLAY_STYLES.includes(data.playStyle)) {
+    errors.push(`playStyle 必须是 ${VALID_PLAY_STYLES.join('/')} 之一`)
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+function validateMemberAdd(data = {}) {
+  data = normalizePayload(data)
+  const errors = []
+
+  if (typeof data.name !== 'string' || data.name.trim() === '') {
+    errors.push('name 不能为空')
+  }
+
+  if (data.playStyle == null || data.playStyle === '') {
+    errors.push('playStyle 不能为空')
+  } else if (!VALID_PLAY_STYLES.includes(data.playStyle)) {
+    errors.push(`playStyle 必须是 ${VALID_PLAY_STYLES.join('/')} 之一`)
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+function sanitizeMemberPayload(data = {}) {
+  data = normalizePayload(data)
+  const payload = {}
+
+  for (const field of ALLOWED_MEMBER_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      payload[field] = data[field]
+    }
+  }
+
+  return payload
+}
 
 function sanitizeAndTrimMemberPayload(data) {
   const payload = sanitizeMemberPayload(data || {})
@@ -21,6 +83,84 @@ function sanitizeAndTrimMemberPayload(data) {
 function stripSelfServiceOnlyFields(payload) {
   const { admin, status, ...selfServicePayload } = payload
   return selfServicePayload
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveCallerMember() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return null
+  const res = await collection.where(_.or([
+    { openid },
+    { openId: openid }
+  ])).get()
+  return (res.data || [])[0] || null
+}
+
+async function requireAdmin() {
+  const member = await resolveCallerMember()
+  if (!isAdminMember(member)) {
+    return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+  }
+  return null
+}
+
+function publicMemberProfile(member) {
+  if (!member) return member
+  const {
+    openid,
+    openId,
+    unionid,
+    phone,
+    admin,
+    isAdmin,
+    ...publicProfile
+  } = member
+  return publicProfile
+}
+
+function isCloudFileId(value) {
+  return typeof value === 'string' && value.startsWith('cloud://')
+}
+
+async function resolveAvatarDisplayUrls(members = []) {
+  if (!Array.isArray(members) || members.length === 0 || typeof cloud.getTempFileURL !== 'function') {
+    return members
+  }
+
+  const fileList = Array.from(new Set(
+    members
+      .map(member => member && member.avatarUrl)
+      .filter(isCloudFileId)
+  ))
+
+  if (fileList.length === 0) return members
+
+  try {
+    const res = await cloud.getTempFileURL({ fileList })
+    const urlByFileId = new Map()
+    ;(res.fileList || []).forEach(file => {
+      if (file && file.fileID && file.tempFileURL) {
+        urlByFileId.set(file.fileID, file.tempFileURL)
+      }
+    })
+
+    if (urlByFileId.size === 0) return members
+
+    return members.map(member => {
+      if (!member || !urlByFileId.has(member.avatarUrl)) return member
+      return {
+        ...member,
+        avatarUrl: urlByFileId.get(member.avatarUrl)
+      }
+    })
+  } catch (err) {
+    console.warn('[members] resolveAvatarDisplayUrls failed', err)
+    return members
+  }
 }
 
 exports.main = async (event, context) => {
@@ -41,12 +181,55 @@ exports.main = async (event, context) => {
         return { errMsg: 'already registered', data: exist.data[0] }
       }
       const now = db.serverDate()
+      const unclaimed = await collection.where({
+        name: payload.name,
+        claimStatus: 'unclaimed'
+      }).get()
+      const claimableMembers = (unclaimed.data || []).filter(member => !member.openid && !member.openId)
+      if (claimableMembers.length > 1) {
+        return {
+          success: false,
+          error: { code: 'CLAIM_CONFLICT', message: '姓名匹配到多条待认领会员，请联系管理员处理' }
+        }
+      }
+      if (claimableMembers.length === 1) {
+        const claimUpdateData = {
+          ...payload,
+          openid,
+          claimStatus: 'claimed',
+          status: 'active',
+          admin: false,
+          isAdmin: false,
+          updateTime: now
+        }
+        const claimedMember = {
+          ...claimableMembers[0],
+          ...claimUpdateData
+        }
+        const claimResult = await collection.where({
+          _id: claimableMembers[0]._id,
+          claimStatus: 'unclaimed',
+          openid: _.exists(false),
+          openId: _.exists(false)
+        }).update({
+          data: claimUpdateData
+        })
+        const updated = (claimResult && claimResult.stats && claimResult.stats.updated) || (claimResult && claimResult.updated) || 0
+        if (updated <= 0) {
+          return {
+            success: false,
+            error: { code: 'CLAIM_CONFLICT', message: '会员认领失败，记录可能已被其他用户认领，请刷新后重试' }
+          }
+        }
+        return { data: claimedMember }
+      }
       return await collection.add({
         data: {
           ...payload,
           openid,
           status: 'active',
           admin: false,
+          claimStatus: 'claimed',
           createTime: now,
           updateTime: now
         }
@@ -54,6 +237,9 @@ exports.main = async (event, context) => {
     }
     case 'get': {
       // 获取会员信息 by openid
+      if (!openid) {
+        return { data: [] }
+      }
       return await collection.where({ openid }).get()
     }
     case 'update': {
@@ -76,6 +262,8 @@ exports.main = async (event, context) => {
       return await collection.where({ openid }).remove()
     }
     case 'search': {
+      const forbidden = await requireAdmin()
+      if (forbidden) return forbidden
       // 支持按姓名或手机号模糊搜索，分页
       const query = []
       if (keyword) {
@@ -86,31 +274,43 @@ exports.main = async (event, context) => {
           ])
         )
       }
-      return await collection
+      const result = await collection
         .where(query.length ? _.and(query) : {})
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .get()
+      return {
+        ...result,
+        data: await resolveAvatarDisplayUrls(result.data || [])
+      }
     }
     case 'list': {
+      const forbidden = await requireAdmin()
+      if (forbidden) return forbidden
       // 获取会员列表，支持状态过滤和分页
       const query = []
       if (data && data.status) {
         query.push({ status: data.status })
       }
-      return await collection
+      const result = await collection
         .where(query.length ? _.and(query) : {})
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .get()
+      return {
+        ...result,
+        data: await resolveAvatarDisplayUrls(result.data || [])
+      }
     }
     case 'updateById': {
       // 根据_id更新会员信息
       if (!_id) {
         return { errMsg: '_id is required' }
       }
+      const forbidden = await requireAdmin()
+      if (forbidden) return forbidden
       const payload = sanitizeAndTrimMemberPayload(data)
       const v = validateMemberData(payload)
       if (!v.valid) {
@@ -129,15 +329,23 @@ exports.main = async (event, context) => {
       if (!_id) {
         return { errMsg: '_id is required' }
       }
+      const forbidden = await requireAdmin()
+      if (forbidden) return forbidden
       return await collection.doc(_id).remove()
     }
     case 'getById': {
       if (!_id) {
         return { success: false, error: { code: 'MISSING_PARAM', message: '_id is required' } };
       }
-      return await collection.doc(_id).get();
+      const result = await collection.doc(_id).get();
+      return { data: publicMemberProfile(result.data) };
     }
     default:
       return { errMsg: 'invalid action' }
   }
+}
+
+exports.__test__ = {
+  isAdminMember,
+  publicMemberProfile
 }

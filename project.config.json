@@ -93,6 +93,22 @@
       },
       {
         "type": "folder",
+        "value": "node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "pages/index"
+      },
+      {
+        "type": "file",
+        "value": "utils/tab-bar.js"
+      },
+      {
+        "type": "folder",
+        "value": "__tests__"
+      },
+      {
+        "type": "folder",
         "value": "components/batch-result-sheet/__tests__"
       },
       {
@@ -117,7 +133,23 @@
       },
       {
         "type": "folder",
+        "value": "pages/home/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/manage/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/match/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "pages/member-edit/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/member-manage/__tests__"
       },
       {
         "type": "folder",
@@ -134,6 +166,10 @@
       {
         "type": "folder",
         "value": "pages/rank/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/setting/__tests__"
       },
       {
         "type": "folder",

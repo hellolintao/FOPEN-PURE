@@ -20,7 +20,8 @@ App({
   async refreshIdentity() {
     try {
       const res = await callFunction({ name: 'members', data: { action: 'get' } });
-      const member = res.result?.data?.[0];
+      const data = res && res.result && res.result.data;
+      const member = Array.isArray(data) ? data[0] : null;
       this.globalData.currentMember = member || null;
       this.globalData.isAdmin = !!(member && member.admin);
       const pages = getCurrentPages();

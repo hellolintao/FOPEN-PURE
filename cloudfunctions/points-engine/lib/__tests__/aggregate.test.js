@@ -15,7 +15,7 @@ const { aggregateRanks } = require('../aggregate')
  * helpers. We provide a fake db.command that produces sentinel objects, which the
  * fake where() interprets.
  */
-function makeFakeDb({ matchResults, tournamentPoints }) {
+function makeFakeDb({ matchResults, tournamentPoints, baselineStandings, collectionErrors = {} }) {
   const _ = {
     and(clauses) { return { __op: 'and', clauses } },
     or(clauses) { return { __op: 'or', clauses } },
@@ -70,7 +70,19 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
   return {
     command: _,
     collection(name) {
-      if (name === 'tournament_points' && tournamentPoints === undefined) {
+      if (collectionErrors[name]) {
+        return {
+          where() {
+            return {
+              orderBy() { return this },
+              limit() { return this },
+              async get() { throw collectionErrors[name] }
+            }
+          }
+        }
+      }
+      if ((name === 'tournament_points' && tournamentPoints === undefined) ||
+          (name === 'baseline_standings' && baselineStandings === undefined)) {
         return {
           where() {
             return {
@@ -85,7 +97,11 @@ function makeFakeDb({ matchResults, tournamentPoints }) {
           }
         }
       }
-      const rows = name === 'match_results' ? matchResults : (name === 'tournament_points' ? tournamentPoints : [])
+      const rows = name === 'match_results'
+        ? matchResults
+        : (name === 'tournament_points'
+          ? tournamentPoints
+          : (name === 'baseline_standings' ? baselineStandings : []))
       return buildCollection(rows)
     }
   }
@@ -209,6 +225,67 @@ describe('aggregateRanks', () => {
     expect(total).toBe(3 * 30)
   })
 
+  test('合并 baseline_standings、confirmed match_results 和 tournament_points', async () => {
+    const seasonId = 'S1'
+    const type = 'singles'
+    const db = makeFakeDb({
+      baselineStandings: [
+        { _id: 'base_A', seasonId, type, memberId: 'A', totalPoints: 100, wins: 3, losses: 1, createTime: new Date('2026-01-01') },
+        { _id: 'base_bad', seasonId, type, totalPoints: 999, wins: 9, losses: 9, createTime: new Date('2026-01-01') },
+        { _id: 'base_other_type', seasonId, type: 'doubles', memberId: 'A', totalPoints: 999, wins: 9, losses: 9, createTime: new Date('2026-01-01') }
+      ],
+      matchResults: [
+        { _id: 'm1', seasonId, tournamentType: type, resultStatus: 'confirmed', createTime: new Date('2026-02-01'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } },
+        { _id: 'm2', seasonId, tournamentType: type, resultStatus: 'pending', createTime: new Date('2026-02-01'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } }
+      ],
+      tournamentPoints: [
+        { _id: 'tp_A', seasonId, tournamentType: type, memberId: 'A', points: 50, createTime: new Date('2026-03-01') }
+      ]
+    })
+
+    const list = await aggregateRanks({ db, seasonId, type, pageSize: 100 })
+
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ memberId: 'A', totalPoints: 170, wins: 4, losses: 1 })
+  })
+
+  test('baseline_standings 集合不存在 → 不影响现有聚合', async () => {
+    const matches = generateConfirmedMatches('S1', 'singles', 3)
+    const db = makeFakeDb({ matchResults: matches, tournamentPoints: [], baselineStandings: undefined })
+    const list = await aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 })
+    const total = list.reduce((s, x) => s + x.totalPoints, 0)
+    expect(total).toBe(3 * 30)
+  })
+
+  test('baseline_standings 非缺集合错误必须抛出，不能吞掉少算', async () => {
+    const indexError = new Error('index does not exist')
+    indexError.errCode = -501007
+    const db = makeFakeDb({
+      matchResults: generateConfirmedMatches('S1', 'singles', 3),
+      tournamentPoints: [],
+      baselineStandings: [],
+      collectionErrors: { baseline_standings: indexError }
+    })
+
+    await expect(aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 }))
+      .rejects.toThrow('index does not exist')
+  })
+
+  test('tournament_points 非缺集合错误必须抛出，不能吞掉少算', async () => {
+    const indexError = new Error('index does not exist')
+    indexError.errCode = -501007
+    const db = makeFakeDb({
+      matchResults: generateConfirmedMatches('S1', 'singles', 3),
+      tournamentPoints: [],
+      collectionErrors: { tournament_points: indexError }
+    })
+
+    await expect(aggregateRanks({ db, seasonId: 'S1', type: 'singles', pageSize: 100 }))
+      .rejects.toThrow('index does not exist')
+  })
+
   test('忽略 non-confirmed match', async () => {
     const matches = [
       ...generateConfirmedMatches('S1', 'singles', 5),
@@ -276,6 +353,32 @@ describe('aggregateRanks asOf parameter', () => {
     })
     const out = await aggregateRanks({ db, seasonId, type, asOf: d('2026-02-01') })
     expect(out.find(r => r.memberId === 'A').totalPoints).toBe(50)
+  })
+
+  test('asOf does not exclude baseline_standings but still cuts off match and tournament points', async () => {
+    const db = makeFakeDb({
+      baselineStandings: [
+        { _id: 'base_A', seasonId, type, memberId: 'A', totalPoints: 100, wins: 3, losses: 1, createTime: d('2026-12-31') }
+      ],
+      matchResults: [
+        { _id: 'm_old', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-01-10'), createTime: d('2026-01-10'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } },
+        { _id: 'm_future', seasonId, resultStatus: 'confirmed', tournamentType: type,
+          confirmedAt: d('2026-03-10'), createTime: d('2026-03-10'),
+          pointsAwarded: { entries: [{ memberId: 'A', points: 20, role: 'winner' }] } }
+      ],
+      tournamentPoints: [
+        { _id: 'tp_old', seasonId, tournamentType: type, memberId: 'A', points: 50,
+          awardedAt: d('2026-01-15'), createTime: d('2026-01-15') },
+        { _id: 'tp_future', seasonId, tournamentType: type, memberId: 'A', points: 30,
+          awardedAt: d('2026-04-15'), createTime: d('2026-04-15') }
+      ]
+    })
+
+    const out = await aggregateRanks({ db, seasonId, type, asOf: d('2026-02-01') })
+
+    expect(out.find(r => r.memberId === 'A')).toMatchObject({ totalPoints: 170, wins: 4, losses: 1 })
   })
 })
 

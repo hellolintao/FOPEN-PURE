@@ -158,7 +158,15 @@
   gap: 4rpx;
 }
 
+.member-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
 .member-name {
+  min-width: 0;
   font-size: 30rpx;
   font-weight: 800;
   color: var(--color-ink);
@@ -166,6 +174,26 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.claim-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 32rpx;
+  padding: 0 10rpx;
+  border-radius: var(--radius-sm);
+  border: 1rpx solid var(--color-ink);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 18rpx;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 32rpx;
+}
+
+.claim-badge.claim-unclaimed {
+  background: var(--color-warn-wash);
 }
 
 .member-phone {

@@ -71,3 +71,18 @@ test('call passes payload through to wx.cloud.callFunction', async () => {
     data: { action: 'batchConfirm', payload: { matches: [], requestId: 'req_x' } },
   }))
 })
+
+test('cloud module does not load mock code when USE_MOCK is false', async () => {
+  jest.resetModules()
+  const nativeCall = jest.fn().mockResolvedValue({ result: { ok: true } })
+  global.wx = { cloud: { callFunction: nativeCall } }
+  jest.doMock('../../config', () => ({ USE_MOCK: false, MOCK_SCENARIO: 'success' }))
+  jest.doMock('../../mock/index', () => {
+    throw new Error('mock should not be loaded in production mode')
+  })
+
+  const cloud = require('../cloud')
+  await cloud.callFunction({ name: 'members', data: { action: 'get' } })
+
+  expect(nativeCall).toHaveBeenCalledWith({ name: 'members', data: { action: 'get' } })
+})

@@ -2,25 +2,38 @@ const mockState = {
   openid: 'openid-test',
   serverDate: { __serverDate: true },
   whereGetData: [],
+  tempFileURLResult: { fileList: [] },
   addResult: { _id: 'created-member' },
   whereUpdateResult: { stats: { updated: 1 } },
-  docUpdateResult: { stats: { updated: 1 } }
+  docUpdateResult: { stats: { updated: 1 } },
+  docGetResult: { data: null }
 };
 
 const mockQuery = {
-  get: jest.fn(() => Promise.resolve({ data: mockState.whereGetData })),
+  get: jest.fn(() => {
+    const data = typeof mockState.whereGetData === 'function'
+      ? mockState.whereGetData(mockQuery.filter)
+      : mockState.whereGetData;
+    return Promise.resolve({ data });
+  }),
   update: jest.fn(() => Promise.resolve(mockState.whereUpdateResult)),
-  remove: jest.fn()
+  remove: jest.fn(),
+  orderBy: jest.fn(function orderBy() { return this; }),
+  skip: jest.fn(function skip() { return this; }),
+  limit: jest.fn(function limit() { return this; })
 };
 
 const mockDoc = {
   update: jest.fn(() => Promise.resolve(mockState.docUpdateResult)),
   remove: jest.fn(),
-  get: jest.fn()
+  get: jest.fn(() => Promise.resolve(mockState.docGetResult))
 };
 
 const mockCollection = {
-  where: jest.fn(() => mockQuery),
+  where: jest.fn((filter) => {
+    mockQuery.filter = filter;
+    return mockQuery;
+  }),
   add: jest.fn(() => Promise.resolve(mockState.addResult)),
   doc: jest.fn(() => mockDoc),
   orderBy: jest.fn(function orderBy() { return this; }),
@@ -32,7 +45,8 @@ const mockCollection = {
 const mockDb = {
   command: {
     or: jest.fn((conditions) => ({ $or: conditions })),
-    and: jest.fn((conditions) => ({ $and: conditions }))
+    and: jest.fn((conditions) => ({ $and: conditions })),
+    exists: jest.fn((value) => ({ $exists: value }))
   },
   RegExp: jest.fn((options) => ({ $regex: options })),
   serverDate: jest.fn(() => mockState.serverDate),
@@ -43,8 +57,11 @@ jest.mock('wx-server-sdk', () => ({
   DYNAMIC_CURRENT_ENV: 'dynamic-current-env',
   init: jest.fn(),
   getWXContext: jest.fn(() => ({ OPENID: mockState.openid })),
-  database: jest.fn(() => mockDb)
+  database: jest.fn(() => mockDb),
+  getTempFileURL: jest.fn(() => Promise.resolve(mockState.tempFileURLResult))
 }));
+
+const cloud = require('wx-server-sdk');
 
 describe('members cloud function', () => {
   let main;
@@ -54,9 +71,11 @@ describe('members cloud function', () => {
     mockState.openid = 'openid-test';
     mockState.serverDate = { __serverDate: true };
     mockState.whereGetData = [];
+    mockState.tempFileURLResult = { fileList: [] };
     mockState.addResult = { _id: 'created-member' };
     mockState.whereUpdateResult = { stats: { updated: 1 } };
     mockState.docUpdateResult = { stats: { updated: 1 } };
+    mockState.docGetResult = { data: null };
     jest.isolateModules(() => {
       ({ main } = require('../index'));
     });
@@ -126,10 +145,267 @@ describe('members cloud function', () => {
         status: 'active',
         admin: false,
         playStyle: 'grinder',
+        claimStatus: 'claimed',
         createTime: mockState.serverDate,
         updateTime: mockState.serverDate
       }
     });
+  });
+
+  test('action=add claims exactly one unclaimed member by exact name', async () => {
+    const unclaimed = {
+      _id: 'member-unclaimed-1',
+      name: '标子',
+      status: 'active',
+      claimStatus: 'unclaimed',
+      admin: false,
+      createTime: '2026-01-01'
+    };
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '标子' && filter.claimStatus === 'unclaimed') return [unclaimed];
+      return [];
+    };
+
+    const result = await main({
+      action: 'add',
+      data: {
+        name: '标子',
+        phone: '13800000000',
+        avatarUrl: 'https://x.com/a.jpg',
+        playStyle: 'grinder'
+      }
+    }, {});
+
+    expect(mockCollection.where).toHaveBeenNthCalledWith(1, { openid: mockState.openid });
+    expect(mockCollection.where).toHaveBeenNthCalledWith(2, { name: '标子', claimStatus: 'unclaimed' });
+    expect(mockCollection.where).toHaveBeenNthCalledWith(3, {
+      _id: 'member-unclaimed-1',
+      claimStatus: 'unclaimed',
+      openid: { $exists: false },
+      openId: { $exists: false }
+    });
+    expect(mockQuery.update).toHaveBeenCalledWith({
+      data: {
+        openid: mockState.openid,
+        name: '标子',
+        phone: '13800000000',
+        avatarUrl: 'https://x.com/a.jpg',
+        playStyle: 'grinder',
+        claimStatus: 'claimed',
+        status: 'active',
+        admin: false,
+        isAdmin: false,
+        updateTime: mockState.serverDate
+      }
+    });
+    expect(mockCollection.doc).not.toHaveBeenCalled();
+    expect(mockCollection.add).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      data: {
+        ...unclaimed,
+        openid: mockState.openid,
+        phone: '13800000000',
+        avatarUrl: 'https://x.com/a.jpg',
+        playStyle: 'grinder',
+        claimStatus: 'claimed',
+        status: 'active',
+        admin: false,
+        isAdmin: false,
+        updateTime: mockState.serverDate
+      }
+    });
+  });
+
+  test('action=add clears legacy isAdmin flag when claiming an unclaimed member', async () => {
+    const unclaimed = {
+      _id: 'member-unclaimed-admin',
+      name: '旧管理员',
+      status: 'active',
+      claimStatus: 'unclaimed',
+      admin: false,
+      isAdmin: true
+    };
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '旧管理员' && filter.claimStatus === 'unclaimed') return [unclaimed];
+      return [];
+    };
+
+    const result = await main({
+      action: 'add',
+      data: { name: '旧管理员', playStyle: 'vers' }
+    }, {});
+
+    expect(mockQuery.update).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        admin: false,
+        isAdmin: false
+      })
+    });
+    expect(result.data).toEqual(expect.objectContaining({
+      admin: false,
+      isAdmin: false
+    }));
+  });
+
+  test('action=add returns CLAIM_CONFLICT and does not add when conditional claim updates no rows', async () => {
+    const unclaimed = {
+      _id: 'member-race-lost',
+      name: '并发',
+      status: 'active',
+      claimStatus: 'unclaimed',
+      admin: false
+    };
+    mockState.whereUpdateResult = { stats: { updated: 0 } };
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '并发' && filter.claimStatus === 'unclaimed') return [unclaimed];
+      return [];
+    };
+
+    const result = await main({
+      action: 'add',
+      data: { name: '并发', playStyle: 'vers' }
+    }, {});
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: 'CLAIM_CONFLICT',
+        message: expect.any(String)
+      }
+    });
+    expect(mockCollection.add).not.toHaveBeenCalled();
+    expect(mockDoc.update).not.toHaveBeenCalled();
+  });
+
+  test('action=add creates new claimed member when no unclaimed exact-name match exists', async () => {
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '不存在' && filter.claimStatus === 'unclaimed') return [];
+      return [];
+    };
+
+    await main({
+      action: 'add',
+      data: { name: '不存在', playStyle: 'vers' }
+    }, {});
+
+    expect(mockCollection.add).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: '不存在',
+        openid: mockState.openid,
+        playStyle: 'vers',
+        claimStatus: 'claimed',
+        status: 'active',
+        admin: false
+      })
+    });
+  });
+
+  test('action=add returns CLAIM_CONFLICT when multiple unclaimed exact-name matches exist', async () => {
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '重名' && filter.claimStatus === 'unclaimed') {
+        return [
+          { _id: 'member-unclaimed-1', name: '重名', claimStatus: 'unclaimed', status: 'active' },
+          { _id: 'member-unclaimed-2', name: '重名', claimStatus: 'unclaimed', status: 'active' }
+        ];
+      }
+      return [];
+    };
+
+    const result = await main({
+      action: 'add',
+      data: { name: '重名', playStyle: 'vers' }
+    }, {});
+
+    expect(result).toEqual({
+      success: false,
+      error: { code: 'CLAIM_CONFLICT', message: '姓名匹配到多条待认领会员，请联系管理员处理' }
+    });
+    expect(mockDoc.update).not.toHaveBeenCalled();
+    expect(mockCollection.add).not.toHaveBeenCalled();
+  });
+
+  test('action=get returns empty data when wx context has no openid', async () => {
+    mockState.openid = undefined;
+
+    const result = await main({ action: 'get' }, {});
+
+    expect(result).toEqual({ data: [] });
+    expect(mockCollection.where).not.toHaveBeenCalled();
+  });
+
+  test('action=add creates new claimed member when matching unclaimed name already has openid', async () => {
+    const unavailable = {
+      _id: 'member-already-linked',
+      name: '已绑定',
+      status: 'active',
+      claimStatus: 'unclaimed',
+      openid: 'other-openid'
+    };
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '已绑定' && filter.claimStatus === 'unclaimed') return [unavailable];
+      return [];
+    };
+
+    await main({
+      action: 'add',
+      data: { name: '已绑定', playStyle: 'vers' }
+    }, {});
+
+    expect(mockQuery.update).not.toHaveBeenCalled();
+    expect(mockCollection.add).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: '已绑定',
+        openid: mockState.openid,
+        playStyle: 'vers',
+        claimStatus: 'claimed',
+        status: 'active',
+        admin: false
+      })
+    });
+  });
+
+  test('action=add does not claim name with surrounding whitespace unless trim makes exact match', async () => {
+    const unclaimed = {
+      _id: 'member-unclaimed-trimmed',
+      name: '标子',
+      status: 'active',
+      claimStatus: 'unclaimed'
+    };
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.openid === mockState.openid) return [];
+      if (filter && filter.name === '标子' && filter.claimStatus === 'unclaimed') return [unclaimed];
+      return [];
+    };
+
+    await main({
+      action: 'add',
+      data: { name: '  标子  ', playStyle: 'vers' }
+    }, {});
+
+    expect(mockCollection.where).toHaveBeenNthCalledWith(2, { name: '标子', claimStatus: 'unclaimed' });
+    expect(mockCollection.where).toHaveBeenNthCalledWith(3, {
+      _id: 'member-unclaimed-trimmed',
+      claimStatus: 'unclaimed',
+      openid: { $exists: false },
+      openId: { $exists: false }
+    });
+    expect(mockQuery.update).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        openid: mockState.openid,
+        name: '标子',
+        playStyle: 'vers',
+        claimStatus: 'claimed',
+        isAdmin: false
+      })
+    });
+    expect(mockCollection.doc).not.toHaveBeenCalled();
+    expect(mockCollection.add).not.toHaveBeenCalled();
   });
 
   test('action=update strips playStyleNote and openid, preserves playStyle and updateTime', async () => {
@@ -167,6 +443,8 @@ describe('members cloud function', () => {
   });
 
   test('action=updateById strips playStyleNote and preserves admin, status, and playStyle', async () => {
+    mockState.whereGetData = [{ _id: 'admin-1', openid: mockState.openid, admin: true }];
+
     await main({
       action: 'updateById',
       _id: 'member-1',
@@ -188,6 +466,82 @@ describe('members cloud function', () => {
         admin: true,
         playStyle: 'moon-queen',
         updateTime: mockState.serverDate
+      }
+    });
+  });
+
+  test('action=updateById rejects non-admin caller before updating member rows', async () => {
+    mockState.whereGetData = [{ _id: 'member-self', openid: mockState.openid, admin: false }];
+
+    const result = await main({
+      action: 'updateById',
+      _id: 'member-1',
+      data: { name: '赵六', status: 'inactive', playStyle: 'moon-queen' }
+    }, {});
+
+    expect(result).toMatchObject({
+      success: false,
+      error: { code: 'FORBIDDEN', message: '需要管理员权限' }
+    });
+    expect(mockDoc.update).not.toHaveBeenCalled();
+  });
+
+  test('action=search resolves cloud avatar file IDs to temporary display URLs', async () => {
+    const cloudAvatar = 'cloud://cloud1-0gthnke69a09f52a.avatars/private-avatar.png';
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.$or) return [{ _id: 'admin-1', openid: mockState.openid, admin: true }];
+      return [
+        { _id: 'member-1', name: '林大', avatarUrl: cloudAvatar },
+        { _id: 'member-2', name: '乐乐', avatarUrl: 'https://example.com/avatar.jpg' },
+        { _id: 'member-3', name: '空头像', avatarUrl: '' }
+      ];
+    };
+    mockState.tempFileURLResult = {
+      fileList: [
+        { fileID: cloudAvatar, tempFileURL: 'https://tmp.example.com/private-avatar.png' }
+      ]
+    };
+
+    const result = await main({ action: 'search', page: 1, pageSize: 20 }, {});
+
+    expect(cloud.getTempFileURL).toHaveBeenCalledWith({ fileList: [cloudAvatar] });
+    expect(result.data).toEqual([
+      { _id: 'member-1', name: '林大', avatarUrl: 'https://tmp.example.com/private-avatar.png' },
+      { _id: 'member-2', name: '乐乐', avatarUrl: 'https://example.com/avatar.jpg' },
+      { _id: 'member-3', name: '空头像', avatarUrl: '' }
+    ]);
+  });
+
+  test('action=getById returns public profile fields without phone, openid, or admin flags', async () => {
+    mockState.docGetResult = {
+      data: {
+        _id: 'member-1',
+        openid: 'openid-secret',
+        openId: 'openId-secret',
+        unionid: 'union-secret',
+        name: '赵六',
+        phone: '13800000000',
+        avatarUrl: 'cloud://avatar',
+        admin: true,
+        isAdmin: true,
+        status: 'active',
+        playStyle: 'moon-queen',
+        createTime: '2026-01-01',
+        updateTime: '2026-01-02'
+      }
+    };
+
+    const result = await main({ action: 'getById', _id: 'member-1' }, {});
+
+    expect(result).toEqual({
+      data: {
+        _id: 'member-1',
+        name: '赵六',
+        avatarUrl: 'cloud://avatar',
+        status: 'active',
+        playStyle: 'moon-queen',
+        createTime: '2026-01-01',
+        updateTime: '2026-01-02'
       }
     });
   });

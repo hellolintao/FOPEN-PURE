@@ -75,9 +75,11 @@ Page({
 					const isLoser = loserIds.includes(memberId)
 
 					if (isWinner) {
-						totalPoints += match.pointsAwarded?.winner?.total ?? 0
+						const winnerPoints = match.pointsAwarded && match.pointsAwarded.winner
+						totalPoints += winnerPoints && winnerPoints.total != null ? winnerPoints.total : 0
 					} else if (isLoser) {
-						totalPoints += match.pointsAwarded?.loser?.total ?? 0
+						const loserPoints = match.pointsAwarded && match.pointsAwarded.loser
+						totalPoints += loserPoints && loserPoints.total != null ? loserPoints.total : 0
 					}
 				})
 

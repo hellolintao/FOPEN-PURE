@@ -319,13 +319,18 @@ Page({
       const result = res.result || {}
       const app = getApp()
       const currentMember = app && app.globalData ? app.globalData.currentMember : null
-      const savedMember = result.errMsg === 'already registered' && result.data
-        ? result.data
-        : {
-            ...(currentMember || {}),
-            ...payload,
-            _id: result._id || (currentMember && currentMember._id)
-          }
+      let savedMember
+      if (result.errMsg === 'already registered' && result.data) {
+        savedMember = result.data
+      } else if (result.data) {
+        savedMember = result.data
+      } else {
+        savedMember = {
+          ...(currentMember || {}),
+          ...payload,
+          _id: result._id || (currentMember && currentMember._id)
+        }
+      }
 
       if (app && app.globalData) {
         app.globalData.currentMember = savedMember

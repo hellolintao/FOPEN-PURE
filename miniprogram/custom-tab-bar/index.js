@@ -21,7 +21,8 @@ Component({
       ];
       const list = baseList.filter(item => !item.adminOnly || isAdmin);
       const pages = getCurrentPages();
-      const current = pages[pages.length - 1]?.route ? '/' + pages[pages.length - 1].route : '';
+      const lastPage = pages[pages.length - 1];
+      const current = lastPage && lastPage.route ? '/' + lastPage.route : '';
       this.setData({ list, isAdmin, selected: current });
     },
 

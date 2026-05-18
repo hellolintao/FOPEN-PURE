@@ -27,7 +27,7 @@ Page({
         }
       });
 
-      const brackets = bracketsResult.result?.data || [];
+      const brackets = (bracketsResult && bracketsResult.result && bracketsResult.result.data) || [];
 
       // 获取所有赛事的名称
       const tournamentIds = [...new Set(brackets.map(b => b.tournamentId).filter(Boolean))];

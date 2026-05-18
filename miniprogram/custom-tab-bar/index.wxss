@@ -25,14 +25,14 @@
   min-width: 0;
   color: #0B0C09;
   position: relative;
-  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
+  transition: transform 160ms ease-out, background 160ms ease-out;
 }
 
 .tab-icon {
   width: 42rpx;
   height: 42rpx;
   display: block;
-  transition: transform 160ms var(--ease-out);
+  transition: transform 160ms ease-out;
 }
 
 .tab.on .tab-icon {

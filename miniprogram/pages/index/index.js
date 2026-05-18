@@ -121,8 +121,9 @@ Page({
   jumpPage(e) {
     const { type, page } = e.currentTarget.dataset;
     if (page) {
+      const selectedEnv = this.data.selectedEnv || {};
       wx.navigateTo({
-        url: `/pages/${page}/index?envId=${this.data.selectedEnv?.envId}`,
+        url: `/pages/${page}/index?envId=${selectedEnv.envId}`,
       });
     }
   },

@@ -30,10 +30,11 @@ Page({
           currentSeasonId: this._getCurrentSeasonId()
         }
       })
-      const list = res.result?.data?.rankList || []
+      const rankData = res && res.result && res.result.data
+      const list = (rankData && rankData.rankList) || []
       const enriched = list.map(row => ({
         ...row,
-        winRatePct: row.winRate > 0 ? `${Math.round(row.winRate * 100)}%` : '—'
+        winRatePct: this._formatWinRatePct(row)
       }))
       this.setData({ rankList: enriched })
     } catch (err) {
@@ -54,7 +55,7 @@ Page({
           type: this.data.activeTab
         }
       })
-      const data = res.result?.data
+      const data = res && res.result && res.result.data
       this.setData({ starHero: data || { mode: 'empty', star: null, subtitle: null } })
     } catch (err) {
       console.error('[rank] loadHero error', err)
@@ -63,7 +64,7 @@ Page({
   },
 
   onTabChange(e) {
-    const tab = e.detail?.value || e.currentTarget.dataset.tab
+    const tab = (e.detail && e.detail.value) || e.currentTarget.dataset.tab
     if (!tab || tab === this.data.activeTab) return
     this.setData({ activeTab: tab })
     this.loadRank()
@@ -72,6 +73,17 @@ Page({
 
   _getCurrentSeasonId() {
     return `season_${this.data.seasonYear}`
+  },
+
+  _formatWinRatePct(row) {
+    const winCount = (row && row.winCount) || 0
+    const lossCount = (row && row.lossCount) || 0
+    const matches = winCount + lossCount
+    if (matches <= 0) return '—'
+
+    const rawRate = Number(row && row.winRate)
+    const winRate = Number.isFinite(rawRate) ? rawRate : winCount / matches
+    return `${Math.round(winRate * 100)}%`
   },
 
   onPlayerTap(e) {

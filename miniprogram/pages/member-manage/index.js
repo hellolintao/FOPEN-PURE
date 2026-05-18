@@ -45,14 +45,16 @@ Page({
 
     const updatedList = memberList.map(item => {
       if (item._id === _id) {
-        return {
+        const nextItem = {
           ...item,
           name,
           phone,
           status,
           admin,
-          playStyle
+          playStyle,
+          claimStatus: Object.prototype.hasOwnProperty.call(updateData, 'claimStatus') ? updateData.claimStatus : item.claimStatus
         }
+        return this.formatMember(nextItem)
       }
       return item
     })
@@ -131,6 +133,18 @@ Page({
     return `${year}-${month}-${day}`
   },
 
+  // 格式化会员展示字段
+  formatMember(item) {
+    const isUnclaimed = item.claimStatus === 'unclaimed'
+    return {
+      ...item,
+      formattedTime: this.formatTime(item.createTime),
+      claimLabel: isUnclaimed ? '待认领' : '',
+      claimClass: isUnclaimed ? 'unclaimed' : '',
+      avatarLoadFailed: false
+    }
+  },
+
   // 获取会员列表
   getMemberList() {
     if (this.data.loading || this.data.noMore) return
@@ -150,11 +164,8 @@ Page({
       success: res => {
         const newMembers = res.result.data || []
 
-        // 格式化时间
-        const formattedMembers = newMembers.map(item => ({
-          ...item,
-          formattedTime: this.formatTime(item.createTime)
-        }))
+        // 格式化会员展示字段
+        const formattedMembers = newMembers.map(item => this.formatMember(item))
 
         if (filterStatus) {
           // 前端过滤状态
@@ -214,6 +225,21 @@ Page({
         current: url
       })
     }
+  },
+
+  onAvatarError(e) {
+    const id = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id
+    if (!id) return
+
+    const memberList = this.data.memberList.map(item => {
+      if (item._id !== id) return item
+      return {
+        ...item,
+        avatarLoadFailed: true
+      }
+    })
+
+    this.setData({ memberList })
   },
 
   // 编辑会员

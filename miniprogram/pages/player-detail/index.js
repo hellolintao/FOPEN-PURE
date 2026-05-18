@@ -63,13 +63,15 @@ Page({
         callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } })
       ]);
 
-      if (statsRes?.result?.success === false) {
+      if (statsRes && statsRes.result && statsRes.result.success === false) {
         console.error('[player-detail] playerStats error', statsRes.result);
       }
 
+      const playerResult = playerRes && playerRes.result;
+      const statsResult = statsRes && statsRes.result;
       this.setStateFromResponses({
-        player: playerRes?.result?.data || null,
-        statsData: statsRes?.result?.success === false ? {} : (statsRes?.result?.data || {}),
+        player: (playerResult && playerResult.data) || null,
+        statsData: statsResult && statsResult.success === false ? {} : ((statsResult && statsResult.data) || {}),
         h2hData: DEFAULT_H2H
       });
       this._loadH2H(playerId, seasonId).then((h2hData) => {
@@ -90,12 +92,12 @@ Page({
         data: { action: 'playerH2H', playerId, currentSeasonId: seasonId }
       });
 
-      if (res?.result?.success === false) {
+      if (res && res.result && res.result.success === false) {
         console.error('[player-detail] playerH2H error', res.result);
         return DEFAULT_H2H;
       }
 
-      return res?.result?.data || DEFAULT_H2H;
+      return (res && res.result && res.result.data) || DEFAULT_H2H;
     } catch (err) {
       console.error('[player-detail] playerH2H error', err);
       return DEFAULT_H2H;
@@ -135,7 +137,7 @@ Page({
     this.setData({
       h2h,
       h2hVisible: this._getH2HVisible(h2h, this.data.h2hExpanded),
-      hasDoubles: this._hasDoubles(this.data.stats?.doubles || {}, h2h.doubles, this.data.rankHistory.doubles)
+      hasDoubles: this._hasDoubles((this.data.stats && this.data.stats.doubles) || {}, h2h.doubles, this.data.rankHistory.doubles)
     });
   },
 

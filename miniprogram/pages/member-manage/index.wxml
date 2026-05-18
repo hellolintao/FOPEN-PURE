@@ -42,12 +42,15 @@
     </view>
 
     <view wx:for="{{memberList}}" wx:key="_id" class="member-item tap-scale" bindtap="onEditMember" data-member="{{item}}">
-      <view class="member-avatar" catchtap="onAvatarTap" data-url="{{item.avatarUrl}}">
-        <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" class="avatar-img" mode="aspectFill" />
+      <view class="member-avatar" catchtap="onAvatarTap" data-url="{{item.avatarLoadFailed ? '' : item.avatarUrl}}">
+        <image wx:if="{{item.avatarUrl && !item.avatarLoadFailed}}" src="{{item.avatarUrl}}" class="avatar-img" mode="aspectFill" binderror="onAvatarError" data-id="{{item._id}}" />
         <text wx:else class="avatar-placeholder">{{item.name.charAt(0) || '会'}}</text>
       </view>
       <view class="member-info">
-        <text class="member-name">{{item.name || '未命名'}}</text>
+        <view class="member-title-row">
+          <text class="member-name">{{item.name || '未命名'}}</text>
+          <text wx:if="{{item.claimLabel}}" class="claim-badge claim-{{item.claimClass}}">{{item.claimLabel}}</text>
+        </view>
         <text class="member-phone num">{{item.phone || '未填写手机号'}}</text>
         <text class="member-meta num">JOINED · {{item.formattedTime}}</text>
       </view>
