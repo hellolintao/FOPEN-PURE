@@ -1,3 +1,5 @@
+const { syncTabBar } = require('../../utils/tab-bar');
+
 Page({
   data: {
     bracketsList: [],
@@ -10,6 +12,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this, '/pages/manage/index');
     this.loadBracketsList();
   },
 

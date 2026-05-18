@@ -1,5 +1,6 @@
 const app = getApp()
 const DEFAULT_AVATAR = '/images/icons/default-avatar.png'
+const { syncTabBar } = require('../../utils/tab-bar')
 
 Page({
 	data: {
@@ -16,6 +17,7 @@ Page({
 		this.checkLogin()
 	},
 	onShow() {
+		syncTabBar(this, '/pages/mine/index')
 		this.checkLogin()
 	},
 	checkLogin() {

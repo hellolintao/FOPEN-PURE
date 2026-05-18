@@ -1,25 +1,34 @@
 const { callFunction } = require('../../utils/cloud');
+const { syncTabBar } = require('../../utils/tab-bar');
+
+function defaultHomeStats() {
+  return {
+    singles: { wins: 0, total: 0, winRateLabel: '—', totalPoints: 0 },
+    doubles: { wins: 0, total: 0, winRateLabel: '—', totalPoints: 0 }
+  };
+}
 
 Page({
   data: {
     currentMember: null,
-    myStats: { matches: 0, wins: 0, winRate: 0 },
+    myStats: defaultHomeStats(),
     isAdmin: false,
     loadingStats: false,
     seasonYear: new Date().getFullYear()
   },
 
   async onShow() {
+    syncTabBar(this, '/pages/home/index');
     await this.loadHome();
   },
 
   async loadHome() {
     const app = getApp();
+    await this.ensureIdentity(app);
     const member = app.globalData.currentMember;
     const isAdmin = app.globalData.isAdmin || false;
-    this.setData({ isAdmin });
+    this.setData({ isAdmin, currentMember: member || null });
     if (!member) return;
-    this.setData({ currentMember: member });
 
     this.setData({ loadingStats: true });
     try {
@@ -28,12 +37,8 @@ Page({
         data: { action: 'playerStats', playerId: member._id, currentSeasonId: this._getCurrentSeasonId() }
       });
       const statsData = stats && stats.result && stats.result.data;
-      const allStats = statsData && statsData.stats;
-      const s = (allStats && allStats.singles) || {};
-      const total = (s.winCount || 0) + (s.lossCount || 0);
-      const winRate = total > 0 ? Math.round((s.winCount / total) * 100) : 0;
       this.setData({
-        myStats: { matches: total, wins: s.winCount || 0, winRate }
+        myStats: this.formatHomeStats(statsData && statsData.stats)
       });
     } catch (err) {
       console.error('[home] loadHome stats error', err);
@@ -45,6 +50,40 @@ Page({
 
   _getCurrentSeasonId() {
     return `season_${this.data.seasonYear}`;
+  },
+
+  async ensureIdentity(app) {
+    if (!app || !app.globalData || app.globalData.currentMember) return;
+    if (app.identityReady && typeof app.identityReady.then === 'function') {
+      await app.identityReady;
+      return;
+    }
+    if (typeof app.refreshIdentity === 'function') {
+      app.identityReady = app.refreshIdentity();
+      await app.identityReady;
+    }
+  },
+
+  formatHomeStats(stats) {
+    return {
+      singles: this.formatStatsBucket(stats && stats.singles),
+      doubles: this.formatStatsBucket(stats && stats.doubles)
+    };
+  },
+
+  formatStatsBucket(bucket = {}) {
+    const wins = bucket.winCount || 0;
+    const losses = bucket.lossCount || 0;
+    const total = wins + losses;
+    const rawWinRate = bucket.winRate;
+    const numericWinRate = Number(rawWinRate);
+    const rate = Number.isFinite(numericWinRate) ? numericWinRate : (total > 0 ? wins / total : null);
+    return {
+      wins,
+      total,
+      winRateLabel: rate === null ? '—' : `${Math.round(rate * 100)}%`,
+      totalPoints: bucket.totalPoints || 0
+    };
   },
 
   onQuickAction(e) {

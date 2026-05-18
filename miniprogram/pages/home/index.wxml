@@ -3,7 +3,7 @@
   <!-- HEAD -->
   <view class="home-head anim-stage-rise">
     <view class="head-tapes">
-      <text class="tape tape-stamped">FOPEN TC · {{isAdmin ? 'ADMIN' : 'MEMBER'}}</text>
+      <text class="tape tape-stamped">FU OPEN · {{isAdmin ? 'ADMIN' : 'MEMBER'}}</text>
     </view>
     <view class="greeting-row">
       <image class="user-avatar" src="{{currentMember.avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
@@ -63,18 +63,45 @@
       <text class="section-meta num">S{{seasonYear}}</text>
     </view>
     <skeleton-loader wx:if="{{loadingStats}}" rows="{{2}}" />
-    <view wx:else class="stats-row">
-      <view class="my-stat my-stat-paper">
-        <text class="my-stat-num num">{{myStats.matches}}</text>
-        <text class="my-stat-label">MATCHES</text>
+    <view wx:else class="home-stats-stack">
+      <view class="home-stat-group">
+        <view class="stat-mode-head">
+          <text class="tape tape-lime tape-stamped-lime">SINGLES · 单打</text>
+        </view>
+        <view class="stats-row">
+          <view class="my-stat my-stat-paper">
+            <text class="my-stat-num num">{{myStats.singles.wins}}<text class="my-stat-denom">/{{myStats.singles.total}}</text></text>
+            <text class="my-stat-label">胜场/总</text>
+          </view>
+          <view class="my-stat my-stat-lime">
+            <text class="my-stat-num num">{{myStats.singles.winRateLabel}}</text>
+            <text class="my-stat-label">胜率</text>
+          </view>
+          <view class="my-stat my-stat-ink">
+            <text class="my-stat-num num">{{myStats.singles.totalPoints}}</text>
+            <text class="my-stat-label">积分</text>
+          </view>
+        </view>
       </view>
-      <view class="my-stat my-stat-lime">
-        <text class="my-stat-num num">{{myStats.wins}}</text>
-        <text class="my-stat-label">WINS</text>
-      </view>
-      <view class="my-stat my-stat-ink">
-        <text class="my-stat-num num">{{myStats.winRate}}<text class="my-stat-suffix">%</text></text>
-        <text class="my-stat-label">WIN RATE</text>
+
+      <view class="home-stat-group">
+        <view class="stat-mode-head">
+          <text class="tape tape-ghost">DOUBLES · 双打</text>
+        </view>
+        <view class="stats-row">
+          <view class="my-stat my-stat-paper">
+            <text class="my-stat-num num">{{myStats.doubles.wins}}<text class="my-stat-denom">/{{myStats.doubles.total}}</text></text>
+            <text class="my-stat-label">胜场/总</text>
+          </view>
+          <view class="my-stat my-stat-paper-alt">
+            <text class="my-stat-num num">{{myStats.doubles.winRateLabel}}</text>
+            <text class="my-stat-label">胜率</text>
+          </view>
+          <view class="my-stat my-stat-paper-alt">
+            <text class="my-stat-num num">{{myStats.doubles.totalPoints}}</text>
+            <text class="my-stat-label">积分</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>

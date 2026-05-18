@@ -213,6 +213,23 @@
   gap: var(--space-3);
 }
 
+.home-stats-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.home-stat-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stat-mode-head {
+  display: flex;
+  align-items: center;
+}
+
 .my-stat {
   display: flex;
   flex-direction: column;
@@ -224,18 +241,18 @@
 }
 
 .my-stat-num {
-  font-size: 88rpx;
+  font-size: 72rpx;
   font-weight: 900;
   line-height: 0.9;
   letter-spacing: -0.04em;
   color: var(--color-ink);
 }
 
-.my-stat-suffix {
-  font-size: 40rpx;
+.my-stat-denom {
+  font-size: 30rpx;
   font-weight: 900;
+  opacity: 0.72;
   letter-spacing: 0;
-  margin-left: 4rpx;
 }
 
 .my-stat-label {
@@ -249,6 +266,10 @@
 .my-stat-paper {
   background: var(--color-bg);
   border: 2rpx solid var(--color-ink);
+}
+
+.my-stat-paper-alt {
+  background: var(--color-bg-3);
 }
 
 .my-stat-lime {

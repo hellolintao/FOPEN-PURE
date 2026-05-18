@@ -1,0 +1,66 @@
+function loadPage(app) {
+  jest.resetModules()
+  let pageDef
+  global.getApp = () => app
+  global.wx = {
+    switchTab: jest.fn(),
+    navigateTo: jest.fn(),
+    showToast: jest.fn()
+  }
+  global.Page = def => { pageDef = def }
+  jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
+  require('../index')
+  return pageDef
+}
+
+function makeCtx(def) {
+  return {
+    ...def,
+    data: JSON.parse(JSON.stringify(def.data)),
+    setData(patch) {
+      for (const [key, value] of Object.entries(patch)) {
+        if (!key.includes('.')) {
+          this.data[key] = value
+          continue
+        }
+        const parts = key.split('.')
+        let target = this.data
+        for (let i = 0; i < parts.length - 1; i++) target = target[parts[i]]
+        target[parts[parts.length - 1]] = value
+      }
+    }
+  }
+}
+
+describe('home stats', () => {
+  afterEach(() => {
+    delete global.getApp
+    delete global.wx
+    delete global.Page
+  })
+
+  test('maps player detail style singles and doubles stats', async () => {
+    const member = { _id: 'member-1', name: '乐乐' }
+    const app = { globalData: { currentMember: member, isAdmin: true } }
+    const def = loadPage(app)
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValue({
+      result: {
+        data: {
+          stats: {
+            singles: { winCount: 15, lossCount: 0, totalPoints: 2940 },
+            doubles: { winCount: 18, lossCount: 2, totalPoints: 1780, winRate: 0.9 }
+          }
+        }
+      }
+    })
+    const ctx = makeCtx(def)
+
+    await ctx.loadHome()
+
+    expect(ctx.data.myStats).toEqual({
+      singles: { wins: 15, total: 15, winRateLabel: '100%', totalPoints: 2940 },
+      doubles: { wins: 18, total: 20, winRateLabel: '90%', totalPoints: 1780 }
+    })
+  })
+})

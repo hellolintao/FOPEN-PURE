@@ -231,8 +231,8 @@ Component({
         wx.showToast({ title: '仅常规赛可加场次', icon: 'none' }); return
       }
       const courtId = e.currentTarget.dataset.courtId
-      const tournamentType = this.properties.tournament && this.properties.tournament.type
-      const matchType = tournamentType === 'doubles' ? 'doubles' : 'singles'
+      const matchTypes = this.allowedMatchTypes()
+      const matchType = matchTypes[0] || 'singles'
       this.openAddMatchPicker({ kind: 'addExtra', courtId, matchType })
     },
 
@@ -252,19 +252,19 @@ Component({
       const slotIndex = parseInt(e.currentTarget.dataset.slotIndex, 10)
       if (isNaN(slotIndex) || slotIndex < 0) return
       const isRegular = this.properties.tournament && this.properties.tournament.format === 'regular'
-      const itemList = isRegular ? ['单打', '双打', '自由拉球'] : ['自由拉球']
+      const actions = isRegular
+        ? this.addMatchActions().concat([{ label: '自由拉球', kind: 'freePlay' }])
+        : [{ label: '自由拉球', kind: 'freePlay' }]
       wx.showActionSheet({
-        itemList,
+        itemList: actions.map(action => action.label),
         success: ({ tapIndex }) => {
-          if (!isRegular) {
+          const action = actions[tapIndex]
+          if (!action) return
+          if (action.kind === 'freePlay') {
             this.applyAddFreePlayAt(courtId, slotIndex)
-          } else if (tapIndex === 0) {
-            this.openAddMatchPicker({ kind: 'addMatchAt', courtId, slotIndex, matchType: 'singles' })
-          } else if (tapIndex === 1) {
-            this.openAddMatchPicker({ kind: 'addMatchAt', courtId, slotIndex, matchType: 'doubles' })
-          } else if (tapIndex === 2) {
-            this.applyAddFreePlayAt(courtId, slotIndex)
+            return
           }
+          this.openAddMatchPicker({ kind: 'addMatchAt', courtId, slotIndex, matchType: action.matchType })
         }
       })
     },
@@ -276,7 +276,7 @@ Component({
         pickerCtx: { kind, courtId, slotIndex, matchType },
         pickerRequiredCount: isDoubles ? 4 : 2,
         pickerExclude: [],
-        pickerMembers: this.properties.members || [],
+        pickerMembers: this.allowedPoolForSchedule(),
         pickerTitle: isDoubles ? '选择双打球员' : '选择单打球员'
       })
     },
@@ -428,7 +428,8 @@ Component({
     },
 
     assemblePlayerObjects(memberIds, matchId, matchType) {
-      const ms = asArray(memberIds).map(id => asArray(this.properties.members).find(x => x._id === id)).filter(Boolean)
+      const pool = this.allowedPoolForSchedule()
+      const ms = asArray(memberIds).map(id => pool.find(x => x._id === id)).filter(Boolean)
       const isDoubles = matchType === 'doubles'
       if ((!isDoubles && ms.length < 2) || (isDoubles && ms.length < 4)) return null
       const player1 = isDoubles
@@ -455,10 +456,36 @@ Component({
     },
 
     allowedPoolForSwitch(/* m */) {
-      return asArray(this.properties.registrations).map(r => ({
-        _id: r.playerId,
-        name: r.playerName,
-        avatarUrl: r.avatarUrl
+      return this.allowedPoolForSchedule()
+    },
+
+    allowedPoolForSchedule() {
+      const rows = []
+      const seen = new Set()
+      const push = (id, name, avatarUrl, registrationId) => {
+        if (!id || seen.has(id)) return
+        seen.add(id)
+        rows.push({ _id: id, name: name || id, avatarUrl, registrationId })
+      }
+      asArray(this.properties.registrations).forEach(r => {
+        push(r.playerId, r.playerName, r.avatarUrl, r.registrationId)
+        push(r.partnerId, r.partnerName, r.partnerAvatarUrl, r.registrationId)
+      })
+      return rows
+    },
+
+    allowedMatchTypes() {
+      const tournamentType = this.properties.tournament && this.properties.tournament.type
+      if (tournamentType === 'mixed') return ['singles', 'doubles']
+      if (tournamentType === 'doubles') return ['doubles']
+      return ['singles']
+    },
+
+    addMatchActions() {
+      return this.allowedMatchTypes().map(matchType => ({
+        kind: 'match',
+        matchType,
+        label: matchType === 'doubles' ? '双打' : '单打'
       }))
     },
 

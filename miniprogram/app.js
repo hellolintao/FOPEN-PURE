@@ -5,6 +5,7 @@ App({
     env: 'cloud1-0gthnke69a09f52a',
     isAdmin: false,
     currentMember: null,
+    currentTabPath: '/pages/home/index',
     lastSelectedPlayers: null
   },
 
@@ -14,7 +15,7 @@ App({
       return;
     }
     wx.cloud.init({ env: this.globalData.env, traceUser: true });
-    this.refreshIdentity();
+    this.identityReady = this.refreshIdentity();
   },
 
   async refreshIdentity() {
@@ -28,10 +29,13 @@ App({
       const last = pages[pages.length - 1];
       if (last && last.getTabBar) {
         const tabBar = last.getTabBar();
-        if (tabBar) tabBar.refresh();
+        if (tabBar) tabBar.refresh(this.globalData.currentTabPath);
       }
+      return this.globalData.currentMember;
     } catch (err) {
+      this.globalData.currentMember = null;
       this.globalData.isAdmin = false;
+      return null;
     }
   }
 });

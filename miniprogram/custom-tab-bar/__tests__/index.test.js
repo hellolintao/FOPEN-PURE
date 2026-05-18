@@ -1,11 +1,12 @@
-function loadTabBar({ isAdmin = false, route = 'pages/home/index' } = {}) {
+function loadTabBar({ isAdmin = false, route = 'pages/home/index', currentTabPath = '' } = {}) {
   let componentConfig
 
   jest.resetModules()
   global.Component = jest.fn(config => {
     componentConfig = config
   })
-  global.getApp = jest.fn(() => ({ globalData: { isAdmin } }))
+  global.__testApp = { globalData: { isAdmin, currentTabPath } }
+  global.getApp = jest.fn(() => global.__testApp)
   global.getCurrentPages = jest.fn(() => [{ route }])
   global.wx = { switchTab: jest.fn() }
 
@@ -27,6 +28,7 @@ describe('custom tab bar', () => {
     delete global.getApp
     delete global.getCurrentPages
     delete global.wx
+    delete global.__testApp
   })
 
   test('shows admin tabs in the requested order with remix line icons', () => {
@@ -62,6 +64,18 @@ describe('custom tab bar', () => {
 
     expect(ctx.data.list.map(item => item.text)).toEqual(['首页', '赛事', '排行', '我的'])
     expect(ctx.data.list.some(item => item.pagePath === '/pages/manage/index')).toBe(false)
+  })
+
+  test('uses explicit currentTabPath instead of stale page stack route', () => {
+    const { componentConfig, ctx } = loadTabBar({
+      isAdmin: true,
+      route: 'pages/home/index',
+      currentTabPath: '/pages/mine/index'
+    })
+
+    componentConfig.methods.refresh.call(ctx)
+
+    expect(ctx.data.selected).toBe('/pages/mine/index')
   })
 
   test('app.json tab bar icon paths use formats accepted by the simulator', () => {

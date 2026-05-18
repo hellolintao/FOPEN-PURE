@@ -1,10 +1,15 @@
 const db = wx.cloud.database()
+const { syncTabBar } = require('../../utils/tab-bar')
 
 Page({
 	data: {
 		tournaments: []
 	},
 	onLoad() {
+		this.loadTournaments()
+	},
+	onShow() {
+		syncTabBar(this, '/pages/match/index')
 		this.loadTournaments()
 	},
 	async loadTournaments() {

@@ -1,4 +1,5 @@
 const { callFunction } = require('../../utils/cloud')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 Page({
   data: {
@@ -15,6 +16,7 @@ Page({
   },
 
   async onShow() {
+    syncTabBar(this, '/pages/rank/index')
     this.setData({ currentMember: getApp().globalData.currentMember })
     await Promise.all([this.loadRank(), this.loadHero()])
   },

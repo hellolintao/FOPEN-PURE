@@ -43,13 +43,51 @@ function makeCtx(def, overrides = {}) {
 }
 
 describe('schedule-board add menu', () => {
-  test('regular empty slot offers singles, doubles, and free play', () => {
+  test('mixed regular empty slot offers singles, doubles, and free play', () => {
     const def = loadComponent()
     const ctx = makeCtx(def)
     ctx.openAddMatchPicker = jest.fn()
     wx.showActionSheet.mockImplementation(({ itemList, success }) => {
       expect(itemList).toEqual(['单打', '双打', '自由拉球'])
       success({ tapIndex: 1 })
+    })
+
+    ctx.onTapEmpty({ currentTarget: { dataset: { courtId: 'c1', slotIndex: '0' } } })
+
+    expect(ctx.openAddMatchPicker).toHaveBeenCalledWith({
+      kind: 'addMatchAt',
+      courtId: 'c1',
+      slotIndex: 0,
+      matchType: 'doubles'
+    })
+  })
+
+  test('singles regular empty slot only offers singles match and free play', () => {
+    const def = loadComponent()
+    const ctx = makeCtx(def, { properties: { tournament: { format: 'regular', type: 'singles' } } })
+    ctx.openAddMatchPicker = jest.fn()
+    wx.showActionSheet.mockImplementation(({ itemList, success }) => {
+      expect(itemList).toEqual(['单打', '自由拉球'])
+      success({ tapIndex: 0 })
+    })
+
+    ctx.onTapEmpty({ currentTarget: { dataset: { courtId: 'c1', slotIndex: '0' } } })
+
+    expect(ctx.openAddMatchPicker).toHaveBeenCalledWith({
+      kind: 'addMatchAt',
+      courtId: 'c1',
+      slotIndex: 0,
+      matchType: 'singles'
+    })
+  })
+
+  test('doubles regular empty slot only offers doubles match and free play', () => {
+    const def = loadComponent()
+    const ctx = makeCtx(def, { properties: { tournament: { format: 'regular', type: 'doubles' } } })
+    ctx.openAddMatchPicker = jest.fn()
+    wx.showActionSheet.mockImplementation(({ itemList, success }) => {
+      expect(itemList).toEqual(['双打', '自由拉球'])
+      success({ tapIndex: 0 })
     })
 
     ctx.onTapEmpty({ currentTarget: { dataset: { courtId: 'c1', slotIndex: '0' } } })
@@ -89,26 +127,33 @@ describe('schedule-board add menu', () => {
 
   test('add picker title and count follow match type', () => {
     const def = loadComponent()
-    const members = [{ _id: 'p1', name: 'A' }]
-    const ctx = makeCtx(def, { properties: { members } })
+    const members = [{ _id: 'p1', name: 'A' }, { _id: 'p2', name: 'B' }, { _id: 'p3', name: 'C' }]
+    const registrations = [
+      { playerId: 'p1', playerName: 'A' },
+      { playerId: 'p3', playerName: 'C' }
+    ]
+    const ctx = makeCtx(def, { properties: { members, registrations } })
 
     ctx.openAddMatchPicker({ kind: 'addMatchAt', courtId: 'c1', slotIndex: 0, matchType: 'doubles' })
 
     expect(ctx.data.pickerShow).toBe(true)
     expect(ctx.data.pickerRequiredCount).toBe(4)
     expect(ctx.data.pickerTitle).toBe('选择双打球员')
-    expect(ctx.data.pickerMembers).toEqual(members)
+    expect(ctx.data.pickerMembers).toEqual([
+      { _id: 'p1', name: 'A', avatarUrl: undefined, registrationId: undefined },
+      { _id: 'p3', name: 'C', avatarUrl: undefined, registrationId: undefined }
+    ])
   })
 
   test('assembled doubles match stores per-match type and partners', () => {
     const def = loadComponent()
-    const members = [
-      { _id: 'p1', name: 'A' },
-      { _id: 'p2', name: 'B' },
-      { _id: 'p3', name: 'C' },
-      { _id: 'p4', name: 'D' },
+    const registrations = [
+      { playerId: 'p1', playerName: 'A' },
+      { playerId: 'p2', playerName: 'B' },
+      { playerId: 'p3', playerName: 'C' },
+      { playerId: 'p4', playerName: 'D' },
     ]
-    const ctx = makeCtx(def, { properties: { members } })
+    const ctx = makeCtx(def, { properties: { registrations } })
 
     const match = ctx.assemblePlayerObjects(['p1', 'p2', 'p3', 'p4'], 'm1', 'doubles')
 

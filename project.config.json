@@ -100,10 +100,6 @@
         "value": "pages/index"
       },
       {
-        "type": "file",
-        "value": "utils/tab-bar.js"
-      },
-      {
         "type": "folder",
         "value": "__tests__"
       },

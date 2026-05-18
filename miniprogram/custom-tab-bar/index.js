@@ -6,12 +6,14 @@ Component({
   },
 
   attached() {
-    this.refresh();
+    const app = getApp();
+    this.refresh(app.globalData && app.globalData.currentTabPath);
   },
 
   methods: {
-    refresh() {
-      const isAdmin = getApp().globalData.isAdmin;
+    refresh(selectedPath) {
+      const app = getApp();
+      const isAdmin = app.globalData.isAdmin;
       const baseList = [
         { pagePath: '/pages/home/index',   text: '首页', iconPath: '/images/icons/ri/home-line.png',           selectedIconPath: '/images/icons/ri/home-fill.png' },
         { pagePath: '/pages/match/index',  text: '赛事', iconPath: '/images/icons/ri/calendar-event-line.png', selectedIconPath: '/images/icons/ri/calendar-event-fill.png' },
@@ -23,14 +25,18 @@ Component({
       const pages = getCurrentPages();
       const lastPage = pages[pages.length - 1];
       const current = lastPage && lastPage.route ? '/' + lastPage.route : '';
-      this.setData({ list, isAdmin, selected: current });
+      const selected = selectedPath || (app.globalData && app.globalData.currentTabPath) || current;
+      if (app.globalData) app.globalData.currentTabPath = selected;
+      this.setData({ list, isAdmin, selected });
     },
 
     onTap(e) {
       const idx = e.currentTarget.dataset.index;
       const item = this.data.list[idx];
-      wx.switchTab({ url: item.pagePath });
+      const app = getApp();
+      if (app.globalData) app.globalData.currentTabPath = item.pagePath;
       this.setData({ selected: item.pagePath });
+      wx.switchTab({ url: item.pagePath });
     }
   }
 });
