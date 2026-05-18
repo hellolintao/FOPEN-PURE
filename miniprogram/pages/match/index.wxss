@@ -112,6 +112,35 @@
   border-radius: var(--radius-sm);
 }
 
+.match-card-badges {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.match-card-permission {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 4rpx 12rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-sm);
+  color: var(--color-bg);
+}
+
+.match-card-permission.permission-admin,
+.match-card-permission.permission-participant {
+  background: var(--color-lime);
+  border-color: var(--color-lime);
+  color: var(--color-ink);
+}
+
+.match-card-permission.permission-viewer {
+  color: var(--color-bg);
+}
+
 .match-card-body {
   padding: var(--space-4) var(--space-5);
   display: flex;

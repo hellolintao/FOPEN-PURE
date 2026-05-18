@@ -25,7 +25,10 @@
     >
       <view class="match-card-top">
         <text class="match-card-name">{{item.name}}</text>
-        <text class="match-card-type">{{item.type === 'singles' ? 'SINGLES' : 'DOUBLES'}}</text>
+        <view class="match-card-badges">
+          <text class="match-card-permission permission-{{item.__permissionKind}}">{{item.__permissionLabel}}</text>
+          <text class="match-card-type">{{item.type === 'singles' ? 'SINGLES' : item.type === 'mixed' ? 'MIXED' : 'DOUBLES'}}</text>
+        </view>
       </view>
       <view class="match-card-body">
         <view class="mc-row">

@@ -164,6 +164,6 @@
   </block>
   <block wx:else>
     <view wx:if="{{isAdmin}}" class="footer-cta cta-secondary" bindtap="onEdit">编辑</view>
-    <view class="footer-cta cta-lime flex-1" bindtap="onEnterScore">录入成绩</view>
+    <view class="footer-cta cta-lime flex-1 {{canEnterScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">录入成绩</view>
   </block>
 </view>

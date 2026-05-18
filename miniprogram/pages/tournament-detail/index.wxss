@@ -509,3 +509,9 @@
 }
 
 .footer-cta.full { flex: 1; }
+
+.footer-cta.cta-disabled {
+  background: var(--color-bg-3);
+  color: var(--color-muted);
+  border: 2rpx solid var(--color-border);
+}

@@ -11,7 +11,9 @@ Page({
     scheduleRows: [],
     tournamentDisplay: null,
     loading: true,
-    isAdmin: false
+    isAdmin: false,
+    isParticipant: false,
+    canEnterScore: false
   },
 
   onLoad(options) {
@@ -31,6 +33,7 @@ Page({
   },
 
   async refresh() {
+    await this.ensureIdentity()
     await Promise.all([
       this.loadTournamentDetail(),
       this.loadRegistrations(),
@@ -38,6 +41,16 @@ Page({
       this.loadFreePlays()
     ])
     this._rebuildScheduleView()
+  },
+
+  async ensureIdentity() {
+    try {
+      if (app.globalData && !app.globalData.currentMember && typeof app.refreshIdentity === 'function') {
+        await app.refreshIdentity()
+      }
+    } catch (err) {
+      console.warn('[tournament-detail] refresh identity failed', err)
+    }
   },
 
   async loadTournamentDetail() {
@@ -57,6 +70,7 @@ Page({
         tournament: result.data,
         tournamentDisplay: buildTournamentDisplay(result.data),
         isAdmin,
+        canEnterScore: isAdmin || this.data.isParticipant,
         loading: false
       })
     } catch (err) {
@@ -89,10 +103,31 @@ Page({
       const avatarMap = await fetchAvatarMap([...ids])
 
       const registrations = buildRosterPeople(rawRegs, avatarMap)
-      this.setData({ registrations })
+      const isParticipant = this.isCurrentMemberRegistered(rawRegs)
+      this.setData({
+        registrations,
+        isParticipant,
+        canEnterScore: this.data.isAdmin || isParticipant
+      })
     } catch (err) {
       console.error('加载参赛人员失败:', err)
+      this.setData({
+        isParticipant: false,
+        canEnterScore: !!this.data.isAdmin
+      })
     }
+  },
+
+  isCurrentMemberRegistered(rawRegs) {
+    const member = app.globalData && app.globalData.currentMember
+    const memberId = member && member._id
+    if (!memberId) return false
+    return (rawRegs || []).some(reg => (
+      reg &&
+      reg.status !== 'cancelled' &&
+      reg.registrationStatus !== 'cancelled' &&
+      (reg.playerId === memberId || reg.partnerId === memberId)
+    ))
   },
 
   async loadBrackets() {
@@ -142,6 +177,10 @@ Page({
   },
 
   onEnterScore() {
+    if (!this.data.canEnterScore) {
+      wx.showToast({ title: '仅参赛者可录入', icon: 'none' })
+      return
+    }
     wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
   },
 
