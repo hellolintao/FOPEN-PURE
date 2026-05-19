@@ -538,10 +538,13 @@ Page({
   async resolveSeasonId(startDate) {
     const year = String(new Date(startDate).getFullYear())
     const r = await wx.cloud.callFunction({
-      name: 'seasons', data: { action: 'getCurrent' }
+      name: 'seasons',
+      data: { action: 'getCurrent', date: startDate }
     }).catch(() => null)
-    return (r && r.result && r.result.data && r.result.data.seasonId)
-      || (r && r.result && r.result.data && r.result.data._id)
+    const data = r && r.result && r.result.data
+    return (data && data.seasonId)
+      || (data && data.season && data.season._id)
+      || (data && data._id)
       || `season_${year}`
   }
 })

@@ -1,4 +1,9 @@
 const app = getApp()
+const {
+  getTournamentStatusMeta,
+  getTournamentShareTitle,
+  isCompletedStatus
+} = require('../../utils/tournament-status')
 
 Page({
   data: {
@@ -7,16 +12,23 @@ Page({
     registrations: [],
     brackets: [],
     freePlays: [],
+    matchResultRows: [],
+    resultSummary: null,
+    resultDisplay: { visible: false, completedText: '', standings: [], groups: [] },
     scheduleCourts: [],
     scheduleRows: [],
     tournamentDisplay: null,
     loading: true,
     isAdmin: false,
     isParticipant: false,
-    canEnterScore: false
+    canEnterScore: false,
+    canOpenScore: false,
+    scoreActionLabel: '录入成绩',
+    shareEnabled: false
   },
 
-  onLoad(options) {
+  onLoad(options = {}) {
+    this.enableShareMenu()
     const { id } = options
     if (id) {
       this.setData({ tournamentId: id })
@@ -38,8 +50,11 @@ Page({
       this.loadTournamentDetail(),
       this.loadRegistrations(),
       this.loadBrackets(),
-      this.loadFreePlays()
+      this.loadFreePlays(),
+      this.loadResultSummary()
     ])
+    this.syncTournamentDisplayState()
+    this.syncResultDisplayState()
     this._rebuildScheduleView()
   },
 
@@ -53,6 +68,74 @@ Page({
     }
   },
 
+  enableShareMenu(enabled = true) {
+    if (typeof wx === 'undefined') return
+    if (enabled && wx.showShareMenu) {
+      wx.showShareMenu({
+        withShareTicket: true,
+        menus: ['shareAppMessage', 'shareTimeline']
+      })
+      return
+    }
+    if (!enabled && wx.hideShareMenu) {
+      wx.hideShareMenu({
+        menus: ['shareAppMessage', 'shareTimeline']
+      })
+    }
+  },
+
+  buildAccessState({ tournament, isAdmin, isParticipant, resultSummary }) {
+    const tournamentWithSummary = withResultSummary(tournament, resultSummary)
+    const statusMeta = getTournamentStatusMeta(tournamentWithSummary)
+    const canEnterScore = !!(isAdmin || isParticipant)
+    return {
+      canEnterScore,
+      canOpenScore: canEnterScore || isCompletedStatus(tournamentWithSummary),
+      scoreActionLabel: statusMeta.scoreActionLabel,
+      shareEnabled: statusMeta.canShare
+    }
+  },
+
+  syncTournamentDisplayState() {
+    if (!this.data.tournament) return
+    const accessState = this.buildAccessState({
+      tournament: this.data.tournament,
+      resultSummary: this.data.resultSummary,
+      isAdmin: this.data.isAdmin,
+      isParticipant: this.data.isParticipant
+    })
+    this.enableShareMenu(accessState.shareEnabled)
+    this.setData({
+      tournamentDisplay: buildTournamentDisplay(this.data.tournament, this.data.resultSummary),
+      ...accessState
+    })
+  },
+
+  syncResultDisplayState() {
+    this.setData({
+      resultDisplay: buildResultDisplay(this.data.matchResultRows, this.data.tournament, this.data.registrations)
+    })
+  },
+
+  async enrichTournamentSeason(tournament) {
+    if (!tournament || tournament.seasonName || !tournament.seasonId) return tournament
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'seasons',
+        data: { action: 'get', id: tournament.seasonId }
+      })
+      const season = res && res.result && res.result.data
+      if (!season || !season.name) {
+        console.warn('[tournament-detail] season name missing', { seasonId: tournament.seasonId })
+        return tournament
+      }
+      return { ...tournament, seasonName: season.name }
+    } catch (err) {
+      console.warn('[tournament-detail] load season failed', err)
+      return tournament
+    }
+  },
+
   async loadTournamentDetail() {
     this.setData({ loading: true })
     try {
@@ -63,14 +146,22 @@ Page({
         setTimeout(() => wx.navigateBack(), 1500)
         return
       }
+      const tournament = await this.enrichTournamentSeason(result.data)
       const me = app.globalData && app.globalData.currentMember
-      const isCreator = !!(me && result.data.createdBy && result.data.createdBy === me._id)
+      const isCreator = !!(me && tournament.createdBy && tournament.createdBy === me._id)
       const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
-      this.setData({
-        tournament: result.data,
-        tournamentDisplay: buildTournamentDisplay(result.data),
+      const accessState = this.buildAccessState({
+        tournament,
+        resultSummary: this.data.resultSummary,
         isAdmin,
-        canEnterScore: isAdmin || this.data.isParticipant,
+        isParticipant: this.data.isParticipant
+      })
+      this.enableShareMenu(accessState.shareEnabled)
+      this.setData({
+        tournament,
+        tournamentDisplay: buildTournamentDisplay(tournament, this.data.resultSummary),
+        isAdmin,
+        ...accessState,
         loading: false
       })
     } catch (err) {
@@ -104,16 +195,28 @@ Page({
 
       const registrations = buildRosterPeople(rawRegs, avatarMap)
       const isParticipant = this.isCurrentMemberRegistered(rawRegs)
+      const accessState = this.buildAccessState({
+        tournament: this.data.tournament,
+        resultSummary: this.data.resultSummary,
+        isAdmin: this.data.isAdmin,
+        isParticipant
+      })
       this.setData({
         registrations,
         isParticipant,
-        canEnterScore: this.data.isAdmin || isParticipant
+        ...accessState
       })
     } catch (err) {
       console.error('加载参赛人员失败:', err)
+      const accessState = this.buildAccessState({
+        tournament: this.data.tournament,
+        resultSummary: this.data.resultSummary,
+        isAdmin: this.data.isAdmin,
+        isParticipant: false
+      })
       this.setData({
         isParticipant: false,
-        canEnterScore: !!this.data.isAdmin
+        ...accessState
       })
     }
   },
@@ -177,11 +280,52 @@ Page({
   },
 
   onEnterScore() {
-    if (!this.data.canEnterScore) {
+    if (!this.data.canOpenScore && !this.data.canEnterScore) {
       wx.showToast({ title: '仅参赛者可录入', icon: 'none' })
       return
     }
     wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
+  },
+
+  async loadResultSummary() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'listByTournament', tournamentId: this.data.tournamentId }
+      })
+      const rows = unpackMatchResultRows(res)
+      this.setData({
+        matchResultRows: rows,
+        resultSummary: buildResultSummary(rows)
+      })
+    } catch (err) {
+      console.warn('[tournament-detail] load result summary failed', err)
+      this.setData({
+        matchResultRows: [],
+        resultSummary: null,
+        resultDisplay: emptyResultDisplay()
+      })
+    }
+  },
+
+  onShareAppMessage() {
+    const tournament = this.data.tournament || {}
+    const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
+    const tournamentId = this.data.tournamentId || tournament._id || ''
+    return {
+      title: getTournamentShareTitle(tournamentWithSummary),
+      path: tournamentId ? `/pages/tournament-detail/index?id=${tournamentId}` : '/pages/match/index'
+    }
+  },
+
+  onShareTimeline() {
+    const tournament = this.data.tournament || {}
+    const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
+    const tournamentId = this.data.tournamentId || tournament._id || ''
+    return {
+      title: getTournamentShareTitle(tournamentWithSummary),
+      query: tournamentId ? `id=${tournamentId}` : ''
+    }
   },
 
   onDelete() {
@@ -212,12 +356,13 @@ Page({
   }
 })
 
-function buildTournamentDisplay(tournament) {
+function buildTournamentDisplay(tournament, resultSummary) {
   const config = tournament.config || {}
   const pointsRules = tournament.pointsRules || {}
   const placement = pointsRules.placement || {}
   const winLoss = pointsRules.winLoss || {}
   const isKnockout = tournament.format === 'knockout'
+  const statusMeta = getTournamentStatusMeta(withResultSummary(tournament, resultSummary))
 
   const placementRows = [
     { label: '冠军', value: placement.champion },
@@ -235,6 +380,11 @@ function buildTournamentDisplay(tournament) {
     currentRound: config.currentRound || 1,
     totalRounds: config.totalRounds || '-',
     formatText: isKnockout ? '淘汰赛' : '常规赛',
+    statusKind: statusMeta.kind,
+    statusLabel: statusMeta.label,
+    statusHint: statusMeta.hint,
+    scoreActionLabel: statusMeta.scoreActionLabel,
+    shareEnabled: statusMeta.canShare,
     hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
     seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
     pointsMode: isKnockout ? 'placement' : 'winLoss',
@@ -267,6 +417,272 @@ function buildRosterPeople(rawRegs, avatarMap) {
     push(reg.partnerId, reg.partnerName, reg)
   })
   return people
+}
+
+function unpackMatchResultRows(res) {
+  const data = res && res.result && res.result.data
+  if (data && Array.isArray(data.results)) return data.results
+  if (Array.isArray(data)) return data
+  return []
+}
+
+function emptyResultDisplay() {
+  return { visible: false, completedText: '', standings: [], groups: [] }
+}
+
+function isPlayableResult(row) {
+  return !!(
+    row &&
+    !row.bye &&
+    row.player1 &&
+    row.player2 &&
+    row.player1.id &&
+    row.player2.id &&
+    !isByeSide(row.player1) &&
+    !isByeSide(row.player2)
+  )
+}
+
+function isByeSide(side) {
+  return !!(side && (side.id === 'BYE' || side.name === 'BYE'))
+}
+
+function buildResultDisplay(rows, tournament, registrations) {
+  const playable = (rows || []).filter(isPlayableResult)
+  if (playable.length === 0) return emptyResultDisplay()
+  if (!playable.every(row => row.resultStatus === 'confirmed')) return emptyResultDisplay()
+
+  const sorted = playable.slice().sort((a, b) => {
+    if ((a.round || 0) !== (b.round || 0)) return (a.round || 0) - (b.round || 0)
+    if ((a.position || 0) !== (b.position || 0)) return (a.position || 0) - (b.position || 0)
+    return (a.queueOrder || 0) - (b.queueOrder || 0)
+  })
+  const groupsMap = new Map()
+  sorted.forEach(row => {
+    const round = row.round || 1
+    if (!groupsMap.has(round)) groupsMap.set(round, [])
+    groupsMap.get(round).push(buildResultMatchRow(row))
+  })
+
+  return {
+    visible: true,
+    completedText: `已完成 ${playable.length} / ${playable.length} 场`,
+    standings: buildResultStandings(sorted, tournament || {}, registrations || []),
+    groups: [...groupsMap.entries()].map(([round, matches]) => ({
+      round,
+      label: `ROUND ${round < 10 ? '0' : ''}${round}`,
+      matches
+    }))
+  }
+}
+
+function buildResultMatchRow(row) {
+  return {
+    matchId: resultMatchId(row),
+    round: row.round || 1,
+    position: row.position || 0,
+    p1Label: sideLabel(row.player1),
+    p2Label: sideLabel(row.player2),
+    scoreText: scoreText(row.score),
+    winnerLabel: sideLabel(row.winner),
+    pointsText: pointsText(row)
+  }
+}
+
+function resultMatchId(row) {
+  const persisted = [
+    row && row._id,
+    row && row.sourceMatchId,
+    row && row.matchId
+  ].map(keyPart).find(Boolean)
+  if (persisted) return persisted
+
+  const round = keyPart(row && row.round) || '1'
+  const position = keyPart(row && row.position) || '0'
+  const queueOrder = keyPart(row && row.queueOrder) || 'none'
+  const p1 = sideIdentity(row && row.player1) || sideLabel(row && row.player1) || 'p1'
+  const p2 = sideIdentity(row && row.player2) || sideLabel(row && row.player2) || 'p2'
+  return `round:${round}|position:${position}|queue:${queueOrder}|p1:${p1}|p2:${p2}`
+}
+
+function keyPart(value) {
+  if (value === undefined || value === null) return ''
+  return String(value).trim()
+}
+
+function sideLabel(side) {
+  if (!side) return ''
+  const name = side.name || ''
+  const partner = side.partnerName || ''
+  return partner ? `${name} / ${partner}` : name
+}
+
+function scoreText(score) {
+  const set0 = score && score.sets && score.sets[0]
+  if (!set0) return ''
+  const base = `${set0.a}:${set0.b}`
+  return score.tiebreak ? `${base} (${score.tiebreak})` : base
+}
+
+function pointsText(row) {
+  const entries = row && row.pointsAwarded && row.pointsAwarded.entries
+  if (!Array.isArray(entries) || entries.length === 0) return ''
+  const p1Ids = sideIds(row.player1)
+  const p2Ids = sideIds(row.player2)
+  const sumFor = ids => entries
+    .filter(entry => ids.includes(entry.memberId))
+    .reduce((sum, entry) => sum + (entry.points || 0), 0)
+  const p1 = sumFor(p1Ids)
+  const p2 = sumFor(p2Ids)
+  if (!p1 && !p2) return ''
+  return `+${p1} / +${p2}`
+}
+
+function sideIds(side) {
+  if (!side) return []
+  return [side.id, side.partnerId].filter(Boolean)
+}
+
+function buildResultStandings(rows, tournament, registrations) {
+  const directory = buildParticipantDirectory(rows, registrations)
+  const stats = new Map()
+
+  const ensure = member => {
+    if (!member || !member.memberId) return null
+    const key = member.memberId
+    if (!stats.has(key)) {
+      const name = member.memberName || key
+      stats.set(key, {
+        standingKey: key,
+        memberId: key,
+        memberName: name,
+        avatarUrl: member.avatarUrl || '',
+        playerInitial: member.playerInitial || firstChar(name),
+        singlesPoints: 0,
+        doublesPoints: 0,
+        totalPoints: 0,
+        wins: 0,
+        losses: 0
+      })
+    }
+    return stats.get(key)
+  }
+
+  rows.forEach(row => {
+    const p1Members = directory.membersFromSide(row.player1)
+    const p2Members = directory.membersFromSide(row.player2)
+    p1Members.forEach(ensure)
+    p2Members.forEach(ensure)
+
+    if (sameSide(row.winner, row.player1)) {
+      p1Members.forEach(member => { ensure(member).wins += 1 })
+      p2Members.forEach(member => { ensure(member).losses += 1 })
+    } else if (sameSide(row.winner, row.player2)) {
+      p2Members.forEach(member => { ensure(member).wins += 1 })
+      p1Members.forEach(member => { ensure(member).losses += 1 })
+    }
+
+    const entries = (row.pointsAwarded && row.pointsAwarded.entries) || []
+    const bucket = resultPointBucket(row, tournament)
+    entries.forEach(entry => {
+      if (!entry || !entry.memberId) return
+      const stat = ensure(directory.memberForId(entry.memberId))
+      if (!stat) return
+      const points = Number(entry.points) || 0
+      stat[bucket] += points
+      stat.totalPoints += points
+    })
+  })
+
+  return [...stats.values()]
+    .sort((a, b) => (
+      (b.totalPoints - a.totalPoints) ||
+      (b.wins - a.wins) ||
+      (a.losses - b.losses) ||
+      compareLabels(a.memberId, b.memberId) ||
+      compareLabels(a.memberName, b.memberName)
+    ))
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      recordText: `${item.wins}胜${item.losses}负`,
+      singlesPointsText: String(item.singlesPoints),
+      doublesPointsText: String(item.doublesPoints)
+    }))
+}
+
+function buildParticipantDirectory(rows, registrations) {
+  const members = new Map()
+  const add = (memberId, memberName, avatarUrl, playerInitial) => {
+    if (!memberId) return null
+    const key = String(memberId)
+    const existing = members.get(key) || { memberId: key }
+    const name = existing.memberName || memberName || key
+    const next = {
+      ...existing,
+      memberName: name,
+      avatarUrl: avatarUrl || existing.avatarUrl || '',
+      playerInitial: playerInitial || existing.playerInitial || firstChar(name)
+    }
+    members.set(key, next)
+    return next
+  }
+  const addSide = side => {
+    if (!side) return
+    add(side.id, side.name, side.avatarUrl, side.playerInitial)
+    add(side.partnerId, side.partnerName, side.partnerAvatarUrl, side.partnerInitial)
+  }
+
+  ;(registrations || []).forEach(member => {
+    add(member.playerId || member._id, member.playerName || member.name, member.avatarUrl, member.playerInitial)
+  })
+  ;(rows || []).forEach(row => {
+    addSide(row.player1)
+    addSide(row.player2)
+    addSide(row.winner)
+  })
+
+  const memberForId = memberId => add(memberId, '', '', '')
+  const membersFromSide = side => {
+    const ids = sideIds(side)
+    return ids.map(memberForId).filter(Boolean)
+  }
+  return { memberForId, membersFromSide }
+}
+
+function resultPointBucket(row, tournament) {
+  const type = (row && (row.tournamentType || row.type || row.matchType)) || (tournament && tournament.type) || 'singles'
+  if (type === 'doubles') return 'doublesPoints'
+  if (type === 'mixed' && (sideIds(row && row.player1).length > 1 || sideIds(row && row.player2).length > 1)) return 'doublesPoints'
+  return 'singlesPoints'
+}
+
+function sideIdentity(side) {
+  const ids = sideIds(side).slice().sort()
+  return ids.join('/')
+}
+
+function compareLabels(a, b) {
+  if (a === b) return 0
+  return a < b ? -1 : 1
+}
+
+function sameSide(a, b) {
+  if (!a || !b) return false
+  return a.id === b.id || a.id === b.partnerId || a.partnerId === b.id || (a.partnerId && a.partnerId === b.partnerId)
+}
+
+function buildResultSummary(rows) {
+  const playable = (rows || []).filter(isPlayableResult)
+  return {
+    playableCount: playable.length,
+    confirmedCount: playable.filter(row => row.resultStatus === 'confirmed').length
+  }
+}
+
+function withResultSummary(tournament, resultSummary) {
+  if (!tournament) return { resultSummary }
+  return { ...tournament, resultSummary: resultSummary || tournament.resultSummary || null }
 }
 
 function tournamentTypeText(type) {

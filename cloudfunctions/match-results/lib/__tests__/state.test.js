@@ -263,6 +263,61 @@ describe('submitResult', () => {
     expect(row.pointsAwarded.entries.filter(e => e.role === 'loser').map(e => e.memberId)).toEqual(['C', 'D'])
   })
 
+  test('regular tournament becomes ongoing after first score and completed after all playable matches are confirmed', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'upcoming'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [
+      {
+        _id: 'result_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm1',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 1,
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      },
+      {
+        _id: 'result_TR_m2',
+        tournamentId: 'TR',
+        sourceMatchId: 'm2',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 2,
+        player1: { id: 'C' },
+        player2: { id: 'D' },
+        playerIds: ['C', 'D'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      }
+    ]
+    seed.tournament_registrations = ['A', 'B', 'C', 'D'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TR', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'm1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    expect(db.__all().tournaments[0].status).toBe('ongoing')
+    expect(db.__all().tournaments[0].completedAt).toBeFalsy()
+
+    await svc.submitResult({ matchId: 'm2', score: { sets: [{ a: 4, b: 1 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__all().tournaments[0].completedAt).toBeDefined()
+  })
+
   test('regular singles tiebreak 5-7 awards player2 as winner', async () => {
     const db = makeDb(seed4Knockout())
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })

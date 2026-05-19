@@ -4,6 +4,7 @@ function loadPage(options = {}) {
   const app = options.app || { globalData: {}, refreshIdentity: jest.fn().mockResolvedValue(null) }
   const tournaments = options.tournaments || [{ _id: 't1', name: 'FU Open', type: 'singles' }]
   const registrationsByTournament = options.registrationsByTournament || {}
+  const resultRowsByTournament = options.resultRowsByTournament || {}
   const tournamentsCollection = {
     get: jest.fn().mockResolvedValue({ data: tournaments })
   }
@@ -18,12 +19,22 @@ function loadPage(options = {}) {
     navigateTo: jest.fn(),
     cloud: {
       database: jest.fn(() => db),
-      callFunction: jest.fn(({ data }) => Promise.resolve({
-        result: {
-          success: true,
-          data: registrationsByTournament[data.tournamentId] || []
+      callFunction: jest.fn(({ name, data }) => {
+        if (name === 'match-results') {
+          return Promise.resolve({
+            result: {
+              success: true,
+              data: { results: resultRowsByTournament[data.tournamentId] || [] }
+            }
+          })
         }
-      }))
+        return Promise.resolve({
+          result: {
+            success: true,
+            data: registrationsByTournament[data.tournamentId] || []
+          }
+        })
+      })
     }
   }
   global.Page = def => { pageDef = def }
@@ -92,5 +103,36 @@ describe('match page tournament entry permissions', () => {
 
     expect(ctx.data.tournaments[0].__permissionLabel).toBe('仅查看')
     expect(ctx.data.tournaments[0].__permissionKind).toBe('viewer')
+  })
+
+  test('decorates tournament status display fields', async () => {
+    const { pageDef } = loadPage({
+      tournaments: [{ _id: 't1', name: 'FU Open', type: 'singles', status: 'live' }]
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__statusKind).toBe('ongoing')
+    expect(ctx.data.tournaments[0].__statusLabel).toBe('进行中')
+    expect(ctx.data.tournaments[0].__statusHint).toBe('赛事进行中')
+  })
+
+  test('decorates all-confirmed stale upcoming event as settled', async () => {
+    const { pageDef } = loadPage({
+      tournaments: [{ _id: 't1', name: 'FU Open', type: 'singles', status: 'upcoming' }],
+      resultRowsByTournament: {
+        t1: [
+          { player1: { id: 'A' }, player2: { id: 'B' }, resultStatus: 'confirmed' },
+          { player1: { id: 'C' }, player2: { id: 'D' }, resultStatus: 'confirmed' }
+        ]
+      }
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__statusKind).toBe('settled')
+    expect(ctx.data.tournaments[0].__statusLabel).toBe('已结算')
   })
 })

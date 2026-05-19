@@ -27,11 +27,13 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     if (submitter.isAdmin) {
       await confirmOne(result, tournament, score, winner, submitter)
       await maybeAwardPlacement(tournament._id)
+      await refreshTournamentSettlementStatus(tournament._id)
     } else {
       await removeResultFields(result._id, ['score'])
       await db.collection('match_results').doc(result._id).update({
         data: { score, resultStatus: 'submitted' }
       })
+      await markTournamentOngoing(result.tournamentId)
     }
   }
 
@@ -51,6 +53,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
       count++
     }
     await maybeAwardPlacement(tournamentId)
+    await refreshTournamentSettlementStatus(tournamentId)
     return { confirmedCount: count }
   }
 
@@ -72,11 +75,12 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     if (result.matchKind === 'bracket' && oldWinnerId && newWinner && oldWinnerId !== newWinner.id) {
       await clearDownstream(result.tournamentId, result)
       await removeTournamentPointsByTournament(result.tournamentId)
-      await db.collection('tournaments').doc(result.tournamentId).update({ data: { status: 'ongoing' } })
+      await markTournamentOngoing(result.tournamentId)
     }
 
     await confirmOne(result, tournament, newScore, newWinner, admin)
     await maybeAwardPlacement(result.tournamentId)
+    await refreshTournamentSettlementStatus(result.tournamentId)
   }
 
   async function clearDownstream(tournamentId, oldMatch) {
@@ -235,8 +239,39 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
         points: e.points, rank: e.rank, awardedAt: now, createTime: now, updateTime: now
       })
     }
-    await db.collection('tournaments').doc(tournamentId).update({ data: { status: 'completed' } })
+    await db.collection('tournaments').doc(tournamentId).update({ data: { status: 'completed', completedAt: now, updateTime: now } })
     return { skipped: false, entriesCount: entries.length, entries }
+  }
+
+  async function refreshTournamentSettlementStatus(tournamentId) {
+    const rows = (await db.collection('match_results').where({ tournamentId }).get()).data || []
+    const playable = rows.filter(isPlayableResult)
+    if (playable.length === 0) return { skipped: true, reason: 'no_playable_matches' }
+    const allConfirmed = playable.every(r => r.resultStatus === 'confirmed')
+    if (allConfirmed) {
+      const now = new Date()
+      await db.collection('tournaments').doc(tournamentId).update({
+        data: { status: 'completed', completedAt: now, updateTime: now }
+      })
+      return { skipped: false, status: 'completed' }
+    }
+    const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed')
+    if (hasStarted) await markTournamentOngoing(tournamentId)
+    return { skipped: true, reason: 'not_all_confirmed' }
+  }
+
+  async function markTournamentOngoing(tournamentId) {
+    const t = await getTournament(tournamentId)
+    if (!t || ['draft', 'cancelled'].includes(t.status)) return
+    const now = new Date()
+    await db.collection('tournaments').doc(tournamentId).update({
+      data: { status: 'ongoing', completedAt: null, updateTime: now }
+    })
+  }
+
+  function isPlayableResult(row) {
+    if (!row || row.bye) return false
+    return !!(row.player1 && row.player2 && row.player1.id && row.player2.id)
   }
 
 

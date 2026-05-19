@@ -186,10 +186,14 @@
   letter-spacing: 0.08em;
 }
 
+.match-status.status-draft { background: var(--color-bg-3); color: var(--color-muted); }
 .match-status.status-upcoming { background: var(--color-bg-3); color: var(--color-ink-3); }
-.match-status.status-ongoing,
-.match-status.status-live { background: var(--color-lime); color: var(--color-ink); }
-.match-status.status-completed { background: var(--color-bg-3); color: var(--color-muted); }
+.match-status.status-ongoing { background: var(--color-lime); color: var(--color-ink); }
+.match-status.status-ended { background: var(--color-bg-3); color: var(--color-muted); }
+.match-status.status-completed,
+.match-status.status-settled { background: var(--color-ink); color: var(--color-bg); }
+.match-status.status-cancelled,
+.match-status.status-unknown { background: var(--color-bg-3); color: var(--color-muted); }
 
 .match-card-cta {
   display: flex;

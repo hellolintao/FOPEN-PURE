@@ -148,7 +148,7 @@
 | `startDate` | String | 是 | 开始日期，格式：YYYY-MM-DD |
 | `endDate` | String | 否 | 结束日期，格式：YYYY-MM-DD |
 | `location` | String | 否 | 地点说明 |
-| `status` | String | 是 | `draft` / `upcoming` / `ongoing` / `completed` |
+| `status` | String | 是 | 持久化生命周期：`draft`（草稿）/ `upcoming`（已发布待开始）/ `ongoing`（已开始录分）/ `completed`（比分已全部确认并结算）。前端展示态会优先按 `schedulePlan.courts[].slots` 精确时间窗口派生“待开始 / 进行中 / 已结束”，无具体时间时退回按 `startDate/endDate` 派生，并把 `completed` 展示为“已结算”。 |
 | `description` | String | 否 | 赛事描述 |
 | `maxPlayers` | Number | 否 | 淘汰赛最大参赛人数 |
 | `schedulePlan` | Object | 非 draft 必填 | 20 分钟粒度场地排程（Phase 7 2026-05-15 起固定 slotMinutes=20，UI 用 1 小时格但入库展开 3 个 slot），结构见下 |
@@ -158,6 +158,7 @@
 | `courtTimeGrid` | Object | 否 | 旧 20 分钟排程字段，仅历史兼容 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
+| `completedAt` | Date | 否 | 全部可打比赛确认并结算的时间，`status='completed'` 时写入 |
 
 ### schedulePlan 结构
 

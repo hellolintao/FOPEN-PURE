@@ -39,9 +39,9 @@
           <text class="mc-label">FORMAT</text>
           <text class="mc-val">{{item.format === 'knockout' ? '淘汰赛 KNOCKOUT' : '常规赛 REGULAR'}}</text>
         </view>
-        <view wx:if="{{item.status}}" class="mc-row">
+        <view wx:if="{{item.__statusLabel}}" class="mc-row">
           <text class="mc-label">STATUS</text>
-          <text class="mc-val match-status status-{{item.status}}">{{item.status === 'upcoming' ? '待开始' : item.status === 'ongoing' || item.status === 'live' ? '进行中' : item.status === 'completed' ? '已结束' : item.status}}</text>
+          <text class="mc-val match-status status-{{item.__statusKind}}">{{item.__statusLabel}}</text>
         </view>
       </view>
       <view class="match-card-cta">

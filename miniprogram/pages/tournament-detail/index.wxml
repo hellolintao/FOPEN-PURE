@@ -11,6 +11,7 @@
       <view class="hero-tapes">
         <text class="tape tape-stamped">TOURNAMENT</text>
         <text class="tape tape-ghost">{{tournamentDisplay.typeText}}</text>
+        <text class="td-status status-{{tournamentDisplay.statusKind}}">{{tournamentDisplay.statusLabel}}</text>
       </view>
       <text class="hero-title">{{tournament.name}}</text>
       <view class="hero-meta">
@@ -26,36 +27,53 @@
           <text class="hero-meta-label">FORMAT</text>
           <text class="hero-meta-val">{{tournamentDisplay.formatText}}</text>
         </view>
+        <view class="hero-meta-block hero-meta-status">
+          <text class="hero-meta-label">STATUS</text>
+          <text class="hero-meta-val">{{tournamentDisplay.statusHint}}</text>
+        </view>
       </view>
       <view wx:if="{{tournament.description}}" class="hero-desc">
         <text>{{tournament.description}}</text>
       </view>
     </view>
 
-    <!-- POINTS RULES -->
-    <view class="td-section anim-stage-rise anim-delay-2">
+    <!-- RESULTS -->
+    <view wx:if="{{resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-2">
       <view class="td-section-head">
-        <text class="tape">积分规则 · POINTS</text>
+        <text class="tape">赛果 · RESULTS</text>
+        <text class="td-section-count num">{{resultDisplay.completedText}}</text>
       </view>
-      <view wx:if="{{tournamentDisplay.pointsMode === 'winLoss'}}" class="points-row">
-        <view class="point-card point-win">
-          <text class="point-card-num num">{{tournamentDisplay.win}}</text>
-          <text class="point-card-label">胜</text>
+      <view wx:if="{{resultDisplay.standings.length > 0}}" class="result-standings">
+        <view class="result-standing-head">
+          <text class="result-standing-member">会员</text>
+          <text class="result-standing-record">胜负</text>
+          <text class="result-standing-points">单打</text>
+          <text class="result-standing-points">双打</text>
         </view>
-        <view class="point-card point-loss">
-          <text class="point-card-num num">{{tournamentDisplay.loss}}</text>
-          <text class="point-card-label">负</text>
-        </view>
-        <view wx:if="{{tournamentDisplay.walkover !== undefined}}" class="point-card point-wo">
-          <text class="point-card-num num">{{tournamentDisplay.walkover}}</text>
-          <text class="point-card-label">弃</text>
+        <view class="result-standing-row" wx:for="{{resultDisplay.standings}}" wx:key="standingKey">
+          <view class="result-standing-member">
+            <text class="result-rank num">{{item.rank}}</text>
+            <image wx:if="{{item.avatarUrl}}" class="result-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="result-avatar result-avatar-fallback">
+              <text class="result-avatar-initial">{{item.playerInitial}}</text>
+            </view>
+            <text class="result-member-name">{{item.memberName}}</text>
+          </view>
+          <text class="result-standing-record num">{{item.recordText}}</text>
+          <text class="result-standing-points num">{{item.singlesPointsText}}</text>
+          <text class="result-standing-points num">{{item.doublesPointsText}}</text>
         </view>
       </view>
-      <view wx:if="{{tournamentDisplay.pointsMode === 'placement'}}" class="points-placement">
-        <view class="placement-row" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
-          <text class="placement-label">{{item.label}}</text>
-          <text class="placement-divider"></text>
-          <text class="placement-num num">{{item.value}}</text>
+      <view class="result-groups">
+        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="round">
+          <text class="result-group-label">{{group.label}}</text>
+          <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
+            <view class="result-match-main">
+              <text class="result-side">{{match.p1Label}}</text>
+              <text class="result-score num">{{match.scoreText || '—'}}</text>
+              <text class="result-side result-side-right">{{match.p2Label}}</text>
+            </view>
+          </view>
         </view>
       </view>
     </view>
@@ -145,6 +163,34 @@
       </view>
     </view>
 
+    <!-- POINTS RULES -->
+    <view class="td-section anim-stage-rise anim-delay-5">
+      <view class="td-section-head">
+        <text class="tape">积分规则 · POINTS</text>
+      </view>
+      <view wx:if="{{tournamentDisplay.pointsMode === 'winLoss'}}" class="points-row">
+        <view class="point-card point-win">
+          <text class="point-card-num num">{{tournamentDisplay.win}}</text>
+          <text class="point-card-label">胜</text>
+        </view>
+        <view class="point-card point-loss">
+          <text class="point-card-num num">{{tournamentDisplay.loss}}</text>
+          <text class="point-card-label">负</text>
+        </view>
+        <view wx:if="{{tournamentDisplay.walkover !== undefined}}" class="point-card point-wo">
+          <text class="point-card-num num">{{tournamentDisplay.walkover}}</text>
+          <text class="point-card-label">弃</text>
+        </view>
+      </view>
+      <view wx:if="{{tournamentDisplay.pointsMode === 'placement'}}" class="points-placement">
+        <view class="placement-row" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
+          <text class="placement-label">{{item.label}}</text>
+          <text class="placement-divider"></text>
+          <text class="placement-num num">{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- DELETE -->
     <view wx:if="{{isAdmin}}" class="td-danger">
       <view class="delete-btn tap-scale" bindtap="onDelete">
@@ -157,6 +203,7 @@
 </view>
 
 <view wx:if="{{tournament}}" class="td-footer">
+  <button wx:if="{{shareEnabled}}" open-type="share" class="footer-cta cta-secondary share-cta">分享</button>
   <block wx:if="{{tournament.status === 'draft' && isAdmin}}">
     <view class="footer-cta cta-lime full" bindtap="onResumeDraft">
       <text>继续创建</text>
@@ -164,6 +211,6 @@
   </block>
   <block wx:else>
     <view wx:if="{{isAdmin}}" class="footer-cta cta-secondary" bindtap="onEdit">编辑</view>
-    <view class="footer-cta cta-lime flex-1 {{canEnterScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">录入成绩</view>
+    <view class="footer-cta cta-lime flex-1 {{canOpenScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">{{scoreActionLabel}}</view>
   </block>
 </view>

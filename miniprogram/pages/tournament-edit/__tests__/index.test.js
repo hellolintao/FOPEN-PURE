@@ -113,4 +113,60 @@ describe('tournament-edit mixed regular flow', () => {
 
     expect(ctx._minPlayers()).toBe(4)
   })
+
+  test('resolveSeasonId uses active season returned by seasons.getCurrent for the start date', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    wx.cloud.callFunction.mockResolvedValueOnce({
+      result: {
+        success: true,
+        data: {
+          seasonId: 'season_1740000000000',
+          season: { _id: 'season_1740000000000', name: '2026 Spring' }
+        }
+      }
+    })
+
+    await expect(ctx.resolveSeasonId('2026-05-19')).resolves.toBe('season_1740000000000')
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'seasons',
+      data: { action: 'getCurrent', date: '2026-05-19' }
+    })
+  })
+
+  test('resolveSeasonId falls back to nested season id from getCurrent data', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    wx.cloud.callFunction.mockResolvedValueOnce({
+      result: {
+        success: true,
+        data: {
+          season: { _id: 'season_nested', name: 'Nested' }
+        }
+      }
+    })
+
+    await expect(ctx.resolveSeasonId('2026-05-19')).resolves.toBe('season_nested')
+  })
+
+  test('resolveSeasonId falls back to top-level id from getCurrent data', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    wx.cloud.callFunction.mockResolvedValueOnce({
+      result: {
+        success: true,
+        data: { _id: 'season_top_level' }
+      }
+    })
+
+    await expect(ctx.resolveSeasonId('2026-05-19')).resolves.toBe('season_top_level')
+  })
+
+  test('resolveSeasonId falls back to season year when getCurrent has no id', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    wx.cloud.callFunction.mockRejectedValueOnce(new Error('cloud unavailable'))
+
+    await expect(ctx.resolveSeasonId('2026-05-19')).resolves.toBe('season_2026')
+  })
 })

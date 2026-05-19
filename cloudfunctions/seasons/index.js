@@ -1,9 +1,42 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
+const { selectCurrentSeason } = require('./lib/current')
+
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('seasons')
+
+function getShanghaiDate(now = new Date()) {
+  const date = new Date(now)
+  const shanghaiTime = date.getTime() + 8 * 60 * 60 * 1000
+  return new Date(shanghaiTime).toISOString().slice(0, 10)
+}
+
+async function getCurrentSeason(event, options = {}) {
+  const data = event && event.data
+  const today = options.today || (() => getShanghaiDate(options.now || new Date()))
+  const seasonCollection = options.collection || collection
+  const selector = options.selectCurrentSeason || selectCurrentSeason
+  const targetDate = (event && event.date) || (data && data.date) || today()
+  const result = await seasonCollection
+    .where({})
+    .orderBy('startDate', 'desc')
+    .limit(100)
+    .get()
+  const season = selector(result.data || [], targetDate)
+  if (!season) {
+    return { success: false, error: { code: 'NOT_FOUND', message: '未找到当前赛季' } }
+  }
+  return {
+    success: true,
+    data: {
+      season,
+      seasonId: season._id,
+      name: season.name
+    }
+  }
+}
 
 exports.main = async (event, context) => {
   const { action, data, page = 1, pageSize = 10, keyword, id } = event
@@ -54,7 +87,12 @@ exports.main = async (event, context) => {
         .limit(pageSize)
         .get()
     }
+    case 'getCurrent': {
+      return await getCurrentSeason(event)
+    }
     default:
       return { errMsg: 'invalid action' }
   }
 }
+
+exports.__test__ = { getCurrentSeason, getShanghaiDate }

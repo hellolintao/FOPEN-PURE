@@ -62,13 +62,13 @@
 
       <view class="block block--collapsible">
         <view class="block-title" bindtap="onToggleFinished">
-          <text>已结束</text>
+          <text>已结算</text>
           <text class="block-toggle">{{finishedExpanded ? '收起' : '展开'}}</text>
         </view>
         <block wx:if="{{finishedExpanded}}">
           <skeleton-loader wx:if="{{finishedState === 'loading'}}" rows="3" />
           <view wx:elif="{{finishedState === 'error'}}" class="finished-error">
-            <text>已结束 · 暂时无法加载</text>
+            <text>已结算 · 暂时无法加载</text>
             <view class="finished-retry" bindtap="onRetryFinished">重试</view>
           </view>
           <view wx:elif="{{finishedState === 'loaded'}}">
