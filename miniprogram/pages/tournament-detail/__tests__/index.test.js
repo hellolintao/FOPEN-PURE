@@ -148,6 +148,24 @@ describe('tournament-detail score permissions', () => {
     expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/tournament-score/index?tournamentId=t1' })
   })
 
+  test('delete success marks tournament list dirty before navigating back', () => {
+    jest.useFakeTimers()
+    const { pageDef, app } = loadPage({ app: { globalData: {} } })
+    wx.showModal.mockImplementation(({ success }) => success({ confirm: true }))
+    wx.cloud.callFunction.mockImplementation(({ success }) => {
+      success({ result: { success: true } })
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't-delete' })
+
+    ctx.onDelete()
+
+    expect(app.globalData.tournamentListDirty).toBe(true)
+    expect(app.globalData.deletedTournamentId).toBe('t-delete')
+    jest.advanceTimersByTime(500)
+    expect(wx.navigateBack).toHaveBeenCalled()
+    jest.useRealTimers()
+  })
+
   test('completed tournament allows viewer to open score page as results', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef, {

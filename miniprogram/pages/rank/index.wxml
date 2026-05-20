@@ -4,7 +4,7 @@
   <view class="page-head anim-stage-rise">
     <view class="head-meta">
       <text class="tape tape-stamped">SEASON · S{{seasonYear}}</text>
-      <text class="head-meta-text">{{rankList.length}} 位选手 · 实时更新</text>
+      <text class="head-meta-text">{{rankList.length}} 位选手 · 每日23:30更新</text>
     </view>
     <view class="head-title">
       <text class="head-title-zh">排行榜</text>

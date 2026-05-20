@@ -130,8 +130,9 @@ Page({
       })
       this.recomputeBottomState()
 
-      if (this.data.anchorMatchId) {
-        const sel = `#row-${this.data.anchorMatchId}`
+      const anchorRowId = this.getAnchorRowId(rowsByRound)
+      if (anchorRowId) {
+        const sel = `#row-${anchorRowId}`
         wx.createSelectorQuery().select(sel).boundingClientRect(rect => {
           if (rect) wx.pageScrollTo({ scrollTop: Math.max(0, rect.top - 100), duration: 200 })
         }).exec()
@@ -142,6 +143,19 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  getAnchorRowId(rowsByRound = this.data.rowsByRound) {
+    const anchorMatchId = this.data.anchorMatchId
+    if (!anchorMatchId) return ''
+    for (const group of (Array.isArray(rowsByRound) ? rowsByRound : [])) {
+      for (const match of (group && Array.isArray(group.matches) ? group.matches : [])) {
+        if (match && (match.sourceMatchId === anchorMatchId || match._id === anchorMatchId || match.matchId === anchorMatchId)) {
+          return match.sourceMatchId || match.matchId || match._id || anchorMatchId
+        }
+      }
+    }
+    return anchorMatchId
   },
 
   onDraftChange(e) {

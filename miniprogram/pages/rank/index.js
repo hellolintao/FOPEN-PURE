@@ -1,5 +1,8 @@
 const { callFunction } = require('../../utils/cloud')
 const { syncTabBar } = require('../../utils/tab-bar')
+const { getCacheEntry, isFresh, nextDailyRefreshAt, setCache } = require('../../utils/page-cache')
+
+const RANK_CACHE_VERSION = 'v2'
 
 Page({
   data: {
@@ -22,7 +25,17 @@ Page({
   },
 
   async loadRank() {
-    this.setData({ loading: true })
+    const cacheKey = this._cacheKey('list')
+    const cached = getCacheEntry(cacheKey)
+    const cachedList = cached && cached.value && Array.isArray(cached.value.rankList)
+      ? cached.value.rankList
+      : null
+    if (cachedList) {
+      this.setData({ rankList: cachedList })
+      if (isFresh(cached)) return
+    }
+
+    this.setData({ loading: !cachedList })
     try {
       const res = await callFunction({
         name: 'points-engine',
@@ -39,6 +52,7 @@ Page({
         winRatePct: this._formatWinRatePct(row)
       }))
       this.setData({ rankList: enriched })
+      setCache(cacheKey, { rankList: enriched }, { expiresAt: nextDailyRefreshAt() })
     } catch (err) {
       console.error('[rank] loadRank error', err)
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 })
@@ -48,6 +62,14 @@ Page({
   },
 
   async loadHero() {
+    const cacheKey = this._cacheKey('hero')
+    const cached = getCacheEntry(cacheKey)
+    const hasHero = cached && cached.value && Object.prototype.hasOwnProperty.call(cached.value, 'starHero')
+    if (hasHero) {
+      this.setData({ starHero: cached.value.starHero })
+      if (isFresh(cached)) return
+    }
+
     try {
       const res = await callFunction({
         name: 'weekly-star',
@@ -58,7 +80,9 @@ Page({
         }
       })
       const data = res && res.result && res.result.data
-      this.setData({ starHero: data || { mode: 'empty', star: null, subtitle: null } })
+      const starHero = data || { mode: 'empty', star: null, subtitle: null }
+      this.setData({ starHero })
+      setCache(cacheKey, { starHero }, { expiresAt: nextDailyRefreshAt() })
     } catch (err) {
       console.error('[rank] loadHero error', err)
       this.setData({ starHero: { mode: 'empty', star: null, subtitle: null } })
@@ -75,6 +99,10 @@ Page({
 
   _getCurrentSeasonId() {
     return `season_${this.data.seasonYear}`
+  },
+
+  _cacheKey(kind) {
+    return `rank:${kind}:${RANK_CACHE_VERSION}:${this._getCurrentSeasonId()}:${this.data.activeTab}`
   },
 
   _formatWinRatePct(row) {

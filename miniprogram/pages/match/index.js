@@ -1,11 +1,15 @@
 const db = wx.cloud.database()
 const { syncTabBar } = require('../../utils/tab-bar')
 const { decorateTournamentStatus } = require('../../utils/tournament-status')
+const { getCacheEntry, isFresh, removeCache, setCache } = require('../../utils/page-cache')
 const app = getApp()
+
+const MATCH_CACHE_TTL_MS = 60 * 1000
 
 Page({
 	data: {
-		tournaments: []
+		tournaments: [],
+		loading: true
 	},
 	onLoad() {
 		this.loadTournaments()
@@ -17,12 +21,49 @@ Page({
 	async loadTournaments() {
 		try {
 			await this.ensureIdentity()
+			const cacheKey = this._tournamentsCacheKey()
+			const dirtyState = this._consumeTournamentListDirtyState()
+			const cached = getCacheEntry(cacheKey)
+			const cachedTournaments = cached && cached.value && Array.isArray(cached.value.tournaments)
+				? cached.value.tournaments
+				: null
+			if (cachedTournaments) {
+				const visibleTournaments = dirtyState.deletedTournamentId
+					? cachedTournaments.filter(tournament => tournament && tournament._id !== dirtyState.deletedTournamentId)
+					: cachedTournaments
+				this.setData({ tournaments: visibleTournaments, loading: false })
+				if (!dirtyState.dirty && isFresh(cached)) return
+				removeCache(cacheKey)
+			} else {
+				this.setData({ loading: true })
+			}
+
 			const result = await db.collection('tournaments').get()
 			const tournaments = await this.decorateTournamentPermissions(result.data || [])
-			this.setData({ tournaments })
+			this.setData({ tournaments, loading: false })
+			setCache(cacheKey, { tournaments }, { ttlMs: MATCH_CACHE_TTL_MS })
 		} catch (err) {
 			console.error('获取赛事失败:', err)
+			this.setData({ loading: false })
 		}
+	},
+	_tournamentsCacheKey() {
+		const globalData = (app && app.globalData) || {}
+		const member = globalData.currentMember || {}
+		const role = globalData.isAdmin ? 'admin' : 'member'
+		return `match:tournaments:v1:${role}:${member._id || 'guest'}`
+	},
+	_consumeTournamentListDirtyState() {
+		const globalData = (app && app.globalData) || {}
+		const state = {
+			dirty: !!globalData.tournamentListDirty,
+			deletedTournamentId: globalData.deletedTournamentId || ''
+		}
+		if (state.dirty || state.deletedTournamentId) {
+			globalData.tournamentListDirty = false
+			globalData.deletedTournamentId = ''
+		}
+		return state
 	},
 	async ensureIdentity() {
 		try {

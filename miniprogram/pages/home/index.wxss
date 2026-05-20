@@ -81,6 +81,18 @@
   z-index: 0;
 }
 
+.hero-credit {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--color-ink-3);
+}
+
 .hero-headline {
   position: relative;
   z-index: 1;

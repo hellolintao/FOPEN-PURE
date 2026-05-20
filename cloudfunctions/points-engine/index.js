@@ -10,11 +10,12 @@ const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
 const { computeH2H } = require('./lib/player-h2h')
 
-exports.main = async (event) => {
-  const { action } = event
+exports.main = async (event = {}) => {
+  const action = event.action || 'refreshRankCache'
   try {
     if (action === 'rankAggregate')    return await rankAggregate(event)
     if (action === 'recompute')        return await recompute(event)
+    if (action === 'refreshRankCache') return await refreshRankCache(event)
 
     // 兼容 wrappers (旧前端契约保持)
     if (action === 'rankList')         return await rankListCompat(event)
@@ -58,20 +59,98 @@ async function recompute({ tournamentId }) {
 
 async function rankListCompat({ type = 'singles', currentSeasonId }) {
   if (!currentSeasonId) return { success: true, data: { rankList: [] } }
-  const list = await aggregateRanks({ db, seasonId: currentSeasonId, type, pageSize: 100 })
+  const cached = await fetchRankCache({ seasonId: currentSeasonId, type })
+  if (cached) {
+    return {
+      success: true,
+      data: {
+        rankList: cached.rankList || [],
+        cachedAt: cached.computedAt || null,
+        cacheDate: cached.cacheDate || null
+      }
+    }
+  }
+  return { success: true, data: { rankList: await buildRankList({ seasonId: currentSeasonId, type }) } }
+}
+
+async function buildRankList({ seasonId, type = 'singles' }) {
+  const list = await aggregateRanks({ db, seasonId, type, pageSize: 100 })
   const joined = await joinMembers(list)
   const withWinRate = joined.map(row => {
     const matches = (row.winCount || 0) + (row.lossCount || 0)
     return { ...row, winRate: matches > 0 ? row.winCount / matches : 0 }
   })
   const memberIds = withWinRate.map(row => row._id)
-  const snapshotMap = await fetchLatestSnapshotMap({ seasonId: currentSeasonId, type, memberIds })
+  const snapshotMap = await fetchLatestSnapshotMap({ seasonId, type, memberIds })
   const out = withWinRate.map((row, i) => {
     const currentRank = i + 1
     const snap = snapshotMap.get(row._id)
     return { ...row, trendDelta: snap ? (snap.rank - currentRank) : null }
   })
-  return { success: true, data: { rankList: out } }
+  return out
+}
+
+async function refreshRankCache({ seasonId, now } = {}) {
+  const computedAt = new Date(now || Date.now())
+  const resolvedSeasonId = seasonId || `season_${toBeijingDateKey(computedAt).slice(0, 4)}`
+  const cacheDate = toBeijingDateKey(computedAt)
+  const refreshedTypes = []
+  for (const type of ['singles', 'doubles']) {
+    const rankList = await buildRankList({ seasonId: resolvedSeasonId, type })
+    await upsertRankCache({
+      _id: rankCacheId(resolvedSeasonId, type),
+      seasonId: resolvedSeasonId,
+      type,
+      rankList,
+      cacheDate,
+      computedAt,
+      updateTime: computedAt
+    })
+    refreshedTypes.push(type)
+  }
+  return { success: true, data: { seasonId: resolvedSeasonId, cacheDate, refreshedTypes } }
+}
+
+async function fetchRankCache({ seasonId, type }) {
+  try {
+    const res = await db.collection('rank_cache').doc(rankCacheId(seasonId, type)).get()
+    const row = res && res.data
+    if (!row || !Array.isArray(row.rankList)) return null
+    return row
+  } catch (err) {
+    if (isMissingCollectionError(err)) return null
+    throw err
+  }
+}
+
+async function upsertRankCache(row) {
+  await ensureRankCacheCollection()
+  const collection = db.collection('rank_cache')
+  const existing = await collection.doc(row._id).get().catch(() => null)
+  if (existing && existing.data) {
+    const { _id, ...data } = row
+    await collection.doc(row._id).update({ data })
+    return
+  }
+  await collection.add({ data: row })
+}
+
+async function ensureRankCacheCollection() {
+  if (!db || typeof db.createCollection !== 'function') return
+  try {
+    await db.createCollection('rank_cache')
+  } catch (err) {
+    // 已存在或无显式建集合权限时，交给后续真实写入暴露具体错误。
+  }
+}
+
+function rankCacheId(seasonId, type) {
+  return `rank_cache_${seasonId}_${type}`
+}
+
+function toBeijingDateKey(date) {
+  const d = new Date(date)
+  return new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
 async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {

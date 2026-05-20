@@ -17,6 +17,7 @@
   <!-- HERO -->
   <view class="hero-block anim-stage-rise anim-delay-1">
     <view class="hero-bg-num num">26</view>
+    <text class="hero-credit">Created by BrainLe</text>
     <view class="hero-headline">
       <text class="hero-line">FU OPEN.</text>
       <text class="hero-line">2026.</text>

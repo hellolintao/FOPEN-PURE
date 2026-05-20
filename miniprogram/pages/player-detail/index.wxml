@@ -23,75 +23,54 @@
       </view>
     </view>
 
-    <!-- SINGLES STATS -->
-    <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-2">
+    <!-- TABS -->
+    <view class="pd-tab-wrap anim-stage-rise anim-delay-2">
+      <chip-tab
+        value="{{activeTab}}"
+        options="{{playerTabOptions}}"
+        bindchange="onTabChange"
+      />
+    </view>
+
+    <!-- ACTIVE STATS -->
+    <view wx:if="{{stats}}" class="pd-section anim-stage-rise anim-delay-3">
       <view class="pd-section-head">
-        <text class="tape tape-lime tape-stamped-lime">SINGLES · 单打</text>
+        <text class="tape {{activeTab === 'singles' ? 'tape-lime tape-stamped-lime' : 'tape-ghost'}}">{{activeTapeLabel}}</text>
       </view>
       <view class="pd-stats-row">
         <view class="pd-stat pd-stat-paper">
-          <text class="pd-stat-num num">{{stats.singles.winCount}}<text class="pd-stat-denom">/{{stats.singles.winCount + stats.singles.lossCount}}</text></text>
+          <text class="pd-stat-num num">{{activeStats.winCount}}<text class="pd-stat-denom">/{{activeStats.winCount + activeStats.lossCount}}</text></text>
           <text class="pd-stat-label">胜场/总</text>
         </view>
-        <view class="pd-stat pd-stat-lime">
-          <text class="pd-stat-num num">{{singlesPct}}</text>
+        <view class="pd-stat {{activeTab === 'singles' ? 'pd-stat-lime' : 'pd-stat-paper-alt'}}">
+          <text class="pd-stat-num num">{{activePct}}</text>
           <text class="pd-stat-label">胜率</text>
         </view>
-        <view class="pd-stat pd-stat-ink">
-          <text class="pd-stat-num num">{{stats.singles.totalPoints}}</text>
+        <view class="pd-stat {{activeTab === 'singles' ? 'pd-stat-ink' : 'pd-stat-paper-alt'}}">
+          <text class="pd-stat-num num">{{activeStats.totalPoints}}</text>
           <text class="pd-stat-label">积分</text>
         </view>
       </view>
     </view>
 
-    <!-- DOUBLES STATS -->
-    <view wx:if="{{stats && hasDoubles}}" class="pd-section anim-stage-rise anim-delay-3">
-      <view class="pd-section-head">
-        <text class="tape tape-ghost">DOUBLES · 双打</text>
-      </view>
-      <view class="pd-stats-row">
-        <view class="pd-stat pd-stat-paper">
-          <text class="pd-stat-num num">{{stats.doubles.winCount}}<text class="pd-stat-denom">/{{stats.doubles.winCount + stats.doubles.lossCount}}</text></text>
-          <text class="pd-stat-label">胜场/总</text>
-        </view>
-        <view class="pd-stat pd-stat-paper-alt">
-          <text class="pd-stat-num num">{{doublesPct}}</text>
-          <text class="pd-stat-label">胜率</text>
-        </view>
-        <view class="pd-stat pd-stat-paper-alt">
-          <text class="pd-stat-num num">{{stats.doubles.totalPoints}}</text>
-          <text class="pd-stat-label">积分</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- SINGLES RANK CHART -->
+    <!-- ACTIVE RANK CHART -->
     <view class="pd-section anim-stage-rise anim-delay-4">
       <view class="pd-section-head">
-        <text class="tape tape-lime tape-stamped-lime">排名走势 · 单打 · 12周</text>
+        <text class="tape {{activeTab === 'singles' ? 'tape-lime tape-stamped-lime' : 'tape-ghost'}}">排名走势 · {{activeTypeLabel}} · 12周</text>
       </view>
-      <rank-chart data="{{rankHistory.singles}}" />
-      <text wx:if="{{rankHistory.singles.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{rankHistory.singles.length}} 周</text>
+      <rank-chart data="{{activeRankHistory}}" />
+      <text wx:if="{{activeRankHistory.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{activeRankHistory.length}} 周</text>
     </view>
 
-    <!-- DOUBLES RANK CHART -->
-    <view wx:if="{{hasDoubles && rankHistory.doubles.length > 0}}" class="pd-section anim-stage-rise anim-delay-5">
+    <!-- ACTIVE H2H -->
+    <view class="pd-section anim-stage-rise anim-delay-5">
       <view class="pd-section-head">
-        <text class="tape tape-ghost">排名走势 · 双打 · 12周</text>
+        <text class="tape {{activeTab === 'singles' ? 'tape-lime tape-stamped-lime' : 'tape-ghost'}}">交手记录 · H2H · {{activeTypeLabel}}</text>
+        <text wx:if="{{activeH2H.length}}" class="pd-section-count num">{{activeH2H.length}}</text>
       </view>
-      <rank-chart data="{{rankHistory.doubles}}" />
-      <text wx:if="{{rankHistory.doubles.length >= 2}}" class="pd-chart-meta">越靠上名次越好 · {{rankHistory.doubles.length}} 周</text>
-    </view>
-
-    <!-- SINGLES H2H -->
-    <view wx:if="{{h2h.singles.length > 0}}" class="pd-section anim-stage-rise anim-delay-6">
-      <view class="pd-section-head">
-        <text class="tape tape-lime tape-stamped-lime">交手记录 · H2H · 单打</text>
-        <text class="pd-section-count num">{{h2h.singles.length}}</text>
-      </view>
-      <view class="pd-recent-list">
+      <view wx:if="{{activeH2H.length > 0}}" class="pd-recent-list">
         <h2h-row
-          wx:for="{{h2hVisible.singles}}"
+          wx:for="{{activeH2HVisible}}"
           wx:key="memberId"
           player-id="{{item.memberId}}"
           name="{{item.name}}"
@@ -101,48 +80,25 @@
           bind:tap="onH2HTap"
         />
       </view>
-      <button
-        wx:if="{{h2h.singles.length > 5 && !h2hExpanded.singles}}"
-        class="pd-h2h-expand"
-        data-type="singles"
-        bindtap="toggleH2HExpanded"
-      >展开全部 {{h2h.singles.length}} 人 →</button>
-    </view>
-
-    <!-- DOUBLES H2H -->
-    <view wx:if="{{hasDoubles && h2h.doubles.length > 0}}" class="pd-section anim-stage-rise anim-delay-7">
-      <view class="pd-section-head">
-        <text class="tape tape-ghost">交手记录 · H2H · 双打</text>
-        <text class="pd-section-count num">{{h2h.doubles.length}}</text>
-      </view>
-      <view class="pd-recent-list">
-        <h2h-row
-          wx:for="{{h2hVisible.doubles}}"
-          wx:key="memberId"
-          player-id="{{item.memberId}}"
-          name="{{item.name}}"
-          avatar-url="{{item.avatarUrl}}"
-          wins="{{item.wins}}"
-          losses="{{item.losses}}"
-          bind:tap="onH2HTap"
-        />
+      <view wx:else class="pd-recent-empty">
+        <text>暂无{{activeTypeLabel}}交手记录</text>
       </view>
       <button
-        wx:if="{{h2h.doubles.length > 5 && !h2hExpanded.doubles}}"
+        wx:if="{{activeH2H.length > h2hDefaultVisible && !activeH2HExpanded}}"
         class="pd-h2h-expand"
-        data-type="doubles"
+        data-type="{{activeTab}}"
         bindtap="toggleH2HExpanded"
-      >展开全部 {{h2h.doubles.length}} 人 →</button>
+      >展开全部 {{activeH2H.length}} 人 →</button>
     </view>
 
     <!-- RECENT -->
-    <view class="pd-section anim-stage-rise anim-delay-8">
+    <view class="pd-section anim-stage-rise anim-delay-6">
       <view class="pd-section-head">
-        <text class="tape">最近比赛 · RECENT</text>
-        <text wx:if="{{recent.length}}" class="pd-section-count num">{{recent.length}}</text>
+        <text class="tape">最近比赛 · {{activeTypeLabel}} · RECENT</text>
+        <text wx:if="{{activeRecent.length}}" class="pd-section-count num">{{activeRecent.length}}</text>
       </view>
-      <view wx:if="{{recent.length > 0}}" class="pd-recent-list">
-        <view wx:for="{{recent}}" wx:key="_id" class="pd-recent-row">
+      <view wx:if="{{activeRecent.length > 0}}" class="pd-recent-list">
+        <view wx:for="{{activeRecent}}" wx:key="_id" class="pd-recent-row" data-tournamentid="{{item.tournamentId}}" data-matchid="{{item.matchId || item.sourceMatchId || item._id}}" bindtap="onRecentTap" hover-class="pd-recent-row--active" hover-stay-time="80">
           <view class="pd-recent-top">
             <text class="pd-recent-badge {{item.tournamentFormat === 'regular' ? 'reg' : ''}}">{{item.tournamentFormat === 'regular' ? '常规赛' : (item.roundLabel || ('R' + item.round))}}</text>
             <text class="pd-recent-tour">{{item.tournamentName || '赛事'}}</text>
@@ -158,7 +114,7 @@
         </view>
       </view>
       <view wx:else class="pd-recent-empty">
-        <text>暂无近期比赛</text>
+        <text>暂无{{activeTypeLabel}}近期比赛</text>
       </view>
     </view>
 

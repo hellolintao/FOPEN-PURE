@@ -1,4 +1,8 @@
 const { syncTabBar } = require('../../utils/tab-bar');
+const { getCacheEntry, isFresh, setCache } = require('../../utils/page-cache');
+
+const MANAGE_CACHE_TTL_MS = 60 * 1000;
+const MANAGE_CACHE_KEY = 'manage:brackets:v1';
 
 Page({
   data: {
@@ -17,7 +21,18 @@ Page({
   },
 
   async loadBracketsList() {
-    this.setData({ loading: true });
+    const cached = getCacheEntry(MANAGE_CACHE_KEY);
+    const cachedValue = cached && cached.value;
+    if (cachedValue && Array.isArray(cachedValue.bracketsList) && cachedValue.tournamentsMap) {
+      this.setData({
+        bracketsList: cachedValue.bracketsList,
+        tournamentsMap: cachedValue.tournamentsMap,
+        loading: false
+      });
+      if (isFresh(cached)) return;
+    }
+
+    this.setData({ loading: !(cachedValue && Array.isArray(cachedValue.bracketsList)) });
 
     try {
       // 获取所有对位表
@@ -55,6 +70,7 @@ Page({
         tournamentsMap: tournamentsMap,
         loading: false
       });
+      setCache(MANAGE_CACHE_KEY, { bracketsList: brackets, tournamentsMap }, { ttlMs: MANAGE_CACHE_TTL_MS });
     } catch (err) {
       console.error('加载对位表列表失败:', err);
       this.setData({ loading: false });

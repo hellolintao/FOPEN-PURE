@@ -11,12 +11,16 @@
     <text class="head-meta">查看俱乐部全部赛事 · 点击进入详情</text>
   </view>
 
-  <view wx:if="{{tournaments.length === 0}}" class="match-empty">
+  <view class="match-skeleton" wx:if="{{loading && tournaments.length === 0}}">
+    <skeleton-loader rows="{{6}}" />
+  </view>
+
+  <view wx:if="{{!loading && tournaments.length === 0}}" class="match-empty">
     <text class="tape">暂无赛事</text>
     <text class="match-empty-hint">本赛季还未发布赛事，先关注首页等待开赛</text>
   </view>
 
-  <view wx:else class="match-list">
+  <view wx:if="{{tournaments.length > 0}}" class="match-list">
     <view
       wx:for="{{tournaments}}" wx:key="_id"
       class="match-card tap-scale anim-stage-rise"

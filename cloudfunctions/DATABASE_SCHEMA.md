@@ -98,6 +98,27 @@
 
 ---
 
+## rank_cache
+
+排行榜每日缓存。`points-engine` 每天 23:30 由 timer 触发 `refreshRankCache`，为当前赛季的单打、双打各写一条缓存；`rankList` 优先读取这里，避免排行榜每次进入页面都实时聚合 `match_results / tournament_points / baseline_standings`。
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | string | `rank_cache_<seasonId>_<type>`，例 `rank_cache_season_2026_singles` |
+| `seasonId` | string | 赛季，例 `season_2026` |
+| `type` | string | `singles` \| `doubles` |
+| `rankList` | array | 已拼好会员信息、胜率和 `trendDelta` 的排行榜行，结构同 `points-engine.rankList` 返回值 |
+| `cacheDate` | string | 北京时间 yyyy-mm-dd，表示本次缓存日期 |
+| `computedAt` | Date | 本次缓存计算时间 |
+| `updateTime` | Date | 更新时间 |
+
+**索引（建议）：**
+
+1. `_id` 唯一即可满足读取与 upsert。
+2. `(seasonId, type, cacheDate DESC)` 可选，用于后台审计或后续保留多日缓存时扩展。
+
+---
+
 ## 2. seasons（赛季表）
 
 存储赛季的基本信息和关联的赛事。

@@ -65,7 +65,7 @@ describe('enrichRecent', () => {
 
   test('knockout SF won -> roundLabel="SF", won=true, pointsAwarded from entries[P], opponent=X', () => {
     const row = {
-      _id: 'm1', tournamentId: 't1', round: 3,
+      _id: 'result_t1_m1', sourceMatchId: 'm1', tournamentId: 't1', round: 3,
       score: '6-4, 6-2',
       playerIds: ['P', 'X'],
       pointsAwarded: { entries: [
@@ -76,7 +76,8 @@ describe('enrichRecent', () => {
     }
     const out = enrichRecent([row], 'P', tournaments, members)
     expect(out[0]).toMatchObject({
-      tournamentId: 't1', tournamentName: '春季锦标赛', tournamentFormat: 'knockout',
+      _id: 'result_t1_m1', matchId: 'm1', sourceMatchId: 'm1',
+      tournamentId: 't1', tournamentName: '春季锦标赛', tournamentFormat: 'knockout', tournamentType: 'singles',
       round: 3, roundLabel: 'SF', score: '6-4, 6-2',
       opponentId: 'X', opponentName: '张昊',
       won: true, pointsAwarded: 20,
@@ -134,7 +135,7 @@ describe('enrichRecent', () => {
       ['M', { _id: 'M', name: '搭档' }]
     ])
     const out = enrichRecent([row], 'P', tournaments, membersWithPartner)
-    expect(out[0]).toMatchObject({ opponentId: 'X', opponentName: '张昊', won: true, pointsAwarded: 15 })
+    expect(out[0]).toMatchObject({ tournamentType: 'doubles', opponentId: 'X', opponentName: '张昊', won: true, pointsAwarded: 15 })
   })
 
   test('unknown opponent id -> opponentName falls back to id; missing tournament -> tournamentName=""', () => {

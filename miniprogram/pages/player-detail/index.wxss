@@ -141,6 +141,10 @@
   margin-left: auto;
 }
 
+.pd-tab-wrap {
+  margin-bottom: var(--space-6);
+}
+
 /* ============================================================
  * ABOUT
  * ============================================================ */
@@ -272,6 +276,10 @@
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border-bottom: 1rpx solid var(--color-border);
+}
+
+.pd-recent-row--active {
+  background: var(--color-bg-2);
 }
 
 .pd-recent-row:last-child {

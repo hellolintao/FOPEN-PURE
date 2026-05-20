@@ -1,3 +1,6 @@
 {
+  "usingComponents": {
+    "skeleton-loader": "/components/skeleton-loader/index"
+  },
   "navigationBarTitleText": "赛事"
 }

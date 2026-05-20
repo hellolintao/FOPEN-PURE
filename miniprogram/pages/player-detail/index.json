@@ -1,6 +1,7 @@
 {
   "usingComponents": {
     "skeleton-loader": "/components/skeleton-loader/index",
+    "chip-tab": "/components/chip-tab/index",
     "rank-chart": "/components/rank-chart/index",
     "h2h-row": "/components/h2h-row/index"
   },

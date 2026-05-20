@@ -10,7 +10,7 @@ jest.mock('wx-server-sdk', () => {
     eq: (v) => op('eq', v),
     remove: () => ({ __op: 'remove' })
   }
-  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [] }
+  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [], rank_cache: [] }
   function rowMatches(row, f) {
     if (!f) return true
     if (f.__op === 'and') return f.clauses.every(c => rowMatches(row, c))
@@ -72,6 +72,10 @@ jest.mock('wx-server-sdk', () => {
             return { stats: { updated: i >= 0 ? 1 : 0 } }
           }
         }
+      },
+      add: async ({ data }) => {
+        rows[name].push({ ...data })
+        return { _id: data && data._id }
       }
     }
   }
@@ -92,6 +96,7 @@ describe('rankList enhancements', () => {
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
     cloud.__rows.baseline_standings.length = 0
+    cloud.__rows.rank_cache.length = 0
   })
 
   function seedMatchesForMember(memberId, wins, losses, points = 20) {
@@ -226,6 +231,63 @@ describe('rankList enhancements', () => {
     const { main } = require('../index')
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 's2026' })
     expect(res.data.rankList[0].trendDelta).toBe(0)
+  })
+
+  test('rankList returns stored daily cache without recomputing live rows', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'LIVE', name: 'live player' })
+    seedMatchesForMember('LIVE', 9, 0, 99)
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'CACHED', name: 'cached player', avatarUrl: '', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      ]
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList).toEqual([
+      { _id: 'CACHED', name: 'cached player', avatarUrl: '', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+    ])
+    expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
+  })
+
+  test('refreshRankCache writes singles and doubles daily cache rows', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'A', name: '甲', avatarUrl: 'a.png' },
+      { _id: 'B', name: '乙', avatarUrl: 'b.png' }
+    )
+    cloud.__rows.baseline_standings.push(
+      { _id: 'bs1', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 4, losses: 1, createTime: '2026-05-01' },
+      { _id: 'bd1', seasonId: 'season_2026', type: 'doubles', memberId: 'B', totalPoints: 80, wins: 2, losses: 2, createTime: '2026-05-01' }
+    )
+
+    const { main } = require('../index')
+    const res = await main({ action: 'refreshRankCache', seasonId: 'season_2026', now: '2026-05-20T23:30:00+08:00' })
+
+    expect(res.success).toBe(true)
+    expect(res.data).toEqual({ seasonId: 'season_2026', cacheDate: '2026-05-20', refreshedTypes: ['singles', 'doubles'] })
+    expect(cloud.__rows.rank_cache).toHaveLength(2)
+    expect(cloud.__rows.rank_cache.find(row => row.type === 'singles')).toMatchObject({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      cacheDate: '2026-05-20',
+      rankList: [
+        { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      ]
+    })
+    expect(cloud.__rows.rank_cache.find(row => row.type === 'doubles').rankList[0]).toMatchObject({
+      _id: 'B',
+      name: '乙',
+      totalPoints: 80,
+      winRate: 0.5
+    })
   })
 })
 

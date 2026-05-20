@@ -2,5 +2,4 @@
   <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
   <text class="name">{{name}}</text>
   <text class="pill pill-{{pillClass}} num">{{record}}</text>
-  <text class="arrow">→</text>
 </view>

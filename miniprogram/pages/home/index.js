@@ -1,5 +1,8 @@
 const { callFunction } = require('../../utils/cloud');
 const { syncTabBar } = require('../../utils/tab-bar');
+const { getCacheEntry, isFresh, setCache } = require('../../utils/page-cache');
+
+const HOME_STATS_CACHE_TTL_MS = 2 * 60 * 1000;
 
 function defaultHomeStats() {
   return {
@@ -30,16 +33,26 @@ Page({
     this.setData({ isAdmin, currentMember: member || null });
     if (!member) return;
 
-    this.setData({ loadingStats: true });
+    const cacheKey = this._homeStatsCacheKey(member._id);
+    const cached = getCacheEntry(cacheKey);
+    const cachedStats = cached && cached.value && cached.value.myStats;
+    if (cachedStats) {
+      this.setData({ myStats: cachedStats });
+      if (isFresh(cached)) return;
+    }
+
+    this.setData({ loadingStats: !cachedStats });
     try {
       const stats = await callFunction({
         name: 'points-engine',
         data: { action: 'playerStats', playerId: member._id, currentSeasonId: this._getCurrentSeasonId() }
       });
       const statsData = stats && stats.result && stats.result.data;
+      const myStats = this.formatHomeStats(statsData && statsData.stats);
       this.setData({
-        myStats: this.formatHomeStats(statsData && statsData.stats)
+        myStats
       });
+      setCache(cacheKey, { myStats }, { ttlMs: HOME_STATS_CACHE_TTL_MS });
     } catch (err) {
       console.error('[home] loadHome stats error', err);
       wx.showToast({ title: '数据加载失败', icon: 'none', duration: 2000 });
@@ -50,6 +63,10 @@ Page({
 
   _getCurrentSeasonId() {
     return `season_${this.data.seasonYear}`;
+  },
+
+  _homeStatsCacheKey(memberId) {
+    return `home:stats:v1:${this._getCurrentSeasonId()}:${memberId}`;
   },
 
   async ensureIdentity(app) {

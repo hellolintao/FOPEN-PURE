@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "rank-cache-daily",
+      "type": "timer",
+      "config": "0 30 23 * * ? *"
+    }
+  ]
+}

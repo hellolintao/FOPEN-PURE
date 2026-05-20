@@ -5,12 +5,23 @@ function loadPage() {
   global.wx = {
     navigateTo: jest.fn(),
     showToast: jest.fn(),
+    getStorageSync: jest.fn(),
+    setStorageSync: jest.fn(),
   }
   global.Page = (def) => { pageDef = def }
   jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
   require('../index')
   return pageDef
 }
+
+test('header copy says daily 23:30 update instead of realtime update', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('每日23:30更新')
+  expect(wxml).not.toContain('实时更新')
+})
 
 function makeCtx(def, data = {}) {
   return {
@@ -79,4 +90,26 @@ test('onTabChange changes active tab and reloads rank and hero', () => {
   expect(ctx.data.activeTab).toBe('doubles')
   expect(ctx.loadRank).toHaveBeenCalled()
   expect(ctx.loadHero).toHaveBeenCalled()
+})
+
+test('loadRank uses fresh daily page cache without calling cloud', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  wx.getStorageSync.mockReturnValue({
+    value: {
+      rankList: [
+        { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+      ]
+    },
+    updatedAt: 1000,
+    expiresAt: Date.now() + 60 * 1000
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(callFunction).not.toHaveBeenCalled()
+  expect(ctx.data.rankList).toEqual([
+    { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+  ])
 })

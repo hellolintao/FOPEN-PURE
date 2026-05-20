@@ -343,6 +343,10 @@ Page({
           success: () => {
             wx.hideLoading()
             wx.showToast({ title: '删除成功', icon: 'success' })
+            if (app && app.globalData) {
+              app.globalData.tournamentListDirty = true
+              app.globalData.deletedTournamentId = this.data.tournamentId
+            }
             setTimeout(() => wx.navigateBack(), 500)
           },
           fail: err => {

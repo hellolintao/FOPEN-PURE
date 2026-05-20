@@ -17,6 +17,8 @@ function loadPage(options = {}) {
   global.getApp = () => app
   global.wx = {
     navigateTo: jest.fn(),
+    getStorageSync: jest.fn(),
+    setStorageSync: jest.fn(),
     cloud: {
       database: jest.fn(() => db),
       callFunction: jest.fn(({ name, data }) => {
@@ -46,14 +48,28 @@ function makeCtx(def) {
   return {
     ...def,
     data: JSON.parse(JSON.stringify(def.data)),
+    __patches: [],
     getTabBar: jest.fn(() => ({ refresh: jest.fn() })),
     setData(patch) {
+      this.__patches.push(patch)
       Object.assign(this.data, patch)
     }
   }
 }
 
 describe('match page tournament entry permissions', () => {
+  test('starts in loading state and guards empty state until loading finishes', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const { pageDef } = loadPage()
+    const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+    expect(pageDef.data.loading).toBe(true)
+    expect(wxml).toContain('<view class="match-skeleton" wx:if="{{loading && tournaments.length === 0}}">')
+    expect(wxml).toContain('<skeleton-loader rows="{{6}}" />')
+    expect(wxml).toContain('<view wx:if="{{!loading && tournaments.length === 0}}" class="match-empty">')
+  })
+
   test('opens unified tournament detail page from events list', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)
@@ -134,5 +150,61 @@ describe('match page tournament entry permissions', () => {
 
     expect(ctx.data.tournaments[0].__statusKind).toBe('settled')
     expect(ctx.data.tournaments[0].__statusLabel).toBe('已结算')
+  })
+
+  test('uses fresh cached tournament list without hitting database', async () => {
+    const { pageDef, db } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false }, refreshIdentity: jest.fn().mockResolvedValue(null) }
+    })
+    wx.getStorageSync.mockReturnValue({
+      value: { tournaments: [{ _id: 'cached-t1', name: 'Cached Open' }] },
+      updatedAt: 1000,
+      expiresAt: Date.now() + 60 * 1000
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(db.collection).not.toHaveBeenCalled()
+    expect(ctx.data.tournaments).toEqual([{ _id: 'cached-t1', name: 'Cached Open' }])
+  })
+
+  test('deleted tournament dirty flag bypasses fresh cache and removes stale card immediately', async () => {
+    const { pageDef, app, db } = loadPage({
+      app: {
+        globalData: {
+          currentMember: { _id: 'm1' },
+          isAdmin: true,
+          tournamentListDirty: true,
+          deletedTournamentId: 'deleted-t2'
+        },
+        refreshIdentity: jest.fn().mockResolvedValue(null)
+      },
+      tournaments: [{ _id: 't1', name: 'Still Here', type: 'singles' }]
+    })
+    wx.getStorageSync.mockReturnValue({
+      value: {
+        tournaments: [
+          { _id: 't1', name: 'Still Here' },
+          { _id: 'deleted-t2', name: 'Deleted Event' }
+        ]
+      },
+      updatedAt: 1000,
+      expiresAt: Date.now() + 60 * 1000
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.__patches[0]).toEqual({
+      tournaments: [{ _id: 't1', name: 'Still Here' }],
+      loading: false
+    })
+    expect(db.collection).toHaveBeenCalledWith('tournaments')
+    expect(ctx.data.tournaments).toEqual([
+      expect.objectContaining({ _id: 't1', name: 'Still Here' })
+    ])
+    expect(app.globalData.tournamentListDirty).toBe(false)
+    expect(app.globalData.deletedTournamentId).toBe('')
   })
 })

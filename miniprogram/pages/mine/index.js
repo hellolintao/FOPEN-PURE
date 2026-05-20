@@ -1,6 +1,9 @@
 const app = getApp()
 const DEFAULT_AVATAR = '/images/icons/default-avatar.png'
 const { syncTabBar } = require('../../utils/tab-bar')
+const { getCache, setCache } = require('../../utils/page-cache')
+
+const MINE_POINTS_CACHE_TTL_MS = 2 * 60 * 1000
 
 Page({
 	data: {
@@ -21,6 +24,12 @@ Page({
 		this.checkLogin()
 	},
 	checkLogin() {
+		const currentMember = app.globalData && app.globalData.currentMember
+		if (currentMember && currentMember._id) {
+			this.applyMember(currentMember, { defaultAvatar: '' })
+			this.loadUserPoints(currentMember._id)
+			return
+		}
 		// 尝试获取openid对应的会员信息
 		wx.cloud.callFunction({
 			name: 'members',
@@ -28,17 +37,7 @@ Page({
 			success: res => {
 				if (res.result && res.result.data && res.result.data.length > 0) {
 					const user = res.result.data[0]
-					this.setData({
-						isLogin: true,
-						isAdmin: user.admin || false,
-						userInfo: {
-							avatarUrl: user.avatarUrl || '',
-							name: user.name || ''
-						},
-						currentMemberId: user._id
-					})
-					app.globalData.currentMember = user
-					app.globalData.isAdmin = !!user.admin
+					this.applyMember(user, { defaultAvatar: '' })
 					// 获取积分
 					this.loadUserPoints(user._id)
 				} else {
@@ -49,9 +48,27 @@ Page({
 			}
 		})
 	},
+	applyMember(user, options = {}) {
+		this.setData({
+			isLogin: true,
+			isAdmin: user.admin || false,
+			userInfo: {
+				avatarUrl: user.avatarUrl || options.defaultAvatar || '',
+				name: user.name || ''
+			},
+			currentMemberId: user._id
+		})
+		app.globalData.currentMember = user
+		app.globalData.isAdmin = !!user.admin
+	},
 	// 获取用户积分
 	async loadUserPoints(memberId) {
 		if (!memberId) return
+		const cached = getCache(this._pointsCacheKey(memberId))
+		if (cached && typeof cached.totalPoints === 'number') {
+			this.setData({ totalPoints: cached.totalPoints })
+			return
+		}
 
 		try {
 			const result = await wx.cloud.callFunction({
@@ -86,10 +103,14 @@ Page({
 				})
 
 				this.setData({ totalPoints })
+				setCache(this._pointsCacheKey(memberId), { totalPoints }, { ttlMs: MINE_POINTS_CACHE_TTL_MS })
 			}
 		} catch (err) {
 			console.error('获取积分失败:', err)
 		}
+	},
+	_pointsCacheKey(memberId) {
+		return `mine:points:v1:${memberId}`
 	},
 	onLogin() {
 		wx.showLoading({ title: '登录中...' })
@@ -102,17 +123,8 @@ Page({
 
 				if (getRes.result && getRes.result.data && getRes.result.data.length > 0) {
 					const user = getRes.result.data[0]
-					this.setData({
-						isLogin: true,
-						isAdmin: user.admin || false,
-						userInfo: {
-							avatarUrl: user.avatarUrl || DEFAULT_AVATAR,
-							name: user.name || '微信用户'
-						},
-						currentMemberId: user._id
-					})
-					app.globalData.currentMember = user
-					app.globalData.isAdmin = !!user.admin
+					const member = user.name ? user : { ...user, name: '微信用户' }
+					this.applyMember(member, { defaultAvatar: DEFAULT_AVATAR })
 					this.loadUserPoints(user._id)
 					wx.showToast({ title: '登录成功', icon: 'success' })
 				} else {

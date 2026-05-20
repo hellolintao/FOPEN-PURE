@@ -162,3 +162,13 @@ test('sheet close hides sheet and refreshes rows', () => {
   expect(ctx.data.sheet.visible).toBe(false)
   expect(ctx.refresh).toHaveBeenCalled()
 })
+
+test('anchor row id resolves result id to source match id', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {
+    anchorMatchId: 'result_t1_m1',
+    rowsByRound: [{ round: 1, matches: [matchA] }],
+  })
+
+  expect(ctx.getAnchorRowId()).toBe('m1')
+})

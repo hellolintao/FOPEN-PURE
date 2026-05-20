@@ -45,12 +45,16 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
       : entries.find(e => e.memberId !== playerId)
     const opponentId = opponentEntry ? opponentEntry.memberId : null
     const opponentMember = opponentId ? membersMap.get(opponentId) : null
+    const sourceMatchId = row.sourceMatchId || row.matchId || row._id
 
     return {
       _id: row._id,
+      matchId: sourceMatchId,
+      sourceMatchId,
       tournamentId: row.tournamentId,
       tournamentName: tournament ? (tournament.name || '') : '',
       tournamentFormat: tournament ? (tournament.format || null) : null,
+      tournamentType: row.tournamentType || row.type || (tournament && tournament.type) || 'singles',
       round: row.round,
       roundLabel: deriveRoundLabel(tournament, row.round),
       score: formatScore(row.score),

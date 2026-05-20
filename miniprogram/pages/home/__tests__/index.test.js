@@ -5,7 +5,9 @@ function loadPage(app) {
   global.wx = {
     switchTab: jest.fn(),
     navigateTo: jest.fn(),
-    showToast: jest.fn()
+    showToast: jest.fn(),
+    getStorageSync: jest.fn(),
+    setStorageSync: jest.fn()
   }
   global.Page = def => { pageDef = def }
   jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
@@ -62,5 +64,28 @@ describe('home stats', () => {
       singles: { wins: 15, total: 15, winRateLabel: '100%', totalPoints: 2940 },
       doubles: { wins: 18, total: 20, winRateLabel: '90%', totalPoints: 1780 }
     })
+  })
+
+  test('uses fresh cached home stats without calling cloud', async () => {
+    const member = { _id: 'member-1', name: '乐乐' }
+    const app = { globalData: { currentMember: member, isAdmin: false } }
+    const def = loadPage(app)
+    const { callFunction } = require('../../../utils/cloud')
+    wx.getStorageSync.mockReturnValue({
+      value: {
+        myStats: {
+          singles: { wins: 1, total: 2, winRateLabel: '50%', totalPoints: 30 },
+          doubles: { wins: 0, total: 0, winRateLabel: '—', totalPoints: 0 }
+        }
+      },
+      updatedAt: 1000,
+      expiresAt: Date.now() + 60 * 1000
+    })
+    const ctx = makeCtx(def)
+
+    await ctx.loadHome()
+
+    expect(callFunction).not.toHaveBeenCalled()
+    expect(ctx.data.myStats.singles.totalPoints).toBe(30)
   })
 })
