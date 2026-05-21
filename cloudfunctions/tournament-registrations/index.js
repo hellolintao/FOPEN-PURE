@@ -5,6 +5,12 @@ cloud.init({
 })
 
 const db = cloud.database()
+const _ = db.command
+const {
+  selfRegister,
+  withdrawRegistration
+} = require('./lib/service')
+const { isActiveRegistration } = require('../_shared/tournament-phase')
 
 // 生成报名ID
 function generateRegistrationId(tournamentId, index) {
@@ -177,6 +183,111 @@ async function handleBulkSet(event) {
   return { success: true, data: { count: docs.length } }
 }
 
+function buildServiceCtx(wxContext) {
+  return {
+    openid: wxContext && wxContext.OPENID,
+    now: () => new Date().toISOString(),
+    serverDate: () => db.serverDate(),
+    inc: (delta) => _.inc(delta),
+    runTransaction: async (handler) => db.runTransaction(async (transaction) => {
+      return handler(buildTransactionDb(transaction))
+    }),
+    db: {
+      updateBracketMatches
+    }
+  }
+}
+
+function buildTransactionDb(database) {
+  return {
+    getTournament: async (tournamentId) => {
+      const res = await database.collection('tournaments').doc(tournamentId).get().catch(() => null)
+      return res && res.data
+    },
+    getMemberByOpenid: async (openid) => {
+      if (!openid) return null
+      const query = _ && typeof _.or === 'function'
+        ? _.or([{ openid }, { openId: openid }])
+        : { openid }
+      const res = await database.collection('members').where(query).get().catch(() => ({ data: [] }))
+      return (res.data || [])[0] || null
+    },
+    listRegistrations: async (tournamentId) => {
+      const query = database.collection('tournament_registrations').where({ tournamentId })
+      const res = await limitQuery(query, 1000).get()
+      return res.data || []
+    },
+    upsertRegistration: async (id, data) => {
+      const collection = database.collection('tournament_registrations')
+      const existing = await collection.doc(id).get().catch(() => null)
+      if (existing && existing.data) {
+        if (!isSameRegistrationIdentity(existing.data, data)) {
+          const err = new Error('报名ID已被其他报名占用')
+          err.code = 'REGISTRATION_ID_CONFLICT'
+          throw err
+        }
+        await collection.doc(id).update({ data: stripId(data) })
+      } else {
+        await collection.add({ data: { ...data, _id: id } })
+      }
+    },
+    updateRegistration: async (id, data) => {
+      await database.collection('tournament_registrations').doc(id).update({ data: stripId(data) })
+    },
+    updateTournament: async (tournamentId, data) => {
+      await database.collection('tournaments').doc(tournamentId).update({ data })
+    },
+    listMatchResults: async (tournamentId) => {
+      const query = database.collection('match_results').where({ tournamentId })
+      const res = await limitQuery(query, 1000).get()
+      return res.data || []
+    },
+    listBrackets: async (tournamentId) => {
+      const query = database.collection('tournament_brackets').where({ tournamentId })
+      const res = await limitQuery(query, 1000).get()
+      return res.data || []
+    }
+  }
+}
+
+function limitQuery(query, n) {
+  return query && typeof query.limit === 'function' ? query.limit(n) : query
+}
+
+function stripId(data = {}) {
+  const { _id, ...rest } = data
+  return rest
+}
+
+function isSameRegistrationIdentity(existing = {}, next = {}) {
+  const existingMemberId = existing.playerId || existing.memberId
+  const nextMemberId = next.playerId || next.memberId
+  return !!(
+    existing.tournamentId &&
+    next.tournamentId &&
+    existing.tournamentId === next.tournamentId &&
+    existingMemberId &&
+    nextMemberId &&
+    existingMemberId === nextMemberId
+  )
+}
+
+function getRegistrationStatus(registration = {}) {
+  return registration.registrationStatus || registration.status || 'confirmed'
+}
+
+async function updateBracketMatches(tournamentId, patches, updateTime) {
+  for (const patch of (patches || [])) {
+    if (!patch || !patch.bracketId) continue
+    await db.collection('tournament_brackets').doc(patch.bracketId).update({
+      data: {
+        matches: patch.matches,
+        updateTime: updateTime || db.serverDate()
+      }
+    })
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main entry
 // ---------------------------------------------------------------------------
@@ -188,6 +299,12 @@ exports.main = async (event, context) => {
 
   try {
     switch (action) {
+      case 'selfRegister':
+        return await selfRegister(buildServiceCtx(wxContext), event)
+
+      case 'withdraw':
+        return await withdrawRegistration(buildServiceCtx(wxContext), event)
+
       case 'add': {
         // 添加报名
         const validationErrors = validateRegistration(data)
@@ -301,14 +418,43 @@ exports.main = async (event, context) => {
 
       case 'list': {
         // 获取报名列表
-        const { tournamentId: filterTournamentId, status: filterStatus, pageSize = 20, pageNum = 1 } = event
+        const listData = (event && event.data) || {}
+        const {
+          tournamentId: eventTournamentId,
+          status: eventStatus,
+          registrationStatus: eventRegistrationStatus,
+          pageSize: eventPageSize,
+          pageNum: eventPageNum
+        } = event
+        const filterTournamentId = eventTournamentId || listData.tournamentId
+        const filterStatus = eventStatus || listData.status
+        const filterRegistrationStatus = eventRegistrationStatus || listData.registrationStatus
+        const pageSize = eventPageSize || listData.pageSize || 20
+        const pageNum = eventPageNum || listData.pageNum || 1
 
         const query = {}
         if (filterTournamentId) {
           query.tournamentId = filterTournamentId
         }
-        if (filterStatus) {
-          query.status = filterStatus
+        const statusFilter = filterRegistrationStatus || filterStatus
+
+        if (statusFilter) {
+          const result = await db.collection('tournament_registrations')
+            .where(query)
+            .orderBy('seed', 'asc')
+            .limit(1000)
+            .get()
+          const filtered = (result.data || [])
+            .filter(row => getRegistrationStatus(row) === statusFilter)
+          const offset = (pageNum - 1) * pageSize
+
+          return {
+            success: true,
+            data: filtered.slice(offset, offset + pageSize),
+            total: filtered.length,
+            pageNum,
+            pageSize
+          }
         }
 
         const result = await db.collection('tournament_registrations')
@@ -345,15 +491,16 @@ exports.main = async (event, context) => {
           })
           .get()
 
-        const registrations = result.data
+        const registrations = result.data || []
+        const activeRegistrations = registrations.filter(isActiveRegistration)
 
         const stats = {
           total: registrations.length,
           singles: registrations.filter(r => r.type === 'singles').length,
           doubles: registrations.filter(r => r.type === 'doubles').length,
-          registered: registrations.filter(r => r.status === 'registered').length,
-          confirmed: registrations.filter(r => r.status === 'confirmed').length,
-          withdrew: registrations.filter(r => r.status === 'withdrew').length
+          registered: registrations.filter(r => (r.registrationStatus || r.status) === 'registered').length,
+          confirmed: activeRegistrations.length,
+          withdrew: registrations.filter(r => !isActiveRegistration(r)).length
         }
 
         return {
@@ -371,15 +518,25 @@ exports.main = async (event, context) => {
         }
 
         const { status } = event
-        if (!status || !['registered', 'confirmed', 'withdrew'].includes(status)) {
+        if (status === 'registered') {
           return {
-            errMsg: '状态必须是 registered, confirmed 或 withdrew'
+            success: false,
+            error: {
+              code: 'INVALID_STATUS',
+              message: 'registered 状态已废弃，请使用 confirmed 或 withdrew'
+            }
+          }
+        }
+
+        if (!status || !['confirmed', 'withdrew'].includes(status)) {
+          return {
+            errMsg: '状态必须是 confirmed 或 withdrew'
           }
         }
 
         const result = await db.collection('tournament_registrations').doc(id).update({
           data: {
-            status,
+            ...buildStatusUpdate(status),
             updateTime: new Date().toISOString()
           }
         })
@@ -440,4 +597,9 @@ exports.main = async (event, context) => {
 
 exports.__test__ = {
   validateRegistration,
+  buildServiceCtx,
+}
+
+function buildStatusUpdate(status) {
+  return { registrationStatus: status }
 }
