@@ -1,6 +1,6 @@
-const { pendingReviewItems, pendingEntryGroups } = require('../../handlers/query')
+const { pendingReviewItems, pendingEntryGroups, canExposeScoreRows, __test__ } = require('../../handlers/query')
 
-function makeQueryCtx({ rows = [], tournaments = {}, members = {}, isAdmin = true } = {}) {
+function makeQueryCtx({ rows = [], tournaments = {}, members = {}, isAdmin = true, tournament = null } = {}) {
   const queries = []
   return {
     isAdmin,
@@ -18,11 +18,44 @@ function makeQueryCtx({ rows = [], tournaments = {}, members = {}, isAdmin = tru
           (!tournamentId || r.tournamentId === tournamentId) &&
           (!resultStatus || r.resultStatus === resultStatus)
         ).length,
+      getTournament: async () => tournament,
       getTournamentsByIds: async (ids) => ids.map(id => tournaments[id]).filter(Boolean),
       getMembersByIds: async (ids) => ids.map(id => members[id]).filter(Boolean),
+      listByTournament: async (tournamentId) => rows.filter(r => r.tournamentId === tournamentId),
     },
   }
 }
+
+test('canExposeScoreRows: legacy tournament with missing scheduleStatus is exposed (backward compat)', () => {
+  expect(canExposeScoreRows({ _id: 'legacy' })).toBe(true)
+})
+
+test('canExposeScoreRows: published is exposed', () => {
+  expect(canExposeScoreRows({ scheduleStatus: 'published' })).toBe(true)
+})
+
+test.each([
+  ['none'],
+  ['draft'],
+  [null],
+  [''],
+  ['ready'],
+  [false],
+  [0],
+])('canExposeScoreRows: explicit non-published scheduleStatus %p is hidden', (scheduleStatus) => {
+  expect(canExposeScoreRows({ scheduleStatus })).toBe(false)
+})
+
+test('listByTournament returns empty rows when scheduleStatus is draft', async () => {
+  const ctx = makeQueryCtx({
+    tournament: { _id: 't1', scheduleStatus: 'draft' },
+    rows: [{ _id: 'r1', tournamentId: 't1' }]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  expect(res).toEqual({ results: [] })
+})
 
 test('pendingReviewItems FORBIDDEN: non-admin', async () => {
   const ctx = makeQueryCtx({ isAdmin: false })

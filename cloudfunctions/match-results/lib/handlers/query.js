@@ -21,12 +21,21 @@ async function submittedQueue(ctx, event) {
   }
 }
 
+function canExposeScoreRows(tournament) {
+  if (!tournament) return false
+  if (tournament.scheduleStatus === 'published') return true
+  if (!Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return true
+  return false
+}
+
 async function listByTournament(ctx, event) {
   if (!event.tournamentId) {
     const err = new Error('tournamentId 必填')
     err.code = 'INVALID_ARG'
     throw err
   }
+  const tournament = await ctx.db.getTournament(event.tournamentId)
+  if (!canExposeScoreRows(tournament)) return { results: [] }
   const results = await ctx.db.listByTournament(event.tournamentId)
   return { results }
 }
@@ -171,4 +180,15 @@ function formatTime(date) {
   return `${hh}:${mm}`
 }
 
-module.exports = { submittedQueue, listByTournament, listByPlayer, pendingReviewItems, pendingEntryGroups }
+module.exports = {
+  submittedQueue,
+  listByTournament,
+  listByPlayer,
+  pendingReviewItems,
+  pendingEntryGroups,
+  canExposeScoreRows,
+  __test__: {
+    canExposeScoreRows,
+    listByTournamentWithCtx: listByTournament,
+  },
+}

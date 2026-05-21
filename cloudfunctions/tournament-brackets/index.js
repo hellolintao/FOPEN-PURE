@@ -445,7 +445,24 @@ async function fillNextSlot(tournamentId, { nextRound, nextPosition, slot, winne
   })
 }
 
-async function handleSaveSchedule({ tournamentId, queues }) {
+function buildDefaultScheduleCtx() {
+  return {
+    db: {
+      getBracket: id => collection.doc(id).get().catch(() => null),
+      updateBracket: (id, data) => collection.doc(id).update({ data }),
+      getTournament: id => db.collection('tournaments').doc(id).get().catch(() => null),
+      updateTournament: (id, data) => db.collection('tournaments').doc(id).update({ data }),
+    },
+    serverDate: () => db.serverDate(),
+    set: value => _.set(value),
+  }
+}
+
+async function handleSaveSchedule(event) {
+  return handleSaveScheduleWithCtx(buildDefaultScheduleCtx(), event)
+}
+
+async function handleSaveScheduleWithCtx(ctx, { tournamentId, queues }) {
   if (!tournamentId) {
     return { success: false, error: { code: 'INVALID_ARG', message: 'tournamentId 必填' } }
   }
@@ -464,7 +481,7 @@ async function handleSaveSchedule({ tournamentId, queues }) {
   }
 
   const r1Id = `bracket_${tournamentId.replace('tournament_', '')}_round_1`
-  const r1Res = await collection.doc(r1Id).get().catch(() => null)
+  const r1Res = await ctx.db.getBracket(r1Id)
   const r1 = r1Res && r1Res.data
   if (!r1) {
     return { success: false, error: { code: 'NOT_FOUND', message: r1Id } }
@@ -476,23 +493,38 @@ async function handleSaveSchedule({ tournamentId, queues }) {
     return { ...m, courtId: a.courtId, queueOrder: a.queueOrder }
   })
 
-  await collection.doc(r1Id).update({
-    data: { matches: updated, updateTime: db.serverDate() }
+  await ctx.db.updateBracket(r1Id, {
+    matches: updated,
+    updateTime: ctx.serverDate()
   })
 
   // Mirror queues into tournament.schedulePlan.queues — 必须用 _.set() 整体替换
   // 否则 TCB 会把对象展开成 dot-path（schedulePlan.queues），遇到旧 doc
   // schedulePlan=null 时会报 "Cannot create field 'queues' in element {schedulePlan: null}"
-  const tRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tRes = await ctx.db.getTournament(tournamentId)
   const curSP = (tRes && tRes.data && tRes.data.schedulePlan && typeof tRes.data.schedulePlan === 'object')
     ? tRes.data.schedulePlan
     : { slotMinutes: 20, courts: [], queues: [] }
   const nextSP = { ...curSP, queues }
-  await db.collection('tournaments').doc(tournamentId).update({
-    data: { schedulePlan: _.set(nextSP), updateTime: db.serverDate() }
+  await ctx.db.updateTournament(tournamentId, {
+    schedulePlan: ctx.set(nextSP),
+    updateTime: ctx.serverDate()
   })
+  // Intentionally NOT writing scheduleStatus here. Higher-level callers
+  // (tournaments.saveScheduleDraft / tournaments.publishSchedule) own that field.
 
   return { success: true, data: { count: updated.filter(m => m.courtId).length } }
+}
+
+function markMatchesForRevision(matches, playerId) {
+  if (!Array.isArray(matches)) return []
+  return matches.map(match => {
+    const affected = !!playerId && (
+      (match.player1 && match.player1.id === playerId) ||
+      (match.player2 && match.player2.id === playerId)
+    )
+    return affected ? { ...match, needsRevision: true } : match
+  })
 }
 
 async function handleRegenerateDraft({ tournamentId }) {
@@ -526,4 +558,25 @@ async function handleRegenerateDraft({ tournamentId }) {
 
 exports.__test__ = {
   validateBracket,
+  markMatchesForRevision,
+  handleSaveScheduleWithCtx,
+  makeScheduleCtx: ({ tournament, r1 }) => {
+    const ctx = {
+      bracketUpdates: [],
+      tournamentUpdates: [],
+      db: {
+        getBracket: jest.fn(async id => (r1 && id === r1._id ? { data: r1 } : null)),
+        updateBracket: jest.fn(async (id, data) => {
+          ctx.bracketUpdates.push({ id, data })
+        }),
+        getTournament: jest.fn(async id => (tournament && (!tournament._id || id === tournament._id) ? { data: tournament } : null)),
+        updateTournament: jest.fn(async (id, data) => {
+          ctx.tournamentUpdates.push({ id, data })
+        }),
+      },
+      serverDate: () => 'server-date',
+      set: value => value,
+    }
+    return ctx
+  },
 }

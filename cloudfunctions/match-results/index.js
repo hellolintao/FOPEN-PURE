@@ -1,6 +1,7 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
 const { validateResultSubmission } = require('./lib/validate')
+const { canExposeScoreRows } = require('./lib/handlers/query')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
@@ -65,6 +66,16 @@ async function resolveSubmitterByOpenid(openid, database = db, command = _) {
 
 function ok(data) { return { success: true, data } }
 function fail(code, message) { return { success: false, error: { code, message } } }
+
+async function guardDirectScoreRowRead(row) {
+  if (!row || !row.tournamentId) return null
+  const tournamentRes = await db.collection('tournaments').doc(row.tournamentId).get().catch(() => null)
+  const tournament = tournamentRes && tournamentRes.data
+  if (canExposeScoreRows(tournament)) return null
+  const submitter = await resolveSubmitter()
+  if (submitter && submitter.isAdmin) return null
+  return fail('FORBIDDEN', '赛程发布后才能录入成绩')
+}
 
 // 数据验证函数
 function validateMatchResult(data) {
@@ -327,6 +338,10 @@ function buildQueryCtx(submitter) {
         if (!ids.length) return []
         return (await db.collection('tournaments').where({ _id: _.in(ids) }).get()).data
       },
+      getTournament: async (tournamentId) => {
+        const r = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+        return r ? r.data : null
+      },
       getMembersByIds: async (ids) => {
         if (!ids.length) return []
         return (await db.collection('members').where({ _id: _.in(ids) }).get()).data
@@ -445,7 +460,10 @@ exports.main = async (event, context) => {
       if (!id && !_id) {
         return { errMsg: '_id or id is required' }
       }
-      return await collection.doc(_id || id).get()
+      const result = await collection.doc(_id || id).get()
+      const forbidden = await guardDirectScoreRowRead(result && result.data)
+      if (forbidden) return forbidden
+      return result
     }
 
     case 'getById': {
@@ -453,7 +471,10 @@ exports.main = async (event, context) => {
       if (!id && !_id) {
         return { errMsg: 'id is required' }
       }
-      return await collection.doc(id || _id).get()
+      const result = await collection.doc(id || _id).get()
+      const forbidden = await guardDirectScoreRowRead(result && result.data)
+      if (forbidden) return forbidden
+      return result
     }
 
     case 'update': {
@@ -888,4 +909,5 @@ exports.__test__ = {
   resolveMatchType,
   resolveSubmitterByOpenid,
   resolveStateMatchId,
+  guardDirectScoreRowRead,
 }
