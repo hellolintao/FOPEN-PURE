@@ -1,4 +1,9 @@
-const { validateCourtTimeGrid, validateSchedulePlan, validatePointsRules } = require('../validate');
+const {
+  validateCourtTimeGrid,
+  validateSchedulePlan,
+  validatePointsRules,
+  validateTournament
+} = require('../validate');
 
 // Keep old tests (migrated from courtTimeGrid)
 describe('validateCourtTimeGrid (legacy, preserved)', () => {
@@ -202,3 +207,73 @@ describe('validatePointsRules', () => {
     expect(errors).toContain('pointsRules.placement 必填');
   });
 });
+
+describe('validateTournament', () => {
+  test.each(['none', 'draft', 'published'])('allows scheduleStatus %s', (scheduleStatus) => {
+    const errors = validateTournament(validTournament({ scheduleStatus }), { isDraft: false });
+    expect(errors).toEqual([]);
+  });
+
+  test('rejects invalid scheduleStatus', () => {
+    const errors = validateTournament(validTournament({ scheduleStatus: 'ready' }), { isDraft: false });
+    expect(errors).toContain('scheduleStatus 必须是 none、draft 或 published');
+  });
+
+  test('allows boolean scheduleNeedsRevision', () => {
+    const errors = validateTournament(validTournament({ scheduleNeedsRevision: false }), { isDraft: false });
+    expect(errors).toEqual([]);
+  });
+
+  test('rejects non-boolean scheduleNeedsRevision', () => {
+    const errors = validateTournament(validTournament({ scheduleNeedsRevision: 'no' }), { isDraft: false });
+    expect(errors).toContain('scheduleNeedsRevision 必须是布尔值');
+  });
+
+  test('preserves schedulePlan validation for non-draft published state', () => {
+    const errors = validateTournament(validTournament({
+      scheduleStatus: 'published',
+      schedulePlan: null
+    }), { isDraft: false });
+    expect(errors).toContain('schedulePlan 必填');
+  });
+
+  test('rejects knockout mixed tournament', () => {
+    const errors = validateTournament(validTournament({
+      type: 'mixed',
+      format: 'knockout',
+      maxPlayers: 8
+    }), { isDraft: false });
+    expect(errors).toContain('淘汰赛不支持 mixed 类型');
+  });
+});
+
+function validTournament(overrides = {}) {
+  return {
+    name: '5月周末赛',
+    type: 'singles',
+    format: 'regular',
+    startDate: '2026-05-25',
+    seasonId: 'season_2026',
+    schedulePlan: {
+      slotMinutes: 20,
+      courts: [
+        {
+          courtId: 'c1',
+          name: '1号场地',
+          slots: [{ slotId: 's1', start: '08:00', end: '08:20' }]
+        }
+      ]
+    },
+    pointsRules: {
+      winLoss: { win: 100, loss: 20, walkover: 50 },
+      placement: {
+        champion: 500,
+        runnerUp: 300,
+        semifinal: 150,
+        quarterfinal: 75,
+        participation: 10
+      }
+    },
+    ...overrides
+  };
+}

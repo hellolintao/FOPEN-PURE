@@ -1,11 +1,10 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
-const { validateCourtTimeGrid, validateSchedulePlan, validatePointsRules } = require('./lib/validate')
+const { validateTournament } = require('./lib/validate')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournaments')
-const TOURNAMENT_TYPES = ['singles', 'doubles', 'mixed']
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,59 +54,6 @@ async function resolveMemberByOpenid(openid, database = db, command = _) {
   const member = members[0]
   if (!member) return null
   return { ...member, openid: member.openid || member.openId || openid }
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-/**
- * Validate tournament payload.
- * isDraft=true: only require minimal fields (name/type/format/startDate/seasonId).
- * isDraft=false: full validation including schedulePlan and pointsRules.
- * @param {object} data
- * @param {{ isDraft: boolean }} opts
- * @returns {string[]} errors array (empty = valid)
- */
-function validateTournament(data, { isDraft = false } = {}) {
-  const errors = []
-
-  // Always-required fields
-  if (!data.name || data.name.trim() === '') errors.push('赛事名称不能为空')
-  if (!data.type || !TOURNAMENT_TYPES.includes(data.type)) {
-    errors.push('赛事类型必须是 singles、doubles 或 mixed')
-  }
-  if (!data.format || !['regular', 'knockout'].includes(data.format)) {
-    errors.push('赛制必须是 regular(常规赛) 或 knockout(淘汰赛)')
-  }
-  if (data.format === 'knockout' && data.type === 'mixed') {
-    errors.push('淘汰赛不支持 mixed 类型')
-  }
-  if (!data.startDate) errors.push('开始日期不能为空')
-  if (!data.seasonId) errors.push('所属赛季不能为空')
-
-  // Date range check (both fields present)
-  if (data.startDate && data.endDate) {
-    const start = new Date(data.startDate)
-    const end = new Date(data.endDate)
-    if (start > end) errors.push('结束日期不能早于开始日期')
-  }
-
-  if (isDraft) return errors
-
-  // Full validation
-  const spErrors = validateSchedulePlan(data.schedulePlan)
-  errors.push(...spErrors)
-
-  const prErrors = validatePointsRules(data.pointsRules)
-  errors.push(...prErrors)
-
-  if (data.format === 'knockout') {
-    const max = data.maxPlayers
-    if (!max || max < 2) errors.push('淘汰赛 maxPlayers 不能小于 2')
-  }
-
-  return errors
 }
 
 // ---------------------------------------------------------------------------
@@ -375,6 +321,72 @@ function buildAdminConsoleCtx(submitter) {
   }
 }
 
+async function buildBulkUpsertSchedulePayload(tournamentId, schedulePlan = {}) {
+  const queues = Array.isArray(schedulePlan && schedulePlan.queues) ? schedulePlan.queues : []
+  let matches = Array.isArray(schedulePlan && schedulePlan.matches) ? schedulePlan.matches : null
+
+  if (!matches) {
+    const bracketId = `bracket_${tournamentId.replace('tournament_', '')}_round_1`
+    const res = await db.collection('tournament_brackets').doc(bracketId).get().catch(() => null)
+    matches = res && res.data && Array.isArray(res.data.matches) ? res.data.matches : []
+  }
+
+  if (!Array.isArray(matches) || matches.length === 0) {
+    return {
+      success: false,
+      error: {
+        code: 'MISSING_MATCHES',
+        message: '排程缺少对阵，请先生成并保存对阵'
+      }
+    }
+  }
+
+  return { success: true, data: { matches, queues } }
+}
+
+function buildRegistrationPhaseCtx(member) {
+  return {
+    isAdmin: isAdminMember(member),
+    callerOpenid: member.openid,
+    callerMemberId: member._id,
+    now: () => new Date().toISOString(),
+    serverDate: () => db.serverDate(),
+    db: {
+      getTournament: async (tournamentId) => {
+        const res = await collection.doc(tournamentId).get().catch(() => null)
+        return res && res.data
+      },
+      countConfirmedRegistrations: async (tournamentId) => {
+        const res = await db.collection('tournament_registrations')
+          .where({ tournamentId, registrationStatus: 'confirmed' })
+          .count()
+        return res.total || 0
+      },
+      updateTournament: async (tournamentId, data) => {
+        const updateData = { ...data }
+        if (updateData.schedulePlan !== undefined) {
+          updateData.schedulePlan = _.set(updateData.schedulePlan)
+        }
+        await collection.doc(tournamentId).update({ data: updateData })
+      },
+      bulkUpsertScheduledMatches: async (tournamentId, schedulePlan) => {
+        const payload = await buildBulkUpsertSchedulePayload(tournamentId, schedulePlan)
+        if (!payload.success) return payload
+        const r = await cloud.callFunction({
+          name: 'match-results',
+          data: {
+            action: 'bulkUpsertScheduledMatches',
+            tournamentId,
+            matches: payload.data.matches,
+            queues: payload.data.queues
+          }
+        })
+        return r.result
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main entry
 // ---------------------------------------------------------------------------
@@ -463,6 +475,24 @@ exports.main = async (event, context) => {
     case 'lastPointsRules':
       return actionLastPointsRules(event)
 
+    case 'publishRegistration':
+    case 'saveScheduleDraft':
+    case 'publishSchedule':
+    case 'confirmScheduleRevision': {
+      try {
+        const wxContext = cloud.getWXContext()
+        const openid = wxContext.OPENID || null
+        if (!openid) return fail('FORBIDDEN', '需要登录')
+        const member = await resolveMemberByOpenid(openid)
+        if (!member) return fail('FORBIDDEN', '成员不存在')
+        if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+        const handlers = require('./lib/handlers/registration-phase')
+        return handlers[action](buildRegistrationPhaseCtx(member), event)
+      } catch (e) {
+        return fail(e.code || 'INTERNAL', e.message || '操作失败')
+      }
+    }
+
     case 'adminConsoleSnapshot': {
       const { adminConsoleSnapshot } = require('./lib/handlers/admin-console')
       try {
@@ -532,4 +562,5 @@ exports.__test__ = {
   resolveMemberByOpenid,
   isAdminMember,
   validateTournament,
+  buildRegistrationPhaseCtx,
 }
