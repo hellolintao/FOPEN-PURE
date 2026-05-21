@@ -1,3 +1,5 @@
+const { PHASE, derivePhase } = require('./tournament-phase')
+
 const STATUS_META = {
   draft: {
     kind: 'draft',
@@ -57,12 +59,52 @@ const STATUS_META = {
   }
 }
 
+const PHASE_META = {
+  [PHASE.REGISTRATION_OPEN]: {
+    kind: 'registration',
+    label: '报名中',
+    hint: '可报名',
+    scoreActionLabel: '我要报名',
+    canShare: true
+  },
+  [PHASE.PENDING_SCHEDULE]: {
+    kind: 'pendingSchedule',
+    label: '待排程',
+    hint: '报名已截止',
+    scoreActionLabel: '等待赛程',
+    canShare: true
+  },
+  [PHASE.SCHEDULE_DRAFT]: {
+    kind: 'scheduleDraft',
+    label: '赛程待发布',
+    hint: '草稿仅管理员可见',
+    scoreActionLabel: '发布赛程',
+    canShare: true
+  },
+  [PHASE.SCHEDULE_PUBLISHED]: {
+    kind: 'upcoming',
+    label: '赛程已发布',
+    hint: '可录分',
+    scoreActionLabel: '录入成绩',
+    canShare: true
+  },
+  [PHASE.RESULTS]: {
+    kind: 'settled',
+    label: '已结算',
+    hint: '比分已确认并结算',
+    scoreActionLabel: '查看成绩',
+    canShare: true
+  }
+}
+
 function getTournamentStatusMeta(input, options = {}) {
   const tournament = normalizeTournamentInput(input)
   const raw = tournament.status || 'upcoming'
+  const phase = derivePhase(tournament, options)
+  const phaseMeta = phase !== PHASE.LEGACY ? PHASE_META[phase] : null
   const fixedMeta = fixedLifecycleMeta(raw)
   const resultMeta = resultLifecycleMeta(tournament.resultSummary || options.resultSummary)
-  const meta = fixedMeta || resultMeta || STATUS_META[deriveDateKind(tournament, options.now)] || STATUS_META[raw] || {
+  const meta = phaseMeta || fixedMeta || resultMeta || STATUS_META[deriveDateKind(tournament, options.now)] || STATUS_META[raw] || {
     kind: 'unknown',
     label: String(raw || '未知'),
     hint: '状态未识别',
