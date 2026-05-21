@@ -13,8 +13,14 @@ Page({
       type: 'mixed',
       format: 'regular',
       maxPlayers: 8,
+      registrationDeadlineAt: '',
       description: ''
     },
+    registrationDeadlineDate: '',
+    registrationDeadlineDisplay: '',
+    registrationPublished: false,
+    sharePath: '',
+    scheduleStarted: false,
     schedulePlanCourts: [],
     selectedPlayers: [],
     matches: [],
@@ -73,8 +79,14 @@ Page({
         type: t.type || 'singles',
         format: t.format || 'regular',
         maxPlayers: t.maxPlayers || 8,
+        registrationDeadlineAt: t.registrationDeadlineAt || '',
         description: t.description || ''
       },
+      registrationDeadlineDate: deadlineDateValue(t.registrationDeadlineAt),
+      registrationDeadlineDisplay: deadlineDisplay(t.registrationDeadlineAt),
+      registrationPublished: !!t.registrationPublishedAt,
+      sharePath: t.registrationPublishedAt ? buildRegistrationSharePath(id) : '',
+      scheduleStarted: t.scheduleStatus === 'draft' || t.scheduleStatus === 'published',
       schedulePlanCourts: asArray(t.schedulePlan && t.schedulePlan.courts),
       queues: asArray(t.schedulePlan && t.schedulePlan.queues),
       pointsRules: this._normalizePointsRules(t.pointsRules || this.data.pointsRules)
@@ -155,17 +167,30 @@ Page({
   },
 
   async commitStep2() {
+    const persisted = await this.persistStep2Inputs()
+    if (!persisted) return
+
+    if (this.data.matches.length === 0 || this.regularScheduleNeedsBuild()) {
+      this.applyDefaultSchedule()
+    }
+    this.setData({ step: 3 })
+  },
+
+  async persistStep2Inputs() {
     const minPlayers = this._minPlayers()
     if (this.data.selectedPlayers.length < minPlayers) {
       const isKD = this.data.form.type === 'doubles' && this.data.form.format === 'knockout'
       const unit = isKD ? '组队伍' : '位球员'
-      return wx.showToast({ title: `至少选 ${minPlayers} ${unit}`, icon: 'none' })
+      wx.showToast({ title: `至少选 ${minPlayers} ${unit}`, icon: 'none' })
+      return false
     }
     if (this.data.schedulePlanCourts.length === 0) {
-      return wx.showToast({ title: '至少选 1 个场地', icon: 'none' })
+      wx.showToast({ title: '至少选 1 个场地', icon: 'none' })
+      return false
     }
     if (this.data.schedulePlanCourts.some(c => !c.slots || c.slots.length === 0)) {
-      return wx.showToast({ title: '每个场地至少选 1 个 slot', icon: 'none' })
+      wx.showToast({ title: '每个场地至少选 1 个 slot', icon: 'none' })
+      return false
     }
 
     const playerChanged = await this.checkPlayerChange()
@@ -175,7 +200,7 @@ Page({
         content: '已生成的对阵将重置',
         success: ({ confirm }) => resolve(confirm)
       }))
-      if (!ok) return
+      if (!ok) return false
       await wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: { action: 'regenerateDraft', tournamentId: this.data.tournamentId }
@@ -188,10 +213,18 @@ Page({
       courts: this.data.schedulePlanCourts,
       queues: this.data.queues || []
     }
-    await wx.cloud.callFunction({
+    const tournamentPatch = { schedulePlan }
+    if (this.data.form.registrationDeadlineAt) {
+      tournamentPatch.registrationDeadlineAt = this.data.form.registrationDeadlineAt
+    }
+    const savePlanRes = await wx.cloud.callFunction({
       name: 'tournaments',
-      data: { action: 'updateNew', id: this.data.tournamentId, data: { schedulePlan } }
+      data: { action: 'updateNew', id: this.data.tournamentId, data: tournamentPatch }
     })
+    if (!_isSuccess(savePlanRes)) {
+      wx.showToast({ title: _errMsg(savePlanRes, '保存排程失败'), icon: 'none' })
+      return false
+    }
 
     const bsRes = await wx.cloud.callFunction({
       name: 'tournament-registrations',
@@ -200,13 +233,87 @@ Page({
     if (!(bsRes.result && bsRes.result.success)) {
       const msg = (bsRes.result && bsRes.result.error && bsRes.result.error.message) || '保存报名失败'
       wx.showToast({ title: msg, icon: 'none' })
+      return false
+    }
+    return true
+  },
+
+  async onPublishRegistration() {
+    if (this.data.scheduleStarted) {
+      wx.showToast({ title: '请先清空排程草稿再重新开放报名', icon: 'none' })
       return
     }
-
-    if (this.data.matches.length === 0 || this.regularScheduleNeedsBuild()) {
-      this.applyDefaultSchedule()
+    if (!this.data.form.registrationDeadlineAt) {
+      wx.showToast({ title: '请选择报名截止', icon: 'none' })
+      return
     }
-    this.setData({ step: 3 })
+    try {
+      const persisted = await this.persistStep2Inputs()
+      if (!persisted) return
+
+      const res = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: {
+          action: 'publishRegistration',
+          id: this.data.tournamentId,
+          registrationDeadlineAt: this.data.form.registrationDeadlineAt
+        }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '发布失败'), icon: 'none' })
+        return
+      }
+
+      const sharePath = buildRegistrationSharePath(this.data.tournamentId)
+      this.setData({
+        registrationPublished: true,
+        sharePath
+      })
+      if (wx.showShareMenu) {
+        wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+      }
+      wx.showToast({ title: '已发布', icon: 'success' })
+    } catch (err) {
+      console.error('[onPublishRegistration]', err)
+      wx.showToast({ title: '发布失败', icon: 'none' })
+    }
+  },
+
+  onShareAppMessage() {
+    if (!this.data.registrationPublished || !this.data.sharePath) {
+      return { title: '赛事报名', path: '/pages/tournament-detail/index' }
+    }
+    return {
+      title: this.data.form.name || '赛事报名',
+      path: this.data.sharePath
+    }
+  },
+
+  onShareTimeline() {
+    if (!this.data.registrationPublished || !this.data.tournamentId) {
+      return { title: '赛事报名', query: '' }
+    }
+    return {
+      title: this.data.form.name || '赛事报名',
+      query: `id=${encodeURIComponent(this.data.tournamentId)}&entry=register`
+    }
+  },
+
+  onRegistrationDeadlineDateChange(e) {
+    const date = e.detail && e.detail.value
+    const deadlineAt = deadlineAtFromDate(date)
+    this.setData({
+      'form.registrationDeadlineAt': deadlineAt,
+      registrationDeadlineDate: deadlineDateValue(deadlineAt),
+      registrationDeadlineDisplay: deadlineDisplay(deadlineAt)
+    })
+  },
+
+  onManageRegistration() {
+    this.setData({ step: 2 })
+    if (wx.pageScrollTo) {
+      wx.pageScrollTo({ selector: '.registration-card', duration: 240 })
+    }
   },
 
   async commitStep3() {
@@ -267,6 +374,92 @@ Page({
     setTimeout(() => {
       wx.redirectTo({ url: `/pages/tournament-detail/index?id=${tid}` })
     }, 800)
+  },
+
+  async onSaveScheduleDraft() {
+    try {
+      const saved = await this.persistScheduleDraftOnly()
+      if (!saved) return
+      wx.showToast({ title: '已保存草稿', icon: 'success' })
+    } catch (err) {
+      console.error('[onSaveScheduleDraft]', err)
+      wx.showToast({ title: '保存草稿失败', icon: 'none' })
+    }
+  },
+
+  async onPublishSchedule() {
+    try {
+      const published = await this.persistPublishedSchedule()
+      if (!published) return
+      wx.redirectTo({ url: `/pages/tournament-detail/index?id=${this.data.tournamentId}` })
+    } catch (err) {
+      console.error('[onPublishSchedule]', err)
+      wx.showToast({ title: '发布赛程失败', icon: 'none' })
+    }
+  },
+
+  async persistScheduleDraftOnly() {
+    const saved = await this.persistScheduleBase()
+    if (!saved) return false
+    const res = await wx.cloud.callFunction({
+      name: 'tournaments',
+      data: { action: 'saveScheduleDraft', id: this.data.tournamentId, schedulePlan: this.buildSchedulePlanSnapshot() }
+    })
+    if (!_isSuccess(res)) {
+      wx.showToast({ title: _errMsg(res, '保存草稿失败'), icon: 'none' })
+      return false
+    }
+    this.setData({ scheduleStarted: true })
+    return true
+  },
+
+  async persistPublishedSchedule() {
+    const saved = await this.persistScheduleBase()
+    if (!saved) return false
+    const res = await wx.cloud.callFunction({
+      name: 'tournaments',
+      data: { action: 'publishSchedule', id: this.data.tournamentId }
+    })
+    if (!_isSuccess(res)) {
+      wx.showToast({ title: _errMsg(res, '发布赛程失败'), icon: 'none' })
+      return false
+    }
+    this.setData({ scheduleStarted: true })
+    return true
+  },
+
+  async persistScheduleBase() {
+    const tid = this.data.tournamentId
+    if ((this.data.matches || []).length > 0) {
+      const r1 = await wx.cloud.callFunction({
+        name: 'tournament-brackets',
+        data: { action: 'saveInitialMatches', tournamentId: tid, matches: this.data.matches }
+      })
+      if (!_isSuccess(r1)) {
+        console.error('[persistScheduleBase] saveInitialMatches failed', r1 && r1.result)
+        wx.showToast({ title: _errMsg(r1, '保存对阵失败'), icon: 'none' })
+        return false
+      }
+    }
+
+    const r2 = await wx.cloud.callFunction({
+      name: 'tournament-brackets',
+      data: { action: 'saveSchedule', tournamentId: tid, queues: this.data.queues }
+    })
+    if (!_isSuccess(r2)) {
+      console.error('[persistScheduleBase] saveSchedule failed', r2 && r2.result)
+      wx.showToast({ title: _errMsg(r2, '保存排程失败'), icon: 'none' })
+      return false
+    }
+    return true
+  },
+
+  buildSchedulePlanSnapshot() {
+    return {
+      slotMinutes: 20,
+      courts: this.data.schedulePlanCourts || [],
+      queues: this.data.queues || []
+    }
   },
 
   _normalizePointsRules(pr) {
@@ -530,7 +723,7 @@ Page({
       name: 'tournament-registrations',
       data: { action: 'list', tournamentId: this.data.tournamentId, pageSize: 200 }
     })
-    const old = ((r.result && r.result.data) || []).map(x => x.playerId).sort().join(',')
+    const old = asArray(r.result && r.result.data).map(x => x.playerId).sort().join(',')
     const cur = this.data.selectedPlayers.map(x => x.playerId).sort().join(',')
     return old && old !== cur
   },
@@ -588,4 +781,27 @@ function todayISODate() {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+function buildRegistrationSharePath(id) {
+  return `/pages/tournament-detail/index?id=${id}&entry=register`
+}
+
+function deadlineAtFromDate(date) {
+  if (!date) return ''
+  return `${date}T23:59:59+08:00`
+}
+
+function deadlineDateValue(value) {
+  if (!value) return ''
+  const m = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
+  return m ? m[1] : ''
+}
+
+function deadlineDisplay(value) {
+  if (!value) return ''
+  const date = deadlineDateValue(value)
+  const timeMatch = String(value).match(/T(\d{2}:\d{2})/)
+  if (!date) return String(value)
+  return `${date} ${timeMatch ? timeMatch[1] : '23:59'}`
 }

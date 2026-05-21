@@ -79,6 +79,24 @@
   </view>
 
   <view wx:if="{{step === 2}}" class="step-body">
+    <view class="card registration-card">
+      <view class="card-head">
+        <view class="card-title-row">
+          <text class="card-title">报名设置</text>
+          <text wx:if="{{registrationPublished}}" class="title-pill">报名中</text>
+        </view>
+      </view>
+      <view class="field compact-field">
+        <text class="label">报名截止 *</text>
+        <picker mode="date" bindchange="onRegistrationDeadlineDateChange" value="{{registrationDeadlineDate}}" disabled="{{scheduleStarted}}">
+          <view class="picker-value">
+            <text class="num">{{registrationDeadlineDisplay || '选择日期时间'}}</text>
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+      <text wx:if="{{scheduleStarted}}" class="field-hint">已开始排程，如需重新开放报名请先清空草稿</text>
+    </view>
     <view class="card">
       <view class="card-head">
         <view class="card-title-row">
@@ -128,9 +146,26 @@
     />
   </view>
 
-  <view class="footer">
+  <view wx:if="{{step === 1}}" class="footer">
     <view class="back tap-scale" bindtap="onBack">{{step === 1 ? '取消' : '上一步'}}</view>
-    <view class="next tap-scale" bindtap="onNext">{{step < 3 ? '下一步' : '创建赛事'}}</view>
+    <view class="next tap-scale" bindtap="onNext">下一步</view>
+  </view>
+  <view wx:elif="{{step === 2 && !registrationPublished && !scheduleStarted}}" class="footer footer-three">
+    <view class="back tap-scale" bindtap="onBack">上一步</view>
+    <view class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
+    <view class="next tap-scale" bindtap="onPublishRegistration">发布并分享到微信</view>
+  </view>
+  <view wx:elif="{{step === 2 && !registrationPublished && scheduleStarted}}" class="footer">
+    <view class="back tap-scale" bindtap="onBack">上一步</view>
+    <view class="next tap-scale" bindtap="onNext">下一步排程</view>
+  </view>
+  <view wx:elif="{{step === 2 && registrationPublished}}" class="footer">
+    <view class="back tap-scale" bindtap="onManageRegistration">管理报名</view>
+    <button open-type="share" class="next tap-scale">分享到微信</button>
+  </view>
+  <view wx:elif="{{step === 3}}" class="footer">
+    <view class="back tap-scale" bindtap="onSaveScheduleDraft">保存草稿</view>
+    <view class="next tap-scale" bindtap="onPublishSchedule">发布赛程</view>
   </view>
 
   <player-picker-sheet
