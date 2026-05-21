@@ -1,8 +1,9 @@
 const { syncTabBar } = require('../../utils/tab-bar');
-const { getCacheEntry, isFresh, setCache } = require('../../utils/page-cache');
+const { getCacheEntry, setCache } = require('../../utils/page-cache');
+const { call } = require('../../utils/cloud');
 
 const MANAGE_CACHE_TTL_MS = 60 * 1000;
-const MANAGE_CACHE_KEY = 'manage:brackets:v1';
+const MANAGE_CACHE_KEY = 'manage:pending-entry:v2';
 
 Page({
   data: {
@@ -29,48 +30,24 @@ Page({
         tournamentsMap: cachedValue.tournamentsMap,
         loading: false
       });
-      if (isFresh(cached)) return;
     }
 
     this.setData({ loading: !(cachedValue && Array.isArray(cachedValue.bracketsList)) });
 
     try {
-      // 获取所有对位表
-      const bracketsResult = await wx.cloud.callFunction({
-        name: 'tournament-brackets',
-        data: {
-          action: 'list',
-          page: 1,
-          pageSize: 50
-        }
+      const res = await call('match-results', {
+        action: 'pendingEntryGroups',
+        payload: { limit: 50 }
       });
-
-      const brackets = (bracketsResult && bracketsResult.result && bracketsResult.result.data) || [];
-
-      // 获取所有赛事的名称
-      const tournamentIds = [...new Set(brackets.map(b => b.tournamentId).filter(Boolean))];
-      const tournamentsMap = {};
-
-      for (const tournamentId of tournamentIds) {
-        try {
-          const tournamentResult = await wx.cloud.database().collection('tournaments').doc(tournamentId).get();
-          if (tournamentResult.data) {
-            tournamentsMap[tournamentId] = {
-              name: tournamentResult.data.name,
-              seasonName: tournamentResult.data.seasonName
-            };
-          }
-        } catch (e) {
-          console.error('获取赛事信息失败:', tournamentId, e);
-        }
-      }
+      if (!res.ok) throw new Error((res.error && res.error.message) || '加载失败');
+      const { bracketsList, tournamentsMap } = normalizePendingGroups(res.data && res.data.groups);
 
       this.setData({
-        bracketsList: brackets,
-        tournamentsMap: tournamentsMap,
+        bracketsList,
+        tournamentsMap,
         loading: false
       });
-      setCache(MANAGE_CACHE_KEY, { bracketsList: brackets, tournamentsMap }, { ttlMs: MANAGE_CACHE_TTL_MS });
+      setCache(MANAGE_CACHE_KEY, { bracketsList, tournamentsMap }, { ttlMs: MANAGE_CACHE_TTL_MS });
     } catch (err) {
       console.error('加载对位表列表失败:', err);
       this.setData({ loading: false });
@@ -96,3 +73,24 @@ Page({
     wx.navigateTo({ url: '/pages/member-manage/index' });
   }
 });
+
+function normalizePendingGroups(groups) {
+  const bracketsList = (Array.isArray(groups) ? groups : []).map(group => ({
+    _id: group._id || `${group.tournamentId || ''}:${group.round || 1}`,
+    tournamentId: group.tournamentId || '',
+    tournamentName: group.tournamentName || '',
+    seasonName: group.seasonName || '',
+    round: group.round || 1,
+    updateTime: group.updateTime || group.createTime || '',
+    matches: Array.isArray(group.matches) ? group.matches : []
+  }));
+  const tournamentsMap = {};
+  for (const group of bracketsList) {
+    if (!group.tournamentId) continue;
+    tournamentsMap[group.tournamentId] = {
+      name: group.tournamentName,
+      seasonName: group.seasonName
+    };
+  }
+  return { bracketsList, tournamentsMap };
+}

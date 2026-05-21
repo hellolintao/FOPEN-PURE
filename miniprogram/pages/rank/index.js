@@ -1,8 +1,8 @@
 const { callFunction } = require('../../utils/cloud')
 const { syncTabBar } = require('../../utils/tab-bar')
-const { getCacheEntry, isFresh, nextDailyRefreshAt, setCache } = require('../../utils/page-cache')
+const { getCacheEntry, isFresh, nextDailyRefreshAt, removeCache, setCache } = require('../../utils/page-cache')
 
-const RANK_CACHE_VERSION = 'v2'
+const RANK_CACHE_VERSION = 'v3'
 
 Page({
   data: {
@@ -30,12 +30,13 @@ Page({
     const cachedList = cached && cached.value && Array.isArray(cached.value.rankList)
       ? cached.value.rankList
       : null
-    if (cachedList) {
+    if (cachedList && cachedList.length > 0) {
       this.setData({ rankList: cachedList })
-      if (isFresh(cached)) return
+    } else if (cachedList) {
+      removeCache(cacheKey)
     }
 
-    this.setData({ loading: !cachedList })
+    this.setData({ loading: !(cachedList && cachedList.length > 0) })
     try {
       const res = await callFunction({
         name: 'points-engine',
@@ -45,6 +46,9 @@ Page({
           currentSeasonId: this._getCurrentSeasonId()
         }
       })
+      if (res && res.result && res.result.success === false) {
+        throw new Error((res.result.error && res.result.error.message) || 'rankList failed')
+      }
       const rankData = res && res.result && res.result.data
       const list = (rankData && rankData.rankList) || []
       const enriched = list.map(row => ({
@@ -52,7 +56,11 @@ Page({
         winRatePct: this._formatWinRatePct(row)
       }))
       this.setData({ rankList: enriched })
-      setCache(cacheKey, { rankList: enriched }, { expiresAt: nextDailyRefreshAt() })
+      if (enriched.length > 0) {
+        setCache(cacheKey, { rankList: enriched }, { expiresAt: nextDailyRefreshAt() })
+      } else {
+        removeCache(cacheKey)
+      }
     } catch (err) {
       console.error('[rank] loadRank error', err)
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 })

@@ -20,6 +20,7 @@ function loadPage(overrides = {}) {
   global.getApp = () => app
   global.Page = (def) => { pageDef = def }
   jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
+  jest.mock('../../../utils/page-cache', () => ({ removeCachesByPrefix: jest.fn() }))
   require('../index')
   return { pageDef, app }
 }
@@ -115,6 +116,7 @@ describe('edit-profile validation and save', () => {
     jest.useFakeTimers()
     const { pageDef, app } = loadPage()
     const { callFunction } = require('../../../utils/cloud')
+    const { removeCachesByPrefix } = require('../../../utils/page-cache')
     callFunction.mockResolvedValueOnce({ result: { _id: 'm1' } })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
@@ -128,6 +130,7 @@ describe('edit-profile validation and save', () => {
       playStyle: 'ice-cow'
     })
     expect(app.globalData.isAdmin).toBe(false)
+    expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
     expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
     jest.useRealTimers()
   })

@@ -55,6 +55,26 @@ function removeCache(key) {
   } catch (err) {}
 }
 
+function removeCachesByPrefix(prefix) {
+  if (!prefix || typeof wx === 'undefined' || !wx.getStorageInfoSync || !wx.removeStorageSync) return 0
+  const fullPrefix = storageKey(prefix)
+  try {
+    const info = wx.getStorageInfoSync()
+    const keys = (info && info.keys) || []
+    let removed = 0
+    keys.forEach(key => {
+      if (typeof key !== 'string' || !key.startsWith(fullPrefix)) return
+      try {
+        wx.removeStorageSync(key)
+        removed += 1
+      } catch (err) {}
+    })
+    return removed
+  } catch (err) {
+    return 0
+  }
+}
+
 function nextDailyRefreshAt(now = new Date(), hour = 23, minute = 30) {
   const base = now instanceof Date ? now : new Date(now)
   const refresh = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, minute, 0, 0)
@@ -70,5 +90,6 @@ module.exports = {
   isFresh,
   nextDailyRefreshAt,
   removeCache,
+  removeCachesByPrefix,
   setCache,
 }

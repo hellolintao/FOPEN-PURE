@@ -100,7 +100,24 @@
 | `schedule_published` | 赛程已发布 | 赛程、参赛人员、录入成绩入口 | 编辑赛程、录入成绩、分享 |
 | `results` | 有成绩或已完成 | 赛果摘要、已完成赛程、查看成绩 | 调整成绩、查看成绩、分享 |
 
-`tournament.status` 可以继续服务现有粗粒度状态，但页面展示应通过新的派生 phase 判断，避免把报名期错误显示成已有赛程的 `upcoming`。
+`tournament.status` 继续服务现有粗粒度生命周期，但页面展示通过派生 phase 判断，避免把报名期错误显示成已有赛程的 `upcoming`。
+
+派生 phase 由 `tournament.status` 与新增字段联合决定，按以下优先级匹配（自上而下，命中即停）：
+
+| 优先级 | 条件 | 派生 phase |
+| --- | --- | --- |
+| 1 | `status === 'draft'` | `draft` |
+| 2 | `scheduleStatus === 'published'` 且存在已结算成绩或 `status === 'completed'` | `results` |
+| 3 | `scheduleStatus === 'published'` | `schedule_published` |
+| 4 | `scheduleStatus === 'draft'` | `schedule_draft` |
+| 5 | `registrationPublishedAt` 存在 且 `now < registrationDeadlineAt` | `registration_open` |
+| 6 | `registrationPublishedAt` 存在 且 `now >= registrationDeadlineAt` | `pending_schedule` |
+| 7 | 兜底（遗留赛事：无 `registrationPublishedAt`、无 `scheduleStatus`） | 沿用旧路径，按 `status` 直接展示 `upcoming / ongoing / completed`，不进入新阶段视图 |
+
+规则要点：
+
+- schedule 状态优先于 registration 状态：一旦有排程草稿/已发布，即使 `registrationDeadlineAt` 改回未来也保持 schedule 视图。详见 8.1。
+- 遗留赛事（仅有 `status` 字段、缺新字段）走旧展示路径，确保 backward compat。
 
 建议新增或派生字段：
 
@@ -108,6 +125,7 @@
 - `registrationPublishedAt`：报名发布/分享时间。
 - `scheduleStatus`：`none | draft | published`。
 - `schedulePublishedAt`：赛程发布时间。
+- `scheduleNeedsRevision`：成员退赛或管理员改动导致赛程需要重新调整的标记，详见 7.3 / 8.2。
 - `withdrawDeadlineAt`：退赛截止时间；默认由比赛日期派生，除非后续支持自定义退赛截止，否则不落库。
 
 退赛截止派生规则：
@@ -148,6 +166,16 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 - 点 `下一步排程`：直接进入第 3 步排程，可跳过微信报名。
 - 点 `发布并分享到微信`：发布报名入口，成员从微信详情页报名，仍可后续进入排程。
+
+`发布并分享到微信` 的语义拆解为两个独立动作的组合，不要混用为单一原子操作：
+
+1. **发布报名**（数据动作）：云函数写 `registrationPublishedAt = now`、`scheduleStatus = 'none'`，校验 `registrationDeadlineAt` 必填且在未来。失败时返回错误，不弹起分享面板。
+2. **唤起分享**（前端动作）：发布成功后调用 `wx.showShareMenu` 并配置 `onShareAppMessage`：
+   - `path` 固定为 `/pages/tournament-detail/index?id=<id>&entry=register`
+   - `title` 取赛事名称
+   - `imageUrl` 复用现有 hero 视觉，无需新增物料
+
+`entry=register` 参数语义：成员从分享链路打开详情时，详情页应自动滚动到报名区并高亮 `我要报名` 按钮；不自动触发报名 RPC，需用户主动点击，避免误报名。
 
 ### 6.3 第 2 步已发布态
 
@@ -249,8 +277,12 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 如果赛程已经发布但还未到退赛截止：
 
 - 允许退出，但不能静默忽略影响。
-- 受影响对局需要标记为待调整，管理员工作台显示赛程需调整。
-- 已有比分的场次不允许成员自助退出，提示联系管理员。
+- 退赛云函数在事务中：
+  1. 写 `tournament_registrations.registrationStatus = 'withdrew'` 并记录 `cancelledAt / cancelledBy`。
+  2. 扫描 `tournament_brackets`，找出包含该 `playerId` 且 `match_results` 仍为待录入或无比分的对局，写 `match.needsRevision = true`。
+  3. 在 `tournaments` 上置 `scheduleNeedsRevision = true`，触发管理员工作台"赛程需调整"任务块（详见 9.2）。
+- 已有比分的场次不允许成员自助退出，前端弹 Toast：`该场次已有成绩，请联系管理员处理` 并阻止本次退赛；不修改 `tournament_registrations`。
+- 管理员在工作台/详情页处理完调整后，手动点击 `已确认赛程` 把 `scheduleNeedsRevision` 清零；无自动清除路径，避免遗漏影响范围。
 
 ## 8. 管理员详情页
 
@@ -276,9 +308,10 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 流程约束：
 
-- 如果编辑后把报名截止改到未来，展示 phase 应回到报名中。
-- 如果已有排程草稿，详情页入口应显示继续排程或发布赛程，避免重新安排造成误解。
-- 如果赛程已发布，不再使用待排程页的编辑路径修改核心报名数据，应进入赛程编辑或成绩调整逻辑。
+- phase 优先级：**schedule 状态严格高于 registration 状态**。即一旦 `scheduleStatus` 进入 `draft / published`，无论 `registrationDeadlineAt` 是否被改回未来，都保持在 schedule 阶段（详见 Section 5 派生表）。
+- 如果还没有排程草稿（`scheduleStatus === 'none'`）且管理员把报名截止改到未来，展示 phase 才回到 `registration_open`。
+- 如果已有排程草稿，编辑页应隐藏"改报名截止"输入并提示 `已开始排程，如需重新开放报名请先清空草稿`，避免出现 phase 矛盾。
+- 如果赛程已发布，不再使用待排程页的编辑路径修改核心报名数据；改为进入赛程编辑（8.2）或成绩调整（8.3）逻辑。
 
 ### 8.2 赛程模式
 
@@ -292,9 +325,20 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 编辑赛程规则：
 
-- 未有比分：可调整场地、时间、对局。
-- 已有比分：编辑前提示影响范围；受影响场次需重新确认或重新录分。
+- 未有比分：可调整场地、时间、对局，无确认弹窗。
+- 已有比分：进入下述确认流程。
 - 不允许无提示地删除已有成绩。
+
+带比分场次编辑的标准流程：
+
+1. 管理员在赛程编辑页提交改动，前端做"影响范围预检"：本地遍历当前 `schedulePlan` diff，找出被改动或被删除的场次，匹配 `match_results.status` 是否已有 `submitted / confirmed / settled` 比分。
+2. 如果存在受影响的已录分场次，弹出确认 modal，列出每场比分概要（`球员A vs 球员B  21:18 / 21:12`）和处置选项：
+   - `保留比分，仅改场地/时间`：仅允许场地、时间字段变更，不允许换人；后端二次校验仍是同一对球员。
+   - `清空比分并重新录入`：在事务中把对应 `match_results` 软删除（写 `status = 'invalidated'`、`invalidatedAt`、`invalidatedBy`），并触发 `points-engine.recompute`。
+   - `取消编辑`：放弃改动。
+3. 后端接收提交后，必须重新做服务端校验，前端选择不可信。
+4. 已结算 (`tournament.status === 'completed'`) 的赛程：本期不开放 `编辑赛程`，按钮禁用并提示 `赛事已结算，如需修改请联系超级管理员`；走单独的"调整成绩"路径（8.3）。
+5. 任何成功的编辑都同时清零 `tournament.scheduleNeedsRevision`，因为这一编辑已经覆盖了之前积压的"需调整"信号。
 
 ### 8.3 赛果模式
 
@@ -332,9 +376,10 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 沿用现有 hero 与 block，新增任务块：
 
 - 报名中赛事：显示报名人数和截止时间，入口为分享或管理。
+  - 软警告规则：常规赛报名人数 > `场地数 × 时段数 × 2`（粗略 1 小时 1 局 / 场地的容量估算）时，在该卡片右上角加一个低强度提示徽标 `人数偏多`，并在管理报名时展示一行说明 `当前报名人数已超出可排场次的建议容量，建议在排程前与组织者确认`，但不阻断报名。淘汰赛单打已有 `maxPlayers` 硬限，不再叠加软警告。
 - 待排程赛事：显示参赛人数和场地时间，入口为安排对局。
 - 赛程草稿待发布：显示已排场次数，入口为继续排程或发布。
-- 赛程需调整：成员退赛或管理员修改后产生的待处理项。
+- 赛程需调整：仅在 `tournaments.scheduleNeedsRevision === true` 时出现；卡片展示触发原因（退赛 / 赛程编辑）、影响场次数和 `处理` 入口；处理完毕后管理员手动 `已确认赛程`，置 false。
 
 ### 9.3 我的比赛 `my-match`
 
@@ -348,14 +393,20 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 ### 10.1 `edit-profile`
 
-微信报名进入时，未注册或未认领会员不能直接报名。
+微信报名进入时，未注册或未认领会员不能直接报名。会员身份通过 `openid → members` 查找派生（沿用 `cloudfunctions/members.add` 现有认领逻辑）。
 
-流程：
+完整流程：
 
-1. 成员从微信分享打开详情。
-2. 点击报名。
-3. 如果没有会员身份，进入现有资料页。
-4. 完成后返回赛事详情继续报名。
+1. 成员从微信分享打开 `tournament-detail?id=<id>&entry=register`。
+2. 详情页 `onLoad` 调用 `members.getByOpenid`（或现有等价接口），按当前 `openid` 查会员：
+   - **A. 命中且 `claimStatus === 'claimed'`**：直接展示报名按钮；走 10.1 步骤 6 之后的报名路径。
+   - **B. 未命中**：判定为新用户，按下文步骤 3 进入 `edit-profile`，传 `from=tournament-register` 和 `tournamentId`。
+   - **C. 命中但 `claimStatus === 'unclaimed'`** 或返回 `CLAIM_CONFLICT`：仍进入 `edit-profile`，由用户在资料页完成认领（手动选择待认领名单或填写新会员资料）；冲突解决遵循 `members.add` 既有规则，不在本期变更。
+3. `edit-profile` 完成保存后，若 query 中含 `from=tournament-register`，使用 `wx.redirectTo` 回到 `tournament-detail?id=<id>&entry=register`，避免在导航栈中留下资料页。
+4. 详情页 `onShow` 重新执行步骤 2 的 openid 查询；如果此时为 `claimed`，自动滚动到报名区并**高亮但不自动点击** `我要报名`（避免误报名风险）。
+5. 用户主动点击 `我要报名` 时再发起报名 RPC（`tournament-registrations` add）。
+6. 报名云函数侧需校验：`openid` 与 `playerId` 对应的 `members.openid` 一致，防止前端注入 `playerId` 替他人报名。
+7. 报名成功后，详情页 phase 内容不变（仍是 `registration_open`），但底部 CTA 从 `我要报名` 切换为 `退出报名`（受退赛截止判断）。
 
 ### 10.2 `tournament-brackets`
 
@@ -384,8 +435,8 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
   registrationPublishedAt: Date | string,
   scheduleStatus: 'none' | 'draft' | 'published',
   schedulePublishedAt: Date | string | null,
-  courtTimeGrid: { courts: [...] },
-  schedulePlan: { courts: [...] } // draft 或 published 结构沿用现有
+  scheduleNeedsRevision: boolean,
+  schedulePlan: { courts: [...] } // 沿用现有 Phase 7 结构，draft / published 共用
 }
 ```
 
@@ -396,33 +447,51 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 - `scheduleStatus: 'none'` 表示只有报名和场地时间，没有排程。
 - `scheduleStatus: 'draft'` 表示管理员有草稿，成员不可见。
 - `scheduleStatus: 'published'` 表示成员可见，录分行可用。
+- `scheduleNeedsRevision` 由 7.3（成员退赛影响已排对局）触发置 `true`，由 8.2（管理员完成赛程编辑）或工作台 `已确认赛程` 操作置 `false`；遗留赛事缺省视为 `false`。
+- 旧 `courtTimeGrid` 字段不再被新流程写入，仅保留历史只读兼容；新代码读写一律走 `schedulePlan`。
+
+遗留赛事迁移策略：
+
+- 不做强制 backfill。已有 `status: 'upcoming' / 'ongoing' / 'completed'` 的赛事，缺 `registrationPublishedAt` 与 `scheduleStatus` 时，按 Section 5 派生表第 7 行走旧展示路径（沿用现有 `match-card`、`tournament-detail` 旧 layout）。
+- 新代码不允许只写部分新字段（如只写 `registrationPublishedAt` 不写 `scheduleStatus`），创建/编辑流程必须保证字段成对。
+- 若后续需要把历史赛事并入新阶段视图，使用一次性脚本统一回填 `scheduleStatus = 'published'`、`schedulePublishedAt = createTime`，本期不做。
 
 ### 11.2 `tournament_registrations`
 
-建议字段：
+沿用现有集合，不重命名状态字段。完整字段表（✓ 已存在 / ✦ 本期新增 / ◐ 沿用 + 扩展枚举）：
 
-```js
-{
-  tournamentId,
-  playerId,
-  playerName,
-  partnerId,
-  partnerName,
-  source: 'admin' | 'wechat',
-  status: 'active' | 'cancelled',
-  registeredAt,
-  cancelledAt,
-  cancelledBy,
-  cancelReason
-}
-```
+| 字段 | 类型 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| `_id` | string | ✓ | 格式 `reg_<tournamentId>_<index>`，沿用现有生成规则 |
+| `tournamentId` | string | ✓ | 所属赛事 |
+| `seasonId` | string | ✓ | 由赛事派生 |
+| `type` | `'singles' \| 'doubles' \| 'mixed'` | ✓ | 由赛事派生 |
+| `playerId` | string | ✓ | `members._id` |
+| `playerName` | string | ✓ | 报名时快照，避免会员改名导致名单错乱 |
+| `partnerId` | string \| null | ✓ | 仅 `knockout doubles` 必填；regular doubles 报名按个人，组队在第 3 步排程随机配对（沿用 Phase 7 现状） |
+| `partnerName` | string \| null | ✓ | 同上 |
+| `teamName` | string \| null | ✓ | 仅 knockout doubles 使用 |
+| `seed` | number | ✓ | 1-64，淘汰赛用 |
+| `registrationStatus` | `'confirmed' \| 'withdrew'` | ✓ | **本期统一使用此字段**，不再引入 `active / cancelled` 新词，避免破坏现有 `bulkSet`、`points-engine`、`tournament-brackets` 的过滤逻辑 |
+| `status` | string | ✓ | 旧字段保持兼容只读；新代码不写 |
+| `source` | `'admin' \| 'wechat'` | ✦ | `admin` 表示来自管理员 `bulkSet` 或后台手动添加；`wechat` 表示微信自助报名 |
+| `registerTime` | string | ✓ | 已存在 |
+| `cancelledAt` | Date \| null | ✦ | 退赛时间戳；`registrationStatus === 'withdrew'` 时必填 |
+| `cancelledBy` | string \| null | ✦ | 退赛操作者 `members._id`，区分自助退赛 vs 管理员代退 |
+| `cancelReason` | string \| null | ✦ | 可空；本期不强制收集 |
+| `reregisteredAt` | Date \| null | ✦ | 退赛后再次报名的时间戳，用于审计 |
+| `createTime` | Date | ✓ | 已存在 |
+| `updateTime` | Date | ✓ | 已存在 |
 
-规则：
+行为规则：
 
 - 微信报名 v1 只创建个人报名记录。
-- regular doubles/mixed 也按个人报名。
-- knockout doubles 自助报名不做。
-- 取消报名不物理删除，避免审计和排程影响不可追踪。
+- regular doubles / mixed 也按个人报名。
+- knockout doubles 自助报名不做：v1 由管理员通过 `bulkSet` 维护，前端 `我要报名` 按钮在 `type === 'doubles' && format === 'knockout'` 时不展示。
+- "取消报名"语义 = 更新现有记录 `registrationStatus = 'withdrew'` + 写 `cancelledAt / cancelledBy`；**不物理删除**，便于审计。
+- 退赛后再次报名：直接复用同行，更新为 `registrationStatus = 'confirmed'`、清空 `cancelledAt / cancelledBy / cancelReason`、写 `reregisteredAt = now`；不新增重复行。
+- 重复报名检测：唯一性约束 `(tournamentId, playerId, registrationStatus = 'confirmed')`，前端 Toast `你已报名` 由后端读现状返回，不重复写记录。
+- 并发保护：见 Section 12。
 
 ### 11.3 `tournament_brackets` / `match_results`
 
@@ -436,9 +505,9 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 | 场景 | 处理 |
 | --- | --- |
-| 非会员点击报名 | 跳转资料认领/注册，完成后回详情 |
+| 非会员点击报名 | 跳转资料认领/注册，完成后回详情，详见 10.1 |
 | 重复报名 | Toast：`你已报名`，不重复写记录 |
-| 常规赛报名人数很多 | 允许报名，不做名额限制 |
+| 常规赛报名人数很多 | 允许报名，不做名额限制；超出建议容量时工作台展示软警告（9.2） |
 | 淘汰赛单打满员 | 禁止报名，Toast：`名额已满` |
 | 报名截止后点击报名 | Toast：`报名已截止` |
 | 退赛截止后点击退出 | Toast：`已过退赛截止时间` |
@@ -446,10 +515,39 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 | 成员查看待排程 | 不展示排程草稿 |
 | 非参赛成员录分 | Toast：`仅参赛者可录入` |
 | 成绩调整后 | 重新计算结果摘要、排名和积分 |
+| 前端注入伪造 `playerId` | 报名/退赛云函数比对 `wxContext.OPENID` 与 `members.openid`，不一致返回 `PERMISSION_DENIED` |
+
+并发保护（淘汰赛单打满员场景）：
+
+`tournament-registrations.add` 在写入前必须按以下顺序确保原子：
+
+1. 在 `tournaments` 上维护 `confirmedCount` 字段（`registrationStatus === 'confirmed'` 的报名数），每次报名/退赛/重新报名时通过 `db.runTransaction` 同步更新。
+2. 报名事务伪代码：
+
+   ```
+   runTransaction:
+     t = read tournaments(tournamentId)
+     if t.format === 'knockout' && t.type === 'singles' && t.confirmedCount >= t.maxPlayers:
+       abort with CAPACITY_FULL
+     write tournament_registrations(new doc, registrationStatus='confirmed')
+     update tournaments.confirmedCount = confirmedCount + 1
+   ```
+
+3. 退赛事务同样在内部把 `confirmedCount` 减 1；重新报名（withdrew → confirmed）走原子 `+1`。
+4. 客户端收到 `CAPACITY_FULL` 时统一展示 `名额已满`。
+5. 常规赛不做容量检查，但 `confirmedCount` 仍维护以供 9.2 软警告判定使用。
 
 ## 13. 测试策略
 
 ### 13.1 工具和状态 helper
+
+集中实现，前后端共用，避免逻辑双份漂移：
+
+- 前端：`miniprogram/utils/tournament-phase.js`（新增），导出 `derivePhase(tournament)`、`getWithdrawDeadline(tournament)`、`canWithdraw(tournament, now)`、`canRegister(tournament, now)`。
+- 后端：`cloudfunctions/_shared/tournament-phase.js`（新增），与前端 helper 同源，由 `tournaments` / `tournament-registrations` / `tournament-brackets` 云函数共用。
+- 同一份 spec 测试集放在 `cloudfunctions/_shared/__tests__/tournament-phase.test.js`，前后端各自再补一份薄壳测试覆盖各自调用点。
+
+helper 行为约束：
 
 - 派生 phase：
   - 报名中。
@@ -457,6 +555,7 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
   - 赛程草稿管理员可见。
   - 赛程发布后。
   - 赛果已出。
+  - 遗留赛事：返回 `legacy`，调用方走旧展示路径。
 - 退赛截止：
   - 5 月 24 日比赛，截止展示为 5 月 23 日 24:00。
   - 截止前 `canWithdraw === true`。
@@ -513,13 +612,14 @@ npm test -- --runInBand
 
 ## 14. 实施顺序建议
 
-1. 新增 phase/registration/withdraw helper 和测试。
-2. 扩展数据模型与云函数：发布报名、报名、退出报名。
+0. **字段对齐与迁移评估**：基于 11.1 / 11.2 写一份 `tournament` 与 `tournament_registrations` 的字段对齐表，对比 `cloudfunctions/DATABASE_SCHEMA.md` 现状，更新该文档；不做强制 backfill 但落地一段说明（遗留赛事走旧路径）。本步不写代码，仅文档与 schema doc 更新，作为后续步骤的基线。
+1. 新增 phase/registration/withdraw helper（13.1 指定的两份文件 + 共享测试）。
+2. 扩展数据模型与云函数：发布报名、报名、退出报名、`confirmedCount` 事务维护（Section 12）、`scheduleNeedsRevision` 置位/清零。
 3. 改 `tournament-edit` 第 2 步发布报名和第 3 步发布赛程。
-4. 改 `tournament-detail` 阶段化展示与底部 CTA。
-5. 改 `match`、`my-match`、`tournament-manage` 的状态标签和任务块。
+4. 改 `tournament-detail` 阶段化展示与底部 CTA，包含 10.1 微信报名链路。
+5. 改 `match`、`my-match`、`tournament-manage` 的状态标签和任务块（含 9.2 软警告与赛程需调整）。
 6. 加赛程未发布门禁。
-7. 加编辑赛程、调整成绩入口和权限保护。
+7. 加编辑赛程、调整成绩入口和权限保护（8.2 带比分场次编辑流程）。
 8. 跑目标测试、全量测试，并人工检查现有页面视觉未大改。
 
 ## 15. 验收清单
@@ -541,3 +641,6 @@ npm test -- --runInBand
 - [ ] 录入成绩后可调整成绩。
 - [ ] 列表、工作台、我的比赛状态一致。
 - [ ] 实现后现有页面样式没有明显漂移。
+- [ ] 遗留赛事（无 `registrationPublishedAt` / `scheduleStatus`）在 `match` 列表、`tournament-detail`、`my-match`、`tournament-manage` 上展示与改造前一致（提供改造前后截图对比，按 Section 5 派生表第 7 行兜底走旧路径）。
+- [ ] `step-bar`、`schedule-board`、`court-grid`、`td-section`、`match-card` 等现有组件无新增的大面积样式 override；新增样式仅作用于本期阶段化新区块，使用局部 class 或 BEM 修饰符隔离。
+- [ ] 与原型 `prototypes-existing-aligned-v1.html` 对照仅作为信息架构参考；实际产物不出现原型独有的全新配色、阴影或卡片嵌套（人工对照确认）。

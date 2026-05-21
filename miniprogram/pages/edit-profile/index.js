@@ -1,4 +1,5 @@
 const { callFunction } = require('../../utils/cloud')
+const { removeCachesByPrefix } = require('../../utils/page-cache')
 const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-style')
 const { DEFAULT_AVATAR_URL } = require('../../config')
 
@@ -336,6 +337,7 @@ Page({
         app.globalData.currentMember = savedMember
         app.globalData.isAdmin = !!savedMember.admin
       }
+      removeCachesByPrefix('rank:')
 
       wx.hideLoading()
       wx.showToast({ title: isRegister ? '注册成功' : '保存成功', icon: 'success' })

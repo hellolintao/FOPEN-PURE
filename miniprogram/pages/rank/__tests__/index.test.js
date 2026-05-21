@@ -92,24 +92,89 @@ test('onTabChange changes active tab and reloads rank and hero', () => {
   expect(ctx.loadHero).toHaveBeenCalled()
 })
 
-test('loadRank uses fresh daily page cache without calling cloud', async () => {
+test('loadRank renders fresh daily page cache before refreshing cloud profile data', async () => {
   const def = loadPage()
   const { callFunction } = require('../../../utils/cloud')
   wx.getStorageSync.mockReturnValue({
     value: {
       rankList: [
-        { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+        { _id: 'A', name: '旧头像用户', avatarUrl: 'stale.png', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
       ]
     },
     updatedAt: 1000,
     expiresAt: Date.now() + 60 * 1000
   })
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', name: '新头像用户', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1 }
+        ]
+      }
+    }
+  })
   const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
 
   await ctx.loadRank()
 
-  expect(callFunction).not.toHaveBeenCalled()
+  expect(callFunction).toHaveBeenCalledWith({
+    name: 'points-engine',
+    data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+  })
   expect(ctx.data.rankList).toEqual([
-    { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+    { _id: 'A', name: '新头像用户', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
   ])
+})
+
+test('loadRank ignores fresh empty page cache and fetches cloud data', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  wx.getStorageSync.mockReturnValue({
+    value: { rankList: [] },
+    updatedAt: 1000,
+    expiresAt: Date.now() + 60 * 1000
+  })
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', winCount: 2, lossCount: 0, winRate: 1 }
+        ]
+      }
+    }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(callFunction).toHaveBeenCalledWith({
+    name: 'points-engine',
+    data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+  })
+  expect(ctx.data.rankList).toEqual([
+    { _id: 'A', winCount: 2, lossCount: 0, winRate: 1, winRatePct: '100%' }
+  ])
+})
+
+test('loadRank surfaces cloud failure envelopes instead of showing an empty list', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  callFunction.mockResolvedValue({
+    result: {
+      success: false,
+      error: { code: 'INTERNAL', message: 'database index missing' }
+    }
+  })
+  const ctx = makeCtx(def, {
+    activeTab: 'singles',
+    seasonYear: 2026,
+    rankList: [{ _id: 'existing' }]
+  })
+
+  await ctx.loadRank()
+
+  expect(wx.showToast).toHaveBeenCalledWith({ title: '加载失败', icon: 'none', duration: 2000 })
+  expect(ctx.data.rankList).toEqual([{ _id: 'existing' }])
+  errorSpy.mockRestore()
 })

@@ -56,7 +56,7 @@
       >
         <view class="bracket-head">
           <view class="bracket-head-info">
-            <text class="bracket-tournament">{{tournamentsMap[item.tournamentId].name || '未知赛事'}}</text>
+            <text class="bracket-tournament">{{item.tournamentName || tournamentsMap[item.tournamentId].name || '未知赛事'}}</text>
             <text class="bracket-tip">点击录入比分</text>
           </view>
           <text class="bracket-round-tape num">R{{item.round < 10 ? '0' : ''}}{{item.round}}</text>

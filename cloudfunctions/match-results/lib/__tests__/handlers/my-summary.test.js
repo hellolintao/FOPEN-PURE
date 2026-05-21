@@ -67,6 +67,35 @@ test('mySummary confirmed pointsEarned aggregates only my entries', async () => 
   expect(result.confirmed[0].pointsEarned).toBe(20)  // 15 + 5
 })
 
+test('mySummary marks confirmed winner from current match result fields', async () => {
+  const ctx = makeCtx({
+    memberId: 'mA',
+    allMatches: [
+      {
+        _id: 'mr_c',
+        tournamentId: 't1',
+        resultStatus: 'confirmed',
+        playerIds: ['mA', 'mB'],
+        round: 'R1',
+        position: 1,
+        score: { sets: [{ a: 0, b: 4 }] },
+        winner: { id: 'mA', name: 'Me' },
+        winnerId: 'mA',
+        pointsAwarded: { entries: [
+          { memberId: 'mA', points: 20, role: 'winner' },
+          { memberId: 'mB', points: 10, role: 'loser' },
+        ] },
+        confirmedAt: new Date(),
+      },
+    ],
+    tournaments: { t1: { _id: 't1', name: 'A' } },
+  })
+
+  const result = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(result.confirmed[0].isWinner).toBe(true)
+})
+
 test('mySummary treats admin caller as player and does not include non-participant pending admin work', async () => {
   const ctx = makeCtx({
     memberId: 'admin1',

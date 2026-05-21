@@ -10,7 +10,12 @@ jest.mock('wx-server-sdk', () => {
     eq: (v) => op('eq', v),
     remove: () => ({ __op: 'remove' })
   }
-  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [], rank_cache: [] }
+  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [], rank_cache: [], __missingCollections: new Set() }
+  function missingCollectionError(name) {
+    const err = new Error(`collection ${name} not exists`)
+    err.errCode = -502005
+    return err
+  }
   function rowMatches(row, f) {
     if (!f) return true
     if (f.__op === 'and') return f.clauses.every(c => rowMatches(row, c))
@@ -65,7 +70,10 @@ jest.mock('wx-server-sdk', () => {
       },
       doc(id) {
         return {
-          get: async () => ({ data: (rows[name] || []).find(r => r._id === id) || null }),
+          get: async () => {
+            if (rows.__missingCollections.has(name)) throw missingCollectionError(name)
+            return { data: (rows[name] || []).find(r => r._id === id) || null }
+          },
           update: async ({ data }) => {
             const i = rows[name].findIndex(r => r._id === id)
             if (i >= 0) rows[name][i] = { ...rows[name][i], ...data }
@@ -97,6 +105,7 @@ describe('rankList enhancements', () => {
     cloud.__rows.rank_snapshots.length = 0
     cloud.__rows.baseline_standings.length = 0
     cloud.__rows.rank_cache.length = 0
+    cloud.__rows.__missingCollections.clear()
   })
 
   function seedMatchesForMember(memberId, wins, losses, points = 20) {
@@ -255,6 +264,86 @@ describe('rankList enhancements', () => {
       { _id: 'CACHED', name: 'cached player', avatarUrl: '', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
+  })
+
+  test('rankList refreshes member profile fields on cached rows without recomputing points', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png' })
+    cloud.__rows.members.push({ _id: 'LIVE', name: 'live player' })
+    seedMatchesForMember('LIVE', 9, 0, 99)
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'CACHED', name: '旧头像用户', avatarUrl: 'stale.png', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      ]
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList).toEqual([
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+    ])
+    expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
+  })
+
+  test('rankList recomputes live rows when stored daily cache is empty', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 4,
+      losses: 1,
+      createTime: '2026-05-01'
+    })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: []
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList).toEqual([
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+    ])
+    expect(res.data.cachedAt).toBeUndefined()
+  })
+
+  test('rankList recomputes live rows when rank_cache collection is missing', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.__missingCollections.add('rank_cache')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 4,
+      losses: 1,
+      createTime: '2026-05-01'
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.success).toBe(true)
+    expect(res.data.rankList).toEqual([
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+    ])
   })
 
   test('refreshRankCache writes singles and doubles daily cache rows', async () => {

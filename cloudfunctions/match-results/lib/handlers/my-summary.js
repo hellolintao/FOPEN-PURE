@@ -32,8 +32,23 @@ async function mySummary(ctx, payload) {
       .filter(e => e.memberId === memberId)
       .reduce((s, e) => s + (e.points || 0), 0)
   }
+  function includesMember(value) {
+    if (!value) return false
+    if (Array.isArray(value)) return value.includes(memberId)
+    if (typeof value === 'string') return value.split(',').map(id => id.trim()).includes(memberId)
+    if (typeof value === 'object') {
+      return value.id === memberId ||
+        value.partnerId === memberId ||
+        includesMember(value.ids) ||
+        includesMember(value.memberIds)
+    }
+    return false
+  }
   function isWinner(m) {
-    return m.winner === memberId || (m.winnerIds && m.winnerIds.includes(memberId))
+    const entries = (m.pointsAwarded && Array.isArray(m.pointsAwarded.entries)) ? m.pointsAwarded.entries : []
+    if (entries.some(e => e.memberId === memberId && e.role === 'winner')) return true
+    if (entries.some(e => e.memberId === memberId && e.role === 'loser')) return false
+    return includesMember(m.winner) || includesMember(m.winnerId) || includesMember(m.winnerIds)
   }
 
   return {

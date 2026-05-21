@@ -4,6 +4,7 @@ function installStorage(initial = {}) {
     getStorageSync: jest.fn(key => store[key]),
     setStorageSync: jest.fn((key, value) => { store[key] = value }),
     removeStorageSync: jest.fn(key => { delete store[key] }),
+    getStorageInfoSync: jest.fn(() => ({ keys: Object.keys(store) })),
     __store: store,
   }
 }
@@ -56,4 +57,18 @@ test('getCacheEntry exposes stale value for stale-first page rendering', () => {
   expect(entry.value).toEqual({ stats: true })
   expect(isFresh(entry, 1200)).toBe(true)
   expect(isFresh(entry, 1600)).toBe(false)
+})
+
+test('removeCachesByPrefix removes matching logical page cache keys only', () => {
+  const { removeCachesByPrefix, setCache } = require('../page-cache')
+  setCache('rank:list:v2:season_2026:singles', { rows: [] })
+  setCache('rank:hero:v2:season_2026:singles', { star: true })
+  setCache('home:summary:v1', { stats: true })
+
+  const removed = removeCachesByPrefix('rank:')
+
+  expect(removed).toBe(2)
+  expect(wx.__store['fopen:page-cache:rank:list:v2:season_2026:singles']).toBeUndefined()
+  expect(wx.__store['fopen:page-cache:rank:hero:v2:season_2026:singles']).toBeUndefined()
+  expect(wx.__store['fopen:page-cache:home:summary:v1']).toBeTruthy()
 })

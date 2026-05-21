@@ -791,6 +791,19 @@ exports.main = async (event, context) => {
         return { success: false, error: { code: 'INTERNAL', message: e.message } }
       }
     }
+    case 'pendingEntryGroups': {
+      const { pendingEntryGroups } = require('./lib/handlers/query')
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+        const ctx = buildQueryCtx(submitter)
+        const data = await pendingEntryGroups(ctx, event.payload || event)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message } }
+      }
+    }
     case 'mySummary': {
       const { mySummary } = require('./lib/handlers/my-summary')
       try {

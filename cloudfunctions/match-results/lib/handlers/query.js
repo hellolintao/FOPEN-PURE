@@ -83,6 +83,87 @@ async function pendingReviewItems(ctx, payload) {
   return { items, truncated: total > limit }
 }
 
+async function pendingEntryGroups(ctx, payload) {
+  if (!ctx.isAdmin) {
+    const err = new Error('FORBIDDEN')
+    err.code = 'FORBIDDEN'
+    throw err
+  }
+  const tournamentId = (payload && payload.tournamentId) || null
+  const limit = Math.min(Math.max(parseInt(payload && payload.limit, 10) || 50, 1), 200)
+
+  const total = await ctx.db.countMatchResults({ resultStatus: 'pending', tournamentId })
+  const rows = await ctx.db.queryMatchResults({ resultStatus: 'pending', tournamentId, limit })
+  const playableRows = rows.filter(isPlayablePending)
+
+  const tournamentIds = [...new Set(playableRows.map(r => r.tournamentId).filter(Boolean))]
+  const tournamentDocs = await ctx.db.getTournamentsByIds(tournamentIds)
+  const tMap = Object.fromEntries(tournamentDocs.map(t => [t._id, t]))
+
+  const grouped = new Map()
+  for (const row of playableRows) {
+    const tournament = tMap[row.tournamentId]
+    if (!tournament || isClosedTournament(tournament)) continue
+
+    const round = row.round || 1
+    const groupId = `${row.tournamentId}:${round}`
+    if (!grouped.has(groupId)) {
+      grouped.set(groupId, {
+        _id: groupId,
+        tournamentId: row.tournamentId,
+        tournamentName: tournament.name || row.tournamentId,
+        seasonName: tournament.seasonName || '',
+        format: tournament.format || 'regular',
+        round,
+        updateTime: row.updateTime || row.createTime || null,
+        matches: [],
+      })
+    }
+    const group = grouped.get(groupId)
+    group.matches.push({
+      matchId: row.sourceMatchId || row.matchId || row._id,
+      resultId: row._id,
+      sourceMatchId: row.sourceMatchId || row.matchId || '',
+      resultStatus: row.resultStatus,
+      round: row.round,
+      position: row.position,
+      player1: row.player1 || {},
+      player2: row.player2 || {},
+      updateTime: row.updateTime || null,
+    })
+    const rowTime = row.updateTime || row.createTime
+    if (isAfter(rowTime, group.updateTime)) group.updateTime = rowTime
+  }
+
+  const groups = [...grouped.values()]
+    .map(group => ({
+      ...group,
+      matches: group.matches.sort((a, b) => (a.position || 0) - (b.position || 0)),
+    }))
+    .sort((a, b) => timeValue(b.updateTime) - timeValue(a.updateTime))
+
+  return { groups, truncated: total > limit }
+}
+
+function isPlayablePending(row) {
+  if (!row || row.bye || row.resultStatus !== 'pending') return false
+  return !!(row.player1 && row.player2 && row.player1.id && row.player2.id)
+}
+
+function isClosedTournament(tournament) {
+  return ['completed', 'cancelled', 'deleted'].includes(tournament && tournament.status)
+}
+
+function timeValue(value) {
+  if (!value) return 0
+  const t = value instanceof Date ? value.getTime() : new Date(value).getTime()
+  return Number.isFinite(t) ? t : 0
+}
+
+function isAfter(candidate, current) {
+  return timeValue(candidate) > timeValue(current)
+}
+
 function formatTime(date) {
   const d = date instanceof Date ? date : new Date(date)
   const hh = String(d.getHours()).padStart(2, '0')
@@ -90,4 +171,4 @@ function formatTime(date) {
   return `${hh}:${mm}`
 }
 
-module.exports = { submittedQueue, listByTournament, listByPlayer, pendingReviewItems }
+module.exports = { submittedQueue, listByTournament, listByPlayer, pendingReviewItems, pendingEntryGroups }

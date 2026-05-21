@@ -1,4 +1,4 @@
-const { pendingReviewItems } = require('../../handlers/query')
+const { pendingReviewItems, pendingEntryGroups } = require('../../handlers/query')
 
 function makeQueryCtx({ rows = [], tournaments = {}, members = {}, isAdmin = true } = {}) {
   const queries = []
@@ -83,4 +83,91 @@ test('pendingReviewItems truncated when over limit', async () => {
   const result = await pendingReviewItems(ctx, { tournamentId: null, limit: 50 })
   expect(result.items).toHaveLength(50)
   expect(result.truncated).toBe(true)
+})
+
+test('pendingEntryGroups FORBIDDEN: non-admin', async () => {
+  const ctx = makeQueryCtx({ isAdmin: false })
+  await expect(pendingEntryGroups(ctx, { limit: 50 }))
+    .rejects.toMatchObject({ code: 'FORBIDDEN' })
+})
+
+test('pendingEntryGroups returns only playable pending matches for existing active tournaments', async () => {
+  const updateTime = new Date('2026-05-18T10:00:00.000Z')
+  const ctx = makeQueryCtx({
+    rows: [
+      {
+        _id: 'mr_pending',
+        sourceMatchId: 'source_pending',
+        tournamentId: 't_active',
+        resultStatus: 'pending',
+        round: 1,
+        position: 1,
+        player1: { id: 'p1', name: '杜导' },
+        player2: { id: 'p2', name: '小野马' },
+        updateTime,
+      },
+      {
+        _id: 'mr_confirmed',
+        tournamentId: 't_active',
+        resultStatus: 'confirmed',
+        round: 1,
+        position: 2,
+        player1: { id: 'p3', name: 'A' },
+        player2: { id: 'p4', name: 'B' },
+        updateTime,
+      },
+      {
+        _id: 'mr_deleted_tournament',
+        tournamentId: 't_deleted',
+        resultStatus: 'pending',
+        round: 1,
+        position: 1,
+        player1: { id: 'p5', name: 'C' },
+        player2: { id: 'p6', name: 'D' },
+        updateTime,
+      },
+      {
+        _id: 'mr_completed_tournament',
+        tournamentId: 't_completed',
+        resultStatus: 'pending',
+        round: 1,
+        position: 1,
+        player1: { id: 'p7', name: 'E' },
+        player2: { id: 'p8', name: 'F' },
+        updateTime,
+      },
+      {
+        _id: 'mr_waiting_slot',
+        tournamentId: 't_active',
+        resultStatus: 'pending',
+        round: 2,
+        position: 1,
+        player1: { id: 'p1', name: '杜导' },
+        player2: null,
+        updateTime,
+      },
+    ],
+    tournaments: {
+      t_active: { _id: 't_active', name: '5.17常规赛', status: 'ongoing', format: 'regular' },
+      t_completed: { _id: 't_completed', name: '已结束赛事', status: 'completed', format: 'regular' },
+    },
+  })
+
+  const result = await pendingEntryGroups(ctx, { limit: 50 })
+
+  expect(result.groups).toHaveLength(1)
+  expect(result.groups[0]).toMatchObject({
+    _id: 't_active:1',
+    tournamentId: 't_active',
+    tournamentName: '5.17常规赛',
+    round: 1,
+    updateTime,
+    matches: [{
+      matchId: 'source_pending',
+      resultId: 'mr_pending',
+      player1: { id: 'p1', name: '杜导' },
+      player2: { id: 'p2', name: '小野马' },
+    }],
+  })
+  expect(result.truncated).toBe(false)
 })

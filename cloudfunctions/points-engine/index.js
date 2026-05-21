@@ -60,11 +60,11 @@ async function recompute({ tournamentId }) {
 async function rankListCompat({ type = 'singles', currentSeasonId }) {
   if (!currentSeasonId) return { success: true, data: { rankList: [] } }
   const cached = await fetchRankCache({ seasonId: currentSeasonId, type })
-  if (cached) {
+  if (cached && cached.rankList.length > 0) {
     return {
       success: true,
       data: {
-        rankList: cached.rankList || [],
+        rankList: await refreshRankMemberProfiles(cached.rankList || []),
         cachedAt: cached.computedAt || null,
         cacheDate: cached.cacheDate || null
       }
@@ -88,6 +88,25 @@ async function buildRankList({ seasonId, type = 'singles' }) {
     return { ...row, trendDelta: snap ? (snap.rank - currentRank) : null }
   })
   return out
+}
+
+async function refreshRankMemberProfiles(rankList) {
+  if (!Array.isArray(rankList) || rankList.length === 0) return []
+  const memberIds = [...new Set(rankList.map(row => row && (row._id || row.memberId)).filter(Boolean))]
+  if (memberIds.length === 0) return rankList
+
+  const members = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data || []
+  const memberMap = Object.fromEntries(members.map(member => [member._id, member]))
+  return rankList.map(row => {
+    const memberId = row && (row._id || row.memberId)
+    const member = memberMap[memberId]
+    if (!member) return row
+    return {
+      ...row,
+      name: member.name || memberId,
+      avatarUrl: member.avatarUrl || ''
+    }
+  })
 }
 
 async function refreshRankCache({ seasonId, now } = {}) {
@@ -121,6 +140,13 @@ async function fetchRankCache({ seasonId, type }) {
     if (isMissingCollectionError(err)) return null
     throw err
   }
+}
+
+function isMissingCollectionError(e) {
+  if (e && e.errCode === -502005) return true
+  const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+  return /\bcollection\s+(?:not\s+exists|does\s+not\s+exist)\b/i.test(text) ||
+    /\b(?:Db or Table|table)\s+not\s+exist\b/i.test(text)
 }
 
 async function upsertRankCache(row) {
