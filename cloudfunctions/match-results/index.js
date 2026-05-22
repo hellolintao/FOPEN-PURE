@@ -385,6 +385,28 @@ function buildSummaryCtx(submitter) {
         playerIds: _.in([mid]),
         resultStatus: 'confirmed',
       }).orderBy('confirmedAt', 'desc').limit(limit).get()).data,
+      queryMyRegistrations: async (mid) => {
+        const [byPlayer, byPartner, byMember, byPlayerIds, byMemberIds] = await Promise.all([
+          db.collection('tournament_registrations').where({ playerId: mid }).limit(100).get(),
+          db.collection('tournament_registrations').where({ partnerId: mid }).limit(100).get(),
+          db.collection('tournament_registrations').where({ memberId: mid }).limit(100).get(),
+          db.collection('tournament_registrations').where({ playerIds: _.in([mid]) }).limit(100).get(),
+          db.collection('tournament_registrations').where({ memberIds: _.in([mid]) }).limit(100).get(),
+        ])
+        const rows = [
+          ...((byPlayer && byPlayer.data) || []),
+          ...((byPartner && byPartner.data) || []),
+          ...((byMember && byMember.data) || []),
+          ...((byPlayerIds && byPlayerIds.data) || []),
+          ...((byMemberIds && byMemberIds.data) || []),
+        ]
+        const map = new Map()
+        rows.forEach((row, index) => {
+          const key = row._id || `${row.tournamentId || ''}:${row.playerId || ''}:${row.partnerId || ''}:${index}`
+          if (!map.has(key)) map.set(key, row)
+        })
+        return [...map.values()]
+      },
       getTournamentsByIds: async (ids) => {
         if (!ids.length) return []
         return (await db.collection('tournaments').where({ _id: _.in(ids) }).get()).data

@@ -11,7 +11,7 @@
   </view>
 
   <block wx:elif="{{loadState === 'loaded' || loadState === 'refreshing'}}">
-    <view wx:if="{{snapshot.pendingConfirm.total === 0 && snapshot.myDrafts.length === 0 && snapshot.ongoing.length === 0}}" class="page-empty">
+    <view wx:if="{{snapshot.pendingConfirm.total === 0 && snapshot.myDrafts.length === 0 && snapshot.ongoing.length === 0 && snapshot.registrationOpen.length === 0 && snapshot.pendingSchedule.length === 0 && snapshot.scheduleDrafts.length === 0 && snapshot.scheduleRevisions.length === 0}}" class="page-empty">
       <empty-state icon="check" title="没有任务" subtitle="新建赛事或等待会员提交比分" action="+ 创建赛事" bindaction="onCreateTournament" />
     </view>
 
@@ -22,6 +22,62 @@
         <view wx:if="{{snapshot.pendingConfirm.total > 0}}" class="hero-cta" bindtap="onHeroCta">→ 审核并确认 {{snapshot.pendingConfirm.total}} 场</view>
         <view wx:elif="{{snapshot.myDrafts.length > 0}}" class="hero-cta" bindtap="onCreateTournament">→ 继续编辑</view>
         <view wx:else class="hero-cta" bindtap="onCreateTournament">+ 创建赛事</view>
+      </view>
+
+      <view wx:if="{{snapshot.registrationOpen.length > 0}}" class="block">
+        <view class="block-title">
+          <text>报名中</text>
+          <status-tag type="ok" text="{{snapshot.registrationOpen.length}}" />
+        </view>
+        <view class="row" wx:for="{{snapshot.registrationOpen}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onRegistrationOpenRow">
+          <view class="row-l">
+            <text class="row-t">{{item.tournamentName}}</text>
+            <text class="row-s">{{item.confirmedCount}} 人已报名 · 截止 {{item.deadlineText}}</text>
+          </view>
+          <status-tag type="{{item.capacityWarning ? 'amber' : 'muted'}}" text="{{item.capacityWarning ? '容量提醒' : '查看'}}" />
+        </view>
+      </view>
+
+      <view wx:if="{{snapshot.pendingSchedule.length > 0}}" class="block">
+        <view class="block-title">
+          <text>待排程</text>
+          <status-tag type="amber" text="{{snapshot.pendingSchedule.length}}" />
+        </view>
+        <view class="row" wx:for="{{snapshot.pendingSchedule}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onPendingScheduleRow">
+          <view class="row-l">
+            <text class="row-t">{{item.tournamentName}}</text>
+            <text class="row-s">{{item.playerCount}} 人 · 报名已截止</text>
+          </view>
+          <status-tag type="{{item.capacityWarning ? 'amber' : 'muted'}}" text="{{item.capacityWarning ? '容量提醒' : '安排'}}" />
+        </view>
+      </view>
+
+      <view wx:if="{{snapshot.scheduleDrafts.length > 0}}" class="block">
+        <view class="block-title">
+          <text>赛程草稿</text>
+          <status-tag type="muted" text="{{snapshot.scheduleDrafts.length}}" />
+        </view>
+        <view class="row" wx:for="{{snapshot.scheduleDrafts}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onScheduleDraftRow">
+          <view class="row-l">
+            <text class="row-t">{{item.tournamentName}}</text>
+            <text class="row-s">{{item.scheduledCount}} 场已排 · {{item.playerCount}} 人</text>
+          </view>
+          <status-tag type="amber" text="发布" />
+        </view>
+      </view>
+
+      <view wx:if="{{snapshot.scheduleRevisions.length > 0}}" class="block">
+        <view class="block-title">
+          <text>赛程需调整</text>
+          <status-tag type="warn" text="{{snapshot.scheduleRevisions.length}}" />
+        </view>
+        <view class="row" wx:for="{{snapshot.scheduleRevisions}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onScheduleRevisionRow">
+          <view class="row-l">
+            <text class="row-t">{{item.tournamentName}}</text>
+            <text class="row-s">{{item.affectedCount}} 场受影响</text>
+          </view>
+          <status-tag type="warn" text="查看" />
+        </view>
       </view>
 
       <view wx:if="{{snapshot.pendingConfirm.total > 0}}" class="block">

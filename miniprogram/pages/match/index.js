@@ -1,6 +1,7 @@
 const db = wx.cloud.database()
 const { syncTabBar } = require('../../utils/tab-bar')
 const { decorateTournamentStatus } = require('../../utils/tournament-status')
+const { PHASE, derivePhase, isActiveRegistration } = require('../../utils/tournament-phase')
 const { getCacheEntry, isFresh, removeCache, setCache } = require('../../utils/page-cache')
 const app = getApp()
 
@@ -83,14 +84,16 @@ Page({
 		}
 		const resultSummaryMap = await this.loadTournamentResultSummaryMap(tournaments)
 		return (tournaments || []).map(tournament => {
+			const resultSummary = resultSummaryMap[tournament._id]
+			const phase = derivePhase(tournament, { resultSummary })
 			const permissionKind = isAdmin
 				? 'admin'
 				: (participantTournamentIds.has(tournament._id) ? 'participant' : 'viewer')
 			return decorateTournamentStatus({
 				...tournament,
-				resultSummary: resultSummaryMap[tournament._id],
+				resultSummary,
 				__permissionKind: permissionKind,
-				__permissionLabel: permissionLabel(permissionKind)
+				__permissionLabel: permissionLabel(permissionKind, phase, permissionKind === 'participant')
 			})
 		})
 	},
@@ -140,9 +143,15 @@ Page({
 	}
 })
 
-function permissionLabel(kind) {
-	if (kind === 'admin') return '可编辑'
-	if (kind === 'participant') return '可录分'
+function permissionLabel(kind, phase, isParticipant) {
+	if (kind === 'admin') {
+		if (phase === PHASE.PENDING_SCHEDULE) return '待排程'
+		return '可编辑'
+	}
+	if (isParticipant && phase === PHASE.PENDING_SCHEDULE) return '等待赛程'
+	if (isParticipant) return phase === PHASE.LEGACY ? '可录分' : '已报名'
+	if (phase === PHASE.REGISTRATION_OPEN) return '可报名'
+	if (phase === PHASE.SCHEDULE_PUBLISHED) return '可录分'
 	return '仅查看'
 }
 
@@ -167,8 +176,4 @@ function buildResultSummary(rows) {
 		playableCount: playable.length,
 		confirmedCount: playable.filter(row => row.resultStatus === 'confirmed').length
 	}
-}
-
-function isActiveRegistration(row) {
-	return !!row && row.status !== 'cancelled' && row.registrationStatus !== 'cancelled'
 }

@@ -1,8 +1,9 @@
 const { mySummary } = require('../../handlers/my-summary')
 
-function makeCtx({ memberId = 'mA', allMatches = [], tournaments = {} } = {}) {
+function makeCtx({ memberId = 'mA', allMatches = [], registrations = [], tournaments = {}, now = '2026-05-22T12:00:00+08:00' } = {}) {
   return {
     callerMemberId: memberId,
+    now: () => now,
     db: {
       queryMyPending: async (mid) => allMatches.filter(m =>
         m.resultStatus === 'pending' &&
@@ -16,6 +17,13 @@ function makeCtx({ memberId = 'mA', allMatches = [], tournaments = {} } = {}) {
         m.resultStatus === 'confirmed' &&
         (m.playerIds || []).includes(mid)
       ).slice(0, limit),
+      queryMyRegistrations: async (mid) => registrations.filter(r =>
+        r.playerId === mid ||
+        r.partnerId === mid ||
+        r.memberId === mid ||
+        (Array.isArray(r.playerIds) && r.playerIds.includes(mid)) ||
+        (Array.isArray(r.memberIds) && r.memberIds.includes(mid))
+      ),
       getTournamentsByIds: async (ids) => ids.map(id => tournaments[id]).filter(Boolean),
     },
   }
@@ -118,4 +126,57 @@ test('mySummary respects historyLimit', async () => {
   const ctx = makeCtx({ allMatches: matches, tournaments: { t1: { _id: 't1', name: 'A' } } })
   const result = await mySummary(ctx, { historyLimit: 5 })
   expect(result.confirmed).toHaveLength(5)
+})
+
+test('mySummary returns active registrations with withdraw status', async () => {
+  const ctx = makeCtx({
+    registrations: [
+      { _id: 'reg1', tournamentId: 't1', playerId: 'mA', registrationStatus: 'confirmed' },
+      { _id: 'reg2', tournamentId: 't2', playerId: 'mA', registrationStatus: 'withdrew' }
+    ],
+    tournaments: {
+      t1: {
+        _id: 't1',
+        name: '5月周末赛',
+        startDate: '2026-05-24',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-23T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      t2: { _id: 't2', name: '已退出赛事', startDate: '2026-05-24' }
+    }
+  })
+
+  const summary = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(summary.registrations).toEqual([
+    expect.objectContaining({
+      tournamentId: 't1',
+      tournamentName: '5月周末赛',
+      statusLabel: '可退出',
+      withdrawDeadlineLabel: '5月23日 24:00',
+      canWithdraw: true
+    })
+  ])
+})
+
+test('mySummary returns registrations fetched by legacy member array fields', async () => {
+  const ctx = makeCtx({
+    registrations: [
+      { _id: 'member-id', tournamentId: 't1', memberId: 'mA', registrationStatus: 'confirmed' },
+      { _id: 'player-ids', tournamentId: 't2', playerIds: ['mA'], registrationStatus: 'confirmed' },
+      { _id: 'member-ids', tournamentId: 't3', memberIds: ['mA'], registrationStatus: 'confirmed' },
+      { _id: 'other', tournamentId: 't4', memberIds: ['mB'], registrationStatus: 'confirmed' }
+    ],
+    tournaments: {
+      t1: { _id: 't1', name: 'memberId 赛事', startDate: '2026-05-24' },
+      t2: { _id: 't2', name: 'playerIds 赛事', startDate: '2026-05-24' },
+      t3: { _id: 't3', name: 'memberIds 赛事', startDate: '2026-05-24' },
+      t4: { _id: 't4', name: '其他赛事', startDate: '2026-05-24' }
+    }
+  })
+
+  const summary = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(summary.registrations.map(row => row.tournamentId)).toEqual(['t1', 't2', 't3'])
 })

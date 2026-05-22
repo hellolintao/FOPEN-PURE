@@ -1,10 +1,14 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
 const { validateTournament } = require('./lib/validate')
+const { isActiveRegistration } = require('../_shared/tournament-phase')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournaments')
+const REGISTRATION_QUERY_CHUNK_SIZE = 20
+const REGISTRATION_PAGE_SIZE = 1000
+const REGISTRATION_MAX_PAGES_PER_CHUNK = 5
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -317,6 +321,23 @@ function buildAdminConsoleCtx(submitter) {
           remainingMatches: t.remainingMatches || 0,
         }))
       },
+      listWorkbenchTournaments: async () => (await db.collection('tournaments')
+        .orderBy('updateTime', 'desc')
+        .limit(100)
+        .get()).data,
+      listRegistrations: async (tournamentId) => listTournamentRegistrations(tournamentId),
+      countActiveRegistrationsByTournamentIds: async (tournamentIds) => countActiveRegistrationsByTournamentIds(tournamentIds),
+      countConfirmedRegistrations: async (tournamentId) => countActiveRegistrations(tournamentId),
+      countScheduleRevisionAffected: async (tournamentId) => {
+        const res = await db.collection('tournament_brackets')
+          .where({ tournamentId })
+          .limit(20)
+          .get()
+        return (res.data || []).reduce((sum, bracket) => {
+          const matches = Array.isArray(bracket.matches) ? bracket.matches : []
+          return sum + matches.filter(match => match && match.needsRevision).length
+        }, 0)
+      },
     },
   }
 }
@@ -356,12 +377,7 @@ function buildRegistrationPhaseCtx(member) {
         const res = await collection.doc(tournamentId).get().catch(() => null)
         return res && res.data
       },
-      countConfirmedRegistrations: async (tournamentId) => {
-        const res = await db.collection('tournament_registrations')
-          .where({ tournamentId, registrationStatus: 'confirmed' })
-          .count()
-        return res.total || 0
-      },
+      countConfirmedRegistrations: async (tournamentId) => countActiveRegistrations(tournamentId),
       updateTournament: async (tournamentId, data) => {
         const updateData = { ...data }
         if (updateData.schedulePlan !== undefined) {
@@ -385,6 +401,52 @@ function buildRegistrationPhaseCtx(member) {
       }
     }
   }
+}
+
+async function listTournamentRegistrations(tournamentId) {
+  const res = await db.collection('tournament_registrations')
+    .where({ tournamentId })
+    .limit(1000)
+    .get()
+  return (res && res.data) || []
+}
+
+async function countActiveRegistrations(tournamentId) {
+  const counts = await countActiveRegistrationsByTournamentIds([tournamentId])
+  return counts[tournamentId] || 0
+}
+
+async function countActiveRegistrationsByTournamentIds(tournamentIds) {
+  const ids = [...new Set((tournamentIds || []).filter(Boolean))]
+  const counts = Object.fromEntries(ids.map(id => [id, 0]))
+  if (ids.length === 0) return counts
+
+  for (const chunk of chunkArray(ids, REGISTRATION_QUERY_CHUNK_SIZE)) {
+    for (let page = 0; page < REGISTRATION_MAX_PAGES_PER_CHUNK; page += 1) {
+      let query = db.collection('tournament_registrations').where({ tournamentId: _.in(chunk) })
+      const canSkip = typeof query.skip === 'function'
+      if (canSkip) query = query.skip(page * REGISTRATION_PAGE_SIZE)
+      if (typeof query.limit === 'function') query = query.limit(REGISTRATION_PAGE_SIZE)
+      const res = await query.get()
+      const rows = (res && res.data) || []
+      rows.forEach(row => {
+        if (row && counts[row.tournamentId] !== undefined && isActiveRegistration(row)) {
+          counts[row.tournamentId] += 1
+        }
+      })
+      if (rows.length < REGISTRATION_PAGE_SIZE || !canSkip) break
+    }
+  }
+
+  return counts
+}
+
+function chunkArray(values, size) {
+  const chunks = []
+  for (let i = 0; i < values.length; i += size) {
+    chunks.push(values.slice(i, i + size))
+  }
+  return chunks
 }
 
 // ---------------------------------------------------------------------------

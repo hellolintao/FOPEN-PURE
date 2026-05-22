@@ -1,10 +1,20 @@
 const { call } = require('../../utils/cloud')
 
+const EMPTY_SNAPSHOT = {
+  pendingConfirm: { total: 0, byTournament: [] },
+  myDrafts: [],
+  ongoing: [],
+  registrationOpen: [],
+  pendingSchedule: [],
+  scheduleDrafts: [],
+  scheduleRevisions: [],
+}
+
 Page({
   data: {
     loadState: 'idle',
     error: null,
-    snapshot: null,
+    snapshot: EMPTY_SNAPSHOT,
     finishedExpanded: false,
     finishedState: 'idle',
     finishedError: null,
@@ -39,7 +49,7 @@ Page({
       this.setData({ loadState: 'error', error: res.error || { code: 'UNKNOWN', message: '加载失败' } })
       return
     }
-    this.setData({ loadState: 'loaded', snapshot: res.data })
+    this.setData({ loadState: 'loaded', snapshot: normalizeSnapshot(res.data) })
   },
 
   onRetry() { this._loadSnapshot('loading') },
@@ -78,6 +88,26 @@ Page({
   },
 
   onOngoingRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-detail/index?id=${tid}` })
+  },
+
+  onRegistrationOpenRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-detail/index?id=${tid}` })
+  },
+
+  onPendingScheduleRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${tid}&step=3` })
+  },
+
+  onScheduleDraftRow(e) {
+    const tid = e.currentTarget.dataset.tournamentid
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${tid}&step=3` })
+  },
+
+  onScheduleRevisionRow(e) {
     const tid = e.currentTarget.dataset.tournamentid
     wx.navigateTo({ url: `/pages/tournament-detail/index?id=${tid}` })
   },
@@ -203,3 +233,21 @@ Page({
 
   onRetryFinished() { this._loadFinished() },
 })
+
+function normalizeSnapshot(snapshot = {}) {
+  const pendingConfirm = snapshot.pendingConfirm || {}
+  return {
+    ...EMPTY_SNAPSHOT,
+    ...snapshot,
+    pendingConfirm: {
+      total: Number(pendingConfirm.total || 0),
+      byTournament: Array.isArray(pendingConfirm.byTournament) ? pendingConfirm.byTournament : [],
+    },
+    myDrafts: Array.isArray(snapshot.myDrafts) ? snapshot.myDrafts : [],
+    ongoing: Array.isArray(snapshot.ongoing) ? snapshot.ongoing : [],
+    registrationOpen: Array.isArray(snapshot.registrationOpen) ? snapshot.registrationOpen : [],
+    pendingSchedule: Array.isArray(snapshot.pendingSchedule) ? snapshot.pendingSchedule : [],
+    scheduleDrafts: Array.isArray(snapshot.scheduleDrafts) ? snapshot.scheduleDrafts : [],
+    scheduleRevisions: Array.isArray(snapshot.scheduleRevisions) ? snapshot.scheduleRevisions : [],
+  }
+}
