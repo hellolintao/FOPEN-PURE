@@ -384,9 +384,38 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.refresh).toHaveBeenCalled()
   })
 
+  test('onRegisterSelf lets bound legacy member register without opening profile editor', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1', openid: 'openid-a', name: 'Alice' }, isAdmin: false } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: true, data: { registrationId: 'reg_m1' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      tournament: { _id: 't1', createdBy: 'admin1' },
+      isCreator: false
+    })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.navigateTo).not.toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('/pages/edit-profile/index')
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'selfRegister', tournamentId: 't1' }
+    })
+    expect(ctx.refresh).toHaveBeenCalled()
+  })
+
   test('onRegisterSelf maps backend registration errors to clear toast', async () => {
     const { pageDef } = loadPage({
-      app: { globalData: { currentMember: { _id: 'm1', claimStatus: 'claimed' }, isAdmin: false } },
+      app: { globalData: { currentMember: { _id: 'm1', openid: 'openid-a', claimStatus: 'claimed' }, isAdmin: false } },
       callFunction: ({ name }) => {
         if (name === 'tournament-registrations') {
           return Promise.resolve({ result: { success: false, error: { code: 'CAPACITY_FULL' } } })

@@ -242,10 +242,10 @@ async function withdrawRegistration(ctx, event = {}) {
 }
 
 function validateCallerMember(ctx, member) {
-  if (!member || (!member.openid && !member.openId)) {
+  if (!member || !member._id || (!member.openid && !member.openId)) {
     return fail('MEMBER_REQUIRED', '请先认领会员身份')
   }
-  if (member.claimStatus !== 'claimed' && !isAdminMember(member)) {
+  if (member.claimStatus === 'pending' || member.claimStatus === 'unclaimed') {
     return fail('MEMBER_REQUIRED', '请先认领会员身份')
   }
   const memberOpenid = member.openid || member.openId
@@ -253,10 +253,6 @@ function validateCallerMember(ctx, member) {
     return fail('PERMISSION_DENIED', '无权操作该会员')
   }
   return null
-}
-
-function isAdminMember(member) {
-  return !!(member && (member.admin === true || member.isAdmin === true))
 }
 
 function isTournamentCreator(tournament, ctx, member) {

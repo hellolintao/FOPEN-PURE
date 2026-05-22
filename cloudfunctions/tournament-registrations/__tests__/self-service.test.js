@@ -275,11 +275,33 @@ test('selfRegister rejects duplicate active registration', async () => {
   expect(state.registrations[0].registrationStatus).toBe('confirmed')
 })
 
-test('selfRegister rejects member without claimStatus', async () => {
-  const { ctx, tx } = makeCtx({
+test('selfRegister allows bound legacy member without claimStatus', async () => {
+  const { ctx, state } = makeCtx({
     member: {
       _id: 'member-a',
       openid: 'openid-a',
+      name: 'Alice',
+      status: 'active'
+    }
+  })
+
+  const res = await selfRegister(ctx, { tournamentId: TID })
+
+  expect(res).toMatchObject({
+    success: true,
+    data: { registrationId: 'reg_open-2026_001', reused: false }
+  })
+  expect(state.registrations[0]).toMatchObject({
+    playerId: 'member-a',
+    playerName: 'Alice',
+    registrationStatus: 'confirmed'
+  })
+})
+
+test('selfRegister rejects member without openid binding', async () => {
+  const { ctx, tx } = makeCtx({
+    member: {
+      _id: 'member-a',
       name: 'Alice',
       status: 'active'
     }

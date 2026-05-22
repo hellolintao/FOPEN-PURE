@@ -1087,12 +1087,8 @@ function firstChar(name) {
 
 function needsRegistrationIdentity(member) {
   if (!member) return true
-  if (member.claimStatus === 'claimed') return false
-  return !(isAdminMember(member) && member._id && (member.openid || member.openId))
-}
-
-function isAdminMember(member) {
-  return !!(member && (member.admin === true || member.isAdmin === true))
+  if (!member._id || (!member.openid && !member.openId)) return true
+  return member.claimStatus === 'pending' || member.claimStatus === 'unclaimed'
 }
 
 function isTournamentCreator(tournament, member) {
