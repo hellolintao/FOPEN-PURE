@@ -46,7 +46,7 @@
         <view class="mm-row" wx:for="{{summary.pending}}" wx:key="matchId" data-matchid="{{item.matchId}}" data-tournamentid="{{item.tournamentId}}" bindtap="onPendingRow">
           <view class="mm-row-l">
             <text class="mm-row-t">{{item.tournamentName}} {{item.round}}-{{item.position}}</text>
-            <text class="mm-row-s">{{item.courtName}} · vs {{item.p2.name}}</text>
+            <text class="mm-row-s">{{item.courtName}} · vs {{item.opponentLabel || item.p2.name}}</text>
           </view>
           <status-tag type="amber" text="录分" />
         </view>
@@ -60,7 +60,7 @@
         </view>
         <view class="mm-row" wx:for="{{summary.submitted}}" wx:key="matchId" data-matchid="{{item.matchId}}" data-tournamentid="{{item.tournamentId}}" bindtap="onSubmittedRow">
           <view class="mm-row-l">
-            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.score.sets[0].a}}:{{item.score.sets[0].b}}</text>
+            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.scoreLabel || (item.score.sets[0].a + ':' + item.score.sets[0].b)}}</text>
             <text class="mm-row-s">等管理员确认 · vs {{item.opponentLabel}}</text>
           </view>
           <status-tag type="amber" text="确认中" />
@@ -75,7 +75,7 @@
         </view>
         <view class="mm-row" wx:for="{{summary.confirmed}}" wx:key="matchId">
           <view class="mm-row-l">
-            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.score.sets[0].a}}:{{item.score.sets[0].b}} {{item.isWinner ? '胜' : '负'}}</text>
+            <text class="mm-row-t">{{item.tournamentName}} {{item.round}} · {{item.scoreLabel || (item.score.sets[0].a + ':' + item.score.sets[0].b)}} {{item.isWinner ? '胜' : '负'}}</text>
             <text class="mm-row-s">+{{item.pointsEarned}} 积分</text>
           </view>
           <status-tag type="ok" text="已确认" />

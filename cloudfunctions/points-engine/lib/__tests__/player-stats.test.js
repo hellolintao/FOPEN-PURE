@@ -117,6 +117,38 @@ describe('enrichRecent', () => {
     expect(out[0].score).toBe('4-2')
   })
 
+  test('structured score object is formatted from current player side', () => {
+    const row = {
+      _id: 'm_score_side', tournamentId: 't2', round: 1,
+      player1: { id: 'Y', name: '陈思远' },
+      player2: { id: 'P', name: 'p' },
+      score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      playerIds: ['Y', 'P'],
+      pointsAwarded: { entries: [
+        { memberId: 'Y', points: 20, role: 'winner' },
+        { memberId: 'P', points: 10, role: 'loser' }
+      ]},
+      confirmedAt: '2026-05-10', createTime: '2026-05-10'
+    }
+    const out = enrichRecent([row], 'P', tournaments, members)
+    expect(out[0].score).toBe('2-4')
+    expect(out[0].won).toBe(false)
+  })
+
+  test('legacy string score is formatted from current player loserId side', () => {
+    const row = {
+      _id: 'm_score_legacy', tournamentId: 't2', round: 1,
+      score: '4-2',
+      winnerId: 'Y',
+      loserId: 'P',
+      playerIds: ['Y', 'P'],
+      confirmedAt: '2026-05-10', createTime: '2026-05-10'
+    }
+    const out = enrichRecent([row], 'P', tournaments, members)
+    expect(out[0].score).toBe('2-4')
+    expect(out[0].won).toBe(false)
+  })
+
   test('doubles recent display picks opposite-role opponent, not same-role partner', () => {
     const row = {
       _id: 'm2d', tournamentId: 't2', tournamentType: 'doubles', round: 1,

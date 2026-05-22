@@ -14,9 +14,73 @@ function deriveRoundLabel(tournament, round) {
   return `R${round}`
 }
 
-function formatScore(score) {
+function includesPlayer(value, playerId) {
+  if (!value || !playerId) return false
+  if (Array.isArray(value)) return value.includes(playerId)
+  if (typeof value === 'string') return value.split(',').map(id => id.trim()).includes(playerId)
+  if (typeof value !== 'object') return false
+  if (value.id === playerId || value.partnerId === playerId || value.memberId === playerId) return true
+  if (Array.isArray(value.ids) && value.ids.includes(playerId)) return true
+  if (Array.isArray(value.memberIds) && value.memberIds.includes(playerId)) return true
+  return false
+}
+
+function oppositeSide(side) {
+  return side === 'a' ? 'b' : (side === 'b' ? 'a' : null)
+}
+
+function winningScoreSide(score) {
+  const pairs = scorePairs(score)
+  const decisive = pairs.find(pair => pair.left !== pair.right) || pairs[pairs.length - 1]
+  if (!decisive || decisive.left === decisive.right) return null
+  return decisive.left > decisive.right ? 'a' : 'b'
+}
+
+function scorePairs(score) {
+  if (!score) return []
+  if (typeof score === 'string') {
+    const pairs = []
+    const re = /\b(\d+)\s*[-:]\s*(\d+)\b/g
+    let m
+    while ((m = re.exec(score))) pairs.push({ left: Number(m[1]), right: Number(m[2]) })
+    return pairs
+  }
+  const pairs = (Array.isArray(score.sets) ? score.sets : [])
+    .filter(set => set && set.a != null && set.b != null)
+    .map(set => ({ left: Number(set.a), right: Number(set.b) }))
+  if (score.tiebreak && typeof score.tiebreak === 'string') {
+    const m = /^(\d+)-(\d+)$/.exec(score.tiebreak)
+    if (m) pairs.push({ left: Number(m[1]), right: Number(m[2]) })
+  }
+  return pairs
+}
+
+function playerRole(row, playerId, mine) {
+  if (mine && mine.role === 'winner') return 'winner'
+  if (mine && mine.role === 'loser') return 'loser'
+  if (includesPlayer(row && row.winner, playerId) || includesPlayer(row && row.winnerId, playerId) || includesPlayer(row && row.winnerIds, playerId)) return 'winner'
+  if (includesPlayer(row && row.loser, playerId) || includesPlayer(row && row.loserId, playerId) || includesPlayer(row && row.loserIds, playerId)) return 'loser'
+  return null
+}
+
+function subjectSide(row, playerId, mine) {
+  if (includesPlayer(row && row.player1, playerId)) return 'a'
+  if (includesPlayer(row && row.player2, playerId)) return 'b'
+  const role = playerRole(row, playerId, mine)
+  const winnerSide = winningScoreSide(row && row.score)
+  if (!role || !winnerSide) return null
+  return role === 'winner' ? winnerSide : oppositeSide(winnerSide)
+}
+
+function flipPairText(text) {
+  if (typeof text !== 'string') return text
+  return text.replace(/\b(\d+)\s*([-:])\s*(\d+)\b/g, (_, left, sep, right) => `${right}${sep}${left}`)
+}
+
+function formatScore(score, options = {}) {
   if (!score) return ''
-  if (typeof score === 'string') return score
+  const flip = !!options.flip
+  if (typeof score === 'string') return flip ? flipPairText(score) : score
 
   const sets = Array.isArray(score.sets) ? score.sets : []
   if (sets.length === 0) return ''
@@ -24,12 +88,12 @@ function formatScore(score) {
   const parts = sets
     .map(set => {
       if (!set || set.a == null || set.b == null) return ''
-      return `${set.a}-${set.b}`
+      return flip ? `${set.b}-${set.a}` : `${set.a}-${set.b}`
     })
     .filter(Boolean)
 
   if (score.tiebreak) {
-    parts.push(`(${score.tiebreak})`)
+    parts.push(`(${flip ? flipPairText(score.tiebreak) : score.tiebreak})`)
   }
 
   return parts.join(' ')
@@ -40,6 +104,8 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
     const tournament = tournamentsMap.get(row.tournamentId) || null
     const entries = (row.pointsAwarded && row.pointsAwarded.entries) || []
     const mine = entries.find(e => e.memberId === playerId)
+    const scoreSide = subjectSide(row, playerId, mine)
+    const role = playerRole(row, playerId, mine)
     const opponentEntry = row.tournamentType === 'doubles' && mine && mine.role
       ? entries.find(e => e.memberId !== playerId && e.role && e.role !== mine.role)
       : entries.find(e => e.memberId !== playerId)
@@ -57,10 +123,10 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
       tournamentType: row.tournamentType || row.type || (tournament && tournament.type) || 'singles',
       round: row.round,
       roundLabel: deriveRoundLabel(tournament, row.round),
-      score: formatScore(row.score),
+      score: formatScore(row.score, { flip: scoreSide === 'b' }),
       opponentId,
       opponentName: opponentMember ? (opponentMember.name || opponentId) : (opponentId || ''),
-      won: mine ? mine.role === 'winner' : false,
+      won: role === 'winner',
       pointsAwarded: mine ? (mine.points || 0) : 0,
       createTime: row.createTime,
       confirmedAt: row.confirmedAt || null

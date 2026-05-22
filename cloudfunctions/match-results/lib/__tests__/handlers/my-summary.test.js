@@ -96,6 +96,66 @@ test('mySummary marks confirmed winner from current match result fields', async 
   expect(result.confirmed[0].isWinner).toBe(true)
 })
 
+test('mySummary exposes scoreLabel from caller perspective when caller is player2', async () => {
+  const ctx = makeCtx({
+    memberId: 'mA',
+    allMatches: [
+      {
+        _id: 'mr_c',
+        tournamentId: 't1',
+        resultStatus: 'confirmed',
+        playerIds: ['mB', 'mA'],
+        round: 1,
+        position: 1,
+        player1: { id: 'mB', name: 'Opponent' },
+        player2: { id: 'mA', name: 'Me' },
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        pointsAwarded: { entries: [
+          { memberId: 'mB', points: 20, role: 'winner' },
+          { memberId: 'mA', points: 10, role: 'loser' },
+        ] },
+        confirmedAt: new Date(),
+      },
+    ],
+    tournaments: { t1: { _id: 't1', name: 'A' } },
+  })
+
+  const result = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(result.confirmed[0]).toMatchObject({
+    scoreLabel: '2:4',
+    isWinner: false,
+  })
+})
+
+test('mySummary flips legacy string score when caller is loserId', async () => {
+  const ctx = makeCtx({
+    memberId: 'mA',
+    allMatches: [
+      {
+        _id: 'mr_legacy',
+        tournamentId: 't1',
+        resultStatus: 'confirmed',
+        playerIds: ['mA', 'mB'],
+        round: 1,
+        position: 1,
+        score: '4:2',
+        winnerId: 'mB',
+        loserId: 'mA',
+        confirmedAt: new Date(),
+      },
+    ],
+    tournaments: { t1: { _id: 't1', name: 'A' } },
+  })
+
+  const result = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(result.confirmed[0]).toMatchObject({
+    scoreLabel: '2:4',
+    isWinner: false,
+  })
+})
+
 test('mySummary treats admin caller as player and does not include non-participant pending admin work', async () => {
   const ctx = makeCtx({
     memberId: 'admin1',

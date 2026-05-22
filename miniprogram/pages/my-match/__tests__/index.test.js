@@ -72,3 +72,13 @@ test('onRecordNow opens first pending match', () => {
     url: '/pages/tournament-score/index?tournamentId=t1&matchId=mr1',
   })
 })
+
+test('confirmed and submitted rows prefer perspective score label in wxml', () => {
+  const fs = require('fs')
+  const path = require('path')
+  loadPage()
+
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('{{item.scoreLabel || (item.score.sets[0].a + \':\' + item.score.sets[0].b)}}')
+})
