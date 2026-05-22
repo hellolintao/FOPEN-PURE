@@ -622,14 +622,19 @@ function buildFooterActions({
       actions.push(footerAction('arrangeSchedule', '安排对局', 'cta-lime flex-1'))
       return actions
     }
-    actions.push(footerAction('edit', '编辑', 'cta-secondary'))
-    if (phase === PHASE.REGISTRATION_OPEN && !isCreator) {
-      if (isParticipant && canMemberWithdraw) {
-        actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
-      } else if (!isParticipant && selfRegistrationSupported) {
-        actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
+    if (phase === PHASE.REGISTRATION_OPEN) {
+      actions.push(footerAction('edit', '编辑', 'cta-secondary'))
+      if (!isCreator) {
+        if (isParticipant && canMemberWithdraw) {
+          actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
+        } else if (!isParticipant && selfRegistrationSupported) {
+          actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
+        }
       }
+      actions.push(footerAction('arrangeSchedule', '安排对局', 'cta-lime flex-1'))
+      return actions
     }
+    actions.push(footerAction('edit', '编辑', 'cta-secondary'))
     return actions
   }
 

@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 function loadPage() {
   jest.resetModules()
   let pageDef
@@ -340,6 +343,47 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(ctx.data.step).toBe(2)
     expect(wx.pageScrollTo).toHaveBeenCalledWith({ selector: '.registration-card', duration: 240 })
+  })
+
+  test('published registration step 2 saves roster and court changes without entering schedule', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      step: 2,
+      registrationPublished: true,
+      selectedPlayers: [{ playerId: 'p1', playerName: 'A' }],
+      schedulePlanCourts: [{ courtId: 'c1', slots: ['2026-05-25T18:00'] }]
+    })
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: [] } })
+
+    await ctx.onSaveStep2Changes()
+
+    expect(ctx.data.step).toBe(2)
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournaments',
+      data: {
+        action: 'updateNew',
+        id: 't1',
+        data: expect.objectContaining({ schedulePlan: expect.any(Object) })
+      }
+    })
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: {
+        action: 'bulkSet',
+        tournamentId: 't1',
+        registrations: [{ playerId: 'p1', playerName: 'A' }]
+      }
+    })
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '已保存', icon: 'success' })
+  })
+
+  test('published registration step 2 footer exposes save and schedule actions', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('wx:elif="{{step === 2 && registrationPublished}}" class="footer footer-three"')
+    expect(wxml).toContain('bindtap="onSaveStep2Changes">保存修改')
+    expect(wxml).toContain('bindtap="onNext">下一步排程')
   })
 
   test('step 2 next still enters schedule directly', async () => {

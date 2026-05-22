@@ -205,8 +205,8 @@ describe('tournament-detail score permissions', () => {
 
     expect(ctx.data.isAdmin).toBe(true)
     expect(ctx.data.isCreator).toBe(false)
-    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '我要报名'])
-    expect(ctx.data.primaryActionLabel).toBe('我要报名')
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '我要报名', '安排对局'])
+    expect(ctx.data.primaryActionLabel).toBe('安排对局')
   })
 
   test('registration open creator admin keeps management actions without self-register CTA', async () => {
@@ -229,7 +229,7 @@ describe('tournament-detail score permissions', () => {
     await ctx.refresh()
 
     expect(ctx.data.isCreator).toBe(true)
-    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑'])
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排对局'])
     expect(ctx.data.footerActions.map(a => a.key)).not.toContain('registerSelf')
   })
 

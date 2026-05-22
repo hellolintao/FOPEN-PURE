@@ -307,6 +307,20 @@ Page({
     }
   },
 
+  async onSaveStep2Changes() {
+    try {
+      const persisted = await this.persistStep2Inputs({
+        requirePlayers: false,
+        saveRegistrations: true
+      })
+      if (!persisted) return
+      wx.showToast({ title: '已保存', icon: 'success' })
+    } catch (err) {
+      console.error('[onSaveStep2Changes]', err)
+      wx.showToast({ title: '保存失败', icon: 'none' })
+    }
+  },
+
   onShareAppMessage() {
     if (!this.data.registrationPublished || !this.data.sharePath) {
       return { title: '赛事报名', path: '/pages/tournament-detail/index' }
