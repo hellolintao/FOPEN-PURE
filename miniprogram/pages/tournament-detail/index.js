@@ -461,9 +461,10 @@ Page({
     const tournament = this.data.tournament || {}
     const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
     const tournamentId = this.data.tournamentId || tournament._id || ''
+    const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
-      path: tournamentId ? `/pages/tournament-detail/index?id=${tournamentId}` : '/pages/match/index'
+      path: tournamentId ? `/pages/tournament-detail/index?id=${encodeURIComponent(tournamentId)}${entry}` : '/pages/match/index'
     }
   },
 
@@ -471,9 +472,10 @@ Page({
     const tournament = this.data.tournament || {}
     const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
     const tournamentId = this.data.tournamentId || tournament._id || ''
+    const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
-      query: tournamentId ? `id=${tournamentId}` : ''
+      query: tournamentId ? `id=${encodeURIComponent(tournamentId)}${entry}` : ''
     }
   },
 

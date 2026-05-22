@@ -865,4 +865,22 @@ describe('tournament-detail score permissions', () => {
       path: '/pages/tournament-detail/index?id=t1'
     })
   })
+
+  test('shares registration-open detail with registration entry path', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      showRegistrationModule: true,
+      tournament: { _id: 't1', name: '五月排位赛', status: 'upcoming' }
+    })
+
+    expect(ctx.onShareAppMessage()).toEqual({
+      title: '五月排位赛 · 待开始',
+      path: '/pages/tournament-detail/index?id=t1&entry=register'
+    })
+    expect(ctx.onShareTimeline()).toEqual({
+      title: '五月排位赛 · 待开始',
+      query: 'id=t1&entry=register'
+    })
+  })
 })

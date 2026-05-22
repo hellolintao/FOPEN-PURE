@@ -78,6 +78,33 @@ function validateBracket(data) {
   return errors
 }
 
+function fail(code, message) {
+  return { success: false, error: { code, message } }
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveMemberByOpenid(openid, database = db, command = _) {
+  if (!openid) return null
+  const query = command && typeof command.or === 'function'
+    ? command.or([{ openid }, { openId: openid }])
+    : { openid }
+  const res = await database.collection('members').where(query).get().catch(() => ({ data: [] }))
+  const member = (res.data || [])[0]
+  return member ? { ...member, openid: member.openid || member.openId || openid } : null
+}
+
+async function requireAdmin() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return fail('FORBIDDEN', '需要登录')
+  const member = await resolveMemberByOpenid(openid)
+  if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+  return null
+}
+
 exports.main = async (event, context) => {
   const { action, data, id, tournamentId, round, matchId, position } = event
   const now = db.serverDate()
@@ -317,14 +344,23 @@ exports.main = async (event, context) => {
         }
       }
 
-      case 'saveInitialMatches':
+      case 'saveInitialMatches': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
         return await handleSaveInitialMatches(event)
+      }
 
-      case 'saveSchedule':
+      case 'saveSchedule': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
         return await handleSaveSchedule(event)
+      }
 
-      case 'regenerateDraft':
+      case 'regenerateDraft': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
         return await handleRegenerateDraft(event)
+      }
 
       default: {
         return { errMsg: 'invalid action' }

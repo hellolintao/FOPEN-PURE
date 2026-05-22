@@ -22,6 +22,18 @@ jest.mock('wx-server-sdk', () => {
 
   function collection(name) {
     if (name === 'match_results') {
+      const rowsForQuery = query => {
+        const rows = Object.values(mockState.rows || {})
+        if (!query || Object.keys(query).length === 0) return rows
+        if (query.tournamentId) return rows.filter(row => row.tournamentId === query.tournamentId)
+        if (query.$and) {
+          return query.$and.reduce((acc, part) => acc.filter(row => {
+            if (part.tournamentId) return row.tournamentId === part.tournamentId
+            return true
+          }), rows)
+        }
+        return rows
+      }
       return {
         doc: id => ({
           get: jest.fn(async () => ({ data: mockState.rows[id] || null })),
@@ -29,8 +41,12 @@ jest.mock('wx-server-sdk', () => {
             mockState.rows[id] = { ...(mockState.rows[id] || { _id: id }), ...data }
             return { updated: 1 }
           }),
+          remove: jest.fn(async () => {
+            delete mockState.rows[id]
+            return { removed: 1 }
+          }),
         }),
-        where: jest.fn(() => mockChainableQuery([])),
+        where: jest.fn(query => mockChainableQuery(rowsForQuery(query))),
         add: jest.fn(async ({ data }) => {
           mockState.rows[data._id] = { ...data }
           return { _id: data._id }
@@ -140,6 +156,75 @@ describe('direct get schedule visibility gate', () => {
 
     expect(res).toEqual({ data: mockState.rows.r1 })
   })
+
+  test('blocks non-admin getByTournament when scheduleStatus is draft', async () => {
+    setState({ scheduleStatus: 'draft' })
+
+    const res = await main({ action: 'getByTournament', data: { tournamentId: 't1' } })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'FORBIDDEN', message: '赛程发布后才能录入成绩' },
+    })
+  })
+
+  test('allows legacy getByTournament when scheduleStatus is missing', async () => {
+    setState({ scheduleStatus: 'missing' })
+
+    const res = await main({ action: 'getByTournament', data: { tournamentId: 't1' } })
+
+    expect(res).toEqual({ data: [mockState.rows.r1] })
+  })
+
+  test('filters non-admin broad list to published and legacy tournaments', async () => {
+    setState({ scheduleStatus: 'published' })
+    mockState.tournaments = {
+      published: { _id: 'published', scheduleStatus: 'published' },
+      draft: { _id: 'draft', scheduleStatus: 'draft' },
+      legacy: { _id: 'legacy' },
+    }
+    mockState.rows = {
+      publishedRow: { _id: 'publishedRow', tournamentId: 'published', resultStatus: 'pending' },
+      draftRow: { _id: 'draftRow', tournamentId: 'draft', resultStatus: 'pending' },
+      legacyRow: { _id: 'legacyRow', tournamentId: 'legacy', resultStatus: 'pending' },
+    }
+
+    const res = await main({ action: 'list', data: {} })
+
+    expect(res.data.map(row => row._id)).toEqual(['publishedRow', 'legacyRow'])
+  })
+
+  test('admin broad list includes draft tournament rows', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.tournaments = {
+      draft: { _id: 'draft', scheduleStatus: 'draft' },
+    }
+    mockState.rows = {
+      draftRow: { _id: 'draftRow', tournamentId: 'draft', resultStatus: 'pending' },
+    }
+
+    const res = await main({ action: 'list', data: {} })
+
+    expect(res.data.map(row => row._id)).toEqual(['draftRow'])
+  })
+
+  test('filters non-admin getByPlayer to published and legacy tournaments', async () => {
+    setState({ scheduleStatus: 'published' })
+    mockState.tournaments = {
+      published: { _id: 'published', scheduleStatus: 'published' },
+      draft: { _id: 'draft', scheduleStatus: 'draft' },
+      legacy: { _id: 'legacy' },
+    }
+    mockState.rows = {
+      publishedRow: { _id: 'publishedRow', tournamentId: 'published', winnerId: 'p1', resultStatus: 'pending' },
+      draftRow: { _id: 'draftRow', tournamentId: 'draft', winnerId: 'p1', resultStatus: 'pending' },
+      legacyRow: { _id: 'legacyRow', tournamentId: 'legacy', winnerId: 'p1', resultStatus: 'pending' },
+    }
+
+    const res = await main({ action: 'getByPlayer', data: { playerId: 'p1' } })
+
+    expect(res.data.map(row => row._id)).toEqual(['publishedRow', 'legacyRow'])
+  })
 })
 
 describe('direct legacy score writes schedule gate', () => {
@@ -173,5 +258,34 @@ describe('direct legacy score writes schedule gate', () => {
 
     expect(res).toEqual({ updated: 1 })
     expect(mockState.rows.r1.score).toBe('4-2')
+  })
+
+  test('blocks non-admin bulkUpsertScheduledMatches', async () => {
+    setState({ scheduleStatus: 'published' })
+
+    const res = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: [],
+    })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'FORBIDDEN', message: '需要管理员权限' },
+    })
+  })
+
+  test('allows admin bulkUpsertScheduledMatches past auth gate', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+
+    const res = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: [],
+    })
+
+    expect(res).toEqual({ success: true, data: { count: 0 } })
   })
 })

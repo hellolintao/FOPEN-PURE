@@ -30,6 +30,27 @@ function canExposeScoreRows(tournament) {
   return false
 }
 
+async function filterRowsByScheduleVisibility(ctx, rows) {
+  const activeRows = rows.filter(isActiveScoreRow)
+  if (ctx.isAdmin) return activeRows
+
+  const tournamentCache = new Map()
+  const visibleRows = []
+  for (const row of activeRows) {
+    if (!row.tournamentId) {
+      visibleRows.push(row)
+      continue
+    }
+    if (!tournamentCache.has(row.tournamentId)) {
+      tournamentCache.set(row.tournamentId, await ctx.db.getTournament(row.tournamentId))
+    }
+    if (canExposeScoreRows(tournamentCache.get(row.tournamentId))) {
+      visibleRows.push(row)
+    }
+  }
+  return visibleRows
+}
+
 async function listByTournament(ctx, event) {
   if (!event.tournamentId) {
     const err = new Error('tournamentId 必填')
@@ -37,7 +58,7 @@ async function listByTournament(ctx, event) {
     throw err
   }
   const tournament = await ctx.db.getTournament(event.tournamentId)
-  if (!canExposeScoreRows(tournament)) return { results: [] }
+  if (!ctx.isAdmin && !canExposeScoreRows(tournament)) return { results: [] }
   const results = (await ctx.db.listByTournament(event.tournamentId)).filter(isActiveScoreRow)
   return { results }
 }
@@ -48,7 +69,7 @@ async function listByPlayer(ctx, event) {
     err.code = 'INVALID_ARG'
     throw err
   }
-  const matches = (await ctx.db.listByPlayerNotConfirmed(event.memberId)).filter(isActiveScoreRow)
+  const matches = await filterRowsByScheduleVisibility(ctx, await ctx.db.listByPlayerNotConfirmed(event.memberId))
   return { matches }
 }
 
@@ -194,5 +215,6 @@ module.exports = {
     canExposeScoreRows,
     isActiveScoreRow,
     listByTournamentWithCtx: listByTournament,
+    listByPlayerWithCtx: listByPlayer,
   },
 }

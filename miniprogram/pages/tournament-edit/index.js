@@ -196,9 +196,11 @@ Page({
     this.setData({ step: 3 })
   },
 
-  async persistStep2Inputs() {
+  async persistStep2Inputs(options = {}) {
+    const requirePlayers = options.requirePlayers !== false
+    const saveRegistrations = options.saveRegistrations !== false
     const minPlayers = this._minPlayers()
-    if (this.data.selectedPlayers.length < minPlayers) {
+    if (requirePlayers && this.data.selectedPlayers.length < minPlayers) {
       const isKD = this.data.form.type === 'doubles' && this.data.form.format === 'knockout'
       const unit = isKD ? '组队伍' : '位球员'
       wx.showToast({ title: `至少选 ${minPlayers} ${unit}`, icon: 'none' })
@@ -246,14 +248,16 @@ Page({
       return false
     }
 
-    const bsRes = await wx.cloud.callFunction({
-      name: 'tournament-registrations',
-      data: { action: 'bulkSet', tournamentId: this.data.tournamentId, registrations: this.data.selectedPlayers }
-    })
-    if (!(bsRes.result && bsRes.result.success)) {
-      const msg = (bsRes.result && bsRes.result.error && bsRes.result.error.message) || '保存报名失败'
-      wx.showToast({ title: msg, icon: 'none' })
-      return false
+    if (saveRegistrations) {
+      const bsRes = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'bulkSet', tournamentId: this.data.tournamentId, registrations: this.data.selectedPlayers }
+      })
+      if (!(bsRes.result && bsRes.result.success)) {
+        const msg = (bsRes.result && bsRes.result.error && bsRes.result.error.message) || '保存报名失败'
+        wx.showToast({ title: msg, icon: 'none' })
+        return false
+      }
     }
     return true
   },
@@ -268,7 +272,7 @@ Page({
       return
     }
     try {
-      const persisted = await this.persistStep2Inputs()
+      const persisted = await this.persistStep2Inputs({ requirePlayers: false, saveRegistrations: false })
       if (!persisted) return
 
       const res = await wx.cloud.callFunction({

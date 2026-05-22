@@ -18,10 +18,11 @@ function makeQueryCtx({ rows = [], tournaments = {}, members = {}, isAdmin = tru
           (!tournamentId || r.tournamentId === tournamentId) &&
           (!resultStatus || r.resultStatus === resultStatus)
         ).length,
-      getTournament: async () => tournament,
+      getTournament: async (id) => tournament || tournaments[id] || null,
       getTournamentsByIds: async (ids) => ids.map(id => tournaments[id]).filter(Boolean),
       getMembersByIds: async (ids) => ids.map(id => members[id]).filter(Boolean),
       listByTournament: async (tournamentId) => rows.filter(r => r.tournamentId === tournamentId),
+      listByPlayerNotConfirmed: async (memberId) => rows.filter(r => (r.playerIds || []).includes(memberId)),
     },
   }
 }
@@ -48,6 +49,7 @@ test.each([
 
 test('listByTournament returns empty rows when scheduleStatus is draft', async () => {
   const ctx = makeQueryCtx({
+    isAdmin: false,
     tournament: { _id: 't1', scheduleStatus: 'draft' },
     rows: [{ _id: 'r1', tournamentId: 't1' }]
   })
@@ -71,6 +73,42 @@ test('listByTournament filters invalidated and history rows from active score ro
   const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
 
   expect(res.results.map(row => row._id)).toEqual(['result_t1_m1'])
+})
+
+test('listByPlayer filters non-admin rows by tournament schedule visibility', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: false,
+    tournaments: {
+      published: { _id: 'published', scheduleStatus: 'published' },
+      draft: { _id: 'draft', scheduleStatus: 'draft' },
+      legacy: { _id: 'legacy' },
+    },
+    rows: [
+      { _id: 'publishedRow', tournamentId: 'published', playerIds: ['m1'], resultStatus: 'pending' },
+      { _id: 'draftRow', tournamentId: 'draft', playerIds: ['m1'], resultStatus: 'pending' },
+      { _id: 'legacyRow', tournamentId: 'legacy', playerIds: ['m1'], resultStatus: 'pending' },
+    ]
+  })
+
+  const res = await __test__.listByPlayerWithCtx(ctx, { memberId: 'm1' })
+
+  expect(res.matches.map(row => row._id)).toEqual(['publishedRow', 'legacyRow'])
+})
+
+test('listByPlayer keeps draft rows for admin', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: true,
+    tournaments: {
+      draft: { _id: 'draft', scheduleStatus: 'draft' },
+    },
+    rows: [
+      { _id: 'draftRow', tournamentId: 'draft', playerIds: ['m1'], resultStatus: 'pending' },
+    ]
+  })
+
+  const res = await __test__.listByPlayerWithCtx(ctx, { memberId: 'm1' })
+
+  expect(res.matches.map(row => row._id)).toEqual(['draftRow'])
 })
 
 test('pendingReviewItems FORBIDDEN: non-admin', async () => {

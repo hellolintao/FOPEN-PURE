@@ -212,6 +212,28 @@ describe('tournament-edit registration publishing flow', () => {
     }))
   })
 
+  test('step 2 can publish registration without preselected players', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      step: 2,
+      form: { ...def.data.form, name: '5月周末赛', registrationDeadlineAt: '2026-05-24T18:00:00+08:00' },
+      selectedPlayers: [],
+      schedulePlanCourts: [{ courtId: 'c1', slots: ['2026-05-25T18:00'] }]
+    })
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: { id: 't1' } } })
+
+    await ctx.onPublishRegistration()
+
+    expect(ctx.data.registrationPublished).toBe(true)
+    expect(ctx.data.sharePath).toBe('/pages/tournament-detail/index?id=t1&entry=register')
+    expect(wx.showToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('至少选') }))
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tournament-registrations',
+      data: expect.objectContaining({ action: 'bulkSet' })
+    }))
+  })
+
   test('publish registration failure does not open share menu', async () => {
     const def = loadPage()
     const ctx = makeCtx(def, {
@@ -223,8 +245,6 @@ describe('tournament-edit registration publishing flow', () => {
     })
     wx.cloud.callFunction
       .mockResolvedValueOnce({ result: { success: true, data: [] } })
-      .mockResolvedValueOnce({ result: { success: true } })
-      .mockResolvedValueOnce({ result: { success: true } })
       .mockResolvedValueOnce({ result: { success: false, error: { message: 'deadline expired' } } })
 
     await ctx.onPublishRegistration()

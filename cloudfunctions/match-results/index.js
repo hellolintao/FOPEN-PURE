@@ -94,6 +94,49 @@ async function guardDirectScoreWriteForRow(row, fallbackTournamentId) {
   return guardDirectScoreWriteByTournamentId((row && row.tournamentId) || fallbackTournamentId)
 }
 
+async function requireAdmin() {
+  const submitter = await resolveSubmitter()
+  if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
+  if (!submitter.isAdmin) return fail('FORBIDDEN', '需要管理员权限')
+  return null
+}
+
+async function guardScoreRowsReadByTournamentId(tournamentId) {
+  if (!tournamentId) return null
+  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tournament = tournamentRes && tournamentRes.data
+  if (canExposeScoreRows(tournament)) return null
+  const submitter = await resolveSubmitter()
+  if (submitter && submitter.isAdmin) return null
+  return fail('FORBIDDEN', SCHEDULE_NOT_PUBLISHED_MESSAGE)
+}
+
+async function filterScoreRowsVisibleToSubmitter(result) {
+  const activeResult = filterActiveScoreRowsResult(result)
+  const rows = activeResult && activeResult.data
+  if (!Array.isArray(rows) || rows.length === 0) return activeResult
+
+  const submitter = await resolveSubmitter()
+  if (submitter && submitter.isAdmin) return activeResult
+
+  const tournamentCache = new Map()
+  const visibleRows = []
+  for (const row of rows) {
+    if (!row || !row.tournamentId) {
+      visibleRows.push(row)
+      continue
+    }
+    if (!tournamentCache.has(row.tournamentId)) {
+      const tournamentRes = await db.collection('tournaments').doc(row.tournamentId).get().catch(() => null)
+      tournamentCache.set(row.tournamentId, tournamentRes && tournamentRes.data)
+    }
+    if (canExposeScoreRows(tournamentCache.get(row.tournamentId))) {
+      visibleRows.push(row)
+    }
+  }
+  return { ...activeResult, data: visibleRows }
+}
+
 function isScheduleWriteBlocked(tournament) {
   return !!(
     tournament &&
@@ -661,6 +704,8 @@ exports.main = async (event, context) => {
       const query = []
 
       if (data && data.tournamentId) {
+        const scheduleGate = await guardScoreRowsReadByTournamentId(data.tournamentId)
+        if (scheduleGate) return scheduleGate
         query.push({ tournamentId: data.tournamentId })
       }
       if (data && data.round) {
@@ -687,12 +732,15 @@ exports.main = async (event, context) => {
         ]))
       }
 
-      return filterActiveScoreRowsResult(await collection
+      const result = await collection
         .where(query.length ? _.and(query) : {})
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
-        .get())
+        .get()
+      return data && data.tournamentId
+        ? filterActiveScoreRowsResult(result)
+        : await filterScoreRowsVisibleToSubmitter(result)
     }
 
     case 'getByTournament': {
@@ -700,6 +748,8 @@ exports.main = async (event, context) => {
       if (!data || !data.tournamentId) {
         return { errMsg: 'tournamentId is required' }
       }
+      const scheduleGate = await guardScoreRowsReadByTournamentId(data.tournamentId)
+      if (scheduleGate) return scheduleGate
 
       const query = { tournamentId: data.tournamentId }
       if (data.round) {
@@ -725,7 +775,7 @@ exports.main = async (event, context) => {
         { loserId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) }
       ])
 
-      return filterActiveScoreRowsResult(await collection
+      return filterScoreRowsVisibleToSubmitter(await collection
         .where(query)
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
@@ -853,8 +903,11 @@ exports.main = async (event, context) => {
       return { success: true, data: { resultStatus: 'pending' } }
     }
 
-    case 'bulkUpsertScheduledMatches':
+    case 'bulkUpsertScheduledMatches': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return await handleBulkUpsert(event)
+    }
 
     case 'submit': {
       const { submit } = require('./lib/handlers/submit')

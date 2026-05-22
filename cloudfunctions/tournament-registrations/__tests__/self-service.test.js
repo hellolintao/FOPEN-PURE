@@ -646,6 +646,92 @@ test('updateStatus rejects legacy registered status without writing', async () =
   expect(update).not.toHaveBeenCalled()
 })
 
+test('bulkSet rejects non-admin caller before replacing registrations', async () => {
+  const memberWhere = jest.fn(() => ({
+    get: jest.fn(async () => ({ data: [{ _id: 'member-a', openid: 'openid-a', admin: false }] }))
+  }))
+  const tournamentGet = jest.fn(async () => ({ data: tournament() }))
+  const add = jest.fn(async () => ({ _id: 'created' }))
+  const registrationWhere = jest.fn(() => ({
+    get: jest.fn(async () => ({ data: [] }))
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'members') return { where: memberWhere }
+    if (name === 'tournaments') return { doc: jest.fn(() => ({ get: tournamentGet })) }
+    if (name === 'tournament_registrations') {
+      return {
+        where: registrationWhere,
+        doc: jest.fn(() => ({ remove: jest.fn(async () => ({ removed: 1 })) })),
+        add
+      }
+    }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({
+    action: 'bulkSet',
+    tournamentId: TID,
+    registrations: [{ playerId: 'member-a', playerName: 'Alice' }]
+  }, {})
+
+  expect(res).toEqual({
+    success: false,
+    error: { code: 'FORBIDDEN', message: '需要管理员权限' }
+  })
+  expect(tournamentGet).not.toHaveBeenCalled()
+  expect(add).not.toHaveBeenCalled()
+})
+
+test('bulkSet allows admin caller to replace registrations', async () => {
+  const memberWhere = jest.fn(() => ({
+    get: jest.fn(async () => ({ data: [{ _id: 'admin-a', openid: 'openid-a', admin: true }] }))
+  }))
+  const tournamentGet = jest.fn(async () => ({ data: tournament() }))
+  const add = jest.fn(async () => ({ _id: 'created' }))
+  const registrationWhere = jest.fn(() => ({
+    get: jest.fn(async () => ({ data: [] }))
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'members') return { where: memberWhere }
+    if (name === 'tournaments') return { doc: jest.fn(() => ({ get: tournamentGet })) }
+    if (name === 'tournament_registrations') {
+      return {
+        where: registrationWhere,
+        doc: jest.fn(() => ({ remove: jest.fn(async () => ({ removed: 1 })) })),
+        add
+      }
+    }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({
+    action: 'bulkSet',
+    tournamentId: TID,
+    registrations: [{ playerId: 'member-b', playerName: 'Bob' }]
+  }, {})
+
+  expect(res).toEqual({ success: true, data: { count: 1 } })
+  expect(tournamentGet).toHaveBeenCalled()
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({
+    data: expect.objectContaining({
+      tournamentId: TID,
+      playerId: 'member-b',
+      playerName: 'Bob',
+      registrationStatus: 'confirmed'
+    })
+  }))
+})
+
 test('list status filter uses registrationStatus before legacy status', async () => {
   const rows = [
     { _id: 'new-active', tournamentId: TID, registrationStatus: 'confirmed', status: 'withdrew', seed: 1 },
