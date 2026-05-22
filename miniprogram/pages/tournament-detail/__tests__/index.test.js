@@ -2,13 +2,13 @@ const fs = require('fs')
 const path = require('path')
 
 describe('tournament-detail WXML layout', () => {
-  test('orders phase, hero, schedule, roster, points, results, and delete sections in main content', () => {
+  test('orders phase, hero, roster, schedule, points, results, and delete sections in main content', () => {
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
     const markers = [
       '<!-- PHASE -->',
       '<!-- HERO -->',
-      '<!-- SCHEDULE -->',
       '<!-- REGISTRATIONS -->',
+      '<!-- SCHEDULE -->',
       '<!-- POINTS RULES -->',
       '<!-- RESULTS -->',
       '<!-- DELETE -->'

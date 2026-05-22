@@ -62,8 +62,37 @@
       </view>
     </view>
 
+    <!-- REGISTRATIONS -->
+    <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-3">
+      <view class="td-section-head">
+        <text class="tape">参赛人员 · ROSTER</text>
+        <text class="td-section-count num">{{activeRegistrationCount}}</text>
+      </view>
+      <view wx:if="{{activeRegistrationCount === 0}}" class="td-empty">
+        <text>暂无报名</text>
+      </view>
+      <view wx:else class="roster-grid">
+        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
+          <view class="roster-seed">
+            <text class="num">{{item.seed}}</text>
+          </view>
+          <view class="roster-avatar-wrap">
+            <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="roster-avatar roster-avatar-fallback">
+              <text class="roster-avatar-initial">{{item.playerInitial}}</text>
+            </view>
+          </view>
+          <text class="roster-name singles">{{item.playerName}}</text>
+        </view>
+      </view>
+      <view wx:if="{{showRegistrationModule && phase === 'pending_schedule'}}" class="next-stage-copy">
+        <text>报名已截止，管理员正在安排对局。</text>
+        <text wx:if="{{withdrawDeadlineLabel}}">可退赛至 {{withdrawDeadlineLabel}}</text>
+      </view>
+    </view>
+
     <!-- SCHEDULE -->
-    <view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-3">
+    <view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-4">
       <view class="td-section-head">
         <text class="tape">赛程 · SCHEDULE</text>
       </view>
@@ -120,35 +149,6 @@
           </block>
         </view>
       </scroll-view>
-    </view>
-
-    <!-- REGISTRATIONS -->
-    <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-4">
-      <view class="td-section-head">
-        <text class="tape">参赛人员 · ROSTER</text>
-        <text class="td-section-count num">{{activeRegistrationCount}}</text>
-      </view>
-      <view wx:if="{{activeRegistrationCount === 0}}" class="td-empty">
-        <text>暂无报名</text>
-      </view>
-      <view wx:else class="roster-grid">
-        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
-          <view class="roster-seed">
-            <text class="num">{{item.seed}}</text>
-          </view>
-          <view class="roster-avatar-wrap">
-            <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view wx:else class="roster-avatar roster-avatar-fallback">
-              <text class="roster-avatar-initial">{{item.playerInitial}}</text>
-            </view>
-          </view>
-          <text class="roster-name singles">{{item.playerName}}</text>
-        </view>
-      </view>
-      <view wx:if="{{showRegistrationModule && phase === 'pending_schedule'}}" class="next-stage-copy">
-        <text>报名已截止，管理员正在安排对局。</text>
-        <text wx:if="{{withdrawDeadlineLabel}}">可退赛至 {{withdrawDeadlineLabel}}</text>
-      </view>
     </view>
 
     <!-- POINTS RULES -->
