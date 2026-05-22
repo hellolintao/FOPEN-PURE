@@ -272,7 +272,10 @@ Page({
       return
     }
     try {
-      const persisted = await this.persistStep2Inputs({ requirePlayers: false, saveRegistrations: false })
+      const persisted = await this.persistStep2Inputs({
+        requirePlayers: false,
+        saveRegistrations: this.data.selectedPlayers.length > 0
+      })
       if (!persisted) return
 
       const res = await wx.cloud.callFunction({

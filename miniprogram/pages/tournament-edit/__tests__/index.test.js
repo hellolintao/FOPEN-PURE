@@ -206,6 +206,10 @@ describe('tournament-edit registration publishing flow', () => {
     expect(ctx.data.registrationPublished).toBe(true)
     expect(ctx.data.sharePath).toBe('/pages/tournament-detail/index?id=t1&entry=register')
     expect(wx.redirectTo).toHaveBeenCalledWith({ url: '/pages/tournament-detail/index?id=t1&entry=register' })
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'bulkSet', tournamentId: 't1', registrations: players }
+    })
     expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
       name: 'match-results',
       data: expect.objectContaining({ action: 'bulkUpsertScheduledMatches' })
@@ -246,6 +250,7 @@ describe('tournament-edit registration publishing flow', () => {
     })
     wx.cloud.callFunction
       .mockResolvedValueOnce({ result: { success: true, data: [] } })
+      .mockResolvedValueOnce({ result: { success: true } })
       .mockResolvedValueOnce({ result: { success: false, error: { message: 'deadline expired' } } })
 
     await ctx.onPublishRegistration()
