@@ -12,6 +12,8 @@ Page({
     totalCount: 0,
     isAdmin: false,
     currentMemberId: '',
+    mode: '',
+    adjustMode: false,
     draftMap: {},
     bottomLabel: '确认全部',
     bottomCount: 0,
@@ -21,6 +23,7 @@ Page({
     loading: false,
     empty: false,
     error: '',
+    scheduleGateBlocked: false,
     sheet: { visible: false, title: '', mode: 'confirm', items: [], result: null, requestId: null }
   },
 
@@ -36,7 +39,9 @@ Page({
     }
     this.setData({
       tournamentId: tid,
-      anchorMatchId: options.matchId || '',
+      anchorMatchId: options.matchId || options.resultId || '',
+      mode: options.mode || '',
+      adjustMode: options.mode === 'adjust',
       isAdmin: !!(app.globalData && app.globalData.isAdmin)
     })
   },
@@ -91,7 +96,7 @@ Page({
   },
 
   async refresh() {
-    this.setData({ loading: true, error: '', draftMap: {}, bottomDisabled: true, bottomCount: 0 })
+    this.setData({ loading: true, error: '', scheduleGateBlocked: false, draftMap: {}, bottomDisabled: true, bottomCount: 0 })
     try {
       const [tRes, rRes] = await Promise.all([
         wx.cloud.callFunction({ name: 'tournaments', data: { action: 'get', id: this.data.tournamentId } }),
@@ -100,11 +105,31 @@ Page({
       // tournaments.get returns either { data: { tournament: {...} } } or legacy { data: {...} }
       const tournament = (tRes.result && tRes.result.data && (tRes.result.data.tournament || tRes.result.data)) || null
       const results = (rRes.result && rRes.result.success && rRes.result.data && rRes.result.data.results) || []
+      if (isScheduleBlocked(tournament)) {
+        this.setData({
+          tournament,
+          rowsByRound: [],
+          confirmedCount: 0,
+          submittedCount: 0,
+          pendingCount: 0,
+          totalCount: 0,
+          empty: true,
+          error: '赛程发布后才能录入成绩',
+          scheduleGateBlocked: true
+        })
+        return
+      }
+
       const sorted = results.slice().sort((a, b) => {
         if ((a.round || 0) !== (b.round || 0)) return (a.round || 0) - (b.round || 0)
         if ((a.position || 0) !== (b.position || 0)) return (a.position || 0) - (b.position || 0)
         return (a.queueOrder || 0) - (b.queueOrder || 0)
-      })
+      }).map(r => ({
+        ...r,
+        rowAnchorId: this.getRowAnchorId(r),
+        isTarget: this.isTargetRow(r),
+        canAdminAdjust: !!(this.data.adjustMode && this.data.isAdmin && r.resultStatus === 'confirmed')
+      }))
       const byRound = new Map()
       for (const r of sorted) {
         const k = r.round || 1
@@ -150,12 +175,21 @@ Page({
     if (!anchorMatchId) return ''
     for (const group of (Array.isArray(rowsByRound) ? rowsByRound : [])) {
       for (const match of (group && Array.isArray(group.matches) ? group.matches : [])) {
-        if (match && (match.sourceMatchId === anchorMatchId || match._id === anchorMatchId || match.matchId === anchorMatchId)) {
-          return match.sourceMatchId || match.matchId || match._id || anchorMatchId
+        if (this.isTargetRow(match, anchorMatchId)) {
+          return this.getRowAnchorId(match) || anchorMatchId
         }
       }
     }
     return anchorMatchId
+  },
+
+  getRowAnchorId(match) {
+    return (match && (match.sourceMatchId || match.matchId || match._id)) || ''
+  },
+
+  isTargetRow(match, anchor = this.data.anchorMatchId) {
+    if (!match || !anchor) return false
+    return match.sourceMatchId === anchor || match._id === anchor || match.matchId === anchor
   },
 
   onDraftChange(e) {
@@ -440,3 +474,11 @@ Page({
     this.refresh()
   }
 })
+
+function isScheduleBlocked(tournament) {
+  return !!(
+    tournament &&
+    Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
+    tournament.scheduleStatus !== 'published'
+  )
+}

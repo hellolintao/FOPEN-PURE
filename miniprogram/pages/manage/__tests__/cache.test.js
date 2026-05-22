@@ -104,3 +104,33 @@ test('loadBracketsList maps pending entry groups into bracket cards', async () =
     t1: { name: '5.17常规赛', seasonName: 'S1' }
   })
 })
+
+test('pending entry card opens score page with matchId and resultId anchors', () => {
+  const { pageDef } = loadPage()
+  const ctx = makeCtx(pageDef)
+  ctx.setData({
+    bracketsList: [{
+      _id: 't1:1',
+      tournamentId: 't1',
+      round: 1,
+      matches: [{
+        matchId: 'm1',
+        resultId: 'result_t1_m1',
+      }]
+    }]
+  })
+
+  ctx.onBracketTap({
+    currentTarget: {
+      dataset: {
+        tournamentid: 't1',
+        bracketid: 't1:1',
+        round: 1,
+      }
+    }
+  })
+
+  expect(wx.navigateTo).toHaveBeenCalledWith({
+    url: '/pages/tournament-score/index?tournamentId=t1&round=1&matchId=m1&resultId=result_t1_m1'
+  })
+})

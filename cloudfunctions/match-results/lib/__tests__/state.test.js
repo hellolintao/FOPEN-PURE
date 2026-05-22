@@ -318,6 +318,58 @@ describe('submitResult', () => {
     expect(db.__all().tournaments[0].completedAt).toBeDefined()
   })
 
+  test('tournament settlement ignores audit rows when checking completion', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'upcoming'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [
+      {
+        _id: 'result_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm1',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 1,
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      },
+      {
+        _id: 'audit_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm_audit',
+        matchKind: 'audit',
+        round: 1,
+        position: 99,
+        player1: { id: 'C' },
+        player2: { id: 'D' },
+        playerIds: ['C', 'D'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      }
+    ]
+    seed.tournament_registrations = ['A', 'B'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TR', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'm1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__all().match_results.find(x => x._id === 'audit_TR_m1').resultStatus).toBe('pending')
+  })
+
   test('regular singles tiebreak 5-7 awards player2 as winner', async () => {
     const db = makeDb(seed4Knockout())
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })
@@ -437,6 +489,78 @@ describe('confirmAll', () => {
     await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
     const r = await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
     expect(r.confirmedCount).toBe(0)
+  })
+
+  test('confirmAll ignores submitted rows that are not active score rows', async () => {
+    const seed = seed4Knockout()
+    seed.match_results = [
+      {
+        _id: 'audit_T1_s1',
+        tournamentId: 'T1',
+        sourceMatchId: 'audit_s1',
+        matchKind: 'audit',
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'submitted',
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        tournamentType: 'singles',
+        pointsAwarded: null,
+      },
+      {
+        _id: 'history_T1_s2',
+        tournamentId: 'T1',
+        sourceMatchId: 'history_s2',
+        matchKind: 'history',
+        archivedFrom: 'result_T1_s2',
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'submitted',
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        tournamentType: 'singles',
+        pointsAwarded: null,
+      },
+      {
+        _id: 'invalidated_T1_s3',
+        tournamentId: 'T1',
+        sourceMatchId: 'invalidated_s3',
+        matchKind: 'bracket',
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'invalidated',
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        tournamentType: 'singles',
+        pointsAwarded: null,
+      },
+      {
+        _id: 'archived_T1_s4',
+        tournamentId: 'T1',
+        sourceMatchId: 'archived_s4',
+        matchKind: 'bracket',
+        archivedFrom: 'result_T1_s4',
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'submitted',
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        tournamentType: 'singles',
+        pointsAwarded: null,
+      },
+    ]
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    const r = await svc.confirmAll({ tournamentId: 'T1', admin: { _id: 'admin1', isAdmin: true } })
+
+    expect(r.confirmedCount).toBe(0)
+    expect(db.__all().match_results.map(row => row.resultStatus)).toEqual([
+      'submitted',
+      'submitted',
+      'invalidated',
+      'submitted',
+    ])
   })
 
   test('非 admin 调 confirmAll → UNAUTHORIZED', async () => {

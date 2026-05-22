@@ -1,4 +1,6 @@
 const { derivePhase, getWithdrawDeadline, canWithdraw, isActiveRegistration } = require('../../../_shared/tournament-phase')
+const { isActiveScoreRow } = require('../active-row')
+const { canExposeScoreRows } = require('./query')
 
 async function mySummary(ctx, payload) {
   const memberId = ctx.callerMemberId
@@ -9,7 +11,7 @@ async function mySummary(ctx, payload) {
   }
   const historyLimit = Math.min(Math.max(parseInt(payload && payload.historyLimit, 10) || 10, 1), 50)
 
-  const [pendingRows, submittedRows, confirmedRows, registrationRows] = await Promise.all([
+  const [rawPendingRows, rawSubmittedRows, rawConfirmedRows, registrationRows] = await Promise.all([
     ctx.db.queryMyPending(memberId),
     ctx.db.queryMySubmitted(memberId),
     ctx.db.queryMyConfirmed(memberId, historyLimit),
@@ -20,9 +22,13 @@ async function mySummary(ctx, payload) {
     isActiveRegistration(row) &&
     (row.playerId === memberId || row.partnerId === memberId || row.memberId === memberId || includesMember(row.playerIds) || includesMember(row.memberIds))
   ))
-  const tIds = [...new Set([...pendingRows, ...submittedRows, ...confirmedRows, ...activeRegistrations].map(r => r.tournamentId))]
+  const tIds = [...new Set([...rawPendingRows, ...rawSubmittedRows, ...rawConfirmedRows, ...activeRegistrations].map(r => r.tournamentId))]
   const tournamentDocs = tIds.length ? await ctx.db.getTournamentsByIds(tIds) : []
   const tMap = Object.fromEntries(tournamentDocs.map(t => [t._id, t]))
+  const visibleMatch = row => isActiveScoreRow(row) && canExposeScoreRows(tMap[row.tournamentId])
+  const pendingRows = rawPendingRows.filter(visibleMatch)
+  const submittedRows = rawSubmittedRows.filter(visibleMatch)
+  const confirmedRows = rawConfirmedRows.filter(visibleMatch)
   const nowValue = ctx.now ? ctx.now() : new Date()
 
   function opponentLabel(m) {

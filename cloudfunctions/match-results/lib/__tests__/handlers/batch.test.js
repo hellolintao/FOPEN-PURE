@@ -1,22 +1,42 @@
-const { batchConfirm, batchAdminSave } = require('../../handlers/batch')
+const { batchConfirm, batchSubmit, batchAdminSave, applyScheduleImpact } = require('../../handlers/batch')
+const { submit, reconfirmMatch } = require('../../handlers/submit')
 
-function makeCtx({ matches = [], requestLog = {}, isAdmin = true, openid = 'oA', memberId = 'mA' } = {}) {
+function makeCtx({ matches = [], requestLog = {}, tournaments = {}, isAdmin = true, openid = 'oA', memberId = 'mA' } = {}) {
   const matchesById = Object.fromEntries(matches.map(m => [m._id, { ...m }]))
+  const historyById = {}
   const requestLogById = { ...requestLog }
+  const tournamentsById = { ...tournaments }
+  const removedPointsFor = []
+  const downstreamClears = []
+  const tournamentUpdates = []
   return {
     callerOpenid: openid,
     callerMemberId: memberId,
     isAdmin,
     confirmedAtNow: new Date('2026-05-16T10:00:00.000Z'),
+    nowDate: new Date('2026-05-16T10:00:00.000Z'),
     db: {
       getMatch: async (id) => matchesById[id] || null,
+      getTournament: async (id) => tournamentsById[id] || null,
+      listMatchesByTournament: async (tournamentId) => Object.values(matchesById).filter(m => m.tournamentId === tournamentId),
       updateMatch: async (id, patch) => {
         matchesById[id] = { ...matchesById[id], ...patch }
+      },
+      archiveMatchResult: async (doc) => {
+        historyById[doc._id] = { ...doc }
+      },
+      clearDownstream: async (tournamentId, row) => {
+        downstreamClears.push({ tournamentId, rowId: row && row._id })
+      },
+      removeTournamentPoints: async (tournamentId) => { removedPointsFor.push(tournamentId) },
+      markTournamentOngoing: async (tournamentId, patch) => {
+        tournamentUpdates.push({ tournamentId, patch })
+        tournamentsById[tournamentId] = { ...(tournamentsById[tournamentId] || { _id: tournamentId }), ...patch }
       },
       getRequestLog: async (id) => requestLogById[id] || null,
       upsertRequestLog: async (id, doc) => { requestLogById[id] = doc },
     },
-    _state: { matchesById, requestLogById },
+    _state: { matchesById, historyById, requestLogById, tournamentsById, removedPointsFor, downstreamClears, tournamentUpdates },
     confirmOne: async function (match) {
       matchesById[match._id] = { ...matchesById[match._id], resultStatus: 'confirmed', updateTime: this.confirmedAtNow }
       return { ok: true }
@@ -142,10 +162,51 @@ test('batchConfirm writes _request_log with merged results', async () => {
   expect(log.results.mr_a.attemptCount).toBe(1)
 })
 
-const { batchSubmit } = require('../../handlers/batch')
+test.each(['draft', 'none'])('batchConfirm rejects submitted rows when scheduleStatus is %s', async (scheduleStatus) => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    tournaments: { t1: { _id: 't1', scheduleStatus } },
+    matches: [{ _id: 'mr_confirm_blocked', tournamentId: 't1', resultStatus: 'submitted', updateTime }],
+  })
 
-function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA', emulateCloudNestedScoreUpdate = false } = {}) {
+  const result = await batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_confirm_blocked', expectedUpdateTime: updateTime.toISOString() }],
+    requestId: `req_confirm_${scheduleStatus}`,
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({
+    matchId: 'mr_confirm_blocked',
+    code: 'SCHEDULE_NOT_PUBLISHED',
+    message: '赛程发布后才能录入成绩',
+    retryable: false,
+  })
+  expect(ctx._state.matchesById.mr_confirm_blocked.resultStatus).toBe('submitted')
+})
+
+test.each([
+  ['published tournament', { _id: 't1', scheduleStatus: 'published' }],
+  ['legacy tournament', { _id: 't1' }],
+])('batchConfirm allows submitted rows for %s', async (_label, tournament) => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    tournaments: { t1: tournament },
+    matches: [{ _id: 'mr_confirm_allowed', tournamentId: 't1', resultStatus: 'submitted', updateTime }],
+  })
+
+  const result = await batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_confirm_allowed', expectedUpdateTime: updateTime.toISOString() }],
+    requestId: `req_confirm_${_label}`,
+  })
+
+  expect(result.successIds).toEqual(['mr_confirm_allowed'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_confirm_allowed.resultStatus).toBe('confirmed')
+})
+
+function makeSubmitCtx({ matches = [], tournaments = {}, openid = 'oA', memberId = 'mA', emulateCloudNestedScoreUpdate = false } = {}) {
   const matchesById = Object.fromEntries(matches.map(m => [m._id, { ...m }]))
+  const tournamentsById = { ...tournaments }
   const requestLogById = {}
   const clearedFields = []
   return {
@@ -155,6 +216,7 @@ function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA', emulateCl
     nowDate: new Date('2026-05-16T11:00:00.000Z'),
     db: {
       getMatch: async (id) => matchesById[id] || null,
+      getTournament: async (id) => tournamentsById[id] || null,
       updateMatch: async (id, patch) => {
         if (emulateCloudNestedScoreUpdate && Object.prototype.hasOwnProperty.call(patch, 'score') && matchesById[id] && matchesById[id].score === null) {
           throw new Error("Cannot create field 'sets' in element {score: null}")
@@ -168,7 +230,7 @@ function makeSubmitCtx({ matches = [], openid = 'oA', memberId = 'mA', emulateCl
       getRequestLog: async (id) => requestLogById[id] || null,
       upsertRequestLog: async (id, doc) => { requestLogById[id] = doc },
     },
-    _state: { matchesById, requestLogById, clearedFields },
+    _state: { matchesById, requestLogById, tournamentsById, clearedFields },
     validateScore: () => ({ valid: true }),
   }
 }
@@ -235,6 +297,24 @@ test('batchSubmit CANNOT_OVERWRITE_CONFIRMED: member cannot overwrite confirmed 
   expect(result.failures[0].code).toBe('CANNOT_OVERWRITE_CONFIRMED')
 })
 
+test.each([
+  ['invalidated active row', { resultStatus: 'invalidated' }],
+  ['history row', { resultStatus: 'confirmed', matchKind: 'history', archivedFrom: 'mr_a' }],
+  ['audit row', { resultStatus: 'pending', matchKind: 'audit' }],
+])('batchSubmit rejects %s', async (_label, rowPatch) => {
+  const ctx = makeSubmitCtx({
+    matches: [{ _id: 'mr_a', resultStatus: 'pending', playerIds: ['mA', 'mB'], ...rowPatch }],
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: `req_inactive_${_label}`,
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({ matchId: 'mr_a', code: 'INVALID_STATE', retryable: false })
+})
+
 test('batchSubmit INVALID_SCORE: bad score structure', async () => {
   const ctx = makeSubmitCtx({
     matches: [{ _id: 'mr_a', resultStatus: 'pending', playerIds: ['mA'] }],
@@ -261,6 +341,44 @@ test('batchSubmit accepts 3-3 tiebreak score using current string schema', async
   })
   expect(result.successIds).toEqual(['mr_tb'])
   expect(ctx._state.matchesById.mr_tb.score.tiebreak).toBe('5-7')
+})
+
+test.each(['draft', 'none'])('batchSubmit rejects score submission when scheduleStatus is %s', async (scheduleStatus) => {
+  const ctx = makeSubmitCtx({
+    tournaments: { t1: { _id: 't1', scheduleStatus } },
+    matches: [{ _id: 'mr_blocked', tournamentId: 't1', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_blocked', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: `req_submit_${scheduleStatus}`,
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({
+    matchId: 'mr_blocked',
+    code: 'SCHEDULE_NOT_PUBLISHED',
+    message: '赛程发布后才能录入成绩',
+    retryable: false,
+  })
+  expect(ctx._state.matchesById.mr_blocked.resultStatus).toBe('pending')
+  expect(ctx._state.matchesById.mr_blocked.score).toBeUndefined()
+})
+
+test('batchSubmit accepts legacy tournament without scheduleStatus', async () => {
+  const ctx = makeSubmitCtx({
+    tournaments: { t_legacy: { _id: 't_legacy' } },
+    matches: [{ _id: 'mr_legacy', tournamentId: 't_legacy', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_legacy', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_submit_legacy',
+  })
+
+  expect(result.successIds).toEqual(['mr_legacy'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_legacy.resultStatus).toBe('submitted')
 })
 
 test('batchAdminSave confirms pending matches with supplied scores', async () => {
@@ -304,4 +422,274 @@ test('batchAdminSave refuses non-admin caller before validating scores', async (
     requestId: 'req_admin_forbidden',
   })).rejects.toMatchObject({ code: 'FORBIDDEN' })
   expect(ctx.validateScore).not.toHaveBeenCalled()
+})
+
+test.each(['draft', 'none'])('batchAdminSave rejects score changes when scheduleStatus is %s', async (scheduleStatus) => {
+  const ctx = makeCtx({
+    tournaments: { t1: { _id: 't1', scheduleStatus } },
+    matches: [{ _id: 'mr_admin_blocked', tournamentId: 't1', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+  ctx.validateScore = jest.fn(() => ({ valid: true }))
+
+  const result = await batchAdminSave(ctx, {
+    matches: [{ matchId: 'mr_admin_blocked', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: `req_admin_${scheduleStatus}`,
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({
+    matchId: 'mr_admin_blocked',
+    code: 'SCHEDULE_NOT_PUBLISHED',
+    message: '赛程发布后才能录入成绩',
+    retryable: false,
+  })
+  expect(ctx.validateScore).not.toHaveBeenCalled()
+  expect(ctx._state.matchesById.mr_admin_blocked.resultStatus).toBe('pending')
+})
+
+test('batchAdminSave can adjust confirmed rows after schedule is published', async () => {
+  const ctx = makeCtx({
+    tournaments: { t1: { _id: 't1', scheduleStatus: 'published' } },
+    matches: [{
+      _id: 'mr_confirmed',
+      tournamentId: 't1',
+      resultStatus: 'confirmed',
+      score: { sets: [{ a: 4, b: 1 }], tiebreak: null },
+      playerIds: ['mA', 'mB'],
+    }],
+  })
+  ctx.validateScore = jest.fn(() => ({ valid: true }))
+  ctx.recomputeTriggered = false
+  ctx.confirmOne = async function (match, score) {
+    if (match.resultStatus === 'confirmed') this.recomputeTriggered = true
+    this._state.matchesById[match._id] = {
+      ...this._state.matchesById[match._id],
+      score,
+      resultStatus: 'confirmed',
+      confirmedBy: this.callerMemberId,
+    }
+    return { ok: true }
+  }
+
+  const result = await batchAdminSave(ctx, {
+    matches: [{ matchId: 'mr_confirmed', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_admin_adjust',
+  })
+
+  expect(result.successIds).toEqual(['mr_confirmed'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_confirmed.score).toEqual({ sets: [{ a: 4, b: 2 }], tiebreak: null })
+  expect(ctx.recomputeTriggered).toBe(true)
+})
+
+test('batchAdminSave rejects audit rows before confirming scores', async () => {
+  const ctx = makeCtx({
+    tournaments: { t1: { _id: 't1', scheduleStatus: 'published' } },
+    matches: [{
+      _id: 'audit_t1_m1',
+      tournamentId: 't1',
+      matchKind: 'audit',
+      resultStatus: 'pending',
+      playerIds: ['mA', 'mB'],
+    }],
+  })
+  ctx.validateScore = jest.fn(() => ({ valid: true }))
+  ctx.confirmOne = jest.fn()
+
+  const result = await batchAdminSave(ctx, {
+    matches: [{ matchId: 'audit_t1_m1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_admin_audit',
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({ matchId: 'audit_t1_m1', code: 'INVALID_STATE', retryable: false })
+  expect(ctx.validateScore).not.toHaveBeenCalled()
+  expect(ctx.confirmOne).not.toHaveBeenCalled()
+})
+
+test('submit handler rejects unpublished schedule before member score changes', async () => {
+  const err = new Error('赛程发布后才能录入成绩')
+  err.code = 'SCHEDULE_NOT_PUBLISHED'
+  const ctx = {
+    submitter: { _id: 'mA' },
+    stateSvc: {
+      assertSchedulePublishedForMatch: jest.fn(async () => { throw err }),
+      submitResult: jest.fn(),
+    },
+  }
+
+  await expect(submit(ctx, { matchId: 'm1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }))
+    .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' })
+  expect(ctx.stateSvc.assertSchedulePublishedForMatch).toHaveBeenCalledWith('m1')
+  expect(ctx.stateSvc.submitResult).not.toHaveBeenCalled()
+})
+
+test('reconfirmMatch handler rejects unpublished schedule before admin adjustment', async () => {
+  const err = new Error('赛程发布后才能录入成绩')
+  err.code = 'SCHEDULE_NOT_PUBLISHED'
+  const ctx = {
+    submitter: { _id: 'admin1', isAdmin: true },
+    stateSvc: {
+      assertSchedulePublishedForMatch: jest.fn(async () => { throw err }),
+      reconfirmMatch: jest.fn(),
+    },
+  }
+
+  await expect(reconfirmMatch(ctx, { matchId: 'm1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null } }))
+    .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' })
+  expect(ctx.stateSvc.assertSchedulePublishedForMatch).toHaveBeenCalledWith('m1')
+  expect(ctx.stateSvc.reconfirmMatch).not.toHaveBeenCalled()
+})
+
+test('applyScheduleImpact archives affected confirmed rows, resets canonical row, and drops recomputed state', async () => {
+  const ctx = makeCtx({
+    tournaments: { t1: { _id: 't1', status: 'completed', completedAt: 'done' } },
+    matches: [{
+      _id: 'result_t1_m1',
+      tournamentId: 't1',
+      sourceMatchId: 'm1',
+      resultStatus: 'confirmed',
+      player1: { id: 'a' },
+      player2: { id: 'b' },
+      courtId: 'c1',
+      queueOrder: 0,
+      score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      winner: { id: 'a' },
+      winnerId: 'a',
+      confirmedBy: 'admin0',
+      confirmedAt: new Date('2026-05-15T10:00:00.000Z'),
+      pointsAwarded: { entries: [{ memberId: 'a', points: 20 }] },
+    }],
+  })
+
+  const result = await applyScheduleImpact(ctx, {
+    tournamentId: 't1',
+    mode: 'invalidate_scores',
+    matches: [{ matchId: 'm1', player1: { id: 'c' }, player2: { id: 'b' } }],
+    queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }],
+  })
+
+  expect(result).toMatchObject({ affectedCount: 1, invalidatedIds: ['result_t1_m1'] })
+  const historyRows = Object.values(ctx._state.historyById)
+  expect(historyRows).toHaveLength(1)
+  expect(historyRows[0]).toMatchObject({
+    archivedFrom: 'result_t1_m1',
+    matchKind: 'history',
+    resultStatus: 'invalidated',
+    invalidatedBy: 'mA',
+    score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+    winnerId: 'a',
+    pointsAwarded: { entries: [{ memberId: 'a', points: 20 }] },
+  })
+  expect(historyRows[0].invalidatedAt).toEqual(ctx.nowDate)
+  expect(ctx._state.matchesById.result_t1_m1).toMatchObject({
+    resultStatus: 'pending',
+    score: null,
+    winner: null,
+    winnerId: null,
+    pointsAwarded: null,
+    confirmedBy: null,
+    confirmedAt: null,
+  })
+  expect(ctx._state.matchesById.result_t1_m1.invalidatedAt).toBeUndefined()
+  expect(ctx._state.removedPointsFor).toEqual(['t1'])
+  expect(ctx._state.downstreamClears).toEqual([{ tournamentId: 't1', rowId: 'result_t1_m1' }])
+  expect(ctx._state.tournamentUpdates).toEqual([{
+    tournamentId: 't1',
+    patch: expect.objectContaining({ status: 'ongoing', completedAt: null }),
+  }])
+})
+
+test('applyScheduleImpact invalidates result-affecting rows while preserving slot-only confirmed scores', async () => {
+  const ctx = makeCtx({
+    matches: [
+      {
+        _id: 'result_t1_m1',
+        tournamentId: 't1',
+        sourceMatchId: 'm1',
+        resultStatus: 'confirmed',
+        player1: { id: 'a' },
+        player2: { id: 'b' },
+        courtId: 'c1',
+        queueOrder: 0,
+        score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+        winner: { id: 'a' },
+        winnerId: 'a',
+        confirmedBy: 'admin0',
+        pointsAwarded: { entries: [{ memberId: 'a', points: 20 }] },
+      },
+      {
+        _id: 'result_t1_m2',
+        tournamentId: 't1',
+        sourceMatchId: 'm2',
+        resultStatus: 'confirmed',
+        player1: { id: 'c' },
+        player2: { id: 'd' },
+        courtId: 'c1',
+        queueOrder: 1,
+        score: { sets: [{ a: 2, b: 4 }], tiebreak: null },
+        winner: { id: 'd' },
+        winnerId: 'd',
+        confirmedBy: 'admin0',
+        pointsAwarded: { entries: [{ memberId: 'd', points: 20 }] },
+      },
+    ],
+  })
+
+  const result = await applyScheduleImpact(ctx, {
+    tournamentId: 't1',
+    mode: 'invalidate_scores',
+    matches: [
+      { matchId: 'm1', player1: { id: 'x' }, player2: { id: 'b' } },
+      { matchId: 'm2', player1: { id: 'c' }, player2: { id: 'd' } },
+    ],
+    queues: [
+      { courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] },
+      { courtId: 'c3', items: [{ kind: 'match', matchId: 'm2', order: 4 }] },
+    ],
+  })
+
+  expect(result).toMatchObject({ affectedCount: 2, invalidatedIds: ['result_t1_m1'] })
+  expect(ctx._state.matchesById.result_t1_m1).toMatchObject({
+    resultStatus: 'pending',
+    score: null,
+    winner: null,
+    pointsAwarded: null,
+  })
+  expect(ctx._state.matchesById.result_t1_m2).toMatchObject({
+    resultStatus: 'confirmed',
+    score: { sets: [{ a: 2, b: 4 }], tiebreak: null },
+    winnerId: 'd',
+    pointsAwarded: { entries: [{ memberId: 'd', points: 20 }] },
+    courtId: 'c3',
+    queueOrder: 4,
+  })
+  expect(Object.values(ctx._state.historyById).map(row => row.archivedFrom)).toEqual(['result_t1_m1'])
+})
+
+test('applyScheduleImpact requires invalidation when players change at the same slot', async () => {
+  const ctx = makeCtx({
+    matches: [{
+      _id: 'result_t1_m1',
+      tournamentId: 't1',
+      sourceMatchId: 'm1',
+      resultStatus: 'confirmed',
+      player1: { id: 'a' },
+      player2: { id: 'b' },
+      courtId: 'c1',
+      queueOrder: 0,
+    }],
+  })
+
+  await expect(applyScheduleImpact(ctx, {
+    tournamentId: 't1',
+    mode: 'keep_time_only',
+    matches: [{ matchId: 'm1', player1: { id: 'c' }, player2: { id: 'b' } }],
+    queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }],
+  })).rejects.toMatchObject({
+    code: 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION',
+    message: '赛程变更影响已确认成绩，请选择清空比分并重新录入',
+  })
+  expect(ctx._state.matchesById.result_t1_m1.resultStatus).toBe('confirmed')
+  expect(ctx._state.removedPointsFor).toEqual([])
 })

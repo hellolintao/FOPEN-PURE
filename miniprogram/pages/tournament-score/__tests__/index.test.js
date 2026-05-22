@@ -1,14 +1,26 @@
-function loadPage() {
+function loadPage({ app: appOverride = {}, tournament = null, matchResults = [] } = {}) {
   jest.resetModules()
   let pageDef
   global.getApp = () => ({
     globalData: {
       isAdmin: true,
       currentMember: { _id: 'admin1', admin: true },
+      ...((appOverride && appOverride.globalData) || {}),
     },
+    ...appOverride,
   })
   global.wx = {
-    cloud: { callFunction: jest.fn() },
+    cloud: {
+      callFunction: jest.fn(async ({ name, data }) => {
+        if (name === 'tournaments' && data && data.action === 'get') {
+          return { result: { data: { tournament } } }
+        }
+        if (name === 'match-results' && data && data.action === 'listByTournament') {
+          return { result: { success: true, data: { results: matchResults } } }
+        }
+        return { result: { success: true, data: {} } }
+      }),
+    },
     createSelectorQuery: jest.fn(() => ({ select: () => ({ boundingClientRect: () => ({ exec: jest.fn() }) }) })),
     pageScrollTo: jest.fn(),
     showModal: jest.fn(),
@@ -171,4 +183,97 @@ test('anchor row id resolves result id to source match id', () => {
   })
 
   expect(ctx.getAnchorRowId()).toBe('m1')
+})
+
+test('resultId option anchors score page to the matching row', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def)
+
+  ctx.onLoad({ tournamentId: 't1', resultId: 'result_t1_m1' })
+
+  expect(ctx.data.anchorMatchId).toBe('result_t1_m1')
+  expect(ctx.getAnchorRowId([{ round: 1, matches: [matchA] }])).toBe('m1')
+})
+
+test.each([
+  ['resultId', { resultId: 'result_t1_m1' }],
+  ['matchId', { matchId: 'm1' }],
+])('%s option marks target row after refresh', async (_label, anchor) => {
+  const pageDef = loadPage({
+    tournament: { _id: 't1', scheduleStatus: 'published' },
+    matchResults: [matchA, matchB],
+  })
+  const ctx = makeCtx(pageDef)
+  ctx.onLoad({ tournamentId: 't1', ...anchor })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound[0].matches.map(row => ({ id: row._id, isTarget: row.isTarget }))).toEqual([
+    { id: 'result_t1_m1', isTarget: true },
+    { id: 'result_t1_m2', isTarget: false },
+  ])
+})
+
+test.each([
+  ['resultId', { resultId: 'result_t1_m1' }],
+  ['matchId', { matchId: 'm1' }],
+])('%s option gives target row a scrollable id when sourceMatchId is missing', async (_label, anchor) => {
+  const noSourceMatch = {
+    ...matchA,
+    sourceMatchId: undefined,
+    matchId: 'm1',
+  }
+  const pageDef = loadPage({
+    tournament: { _id: 't1', scheduleStatus: 'published' },
+    matchResults: [noSourceMatch],
+  })
+  const ctx = makeCtx(pageDef)
+  ctx.onLoad({ tournamentId: 't1', ...anchor })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound[0].matches[0]).toMatchObject({
+    _id: 'result_t1_m1',
+    matchId: 'm1',
+    rowAnchorId: 'm1',
+    isTarget: true,
+  })
+  expect(ctx.getAnchorRowId()).toBe('m1')
+})
+
+test.each(['draft', 'none'])('%s schedule blocks score page with clear message', async (scheduleStatus) => {
+  const pageDef = loadPage({
+    tournament: { _id: 't1', scheduleStatus, name: '5月周末赛' },
+    matchResults: [matchA],
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound).toEqual([])
+  expect(ctx.data.empty).toBe(true)
+  expect(ctx.data.error).toBe('赛程发布后才能录入成绩')
+})
+
+test('admin adjust mode can edit confirmed rows', async () => {
+  const pageDef = loadPage({
+    app: { globalData: { isAdmin: true, currentMember: { _id: 'admin1' } } },
+    tournament: { _id: 't1', scheduleStatus: 'published' },
+    matchResults: [{
+      ...matchA,
+      _id: 'r1',
+      sourceMatchId: 'm1',
+      resultStatus: 'confirmed',
+      player1: { id: 'a', name: 'A' },
+      player2: { id: 'b', name: 'B' },
+    }],
+  })
+  const ctx = makeCtx(pageDef)
+  ctx.onLoad({ tournamentId: 't1', mode: 'adjust' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.mode).toBe('adjust')
+  expect(ctx.data.adjustMode).toBe(true)
+  expect(ctx.data.rowsByRound[0].matches[0].canAdminAdjust).toBe(true)
 })

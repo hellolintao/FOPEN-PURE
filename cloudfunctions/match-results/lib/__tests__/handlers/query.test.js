@@ -57,6 +57,22 @@ test('listByTournament returns empty rows when scheduleStatus is draft', async (
   expect(res).toEqual({ results: [] })
 })
 
+test('listByTournament filters invalidated and history rows from active score rows', async () => {
+  const ctx = makeQueryCtx({
+    tournament: { _id: 't1', scheduleStatus: 'published' },
+    rows: [
+      { _id: 'result_t1_m1', tournamentId: 't1', resultStatus: 'pending' },
+      { _id: 'result_t1_m2', tournamentId: 't1', resultStatus: 'invalidated' },
+      { _id: 'history_result_t1_m2_1', tournamentId: 't1', resultStatus: 'invalidated', matchKind: 'history', archivedFrom: 'result_t1_m2' },
+      { _id: 'audit_result_t1_m2_1', tournamentId: 't1', resultStatus: 'pending', matchKind: 'audit' },
+    ]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  expect(res.results.map(row => row._id)).toEqual(['result_t1_m1'])
+})
+
 test('pendingReviewItems FORBIDDEN: non-admin', async () => {
   const ctx = makeQueryCtx({ isAdmin: false })
   await expect(pendingReviewItems(ctx, { tournamentId: null, limit: 50 }))

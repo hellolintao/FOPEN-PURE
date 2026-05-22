@@ -129,6 +129,15 @@
   border-bottom: none;
 }
 
+.score-row-wrap {
+  position: relative;
+}
+
+.score-row-target {
+  background: rgba(199, 255, 62, 0.18);
+  box-shadow: inset 6rpx 0 0 var(--color-lime);
+}
+
 /* ============================================================
  * EMPTY
  * ============================================================ */

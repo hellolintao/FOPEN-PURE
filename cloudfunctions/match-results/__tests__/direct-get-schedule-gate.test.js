@@ -25,8 +25,16 @@ jest.mock('wx-server-sdk', () => {
       return {
         doc: id => ({
           get: jest.fn(async () => ({ data: mockState.rows[id] || null })),
+          update: jest.fn(async ({ data }) => {
+            mockState.rows[id] = { ...(mockState.rows[id] || { _id: id }), ...data }
+            return { updated: 1 }
+          }),
         }),
         where: jest.fn(() => mockChainableQuery([])),
+        add: jest.fn(async ({ data }) => {
+          mockState.rows[data._id] = { ...data }
+          return { _id: data._id }
+        }),
       }
     }
 
@@ -81,6 +89,17 @@ function setState({ scheduleStatus, isAdmin = false }) {
   }
 }
 
+const validMatchData = {
+  tournamentId: 't1',
+  round: 1,
+  type: 'singles',
+  players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+  status: 'completed',
+  winnerId: 'a',
+  loserId: 'b',
+  score: '4-2',
+}
+
 describe('direct get schedule visibility gate', () => {
   test.each([
     { action: 'get', payload: { id: 'r1' }, scheduleStatus: 'draft' },
@@ -120,5 +139,39 @@ describe('direct get schedule visibility gate', () => {
     const res = await main({ action: 'getById', id: 'r1' })
 
     expect(res).toEqual({ data: mockState.rows.r1 })
+  })
+})
+
+describe('direct legacy score writes schedule gate', () => {
+  test.each([
+    ['add', { data: { ...validMatchData, _id: 'r_add' } }],
+    ['update', { id: 'r1', data: validMatchData }],
+    ['updateScore', { id: 'r1', data: { score: '4-2', winnerId: 'a', loserId: 'b' } }],
+    ['submit-result', { data: { matchId: 'r1', submittedBy: 'member1', role: 'player', winnerIds: ['a'], score: '4-2' } }],
+  ])('blocks %s when scheduleStatus is draft', async (action, payload) => {
+    setState({ scheduleStatus: 'draft' })
+
+    const res = await main({ action, ...payload })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' },
+    })
+  })
+
+  test.each([
+    ['missing'],
+    ['published'],
+  ])('allows updateScore when scheduleStatus is %s', async (scheduleStatus) => {
+    setState({ scheduleStatus })
+
+    const res = await main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' },
+    })
+
+    expect(res).toEqual({ updated: 1 })
+    expect(mockState.rows.r1.score).toBe('4-2')
   })
 })

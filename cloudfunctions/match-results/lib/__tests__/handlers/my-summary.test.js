@@ -118,6 +118,30 @@ test('mySummary treats admin caller as player and does not include non-participa
   expect(result.submitted).toEqual([])
 })
 
+test('mySummary hides non-active score rows and explicit draft tournament rows', async () => {
+  const ctx = makeCtx({
+    memberId: 'mA',
+    allMatches: [
+      { _id: 'active_legacy', tournamentId: 't_legacy', resultStatus: 'pending', playerIds: ['mA', 'mB'], round: 1, position: 1, player1: { id: 'mA' }, player2: { id: 'mB' } },
+      { _id: 'active_published', tournamentId: 't_published', resultStatus: 'pending', playerIds: ['mA', 'mC'], round: 1, position: 2, player1: { id: 'mA' }, player2: { id: 'mC' } },
+      { _id: 'draft_row', tournamentId: 't_draft', resultStatus: 'pending', playerIds: ['mA', 'mD'], round: 1, position: 3, player1: { id: 'mA' }, player2: { id: 'mD' } },
+      { _id: 'audit_row', tournamentId: 't_published', matchKind: 'audit', resultStatus: 'pending', playerIds: ['mA', 'mE'], round: 1, position: 4, player1: { id: 'mA' }, player2: { id: 'mE' } },
+      { _id: 'history_row', tournamentId: 't_published', matchKind: 'history', archivedFrom: 'active_published', resultStatus: 'pending', playerIds: ['mA', 'mF'], round: 1, position: 5, player1: { id: 'mA' }, player2: { id: 'mF' } },
+      { _id: 'invalidated_row', tournamentId: 't_published', resultStatus: 'invalidated', playerIds: ['mA', 'mG'], round: 1, position: 6, player1: { id: 'mA' }, player2: { id: 'mG' } },
+      { _id: 'archived_row', tournamentId: 't_published', archivedFrom: 'active_published', resultStatus: 'pending', playerIds: ['mA', 'mH'], round: 1, position: 7, player1: { id: 'mA' }, player2: { id: 'mH' } },
+    ],
+    tournaments: {
+      t_legacy: { _id: 't_legacy', name: 'Legacy' },
+      t_published: { _id: 't_published', name: 'Published', scheduleStatus: 'published' },
+      t_draft: { _id: 't_draft', name: 'Draft', scheduleStatus: 'draft' },
+    },
+  })
+
+  const result = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(result.pending.map(row => row.matchId)).toEqual(['active_legacy', 'active_published'])
+})
+
 test('mySummary respects historyLimit', async () => {
   const matches = Array.from({ length: 15 }).map((_, i) => ({
     _id: `mr_${i}`, tournamentId: 't1', resultStatus: 'confirmed', playerIds: ['mA'],

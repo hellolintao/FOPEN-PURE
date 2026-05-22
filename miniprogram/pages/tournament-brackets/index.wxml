@@ -25,13 +25,18 @@
     </view>
 
     <!-- EMPTY -->
-    <view wx:if="{{decoratedCourts.length === 0}}" class="bracket-empty">
+    <view wx:if="{{scheduleGateBlocked}}" class="bracket-empty">
+      <text class="tape">赛程未发布</text>
+      <text class="bracket-empty-hint">{{scheduleGateMessage}}</text>
+    </view>
+
+    <view wx:elif="{{decoratedCourts.length === 0}}" class="bracket-empty">
       <text class="tape">尚未配置排程</text>
       <text class="bracket-empty-hint">前往编辑排程以指定场地与对阵</text>
     </view>
 
     <!-- ROUND 01 · BY COURT -->
-    <view wx:if="{{decoratedCourts.length > 0}}" class="round-section anim-stage-rise anim-delay-1">
+    <view wx:if="{{!scheduleGateBlocked && decoratedCourts.length > 0}}" class="round-section anim-stage-rise anim-delay-1">
       <view class="round-banner">
         <text class="tape tape-lime tape-stamped-lime">ROUND 01</text>
         <text class="round-banner-sub">首轮 · 按场地分组</text>
@@ -76,7 +81,7 @@
     </view>
 
     <!-- LATER ROUNDS -->
-    <view wx:if="{{laterRounds.length > 0}}" class="round-section later anim-stage-rise anim-delay-2">
+    <view wx:if="{{!scheduleGateBlocked && laterRounds.length > 0}}" class="round-section later anim-stage-rise anim-delay-2">
       <view wx:for="{{laterRounds}}" wx:for-item="b" wx:key="round" class="later-block">
         <view class="round-banner">
           <text class="tape tape-ghost">ROUND {{fmt.pad2(b.round)}}</text>

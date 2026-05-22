@@ -9,6 +9,7 @@ function loadPage() {
     redirectTo: jest.fn(),
     pageScrollTo: jest.fn(),
     showShareMenu: jest.fn(),
+    showActionSheet: jest.fn(),
     cloud: { callFunction: jest.fn() }
   }
   global.getApp = () => app
@@ -432,5 +433,193 @@ describe('tournament-edit registration publishing flow', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '发布赛程失败', icon: 'none' })
     expect(wx.redirectTo).not.toHaveBeenCalled()
     errSpy.mockRestore()
+  })
+
+  test('edit-schedule impact confirmation offers score handling choices for changed confirmed rows', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: { m1: { courtId: 'c1', queueOrder: 0 } },
+      matches: [{ matchId: 'm1', courtId: 'c2' }],
+      queues: [{ courtId: 'c2', items: [{ kind: 'match', matchId: 'm1', order: 1 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 0 }))
+
+    await expect(ctx.confirmScheduleEditImpact()).resolves.toBe('keep_time_only')
+
+    expect(wx.showActionSheet).toHaveBeenCalledWith(expect.objectContaining({
+      itemList: ['保留比分，仅改场地/时间', '清空比分并重新录入', '取消编辑']
+    }))
+    expect(ctx.data.scheduleImpactChoice).toBe('keep_time_only')
+  })
+
+  test('edit-schedule impact confirmation is skipped when confirmed rows are unaffected', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { sourceMatchId: 'm1', courtId: 'c1', queueOrder: 0, player1Key: 'p1:::', player2Key: 'p2:::' }
+      },
+      matches: [{ matchId: 'm1', courtId: 'c1', player1: { id: 'p1' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    })
+
+    await expect(ctx.confirmScheduleEditImpact()).resolves.toBe('none')
+
+    expect(wx.showActionSheet).not.toHaveBeenCalled()
+  })
+
+  test('edit-schedule impact confirmation is required when players change at the same slot', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { courtId: 'c1', queueOrder: 0, player1Key: 'p1', player2Key: 'p2' }
+      },
+      matches: [{ matchId: 'm1', courtId: 'c1', player1: { id: 'p3' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 1 }))
+
+    await expect(ctx.confirmScheduleEditImpact()).resolves.toBe('invalidate_scores')
+
+    expect(wx.showActionSheet).toHaveBeenCalled()
+    expect(ctx.data.scheduleImpactChoice).toBe('invalidate_scores')
+  })
+
+  test('invalidate score impact is sent to backend before schedule writes continue', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { courtId: 'c1', queueOrder: 0, player1Key: 'p1', player2Key: 'p2' }
+      },
+      matches: [{ matchId: 'm1', round: 1, position: 1, player1: { id: 'p3' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 1 }))
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: {} } })
+
+    await expect(ctx.persistScheduleBase()).resolves.toBe(true)
+
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'match-results',
+      data: expect.objectContaining({
+        action: 'applyScheduleImpact',
+        tournamentId: 't1',
+        mode: 'invalidate_scores',
+        matches: ctx.data.matches,
+        queues: ctx.data.queues,
+      })
+    })
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-brackets',
+      data: expect.objectContaining({ action: 'saveInitialMatches' })
+    })
+  })
+
+  test('keep-time-only schedule edit saves queues without rewriting initial bracket matches', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { courtId: 'c1', queueOrder: 0, player1Key: 'p1:::', player2Key: 'p2:::' }
+      },
+      matches: [{ matchId: 'm1', round: 1, position: 1, player1: { id: 'p1' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c2', items: [{ kind: 'match', matchId: 'm1', order: 2 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 0 }))
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: {} } })
+
+    await expect(ctx.persistScheduleBase()).resolves.toBe(true)
+
+    const calls = wx.cloud.callFunction.mock.calls.map(([arg]) => arg)
+    expect(calls).not.toContainEqual({
+      name: 'tournament-brackets',
+      data: expect.objectContaining({ action: 'saveInitialMatches' })
+    })
+    expect(calls).toContainEqual({
+      name: 'tournament-brackets',
+      data: expect.objectContaining({ action: 'saveSchedule' })
+    })
+  })
+
+  test('published schedule edit invalidates confirmed rows before publish triggers score-row upsert', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { courtId: 'c1', queueOrder: 0, player1Key: 'p1', player2Key: 'p2' }
+      },
+      matches: [{ matchId: 'm1', round: 1, position: 1, player1: { id: 'p3' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 1 }))
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: {} } })
+
+    await expect(ctx.persistPublishedSchedule()).resolves.toBe(true)
+
+    const calls = wx.cloud.callFunction.mock.calls.map(([arg]) => arg)
+    const realImpactIndex = calls.findIndex(arg =>
+      arg.name === 'match-results' &&
+      arg.data.action === 'applyScheduleImpact' &&
+      arg.data.dryRun === false
+    )
+    const publishIndex = calls.findIndex(arg =>
+      arg.name === 'tournaments' &&
+      arg.data.action === 'publishSchedule'
+    )
+    expect(realImpactIndex).toBeGreaterThanOrEqual(0)
+    expect(publishIndex).toBeGreaterThanOrEqual(0)
+    expect(realImpactIndex).toBeLessThan(publishIndex)
+  })
+
+  test('published keep-time-only edit blocks result-affecting changes before publish', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      scheduleEditMode: true,
+      matchResultRows: [{ sourceMatchId: 'm1', resultStatus: 'confirmed' }],
+      originalScheduleSnapshot: {
+        m1: { courtId: 'c1', queueOrder: 0, player1Key: 'p1', player2Key: 'p2' }
+      },
+      matches: [{ matchId: 'm1', round: 1, position: 1, player1: { id: 'p3' }, player2: { id: 'p2' } }],
+      queues: [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    })
+    wx.showActionSheet.mockImplementation(({ success }) => success({ tapIndex: 0 }))
+    wx.cloud.callFunction.mockImplementation(async ({ name, data }) => {
+      if (name === 'match-results' && data.action === 'applyScheduleImpact') {
+        return {
+          result: {
+            success: false,
+            error: {
+              code: 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION',
+              message: '赛程变更影响已确认成绩，请选择清空比分并重新录入'
+            }
+          }
+        }
+      }
+      return { result: { success: true, data: {} } }
+    })
+
+    await expect(ctx.persistPublishedSchedule()).resolves.toBe(false)
+
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith({
+      name: 'tournaments',
+      data: { action: 'publishSchedule', id: 't1' }
+    })
+    expect(wx.showToast).toHaveBeenCalledWith({
+      title: '赛程变更影响已确认成绩，请选择清空比分并重新录入',
+      icon: 'none'
+    })
   })
 })

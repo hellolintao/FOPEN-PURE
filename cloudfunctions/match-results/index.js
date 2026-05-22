@@ -2,6 +2,7 @@
 const cloud = require('wx-server-sdk')
 const { validateResultSubmission } = require('./lib/validate')
 const { canExposeScoreRows } = require('./lib/handlers/query')
+const { isActiveScoreRow } = require('./lib/active-row')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
@@ -67,14 +68,43 @@ async function resolveSubmitterByOpenid(openid, database = db, command = _) {
 function ok(data) { return { success: true, data } }
 function fail(code, message) { return { success: false, error: { code, message } } }
 
+const SCHEDULE_NOT_PUBLISHED_MESSAGE = '赛程发布后才能录入成绩'
+
 async function guardDirectScoreRowRead(row) {
   if (!row || !row.tournamentId) return null
+  if (!isActiveScoreRow(row)) return fail('NOT_FOUND', '比赛不存在')
   const tournamentRes = await db.collection('tournaments').doc(row.tournamentId).get().catch(() => null)
   const tournament = tournamentRes && tournamentRes.data
   if (canExposeScoreRows(tournament)) return null
   const submitter = await resolveSubmitter()
   if (submitter && submitter.isAdmin) return null
   return fail('FORBIDDEN', '赛程发布后才能录入成绩')
+}
+
+async function guardDirectScoreWriteByTournamentId(tournamentId) {
+  if (!tournamentId) return null
+  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tournament = tournamentRes && tournamentRes.data
+  if (!isScheduleWriteBlocked(tournament)) return null
+  return fail('SCHEDULE_NOT_PUBLISHED', SCHEDULE_NOT_PUBLISHED_MESSAGE)
+}
+
+async function guardDirectScoreWriteForRow(row, fallbackTournamentId) {
+  if (row && !isActiveScoreRow(row)) return fail('INVALID_STATE', '成绩记录已失效，请重新打开页面')
+  return guardDirectScoreWriteByTournamentId((row && row.tournamentId) || fallbackTournamentId)
+}
+
+function isScheduleWriteBlocked(tournament) {
+  return !!(
+    tournament &&
+    Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
+    tournament.scheduleStatus !== 'published'
+  )
+}
+
+function filterActiveScoreRowsResult(result) {
+  if (!result || !Array.isArray(result.data)) return result
+  return { ...result, data: result.data.filter(isActiveScoreRow) }
 }
 
 // 数据验证函数
@@ -195,7 +225,7 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
       const existing = existingRes && existingRes.data
       if (existing) {
         await collection.doc(docId).update({
-          data: { ...doc, createTime: existing.createTime }
+          data: mergeScheduledMatchDoc(existing, doc)
         })
       } else {
         await collection.add({ data: { ...doc, createTime: now } })
@@ -241,7 +271,7 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
         const existingRes = await collection.doc(docId).get().catch(() => null)
         const existing = existingRes && existingRes.data
         if (existing) {
-          await collection.doc(docId).update({ data: { ...doc, createTime: existing.createTime } })
+          await collection.doc(docId).update({ data: mergeScheduledMatchDoc(existing, doc) })
         } else {
           await collection.add({ data: { ...doc, createTime: now } })
         }
@@ -254,7 +284,7 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
       matchKind: _.in(['bracket', 'regularRound', 'extra'])
     }).get().catch(() => ({ data: [] }))
     for (const doc of (orphanRes.data || [])) {
-      if (!seen.has(doc._id)) {
+      if (shouldRemoveOrphanMatchDoc(doc, seen)) {
         await collection.doc(doc._id).remove().catch(() => null)
       }
     }
@@ -262,8 +292,69 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
     return { success: true, data: { count: seen.size } }
   } catch (e) {
     console.error('[match-results.bulkUpsertScheduledMatches] error', e)
-    return { success: false, error: { code: 'INTERNAL', message: e.message } }
+    return { success: false, error: { code: e.code || 'INTERNAL', message: e.message } }
   }
+}
+
+function mergeScheduledMatchDoc(existing, scheduled) {
+  const merged = { ...scheduled, createTime: existing && existing.createTime }
+  if (!existing || !isActiveScoreRow(existing)) return merged
+  if (!hasPreservableScoreState(existing)) return merged
+  if (!hasSameResultIdentity(existing, scheduled)) {
+    const err = new Error('赛程变更影响已确认成绩，请先清空比分并重新发布')
+    err.code = 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION'
+    throw err
+  }
+  return {
+    ...merged,
+    score: existing.score,
+    scoreDetail: existing.scoreDetail,
+    resultStatus: existing.resultStatus,
+    status: existing.status || merged.status,
+    winner: existing.winner,
+    winnerId: existing.winnerId,
+    loserId: existing.loserId,
+    submissions: existing.submissions,
+    submittedBy: existing.submittedBy,
+    submittedAt: existing.submittedAt,
+    confirmedBy: existing.confirmedBy,
+    confirmedAt: existing.confirmedAt,
+    pointsAwarded: existing.pointsAwarded
+  }
+}
+
+function shouldRemoveOrphanMatchDoc(doc, seen) {
+  if (!doc || !doc._id || seen.has(doc._id)) return false
+  if (doc.matchKind === 'history' || doc.archivedFrom || doc.resultStatus === 'invalidated') return false
+  return true
+}
+
+function hasPreservableScoreState(row) {
+  return row && ['submitted', 'confirmed'].includes(row.resultStatus)
+}
+
+function hasSameResultIdentity(existing, scheduled) {
+  return resultIdentityKey(existing) === resultIdentityKey(scheduled)
+}
+
+function resultIdentityKey(row) {
+  if (!row) return ''
+  return [
+    row.sourceMatchId || row.matchId || row._id || '',
+    playerIdentityKey(row.player1),
+    playerIdentityKey(row.player2)
+  ].join('|')
+}
+
+function playerIdentityKey(player) {
+  if (!player) return ''
+  return [
+    player.id || '',
+    player.partnerId || '',
+    player.sourceMatchId || player.fromMatchId || '',
+    player.name || '',
+    player.partnerName || ''
+  ].join(':')
 }
 
 // Phase 9 v2.1 — ctx builder helpers for new handler routes
@@ -281,8 +372,28 @@ function buildBatchCtx(submitter, isAdminFlag) {
         const r = await db.collection('match_results').doc(id).get().catch(() => null)
         return r ? r.data : null
       },
+      getTournament: async (tournamentId) => {
+        const r = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+        return r ? r.data : null
+      },
+      listMatchesByTournament: async (tournamentId) => (await collection.where({ tournamentId }).limit(500).get()).data,
       updateMatch: async (id, patch) => {
         await db.collection('match_results').doc(id).update({ data: patch })
+      },
+      archiveMatchResult: async (doc) => {
+        if (typeof db.createCollection === 'function') {
+          await db.createCollection('match_result_history').catch(() => null)
+        }
+        await db.collection('match_result_history').add({ data: doc })
+      },
+      clearDownstream: async (tournamentId, row) => {
+        await stateSvc.clearDownstream(tournamentId, row)
+      },
+      removeTournamentPoints: async (tournamentId) => {
+        await db.collection('tournament_points').where({ tournamentId }).remove().catch(() => null)
+      },
+      markTournamentOngoing: async (tournamentId, patch) => {
+        await db.collection('tournaments').doc(tournamentId).update({ data: patch }).catch(() => null)
       },
       clearMatchFields: async (id, fields) => {
         const data = {}
@@ -426,6 +537,8 @@ exports.main = async (event, context) => {
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
+      const scheduleGate = await guardDirectScoreWriteByTournamentId(data.tournamentId)
+      if (scheduleGate) return scheduleGate
 
       // 检查是否已存在相同的比赛
       const existingMatch = await collection.where({
@@ -509,6 +622,9 @@ exports.main = async (event, context) => {
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
+      const current = await collection.doc(_id || id).get().catch(() => null)
+      const scheduleGate = await guardDirectScoreWriteForRow(current && current.data, data && data.tournamentId)
+      if (scheduleGate) return scheduleGate
 
       // 更新比赛数据
       const updateData = {
@@ -571,12 +687,12 @@ exports.main = async (event, context) => {
         ]))
       }
 
-      return await collection
+      return filterActiveScoreRowsResult(await collection
         .where(query.length ? _.and(query) : {})
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
-        .get()
+        .get())
     }
 
     case 'getByTournament': {
@@ -590,11 +706,11 @@ exports.main = async (event, context) => {
         query.round = data.round
       }
 
-      return await collection
+      return filterActiveScoreRowsResult(await collection
         .where(query)
         .orderBy('round', 'asc')
         .orderBy('createTime', 'asc')
-        .get()
+        .get())
     }
 
     case 'getByPlayer': {
@@ -609,12 +725,12 @@ exports.main = async (event, context) => {
         { loserId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) }
       ])
 
-      return await collection
+      return filterActiveScoreRowsResult(await collection
         .where(query)
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
-        .get()
+        .get())
     }
 
     case 'updateStatus': {
@@ -642,6 +758,9 @@ exports.main = async (event, context) => {
       if (!data) {
         return { errMsg: 'score data is required' }
       }
+      const current = await collection.doc(_id || id).get().catch(() => null)
+      const scheduleGate = await guardDirectScoreWriteForRow(current && current.data)
+      if (scheduleGate) return scheduleGate
 
       const updateData = {
         score: data.score,
@@ -718,6 +837,8 @@ exports.main = async (event, context) => {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: 'matchId 不能为空' } }
       }
       const match = await collection.doc(data.matchId).get()
+      const scheduleGate = await guardDirectScoreWriteForRow(match && match.data)
+      if (scheduleGate) return scheduleGate
       const submissions = (match.data.submissions || []).filter(s => s.submittedBy !== data.submittedBy)
       submissions.push({
         submittedBy: data.submittedBy,
@@ -744,7 +865,7 @@ exports.main = async (event, context) => {
         const data = await submit(ctx, event)
         return ok(data)
       } catch (e) {
-        return fail(e.message || 'INTERNAL', e.message)
+        return fail(e.code || e.message || 'INTERNAL', e.message)
       }
     }
 
@@ -757,7 +878,7 @@ exports.main = async (event, context) => {
         const data = await confirmAll(ctx, event)
         return ok(data)
       } catch (e) {
-        return fail(e.message || 'INTERNAL', e.message)
+        return fail(e.code || e.message || 'INTERNAL', e.message)
       }
     }
 
@@ -770,7 +891,7 @@ exports.main = async (event, context) => {
         const data = await reconfirmMatch(ctx, event)
         return ok(data)
       } catch (e) {
-        return fail(e.message || 'INTERNAL', e.message)
+        return fail(e.code || e.message || 'INTERNAL', e.message)
       }
     }
 
@@ -819,6 +940,22 @@ exports.main = async (event, context) => {
       } catch (e) {
         if (e && e.code) return { success: false, error: { code: e.code, message: e.message, requestId: payload && payload.requestId } }
         return { success: false, error: { code: 'INTERNAL', message: e.message, requestId: payload && payload.requestId } }
+      }
+    }
+    case 'applyScheduleImpact': {
+      const { applyScheduleImpact } = require('./lib/handlers/batch')
+      const payload = event.payload || event
+      try {
+        const submitter = await resolveSubmitter()
+        if (!submitter || !submitter.isAdmin) {
+          return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+        }
+        const ctx = buildBatchCtx(submitter, true)
+        const data = await applyScheduleImpact(ctx, payload)
+        return { success: true, data }
+      } catch (e) {
+        if (e && e.code) return { success: false, error: { code: e.code, message: e.message } }
+        return { success: false, error: { code: 'INTERNAL', message: e.message } }
       }
     }
     case 'pendingReviewItems': {
@@ -932,4 +1069,6 @@ exports.__test__ = {
   resolveSubmitterByOpenid,
   resolveStateMatchId,
   guardDirectScoreRowRead,
+  mergeScheduledMatchDoc,
+  shouldRemoveOrphanMatchDoc,
 }

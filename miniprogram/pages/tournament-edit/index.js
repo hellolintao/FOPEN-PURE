@@ -21,6 +21,10 @@ Page({
     registrationPublished: false,
     sharePath: '',
     scheduleStarted: false,
+    scheduleEditMode: false,
+    matchResultRows: [],
+    originalScheduleSnapshot: null,
+    scheduleImpactChoice: '',
     schedulePlanCourts: [],
     selectedPlayers: [],
     matches: [],
@@ -43,6 +47,10 @@ Page({
   },
 
   async onLoad(options) {
+    const patch = {}
+    if (options && options.step) patch.step = parseInt(options.step, 10) || this.data.step
+    if (options && options.mode === 'edit-schedule') patch.scheduleEditMode = true
+    if (Object.keys(patch).length > 0) this.setData(patch)
     await this.loadMembersAndCourts()
     if (options.id) await this.hydrateDraft(options.id)
   },
@@ -121,6 +129,18 @@ Page({
     })
     const fp = (fpRes.result && fpRes.result.success && fpRes.result.data && fpRes.result.data.items) || []
     this.setData({ freePlays: asArray(fp) })
+
+    if (this.data.scheduleEditMode) {
+      const mrRes = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'listByTournament', tournamentId: id }
+      })
+      const matchResultRows = (mrRes.result && mrRes.result.success && mrRes.result.data && mrRes.result.data.results) || []
+      this.setData({
+        matchResultRows,
+        originalScheduleSnapshot: this.buildScheduleEditSnapshot(r1Matches, this.data.queues)
+      })
+    }
   },
 
   async onNext() {
@@ -414,8 +434,13 @@ Page({
   },
 
   async persistPublishedSchedule() {
-    const saved = await this.persistScheduleBase()
+    const saved = await this.persistScheduleBase({ applyImpactAfterSave: false })
     if (!saved) return false
+    const impactChoice = this.data.scheduleImpactChoice
+    if (this.data.scheduleEditMode && impactChoice && impactChoice !== 'none') {
+      const impactApplied = await this.applyScheduleImpact(impactChoice, false)
+      if (!impactApplied) return false
+    }
     const res = await wx.cloud.callFunction({
       name: 'tournaments',
       data: { action: 'publishSchedule', id: this.data.tournamentId }
@@ -428,9 +453,17 @@ Page({
     return true
   },
 
-  async persistScheduleBase() {
+  async persistScheduleBase(options = {}) {
     const tid = this.data.tournamentId
-    if ((this.data.matches || []).length > 0) {
+    const applyImpactAfterSave = options.applyImpactAfterSave !== false
+    const impactChoice = await this.confirmScheduleEditImpact()
+    if (impactChoice === 'cancel') return false
+    if (impactChoice !== 'none') {
+      const impactAllowed = await this.applyScheduleImpact(impactChoice, true)
+      if (!impactAllowed) return false
+    }
+    const skipInitialMatchRewrite = this.data.scheduleEditMode && impactChoice === 'keep_time_only'
+    if (!skipInitialMatchRewrite && (this.data.matches || []).length > 0) {
       const r1 = await wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: { action: 'saveInitialMatches', tournamentId: tid, matches: this.data.matches }
@@ -451,6 +484,29 @@ Page({
       wx.showToast({ title: _errMsg(r2, '保存排程失败'), icon: 'none' })
       return false
     }
+    if (applyImpactAfterSave && impactChoice !== 'none') {
+      const impactApplied = await this.applyScheduleImpact(impactChoice, false)
+      if (!impactApplied) return false
+    }
+    return true
+  },
+
+  async applyScheduleImpact(mode, dryRun) {
+    const res = await wx.cloud.callFunction({
+      name: 'match-results',
+      data: {
+        action: 'applyScheduleImpact',
+        tournamentId: this.data.tournamentId,
+        mode,
+        matches: this.data.matches,
+        queues: this.data.queues,
+        dryRun: !!dryRun
+      }
+    })
+    if (!_isSuccess(res)) {
+      wx.showToast({ title: _errMsg(res, '处理赛程影响失败'), icon: 'none' })
+      return false
+    }
     return true
   },
 
@@ -460,6 +516,76 @@ Page({
       courts: this.data.schedulePlanCourts || [],
       queues: this.data.queues || []
     }
+  },
+
+  async confirmScheduleEditImpact() {
+    if (!this.data.scheduleEditMode) return 'none'
+    const confirmedRows = asArray(this.data.matchResultRows).filter(row => row.resultStatus === 'confirmed')
+    if (confirmedRows.length === 0) return 'none'
+    if (!this.hasScheduleImpactOnConfirmedRows(confirmedRows)) return 'none'
+
+    const choices = [
+      { key: 'keep_time_only', label: '保留比分，仅改场地/时间' },
+      { key: 'invalidate_scores', label: '清空比分并重新录入' },
+      { key: 'cancel', label: '取消编辑' }
+    ]
+    const choice = await this.pickScheduleImpactChoice(choices)
+    this.setData({ scheduleImpactChoice: choice })
+    return choice
+  },
+
+  pickScheduleImpactChoice(choices) {
+    if (wx.showActionSheet) {
+      return new Promise(resolve => wx.showActionSheet({
+        itemList: choices.map(choice => choice.label),
+        success: ({ tapIndex }) => resolve((choices[tapIndex] && choices[tapIndex].key) || 'cancel'),
+        fail: () => resolve('cancel')
+      }))
+    }
+    return new Promise(resolve => wx.showModal({
+      title: '赛程已影响成绩',
+      content: choices.map(choice => choice.label).join('\n'),
+      success: ({ confirm }) => resolve(confirm ? choices[0].key : 'cancel'),
+      fail: () => resolve('cancel')
+    }))
+  },
+
+  hasScheduleImpactOnConfirmedRows(confirmedRows) {
+    const before = this.data.originalScheduleSnapshot || {}
+    const after = this.buildScheduleEditSnapshot(this.data.matches, this.data.queues)
+    return confirmedRows.some(row => {
+      const matchId = row.sourceMatchId || row.matchId || row._id
+      if (!matchId) return false
+      return !sameScheduleSnapshot(before[matchId], after[matchId])
+    })
+  },
+
+  buildScheduleEditSnapshot(matches = [], queues = []) {
+    const snapshot = {}
+    asArray(matches).forEach(match => {
+      const matchId = match.matchId || match.sourceMatchId
+      if (!matchId) return
+      snapshot[matchId] = {
+        sourceMatchId: matchId,
+        player1Key: playerKey(match.player1),
+        player2Key: playerKey(match.player2),
+        courtId: match.courtId || '',
+        queueOrder: hasOwn(match, 'queueOrder') ? match.queueOrder : null
+      }
+    })
+    asArray(queues).forEach(queue => {
+      asArray(queue.items).forEach(item => {
+        const matchId = item.matchId || item.sourceMatchId
+        if (!matchId || item.kind === 'freePlay') return
+        const current = snapshot[matchId] || { sourceMatchId: matchId, player1Key: '', player2Key: '' }
+        snapshot[matchId] = {
+          ...current,
+          courtId: queue.courtId || item.courtId || '',
+          queueOrder: hasOwn(item, 'order') ? item.order : null
+        }
+      })
+    })
+    return snapshot
   },
 
   _normalizePointsRules(pr) {
@@ -773,6 +899,28 @@ function unpackList(res, dataFields) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
+}
+
+function hasOwn(obj, key) {
+  return !!(obj && Object.prototype.hasOwnProperty.call(obj, key))
+}
+
+function sameScheduleSnapshot(a, b) {
+  return ((a && a.courtId) || '') === ((b && b.courtId) || '')
+    && (hasOwn(a, 'queueOrder') ? a.queueOrder : null) === (hasOwn(b, 'queueOrder') ? b.queueOrder : null)
+    && ((a && a.sourceMatchId) || '') === ((b && b.sourceMatchId) || '')
+    && ((a && a.player1Key) || '') === ((b && b.player1Key) || '')
+    && ((a && a.player2Key) || '') === ((b && b.player2Key) || '')
+}
+
+function playerKey(player) {
+  if (!player) return ''
+  return [
+    player.id || '',
+    player.partnerId || '',
+    player.name || '',
+    player.partnerName || ''
+  ].join(':')
 }
 
 function todayISODate() {
