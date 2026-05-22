@@ -91,6 +91,21 @@ describe('match page tournament entry permissions', () => {
     expect(ctx.data.tournaments[0].__permissionKind).toBe('admin')
   })
 
+  test('sorts tournaments by creation time descending so newest appears first', async () => {
+    const { pageDef } = loadPage({
+      tournaments: [
+        { _id: 'old', name: '旧赛事', type: 'singles', createTime: '2026-05-20T10:00:00+08:00' },
+        { _id: 'new', name: '新赛事', type: 'singles', createTime: '2026-05-22T10:00:00+08:00' },
+        { _id: 'mid', name: '中间赛事', type: 'singles', createdAt: '2026-05-21T10:00:00+08:00' }
+      ]
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments.map(t => t._id)).toEqual(['new', 'mid', 'old'])
+  })
+
   test('decorates admin schedule-published events as editable', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { isAdmin: true }, refreshIdentity: jest.fn().mockResolvedValue(null) },

@@ -32,7 +32,7 @@ Page({
 				const visibleTournaments = dirtyState.deletedTournamentId
 					? cachedTournaments.filter(tournament => tournament && tournament._id !== dirtyState.deletedTournamentId)
 					: cachedTournaments
-				this.setData({ tournaments: visibleTournaments, loading: false })
+				this.setData({ tournaments: sortTournamentsByCreateTimeDesc(visibleTournaments), loading: false })
 				if (!dirtyState.dirty && isFresh(cached)) return
 				removeCache(cacheKey)
 			} else {
@@ -40,7 +40,7 @@ Page({
 			}
 
 			const result = await db.collection('tournaments').get()
-			const tournaments = await this.decorateTournamentPermissions(result.data || [])
+			const tournaments = sortTournamentsByCreateTimeDesc(await this.decorateTournamentPermissions(result.data || []))
 			this.setData({ tournaments, loading: false })
 			setCache(cacheKey, { tournaments }, { ttlMs: MATCH_CACHE_TTL_MS })
 		} catch (err) {
@@ -153,6 +153,46 @@ function permissionLabel(kind, phase, isParticipant) {
 	if (phase === PHASE.REGISTRATION_OPEN) return '可报名'
 	if (phase === PHASE.SCHEDULE_PUBLISHED) return '可录分'
 	return '仅查看'
+}
+
+function sortTournamentsByCreateTimeDesc(tournaments) {
+	return (tournaments || [])
+		.map((tournament, index) => ({
+			tournament,
+			index,
+			createdAt: tournamentCreateTimestamp(tournament)
+		}))
+		.sort((a, b) => {
+			if (a.createdAt !== b.createdAt) return b.createdAt - a.createdAt
+			return a.index - b.index
+		})
+		.map(item => item.tournament)
+}
+
+function tournamentCreateTimestamp(tournament) {
+	if (!tournament) return Number.NEGATIVE_INFINITY
+	return timestampValue(
+		tournament.createTime ||
+		tournament.createdAt ||
+		tournament.createDate ||
+		tournament.createdTime ||
+		tournament._createTime
+	)
+}
+
+function timestampValue(value) {
+	if (!value) return Number.NEGATIVE_INFINITY
+	if (value instanceof Date) return value.getTime()
+	if (typeof value === 'number') return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY
+	if (typeof value === 'string') {
+		const parsed = new Date(value).getTime()
+		return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed
+	}
+	if (typeof value === 'object') {
+		if (typeof value.toDate === 'function') return timestampValue(value.toDate())
+		return timestampValue(value.$date || value.date || value.timestamp || value.seconds)
+	}
+	return Number.NEGATIVE_INFINITY
 }
 
 function unpackRegistrationRows(res) {
