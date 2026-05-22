@@ -135,8 +135,14 @@
   min-width: 0;
 }
 
-.hero-meta-status {
+.hero-meta-status,
+.hero-meta-wide {
   grid-column: 1 / -1;
+}
+
+.hero-meta-court-time {
+  padding-top: var(--space-2);
+  border-top: 1rpx solid var(--color-border);
 }
 
 .hero-meta-label {
@@ -155,6 +161,14 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.hero-meta-val-wrap {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  line-height: 1.35;
+  word-break: break-all;
 }
 
 .hero-desc {

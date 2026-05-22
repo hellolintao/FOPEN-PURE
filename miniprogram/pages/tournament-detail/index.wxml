@@ -25,24 +25,24 @@
       <text class="hero-title">{{tournament.name}}</text>
       <view class="hero-meta">
         <view class="hero-meta-block">
-          <text class="hero-meta-label">SEASON</text>
-          <text class="hero-meta-val">{{tournament.seasonName || '—'}}</text>
+          <text class="hero-meta-label">赛季</text>
+          <text class="hero-meta-val">{{tournamentDisplay.seasonText}}</text>
         </view>
         <view class="hero-meta-block">
-          <text class="hero-meta-label">DATE</text>
-          <text class="hero-meta-val">{{tournament.startDate}}{{tournament.endDate ? ' → ' + tournament.endDate : ''}}</text>
+          <text class="hero-meta-label">比赛时间</text>
+          <text class="hero-meta-val">{{tournamentDisplay.matchTimeText}}</text>
         </view>
         <view class="hero-meta-block">
-          <text class="hero-meta-label">COURT TIME</text>
-          <text class="hero-meta-val">{{tournamentDisplay.courtTimeText}}</text>
+          <text class="hero-meta-label">地点</text>
+          <text class="hero-meta-val">{{tournamentDisplay.locationText}}</text>
         </view>
         <block wx:if="{{showRegistrationModule}}">
           <view class="hero-meta-block">
-            <text class="hero-meta-label">DEADLINE</text>
+            <text class="hero-meta-label">报名截止</text>
             <text class="hero-meta-val">{{tournamentDisplay.registrationDeadlineLabel || '—'}}</text>
           </view>
-          <view class="hero-meta-block hero-meta-status">
-            <text class="hero-meta-label">WITHDRAW BY</text>
+          <view class="hero-meta-block">
+            <text class="hero-meta-label">退赛截止</text>
             <text class="hero-meta-val">{{withdrawDeadlineLabel || '—'}}</text>
           </view>
         </block>
@@ -56,6 +56,10 @@
             <text class="hero-meta-val">{{tournamentDisplay.statusHint}}</text>
           </view>
         </block>
+        <view class="hero-meta-block hero-meta-wide hero-meta-court-time">
+          <text class="hero-meta-label">场地时间</text>
+          <text class="hero-meta-val hero-meta-val-wrap">{{tournamentDisplay.courtTimeText}}</text>
+        </view>
       </view>
       <view wx:if="{{tournament.description}}" class="hero-desc">
         <text>{{tournament.description}}</text>

@@ -33,6 +33,20 @@ describe('tournament-detail WXML layout', () => {
     expect(wxml).not.toContain('wx:for="{{resultDisplay.leaders}}"')
     expect(wxml).toContain('wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId"')
   })
+
+  test('uses localized hero labels and a full-width wrapping court time row', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('比赛时间')
+    expect(wxml).toContain('报名截止')
+    expect(wxml).toContain('地点')
+    expect(wxml).toContain('场地时间')
+    expect(wxml).toContain('hero-meta-block hero-meta-wide hero-meta-court-time')
+    expect(wxml).toContain('hero-meta-val hero-meta-val-wrap')
+    expect(wxml).not.toContain('>DATE<')
+    expect(wxml).not.toContain('>DEADLINE<')
+    expect(wxml).not.toContain('>COURT TIME<')
+  })
 })
 
 function loadPage(options = {}) {
@@ -43,6 +57,7 @@ function loadPage(options = {}) {
   const tournament = options.tournament === undefined ? null : options.tournament
   const matchResults = options.matchResults || []
   const seasons = options.seasons || {}
+  const currentSeason = options.currentSeason || null
   const members = options.members || []
   const callFunction = options.callFunction
   const registrationChain = {
@@ -97,6 +112,12 @@ function loadPage(options = {}) {
           return Promise.resolve({ result: { success: true, data: { results: matchResults } } })
         }
         if (name === 'seasons') {
+          if (data && data.action === 'get' && options.rejectSeasonGet) {
+            return Promise.reject(new Error('season get failed'))
+          }
+          if (data && data.action === 'getCurrent') {
+            return Promise.resolve({ result: { success: true, data: currentSeason } })
+          }
           const id = data && data.id
           return Promise.resolve({ result: { data: seasons[id] || null } })
         }
@@ -143,6 +164,85 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.primaryActionLabel).toBe('我要报名')
     expect(ctx.data.showRegistrationStatusCard).toBe(false)
     expect(ctx.data.selfRegistrationSupported).toBe(true)
+  })
+
+  test('builds hero display fields for season, location, deadlines, and full court time', async () => {
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: '测试05224',
+        type: 'mixed',
+        format: 'regular',
+        status: 'upcoming',
+        seasonId: 'season_1740000000000',
+        location: '海峡奥体网球场',
+        startDate: '2026-05-22',
+        registrationDeadlineAt: '2026-05-31T23:59:00+08:00',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        scheduleStatus: 'none',
+        schedulePlan: {
+          slotMinutes: 20,
+          courts: [
+            {
+              courtId: 'c1',
+              name: '比赛2',
+              location: '室内A区',
+              slots: [
+                '2026-05-22T08:00',
+                '2026-05-22T08:20',
+                '2026-05-22T08:40',
+                '2026-05-22T09:00',
+                '2026-05-22T09:20',
+                '2026-05-22T09:40'
+              ]
+            },
+            {
+              courtId: 'c2',
+              name: '中心场',
+              location: '西门',
+              slots: ['2026-05-22T14:00', '2026-05-22T14:20']
+            }
+          ]
+        }
+      },
+      seasons: {
+        season_1740000000000: { _id: 'season_1740000000000', name: '2026 春季赛' }
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.tournamentDisplay).toMatchObject({
+      seasonText: '2026 春季赛',
+      matchTimeText: '2026-05-22',
+      locationText: '海峡奥体网球场',
+      registrationDeadlineLabel: '5月31日 23:59',
+      withdrawDeadlineLabel: '5月21日 24:00',
+      courtTimeText: '比赛2（室内A区）：08:00-10:00；中心场（西门）：14:00-14:40'
+    })
+  })
+
+  test('falls back to current season when direct season lookup fails', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { pageDef } = loadPage({
+        rejectSeasonGet: true,
+        tournament: { _id: 't1', name: '测试05224', type: 'mixed', format: 'regular', status: 'upcoming', seasonId: 'stale_season', startDate: '2026-05-22' },
+        currentSeason: {
+          seasonId: 'season_1740000000000',
+          season: { _id: 'season_1740000000000', name: '2026 春季赛' }
+        }
+      })
+      const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+      await ctx.loadTournamentDetail()
+
+      expect(ctx.data.tournament.seasonName).toBe('2026 春季赛')
+      expect(ctx.data.tournamentDisplay.seasonText).toBe('2026 春季赛')
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   test('registered member before withdraw deadline sees withdraw CTA and no waiting button', async () => {

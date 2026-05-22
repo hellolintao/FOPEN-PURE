@@ -157,22 +157,42 @@ Page({
   },
 
   async enrichTournamentSeason(tournament) {
-    if (!tournament || tournament.seasonName || !tournament.seasonId) return tournament
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'seasons',
-        data: { action: 'get', id: tournament.seasonId }
-      })
-      const season = res && res.result && res.result.data
-      if (!season || !season.name) {
+    if (!tournament || hasUsableText(tournament.seasonName)) return tournament
+    let enriched = tournament
+    if (tournament.seasonId) {
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'seasons',
+          data: { action: 'get', id: tournament.seasonId }
+        })
+        const season = extractSeasonRecord(res)
+        if (season && hasUsableText(season.name)) {
+          return { ...tournament, seasonName: season.name }
+        }
         console.warn('[tournament-detail] season name missing', { seasonId: tournament.seasonId })
-        return tournament
+      } catch (err) {
+        console.warn('[tournament-detail] load season by id failed', err)
       }
-      return { ...tournament, seasonName: season.name }
-    } catch (err) {
-      console.warn('[tournament-detail] load season failed', err)
-      return tournament
     }
+    if (tournament.startDate) {
+      try {
+        const currentRes = await wx.cloud.callFunction({
+          name: 'seasons',
+          data: { action: 'getCurrent', date: tournament.startDate }
+        })
+        const season = extractSeasonRecord(currentRes)
+        if (season && hasUsableText(season.name)) {
+          enriched = {
+            ...tournament,
+            seasonId: tournament.seasonId || season._id || season.seasonId,
+            seasonName: season.name
+          }
+        }
+      } catch (err) {
+        console.warn('[tournament-detail] load current season failed', err)
+      }
+    }
+    return enriched
   },
 
   async loadTournamentDetail() {
@@ -669,12 +689,13 @@ function footerAction(key, label, className, extra = {}) {
 }
 
 function buildTournamentDisplay(tournament, resultSummary) {
-  const config = tournament.config || {}
-  const pointsRules = tournament.pointsRules || {}
+  const safeTournament = tournament || {}
+  const config = safeTournament.config || {}
+  const pointsRules = safeTournament.pointsRules || {}
   const placement = pointsRules.placement || {}
   const winLoss = pointsRules.winLoss || {}
-  const isKnockout = tournament.format === 'knockout'
-  const statusMeta = getTournamentStatusMeta(withResultSummary(tournament, resultSummary))
+  const isKnockout = safeTournament.format === 'knockout'
+  const statusMeta = getTournamentStatusMeta(withResultSummary(safeTournament, resultSummary))
 
   const placementRows = [
     { label: '冠军', value: placement.champion },
@@ -684,10 +705,15 @@ function buildTournamentDisplay(tournament, resultSummary) {
     { label: '参赛', value: placement.participation }
   ].filter(row => row.value !== undefined && row.value !== null)
 
+  const withdraw = getWithdrawDeadline(safeTournament)
+
   return {
-    maxPlayers: tournament.maxPlayers || config.maxPlayers || '-',
-    playersPerMatch: config.playersPerMatch || (tournament.type === 'mixed' ? '2 / 4' : (tournament.type === 'doubles' ? 4 : 2)),
-    typeText: tournamentTypeText(tournament.type),
+    seasonText: seasonDisplayText(safeTournament),
+    matchTimeText: matchTimeText(safeTournament),
+    locationText: cleanDisplayText(safeTournament.location) || '—',
+    maxPlayers: safeTournament.maxPlayers || config.maxPlayers || '-',
+    playersPerMatch: config.playersPerMatch || (safeTournament.type === 'mixed' ? '2 / 4' : (safeTournament.type === 'doubles' ? 4 : 2)),
+    typeText: tournamentTypeText(safeTournament.type),
     showRoundInfo: isKnockout,
     currentRound: config.currentRound || 1,
     totalRounds: config.totalRounds || '-',
@@ -697,9 +723,11 @@ function buildTournamentDisplay(tournament, resultSummary) {
     statusHint: statusMeta.hint,
     scoreActionLabel: statusMeta.scoreActionLabel,
     shareEnabled: statusMeta.canShare,
-    courtTimeText: courtTimeText(tournament),
-    registrationDeadlineLabel: dateTimeLabel(tournament.registrationDeadlineAt),
-    withdrawDeadlineLabel: getWithdrawDeadline(tournament).label,
+    courtTimeText: courtTimeText(safeTournament),
+    registrationDeadlineLabel: dateTimeLabel(safeTournament.registrationDeadlineAt),
+    registrationDeadlineText: dateTimeLabel(safeTournament.registrationDeadlineAt) || '—',
+    withdrawDeadlineLabel: withdraw.label,
+    withdrawDeadlineText: withdraw.label || '—',
     hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
     seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
     pointsMode: isKnockout ? 'placement' : 'winLoss',
@@ -708,6 +736,61 @@ function buildTournamentDisplay(tournament, resultSummary) {
     walkover: typeof winLoss.walkover === 'number' ? winLoss.walkover : undefined,
     placementRows
   }
+}
+
+function extractSeasonRecord(res) {
+  const data = res && res.result && res.result.data
+  if (!data) return null
+  if (data.season) {
+    return {
+      ...data.season,
+      seasonId: data.seasonId || data.season._id,
+      name: data.season.name || data.name
+    }
+  }
+  return data
+}
+
+function seasonDisplayText(tournament) {
+  const name = cleanDisplayText(tournament.seasonName)
+  if (name) return name
+  const year = yearFromDate(tournament.startDate) || yearFromSeasonId(tournament.seasonId)
+  if (year) return `${year} 赛季`
+  return cleanDisplayText(tournament.seasonId) || '—'
+}
+
+function matchTimeText(tournament) {
+  const start = dateDisplayText(tournament.startDate)
+  const end = dateDisplayText(tournament.endDate)
+  if (start && end && start !== end) return `${start} → ${end}`
+  return start || end || '—'
+}
+
+function dateDisplayText(value) {
+  if (!value) return ''
+  const parts = extractDateTimeParts(value)
+  if (parts) return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`
+  return cleanDisplayText(value)
+}
+
+function cleanDisplayText(value) {
+  const text = String(value === undefined || value === null ? '' : value).trim()
+  return hasUsableText(text) ? text : ''
+}
+
+function hasUsableText(value) {
+  const text = String(value === undefined || value === null ? '' : value).trim()
+  return !!text && text !== '-' && text !== '—'
+}
+
+function yearFromDate(value) {
+  const parts = extractDateTimeParts(value)
+  return parts ? String(parts.year) : ''
+}
+
+function yearFromSeasonId(value) {
+  const match = /(?:^|_)(20\d{2})(?:$|_)/.exec(String(value || ''))
+  return match ? match[1] : ''
 }
 
 function buildRosterPeople(rawRegs, avatarMap) {
@@ -1144,26 +1227,23 @@ function mapRegistrationError(code, fallback) {
 }
 
 function courtTimeText(tournament = {}) {
-  const schedulePlan = tournament.schedulePlan || {}
-  const courts = Array.isArray(schedulePlan.courts) ? schedulePlan.courts : []
+  const plan = tournament.schedulePlan || tournament.courtTimeGrid || {}
+  const courts = asArray(plan.courts)
   if (courts.length > 0) {
-    return courts.map(court => {
-      const slots = (court.slots || []).slice().sort()
-      if (slots.length === 0) return court.name || ''
-      const start = formatSlotTime(slots[0])
-      const end = slotEndTime(slots[slots.length - 1], schedulePlan.slotMinutes || tournament.slotMinutes || 20)
-      const time = end ? `${start}-${end}` : start
-      return `${court.name || '场地'}：${time}`
-    }).filter(Boolean).join('；')
-  }
-
-  const grid = tournament.courtTimeGrid || {}
-  const gridCourts = Array.isArray(grid.courts) ? grid.courts : []
-  const gridSlots = Array.isArray(grid.slots) ? grid.slots : []
-  if (gridCourts.length > 0 && gridSlots.length > 0) {
-    const start = formatSlotTime(gridSlots[0])
-    const end = slotEndTime(gridSlots[gridSlots.length - 1], grid.matchDuration || 20)
-    return gridCourts.map(court => `${court.name || '场地'}：${start}${end ? '-' + end : ''}`).join('；')
+    const slotsByCourt = collectPlanSlotsByCourt(plan)
+    const slotMinutes = toPositiveNumber(plan.slotMinutes || plan.matchDuration || tournament.slotMinutes) || 20
+    const lines = courts.map(court => {
+      const slots = asArray(court && court.slots).length > 0
+        ? asArray(court.slots)
+        : asArray(slotsByCourt[court && court.courtId])
+      const time = slotRangeText(slots, slotMinutes, tournament.startDate)
+      if (!time) return ''
+      const name = cleanDisplayText(court && (court.name || court.courtName || court.courtId)) || '场地'
+      const location = cleanDisplayText(court && (court.location || court.address || court.venue))
+      const courtText = location && location !== name ? `${name}（${location}）` : name
+      return `${courtText}：${time}`
+    }).filter(Boolean)
+    if (lines.length > 0) return lines.join('；')
   }
 
   if (tournament.courtName && (tournament.startTime || tournament.endTime)) {
@@ -1173,9 +1253,126 @@ function courtTimeText(tournament = {}) {
 }
 
 function formatSlotTime(value) {
+  if (value && typeof value === 'object') return formatSlotTime(value.startTime || value.time || value.slot || value.datetime || value.dateTime)
   const text = String(value || '')
   const match = /T(\d{2}):(\d{2})/.exec(text) || /^(\d{2}):(\d{2})/.exec(text)
   return match ? `${match[1]}:${match[2]}` : text
+}
+
+function collectPlanSlotsByCourt(plan) {
+  const slotsByCourt = {}
+  asArray(plan && plan.slots).forEach(slot => {
+    const ids = asArray(slot && (slot.availableCourtIds || slot.courtIds))
+    const value = slot && typeof slot === 'object'
+      ? (slot.startTime || slot.time || slot.slot || slot.datetime || slot.dateTime)
+      : slot
+    ids.forEach(id => {
+      if (!id) return
+      if (!slotsByCourt[id]) slotsByCourt[id] = []
+      slotsByCourt[id].push(value)
+    })
+  })
+  return slotsByCourt
+}
+
+function slotRangeText(slots, slotMinutes, fallbackDate) {
+  const points = asArray(slots)
+    .map(slot => slotMinutePoint(slot, fallbackDate))
+    .filter(Boolean)
+  const minutePoints = [...new Set(points
+    .filter(point => Number.isFinite(point.minute))
+    .map(point => point.minute))]
+    .sort((a, b) => a - b)
+  if (minutePoints.length === 0) {
+    return [...new Set(points.map(point => point.label).filter(Boolean))].join('、')
+  }
+
+  const ranges = []
+  let start = minutePoints[0]
+  let end = start + slotMinutes
+  for (let i = 1; i < minutePoints.length; i += 1) {
+    const next = minutePoints[i]
+    if (next <= end) {
+      end = Math.max(end, next + slotMinutes)
+      continue
+    }
+    ranges.push(`${minuteLabel(start)}-${minuteLabel(end, start)}`)
+    start = next
+    end = next + slotMinutes
+  }
+  ranges.push(`${minuteLabel(start)}-${minuteLabel(end, start)}`)
+  return ranges.join('、')
+}
+
+function slotMinutePoint(value, fallbackDate) {
+  const parts = extractDateTimeParts(value, fallbackDate)
+  if (!parts) {
+    const label = formatSlotTime(value)
+    return label ? { label } : null
+  }
+  const day = Math.floor(Date.UTC(parts.year, parts.month - 1, parts.day) / (24 * 60 * 60 * 1000))
+  return {
+    minute: day * 1440 + parts.hour * 60 + parts.minute,
+    label: `${pad2(parts.hour)}:${pad2(parts.minute)}`
+  }
+}
+
+function minuteLabel(totalMinutes, rangeStart) {
+  const minutesInDay = 1440
+  if (Number.isFinite(rangeStart) && totalMinutes > rangeStart && totalMinutes % minutesInDay === 0) {
+    return '24:00'
+  }
+  const dayMinute = ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay
+  return `${pad2(Math.floor(dayMinute / 60))}:${pad2(dayMinute % 60)}`
+}
+
+function extractDateTimeParts(value, fallbackDate) {
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    return extractDateTimeParts(value.startTime || value.time || value.slot || value.datetime || value.dateTime, fallbackDate)
+  }
+  if (value instanceof Date) return dateObjectParts(value)
+  if (typeof value === 'number' && Number.isFinite(value)) return dateObjectParts(new Date(value))
+
+  const text = String(value || '').trim()
+  if (!text) return null
+  const dateTime = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(text)
+  if (dateTime) {
+    return {
+      year: Number(dateTime[1]),
+      month: Number(dateTime[2]),
+      day: Number(dateTime[3]),
+      hour: Number(dateTime[4] || 0),
+      minute: Number(dateTime[5] || 0),
+      second: Number(dateTime[6] || 0)
+    }
+  }
+
+  const timeOnly = /^T?(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text)
+  if (timeOnly) {
+    const date = extractDateTimeParts(fallbackDate) || { year: 1970, month: 1, day: 1 }
+    return {
+      year: date.year,
+      month: date.month,
+      day: date.day,
+      hour: Number(timeOnly[1]),
+      minute: Number(timeOnly[2]),
+      second: Number(timeOnly[3] || 0)
+    }
+  }
+
+  const parsed = new Date(text)
+  return Number.isNaN(parsed.getTime()) ? null : dateObjectParts(parsed)
+}
+
+function dateObjectParts(date) {
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+    second: date.getSeconds()
+  }
 }
 
 function slotEndTime(value, minutes) {
@@ -1185,6 +1382,19 @@ function slotEndTime(value, minutes) {
   const hh = String(date.getHours()).padStart(2, '0')
   const mm = String(date.getMinutes()).padStart(2, '0')
   return `${hh}:${mm}`
+}
+
+function toPositiveNumber(value) {
+  const number = Number(value)
+  return Number.isFinite(number) && number > 0 ? number : 0
+}
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : []
 }
 
 function dateTimeLabel(value) {
