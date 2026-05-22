@@ -293,6 +293,47 @@ test('selfRegister rejects member without claimStatus', async () => {
   expect(tx.updateTournament).not.toHaveBeenCalled()
 })
 
+test('selfRegister allows non-creator admin member without claimStatus', async () => {
+  const { ctx, state } = makeCtx({
+    tournament: tournament({ createdBy: 'admin-other' }),
+    member: {
+      _id: 'member-a',
+      openid: 'openid-a',
+      name: 'Alice',
+      admin: true,
+      status: 'active'
+    }
+  })
+
+  const res = await selfRegister(ctx, { tournamentId: TID })
+
+  expect(res).toMatchObject({
+    success: true,
+    data: { registrationId: 'reg_open-2026_001', reused: false }
+  })
+  expect(state.registrations[0]).toMatchObject({
+    playerId: 'member-a',
+    playerName: 'Alice',
+    registrationStatus: 'confirmed'
+  })
+})
+
+test.each([
+  ['createdBy member id', { createdBy: 'member-a' }],
+  ['createdByOpenid', { createdBy: 'member-other', createdByOpenid: 'openid-a' }]
+])('selfRegister rejects tournament creator by %s', async (_label, tournamentPatch) => {
+  const { ctx, tx } = makeCtx({
+    tournament: tournament(tournamentPatch)
+  })
+
+  const res = await selfRegister(ctx, { tournamentId: TID })
+
+  expect(res).toMatchObject({ success: false, error: { code: 'CREATOR_CANNOT_REGISTER' } })
+  expect(tx.listRegistrations).not.toHaveBeenCalled()
+  expect(tx.upsertRegistration).not.toHaveBeenCalled()
+  expect(tx.updateTournament).not.toHaveBeenCalled()
+})
+
 test.each(['pending', 'unclaimed'])('selfRegister rejects member with claimStatus=%s', async (claimStatus) => {
   const { ctx, tx } = makeCtx({ member: member({ claimStatus }) })
 

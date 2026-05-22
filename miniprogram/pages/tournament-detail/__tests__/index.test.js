@@ -184,6 +184,55 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排对局'])
   })
 
+  test('registration open non-creator admin can register while keeping edit action', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin2', openid: 'openid-admin2', admin: true }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        createdBy: 'admin1',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: []
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.isAdmin).toBe(true)
+    expect(ctx.data.isCreator).toBe(false)
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '我要报名'])
+    expect(ctx.data.primaryActionLabel).toBe('我要报名')
+  })
+
+  test('registration open creator admin keeps management actions without self-register CTA', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin1', openid: 'openid-admin1', admin: true }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        createdBy: 'admin1',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: []
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.isCreator).toBe(true)
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑'])
+    expect(ctx.data.footerActions.map(a => a.key)).not.toContain('registerSelf')
+  })
+
   test('schedule published shows schedule before roster and hides registration module', async () => {
     const { pageDef } = loadPage({
       tournament: { _id: 't1', scheduleStatus: 'published', status: 'upcoming', schedulePlan: { courts: [] } }
@@ -304,6 +353,35 @@ describe('tournament-detail score permissions', () => {
     expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
       name: 'tournament-registrations'
     }))
+  })
+
+  test('onRegisterSelf lets bound non-creator admin register without opening profile editor', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin2', openid: 'openid-admin2', admin: true }, isAdmin: true } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: true, data: { registrationId: 'reg_admin2' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      tournament: { _id: 't1', createdBy: 'admin1' },
+      isCreator: false
+    })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.navigateTo).not.toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('/pages/edit-profile/index')
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'selfRegister', tournamentId: 't1' }
+    })
+    expect(ctx.refresh).toHaveBeenCalled()
   })
 
   test('onRegisterSelf maps backend registration errors to clear toast', async () => {

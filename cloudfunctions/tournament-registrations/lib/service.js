@@ -56,6 +56,9 @@ async function selfRegister(ctx, event = {}) {
     const member = await tx.getMemberByOpenid(ctx.openid)
     const memberError = validateCallerMember(ctx, member)
     if (memberError) return memberError
+    if (isTournamentCreator(tournament, ctx, member)) {
+      return fail('CREATOR_CANNOT_REGISTER', '发起人不能报名')
+    }
 
     const registrations = await tx.listRegistrations(tournamentId)
     const memberRows = registrations.filter(row => isRegistrationForMember(row, member._id))
@@ -239,7 +242,10 @@ async function withdrawRegistration(ctx, event = {}) {
 }
 
 function validateCallerMember(ctx, member) {
-  if (!member || member.claimStatus !== 'claimed' || (!member.openid && !member.openId)) {
+  if (!member || (!member.openid && !member.openId)) {
+    return fail('MEMBER_REQUIRED', '请先认领会员身份')
+  }
+  if (member.claimStatus !== 'claimed' && !isAdminMember(member)) {
     return fail('MEMBER_REQUIRED', '请先认领会员身份')
   }
   const memberOpenid = member.openid || member.openId
@@ -247,6 +253,20 @@ function validateCallerMember(ctx, member) {
     return fail('PERMISSION_DENIED', '无权操作该会员')
   }
   return null
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+function isTournamentCreator(tournament, ctx, member) {
+  if (!tournament || !member) return false
+  const memberOpenid = member.openid || member.openId
+  return !!(
+    (tournament.createdBy && tournament.createdBy === member._id) ||
+    (tournament.createdByOpenid && ctx.openid && tournament.createdByOpenid === ctx.openid) ||
+    (tournament.createdByOpenid && memberOpenid && tournament.createdByOpenid === memberOpenid)
+  )
 }
 
 function getEffectiveConfirmedCount(tournament = {}, activeCount) {

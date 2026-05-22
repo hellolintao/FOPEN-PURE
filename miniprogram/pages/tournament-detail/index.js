@@ -27,6 +27,7 @@ Page({
     tournamentDisplay: null,
     loading: true,
     isAdmin: false,
+    isCreator: false,
     isParticipant: false,
     canEnterScore: false,
     canOpenScore: false,
@@ -146,6 +147,7 @@ Page({
       registrations: this.data.registrations,
       resultSummary: this.data.resultSummary,
       isAdmin: this.data.isAdmin,
+      isCreator: this.data.isCreator,
       isParticipant: this.data.isParticipant,
       canOpenScore: this.data.canOpenScore,
       scoreActionLabel: this.data.scoreActionLabel,
@@ -185,7 +187,7 @@ Page({
       }
       const tournament = await this.enrichTournamentSeason(result.data)
       const me = app.globalData && app.globalData.currentMember
-      const isCreator = !!(me && tournament.createdBy && tournament.createdBy === me._id)
+      const isCreator = isTournamentCreator(tournament, me)
       const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
       const accessState = this.buildAccessState({
         tournament,
@@ -198,6 +200,7 @@ Page({
         tournament,
         tournamentDisplay: buildTournamentDisplay(tournament, this.data.resultSummary),
         isAdmin,
+        isCreator,
         ...accessState,
         loading: false
       })
@@ -331,6 +334,10 @@ Page({
     const member = app.globalData && app.globalData.currentMember
     if (needsRegistrationIdentity(member)) {
       this.openRegistrationIdentityEditor()
+      return
+    }
+    if (isTournamentCreator(this.data.tournament, member)) {
+      wx.showToast({ title: mapRegistrationError('CREATOR_CANNOT_REGISTER', '报名失败'), icon: 'none' })
       return
     }
 
@@ -516,6 +523,7 @@ function buildDetailPhaseState({
   registrations,
   resultSummary,
   isAdmin,
+  isCreator,
   isParticipant,
   canOpenScore,
   scoreActionLabel,
@@ -541,6 +549,7 @@ function buildDetailPhaseState({
   const footerActions = buildFooterActions({
     phase,
     isAdmin,
+    isCreator,
     isParticipant,
     canMemberWithdraw,
     selfRegistrationSupported,
@@ -585,6 +594,7 @@ function buildPhaseSteps(phase) {
 function buildFooterActions({
   phase,
   isAdmin,
+  isCreator,
   isParticipant,
   canMemberWithdraw,
   selfRegistrationSupported,
@@ -613,6 +623,13 @@ function buildFooterActions({
       return actions
     }
     actions.push(footerAction('edit', '编辑', 'cta-secondary'))
+    if (phase === PHASE.REGISTRATION_OPEN && !isCreator) {
+      if (isParticipant && canMemberWithdraw) {
+        actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
+      } else if (!isParticipant && selfRegistrationSupported) {
+        actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
+      }
+    }
     return actions
   }
 
@@ -1069,7 +1086,22 @@ function firstChar(name) {
 }
 
 function needsRegistrationIdentity(member) {
-  return !member || member.claimStatus !== 'claimed'
+  if (!member) return true
+  if (member.claimStatus === 'claimed') return false
+  return !(isAdminMember(member) && member._id && (member.openid || member.openId))
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+function isTournamentCreator(tournament, member) {
+  if (!tournament || !member) return false
+  const memberOpenid = member.openid || member.openId
+  return !!(
+    (tournament.createdBy && tournament.createdBy === member._id) ||
+    (tournament.createdByOpenid && memberOpenid && tournament.createdByOpenid === memberOpenid)
+  )
 }
 
 function _isSuccess(res) {
@@ -1104,6 +1136,7 @@ function mapRegistrationError(code, fallback) {
     MATCH_HAS_RESULT: '该场次已有成绩，请联系管理员处理',
     SELF_REGISTRATION_UNSUPPORTED: '该赛制暂不支持自助报名',
     ALREADY_REGISTERED: '你已报名',
+    CREATOR_CANNOT_REGISTER: '发起人不能报名',
     PERMISSION_DENIED: '只能为自己操作'
   }
   return map[code] || fallback
