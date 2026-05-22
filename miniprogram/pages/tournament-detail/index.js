@@ -4,6 +4,13 @@ const {
   getTournamentShareTitle,
   isCompletedStatus
 } = require('../../utils/tournament-status')
+const {
+  PHASE,
+  derivePhase,
+  getWithdrawDeadline,
+  canWithdraw,
+  isActiveRegistration
+} = require('../../utils/tournament-phase')
 
 Page({
   data: {
@@ -24,14 +31,27 @@ Page({
     canEnterScore: false,
     canOpenScore: false,
     scoreActionLabel: '录入成绩',
-    shareEnabled: false
+    shareEnabled: false,
+    entry: '',
+    phase: '',
+    phaseSteps: [],
+    activeRegistrationCount: 0,
+    withdrawDeadlineLabel: '',
+    showRegistrationModule: false,
+    showRegistrationStatusCard: false,
+    showWaitingScheduleButton: false,
+    showScheduleSection: false,
+    showResultsSection: false,
+    footerActions: [],
+    primaryActionLabel: '',
+    selfRegistrationSupported: true
   },
 
   onLoad(options = {}) {
     this.enableShareMenu()
-    const { id } = options
+    const { id, entry } = options
     if (id) {
-      this.setData({ tournamentId: id })
+      this.setData({ tournamentId: id, entry: entry || '' })
       this.refresh()
     }
   },
@@ -56,6 +76,8 @@ Page({
     this.syncTournamentDisplayState()
     this.syncResultDisplayState()
     this._rebuildScheduleView()
+    this.syncDetailPhaseState()
+    this.scrollToRegistrationSectionIfNeeded()
   },
 
   async ensureIdentity() {
@@ -117,6 +139,21 @@ Page({
     })
   },
 
+  syncDetailPhaseState() {
+    if (!this.data.tournament) return
+    this.setData(buildDetailPhaseState({
+      tournament: this.data.tournament,
+      registrations: this.data.registrations,
+      resultSummary: this.data.resultSummary,
+      isAdmin: this.data.isAdmin,
+      isParticipant: this.data.isParticipant,
+      canOpenScore: this.data.canOpenScore,
+      scoreActionLabel: this.data.scoreActionLabel,
+      now: this.data.now,
+      entry: this.data.entry
+    }))
+  },
+
   async enrichTournamentSeason(tournament) {
     if (!tournament || tournament.seasonName || !tournament.seasonId) return tournament
     try {
@@ -174,15 +211,13 @@ Page({
   async loadRegistrations() {
     try {
       const db = wx.cloud.database()
-      const _ = db.command
       const result = await db.collection('tournament_registrations')
         .where({
-          tournamentId: this.data.tournamentId,
-          status: _.neq('cancelled')
+          tournamentId: this.data.tournamentId
         })
         .orderBy('seed', 'asc')
         .get()
-      const rawRegs = result.data || []
+      const rawRegs = (result.data || []).filter(isActiveRegistration)
 
       // 收集所有 playerId / partnerId 一次性查头像
       const ids = new Set()
@@ -227,8 +262,7 @@ Page({
     if (!memberId) return false
     return (rawRegs || []).some(reg => (
       reg &&
-      reg.status !== 'cancelled' &&
-      reg.registrationStatus !== 'cancelled' &&
+      isActiveRegistration(reg) &&
       (reg.playerId === memberId || reg.partnerId === memberId)
     ))
   },
@@ -272,7 +306,7 @@ Page({
   },
 
   onEdit() {
-    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}` })
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=1` })
   },
 
   onResumeDraft() {
@@ -285,6 +319,121 @@ Page({
       return
     }
     wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
+  },
+
+  async onRegisterSelf() {
+    if (!this.data.selfRegistrationSupported) {
+      wx.showToast({ title: mapRegistrationError('SELF_REGISTRATION_UNSUPPORTED', '报名失败'), icon: 'none' })
+      return
+    }
+
+    await this.ensureIdentity()
+    const member = app.globalData && app.globalData.currentMember
+    if (needsRegistrationIdentity(member)) {
+      this.openRegistrationIdentityEditor()
+      return
+    }
+
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'selfRegister', tournamentId: this.data.tournamentId }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '报名失败'), icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已报名', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-detail] self register failed', err)
+      wx.showToast({ title: '报名失败', icon: 'none' })
+    }
+  },
+
+  openRegistrationIdentityEditor() {
+    wx.navigateTo({
+      url: `/pages/edit-profile/index?mode=register&from=tournament-register&tournamentId=${this.data.tournamentId}`,
+      events: {
+        registrationIdentityReady: () => {
+          this.setData({ entry: 'register' })
+          this.refresh()
+        }
+      }
+    })
+  },
+
+  async onWithdrawSelf() {
+    const ok = await new Promise(resolve => wx.showModal({
+      title: '退出报名',
+      content: `确定退出本次赛事？${this.data.withdrawDeadlineLabel ? '退赛截止为 ' + this.data.withdrawDeadlineLabel : ''}`,
+      success: ({ confirm }) => resolve(confirm),
+      fail: () => resolve(false)
+    }))
+    if (!ok) return
+
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'withdraw', tournamentId: this.data.tournamentId }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '退出失败'), icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已退出', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-detail] withdraw failed', err)
+      wx.showToast({ title: '退出失败', icon: 'none' })
+    }
+  },
+
+  onArrangeSchedule() {
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3` })
+  },
+
+  onEditSchedule() {
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3&mode=edit-schedule` })
+  },
+
+  onAdjustResults() {
+    wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}&mode=adjust` })
+  },
+
+  async onConfirmScheduleRevision() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: { action: 'confirmScheduleRevision', id: this.data.tournamentId }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '确认失败'), icon: 'none' })
+        return
+      }
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-detail] confirm schedule revision failed', err)
+      wx.showToast({ title: '确认失败', icon: 'none' })
+    }
+  },
+
+  scrollToRegistrationSectionIfNeeded() {
+    if (this.registrationEntryScrolled) return
+    if (this.data.entry !== 'register') return
+    if (this.data.phase !== PHASE.REGISTRATION_OPEN) return
+    if (!this.data.selfRegistrationSupported) return
+    if (!wx.createSelectorQuery || !wx.pageScrollTo) return
+
+    this.registrationEntryScrolled = true
+    wx.createSelectorQuery()
+      .select('#registration-section')
+      .boundingClientRect(rect => {
+        if (rect) {
+          wx.pageScrollTo({ scrollTop: Math.max(0, rect.top - 80), duration: 200 })
+        }
+      })
+      .exec()
   },
 
   async loadResultSummary() {
@@ -360,6 +509,141 @@ Page({
   }
 })
 
+function buildDetailPhaseState({
+  tournament,
+  registrations,
+  resultSummary,
+  isAdmin,
+  isParticipant,
+  canOpenScore,
+  scoreActionLabel,
+  now,
+  entry
+}) {
+  const activeRegs = (registrations || []).filter(isActiveRegistration)
+  const phase = derivePhase(tournament, { now, resultSummary })
+  const withdraw = getWithdrawDeadline(tournament)
+  const selfRegistrationSupported = !(tournament.format === 'knockout' && tournament.type === 'doubles')
+  const canMemberWithdraw = !!(
+    isParticipant &&
+    canWithdraw(tournament, { now }) &&
+    (
+      phase === PHASE.REGISTRATION_OPEN ||
+      phase === PHASE.PENDING_SCHEDULE ||
+      phase === PHASE.SCHEDULE_PUBLISHED
+    )
+  )
+  const showRegistrationModule = phase === PHASE.REGISTRATION_OPEN || phase === PHASE.PENDING_SCHEDULE
+  const showScheduleSection = phase === PHASE.LEGACY || phase === PHASE.SCHEDULE_PUBLISHED || phase === PHASE.RESULTS || (isAdmin && phase === PHASE.SCHEDULE_DRAFT)
+  const showResultsSection = phase === PHASE.LEGACY || phase === PHASE.RESULTS
+  const footerActions = buildFooterActions({
+    phase,
+    isAdmin,
+    isParticipant,
+    canMemberWithdraw,
+    selfRegistrationSupported,
+    canOpenScore,
+    scoreActionLabel
+  })
+  const primaryAction = footerActions.slice().reverse().find(action => action.key !== 'share')
+
+  return {
+    phase,
+    entry: entry || '',
+    phaseSteps: buildPhaseSteps(phase),
+    activeRegistrationCount: activeRegs.length,
+    withdrawDeadlineLabel: withdraw.label,
+    showRegistrationModule,
+    showRegistrationStatusCard: false,
+    showWaitingScheduleButton: false,
+    showScheduleSection,
+    showResultsSection,
+    footerActions,
+    primaryActionLabel: primaryAction ? primaryAction.label : '',
+    selfRegistrationSupported
+  }
+}
+
+function buildPhaseSteps(phase) {
+  const order = [
+    { key: PHASE.REGISTRATION_OPEN, label: '报名', phases: [PHASE.REGISTRATION_OPEN] },
+    { key: PHASE.PENDING_SCHEDULE, label: '排程', phases: [PHASE.PENDING_SCHEDULE, PHASE.SCHEDULE_DRAFT] },
+    { key: PHASE.SCHEDULE_PUBLISHED, label: '比赛', phases: [PHASE.SCHEDULE_PUBLISHED] },
+    { key: PHASE.RESULTS, label: '赛果', phases: [PHASE.RESULTS] }
+  ]
+  const activeIndex = order.findIndex(item => item.phases.includes(phase))
+  return order.map((item, index) => ({
+    key: item.key,
+    label: item.label,
+    active: index === activeIndex,
+    done: activeIndex > index
+  }))
+}
+
+function buildFooterActions({
+  phase,
+  isAdmin,
+  isParticipant,
+  canMemberWithdraw,
+  selfRegistrationSupported,
+  canOpenScore,
+  scoreActionLabel
+}) {
+  if (phase === PHASE.DRAFT && isAdmin) {
+    return [footerAction('resumeDraft', '继续创建', 'cta-lime full')]
+  }
+
+  const actions = [footerAction('share', '分享', 'cta-secondary share-cta', { openType: 'share' })]
+
+  if (isAdmin) {
+    if (phase === PHASE.RESULTS) {
+      actions.push(footerAction('adjustResults', '调整成绩', 'cta-lime flex-1'))
+      return actions
+    }
+    if (phase === PHASE.SCHEDULE_PUBLISHED) {
+      actions.push(footerAction('editSchedule', '编辑赛程', 'cta-secondary'))
+      actions.push(footerAction('enterScore', scoreActionLabel || '录入成绩', 'cta-lime flex-1'))
+      return actions
+    }
+    if (phase === PHASE.PENDING_SCHEDULE || phase === PHASE.SCHEDULE_DRAFT) {
+      actions.push(footerAction('edit', '编辑', 'cta-secondary'))
+      actions.push(footerAction('arrangeSchedule', '安排对局', 'cta-lime flex-1'))
+      return actions
+    }
+    actions.push(footerAction('edit', '编辑', 'cta-secondary'))
+    return actions
+  }
+
+  if (phase === PHASE.REGISTRATION_OPEN) {
+    if (isParticipant && canMemberWithdraw) {
+      actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
+    } else if (!isParticipant && selfRegistrationSupported) {
+      actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
+    }
+    return actions
+  }
+
+  if ((phase === PHASE.PENDING_SCHEDULE || phase === PHASE.SCHEDULE_PUBLISHED) && isParticipant && canMemberWithdraw) {
+    actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
+  }
+  if (phase === PHASE.SCHEDULE_PUBLISHED && canOpenScore) {
+    actions.push(footerAction('enterScore', scoreActionLabel || '录入成绩', 'cta-lime flex-1'))
+  }
+  if (phase === PHASE.RESULTS && canOpenScore) {
+    actions.push(footerAction('enterScore', scoreActionLabel || '查看成绩', 'cta-lime flex-1'))
+  }
+  return actions
+}
+
+function footerAction(key, label, className, extra = {}) {
+  return {
+    key,
+    label,
+    className,
+    ...extra
+  }
+}
+
 function buildTournamentDisplay(tournament, resultSummary) {
   const config = tournament.config || {}
   const pointsRules = tournament.pointsRules || {}
@@ -389,6 +673,9 @@ function buildTournamentDisplay(tournament, resultSummary) {
     statusHint: statusMeta.hint,
     scoreActionLabel: statusMeta.scoreActionLabel,
     shareEnabled: statusMeta.canShare,
+    courtTimeText: courtTimeText(tournament),
+    registrationDeadlineLabel: dateTimeLabel(tournament.registrationDeadlineAt),
+    withdrawDeadlineLabel: getWithdrawDeadline(tournament).label,
     hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
     seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
     pointsMode: isKnockout ? 'placement' : 'winLoss',
@@ -777,6 +1064,102 @@ function playerLabel(p, bye) {
 function firstChar(name) {
   const s = (name || '').trim()
   return s ? s.charAt(0) : '?'
+}
+
+function needsRegistrationIdentity(member) {
+  return !member || member.claimStatus !== 'claimed'
+}
+
+function _isSuccess(res) {
+  return !!(res && res.result && res.result.success === true)
+}
+
+function _errMsg(res, fallback) {
+  const r = res && res.result
+  if (!r) return fallback
+  if (r.error) {
+    if (typeof r.error === 'string') return r.error
+    const code = r.error.code || r.error.errCode
+    const mapped = mapRegistrationError(code, '')
+    if (mapped) return mapped
+    if (r.error.message) return r.error.message
+    if (r.error.errMsg) return r.error.errMsg
+  }
+  if (r.code || r.errCode) {
+    const mapped = mapRegistrationError(r.code || r.errCode, '')
+    if (mapped) return mapped
+  }
+  if (r.errMsg) return r.errMsg
+  return fallback
+}
+
+function mapRegistrationError(code, fallback) {
+  const map = {
+    MEMBER_REQUIRED: '请先完善资料',
+    CAPACITY_FULL: '名额已满',
+    REGISTRATION_CLOSED: '报名已截止',
+    WITHDRAW_CLOSED: '已过退赛截止时间',
+    MATCH_HAS_RESULT: '该场次已有成绩，请联系管理员处理',
+    SELF_REGISTRATION_UNSUPPORTED: '该赛制暂不支持自助报名',
+    ALREADY_REGISTERED: '你已报名',
+    PERMISSION_DENIED: '只能为自己操作'
+  }
+  return map[code] || fallback
+}
+
+function courtTimeText(tournament = {}) {
+  const schedulePlan = tournament.schedulePlan || {}
+  const courts = Array.isArray(schedulePlan.courts) ? schedulePlan.courts : []
+  if (courts.length > 0) {
+    return courts.map(court => {
+      const slots = (court.slots || []).slice().sort()
+      if (slots.length === 0) return court.name || ''
+      const start = formatSlotTime(slots[0])
+      const end = slotEndTime(slots[slots.length - 1], schedulePlan.slotMinutes || tournament.slotMinutes || 20)
+      const time = end ? `${start}-${end}` : start
+      return `${court.name || '场地'}：${time}`
+    }).filter(Boolean).join('；')
+  }
+
+  const grid = tournament.courtTimeGrid || {}
+  const gridCourts = Array.isArray(grid.courts) ? grid.courts : []
+  const gridSlots = Array.isArray(grid.slots) ? grid.slots : []
+  if (gridCourts.length > 0 && gridSlots.length > 0) {
+    const start = formatSlotTime(gridSlots[0])
+    const end = slotEndTime(gridSlots[gridSlots.length - 1], grid.matchDuration || 20)
+    return gridCourts.map(court => `${court.name || '场地'}：${start}${end ? '-' + end : ''}`).join('；')
+  }
+
+  if (tournament.courtName && (tournament.startTime || tournament.endTime)) {
+    return `${tournament.courtName}：${[tournament.startTime, tournament.endTime].filter(Boolean).join('-')}`
+  }
+  return '待定'
+}
+
+function formatSlotTime(value) {
+  const text = String(value || '')
+  const match = /T(\d{2}):(\d{2})/.exec(text) || /^(\d{2}):(\d{2})/.exec(text)
+  return match ? `${match[1]}:${match[2]}` : text
+}
+
+function slotEndTime(value, minutes) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setMinutes(date.getMinutes() + Number(minutes || 0))
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function dateTimeLabel(value) {
+  if (!value) return ''
+  const text = String(value)
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(text)
+  const timeMatch = /T(\d{2}):(\d{2})/.exec(text)
+  if (!dateMatch) return text
+  const month = Number(dateMatch[2])
+  const day = Number(dateMatch[3])
+  return timeMatch ? `${month}月${day}日 ${timeMatch[1]}:${timeMatch[2]}` : `${month}月${day}日`
 }
 
 async function fetchAvatarMap(ids) {

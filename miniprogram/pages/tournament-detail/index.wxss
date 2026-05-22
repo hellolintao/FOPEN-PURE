@@ -9,6 +9,49 @@
 }
 
 /* ============================================================
+ * PHASE
+ * ============================================================ */
+.phase-strip {
+  margin-bottom: var(--space-5);
+}
+
+.phase-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  border-top: 2rpx solid var(--color-ink);
+  border-bottom: 2rpx solid var(--color-ink);
+  padding: var(--space-2) 0;
+}
+
+.phase-step {
+  min-width: 0;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 22rpx;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.phase-step.done {
+  background: var(--color-bg-2);
+  color: var(--color-ink-3);
+  border-color: var(--color-border-strong);
+}
+
+.phase-step.active {
+  background: var(--color-lime);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+/* ============================================================
  * HERO
  * ============================================================ */
 .td-hero {
@@ -36,11 +79,14 @@
 }
 
 .td-status.status-draft,
-.td-status.status-upcoming {
+.td-status.status-upcoming,
+.td-status.status-pendingSchedule,
+.td-status.status-scheduleDraft {
   background: var(--color-bg-3);
   color: var(--color-ink-3);
 }
 
+.td-status.status-registration,
 .td-status.status-ongoing {
   background: var(--color-lime);
   color: var(--color-ink);
@@ -528,6 +574,19 @@
   font-size: 28rpx;
 }
 
+.next-stage-copy {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding-top: var(--space-4);
+  border-top: 1rpx solid var(--color-border);
+  color: var(--color-ink-3);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .roster-doubles {
   display: flex;
   flex-direction: column;
@@ -734,6 +793,10 @@
   flex: 1;
   min-height: 88rpx;
   padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   font-size: 30rpx;
   letter-spacing: 0.04em;
   font-weight: 800;

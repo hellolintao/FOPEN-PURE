@@ -6,6 +6,15 @@
 
   <block wx:elif="{{tournament}}">
 
+    <!-- PHASE -->
+    <view class="td-section phase-strip anim-stage-rise">
+      <view class="phase-steps">
+        <view class="phase-step {{item.active ? 'active' : ''}} {{item.done ? 'done' : ''}}" wx:for="{{phaseSteps}}" wx:key="key">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- HERO -->
     <view class="td-hero anim-stage-rise">
       <view class="hero-tapes">
@@ -24,62 +33,37 @@
           <text class="hero-meta-val">{{tournament.startDate}}{{tournament.endDate ? ' → ' + tournament.endDate : ''}}</text>
         </view>
         <view class="hero-meta-block">
-          <text class="hero-meta-label">FORMAT</text>
-          <text class="hero-meta-val">{{tournamentDisplay.formatText}}</text>
+          <text class="hero-meta-label">COURT TIME</text>
+          <text class="hero-meta-val">{{tournamentDisplay.courtTimeText}}</text>
         </view>
-        <view class="hero-meta-block hero-meta-status">
-          <text class="hero-meta-label">STATUS</text>
-          <text class="hero-meta-val">{{tournamentDisplay.statusHint}}</text>
-        </view>
+        <block wx:if="{{showRegistrationModule}}">
+          <view class="hero-meta-block">
+            <text class="hero-meta-label">DEADLINE</text>
+            <text class="hero-meta-val">{{tournamentDisplay.registrationDeadlineLabel || '—'}}</text>
+          </view>
+          <view class="hero-meta-block hero-meta-status">
+            <text class="hero-meta-label">WITHDRAW BY</text>
+            <text class="hero-meta-val">{{withdrawDeadlineLabel || '—'}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="hero-meta-block">
+            <text class="hero-meta-label">FORMAT</text>
+            <text class="hero-meta-val">{{tournamentDisplay.formatText}}</text>
+          </view>
+          <view class="hero-meta-block hero-meta-status">
+            <text class="hero-meta-label">STATUS</text>
+            <text class="hero-meta-val">{{tournamentDisplay.statusHint}}</text>
+          </view>
+        </block>
       </view>
       <view wx:if="{{tournament.description}}" class="hero-desc">
         <text>{{tournament.description}}</text>
       </view>
     </view>
 
-    <!-- RESULTS -->
-    <view wx:if="{{resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-2">
-      <view class="td-section-head">
-        <text class="tape">赛果 · RESULTS</text>
-        <text class="td-section-count num">{{resultDisplay.completedText}}</text>
-      </view>
-      <view wx:if="{{resultDisplay.standings.length > 0}}" class="result-standings">
-        <view class="result-standing-head">
-          <text class="result-standing-member">会员</text>
-          <text class="result-standing-record">胜负</text>
-          <text class="result-standing-points">单打</text>
-          <text class="result-standing-points">双打</text>
-        </view>
-        <view class="result-standing-row" wx:for="{{resultDisplay.standings}}" wx:key="standingKey">
-          <view class="result-standing-member">
-            <text class="result-rank num">{{item.rank}}</text>
-            <image wx:if="{{item.avatarUrl}}" class="result-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view wx:else class="result-avatar result-avatar-fallback">
-              <text class="result-avatar-initial">{{item.playerInitial}}</text>
-            </view>
-            <text class="result-member-name">{{item.memberName}}</text>
-          </view>
-          <text class="result-standing-record num">{{item.recordText}}</text>
-          <text class="result-standing-points num">{{item.singlesPointsText}}</text>
-          <text class="result-standing-points num">{{item.doublesPointsText}}</text>
-        </view>
-      </view>
-      <view class="result-groups">
-        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="round">
-          <text class="result-group-label">{{group.label}}</text>
-          <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
-            <view class="result-match-main">
-              <text class="result-side">{{match.p1Label}}</text>
-              <text class="result-score num">{{match.scoreText || '—'}}</text>
-              <text class="result-side result-side-right">{{match.p2Label}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- SCHEDULE -->
-    <view class="td-section anim-stage-rise anim-delay-3">
+    <view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-3">
       <view class="td-section-head">
         <text class="tape">赛程 · SCHEDULE</text>
       </view>
@@ -139,12 +123,12 @@
     </view>
 
     <!-- REGISTRATIONS -->
-    <view class="td-section anim-stage-rise anim-delay-4">
+    <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-4">
       <view class="td-section-head">
         <text class="tape">参赛人员 · ROSTER</text>
-        <text class="td-section-count num">{{registrations.length}}</text>
+        <text class="td-section-count num">{{activeRegistrationCount}}</text>
       </view>
-      <view wx:if="{{registrations.length === 0}}" class="td-empty">
+      <view wx:if="{{activeRegistrationCount === 0}}" class="td-empty">
         <text>暂无报名</text>
       </view>
       <view wx:else class="roster-grid">
@@ -160,6 +144,10 @@
           </view>
           <text class="roster-name singles">{{item.playerName}}</text>
         </view>
+      </view>
+      <view wx:if="{{showRegistrationModule && phase === 'pending_schedule'}}" class="next-stage-copy">
+        <text>报名已截止，管理员正在安排对局。</text>
+        <text wx:if="{{withdrawDeadlineLabel}}">可退赛至 {{withdrawDeadlineLabel}}</text>
       </view>
     </view>
 
@@ -191,6 +179,47 @@
       </view>
     </view>
 
+    <!-- RESULTS -->
+    <view wx:if="{{showResultsSection && resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-6">
+      <view class="td-section-head">
+        <text class="tape">赛果 · RESULTS</text>
+        <text class="td-section-count num">{{resultDisplay.completedText}}</text>
+      </view>
+      <view wx:if="{{resultDisplay.standings.length > 0}}" class="result-standings">
+        <view class="result-standing-head">
+          <text class="result-standing-member">会员</text>
+          <text class="result-standing-record">胜负</text>
+          <text class="result-standing-points">单打</text>
+          <text class="result-standing-points">双打</text>
+        </view>
+        <view class="result-standing-row" wx:for="{{resultDisplay.standings}}" wx:key="standingKey">
+          <view class="result-standing-member">
+            <text class="result-rank num">{{item.rank}}</text>
+            <image wx:if="{{item.avatarUrl}}" class="result-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="result-avatar result-avatar-fallback">
+              <text class="result-avatar-initial">{{item.playerInitial}}</text>
+            </view>
+            <text class="result-member-name">{{item.memberName}}</text>
+          </view>
+          <text class="result-standing-record num">{{item.recordText}}</text>
+          <text class="result-standing-points num">{{item.singlesPointsText}}</text>
+          <text class="result-standing-points num">{{item.doublesPointsText}}</text>
+        </view>
+      </view>
+      <view class="result-groups">
+        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="round">
+          <text class="result-group-label">{{group.label}}</text>
+          <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
+            <view class="result-match-main">
+              <text class="result-side">{{match.p1Label}}</text>
+              <text class="result-score num">{{match.scoreText || '—'}}</text>
+              <text class="result-side result-side-right">{{match.p2Label}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- DELETE -->
     <view wx:if="{{isAdmin}}" class="td-danger">
       <view class="delete-btn tap-scale" bindtap="onDelete">
@@ -203,14 +232,15 @@
 </view>
 
 <view wx:if="{{tournament}}" class="td-footer">
-  <button wx:if="{{shareEnabled}}" open-type="share" class="footer-cta cta-secondary share-cta">分享</button>
-  <block wx:if="{{tournament.status === 'draft' && isAdmin}}">
-    <view class="footer-cta cta-lime full" bindtap="onResumeDraft">
-      <text>继续创建</text>
-    </view>
-  </block>
-  <block wx:else>
-    <view wx:if="{{isAdmin}}" class="footer-cta cta-secondary" bindtap="onEdit">编辑</view>
-    <view class="footer-cta cta-lime flex-1 {{canOpenScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">{{scoreActionLabel}}</view>
+  <block wx:for="{{footerActions}}" wx:key="key">
+    <button wx:if="{{item.key === 'share'}}" open-type="share" class="footer-cta {{item.className}}">{{item.label}}</button>
+    <view wx:elif="{{item.key === 'resumeDraft'}}" class="footer-cta {{item.className}}" bindtap="onResumeDraft">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'edit'}}" class="footer-cta {{item.className}}" bindtap="onEdit">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'arrangeSchedule'}}" class="footer-cta {{item.className}}" bindtap="onArrangeSchedule">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'editSchedule'}}" class="footer-cta {{item.className}}" bindtap="onEditSchedule">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'enterScore'}}" class="footer-cta {{item.className}} {{canOpenScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'adjustResults'}}" class="footer-cta {{item.className}}" bindtap="onAdjustResults">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'registerSelf' && selfRegistrationSupported}}" class="footer-cta {{item.className}}" bindtap="onRegisterSelf">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'withdrawSelf'}}" class="footer-cta {{item.className}}" bindtap="onWithdrawSelf">{{item.label}}</view>
   </block>
 </view>

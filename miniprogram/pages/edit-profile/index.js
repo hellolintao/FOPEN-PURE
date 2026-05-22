@@ -8,6 +8,8 @@ const PRIVACY_AGREE_BUTTON_ID = 'edit-profile-privacy-agree'
 Page({
   data: {
     isRegister: false,
+    from: '',
+    tournamentId: '',
     defaultAvatar: DEFAULT_AVATAR_URL,
     avatarPreviewUrl: '',
     avatarUploading: false,
@@ -25,7 +27,11 @@ Page({
   onLoad(query) {
     const isRegister = (query && query.mode) === 'register'
     this.setupPrivacyAuthorization()
-    this.setData({ isRegister })
+    this.setData({
+      isRegister,
+      from: (query && query.from) || '',
+      tournamentId: (query && query.tournamentId) || ''
+    })
     wx.setNavigationBarTitle({ title: isRegister ? '注册' : '编辑资料' })
     if (!isRegister) {
       this.loadUserInfo()
@@ -269,6 +275,17 @@ Page({
     const { isRegister } = this.data
     const { name, phone, avatarUrl, playStyle } = this.data.formData
     const cleanName = (name || '').trim()
+    const app = getApp()
+    const currentMember = app && app.globalData ? app.globalData.currentMember : null
+    const isTournamentRegister = this.data.from === 'tournament-register' && this.data.tournamentId
+    const shouldClaimExistingMember = !!(
+      isTournamentRegister &&
+      currentMember &&
+      currentMember._id &&
+      currentMember.claimStatus !== 'claimed'
+    )
+    const shouldCreateMember = !shouldClaimExistingMember && (isRegister || (isTournamentRegister && !(currentMember && currentMember._id)))
+    const requiresPlayStyle = shouldCreateMember || shouldClaimExistingMember
 
     if (!cleanName) {
       wx.showToast({ title: '请输入姓名', icon: 'none' })
@@ -280,7 +297,7 @@ Page({
       return
     }
 
-    if (isRegister && !playStyle) {
+    if (requiresPlayStyle && !playStyle) {
       wx.showToast({ title: '请选择打法', icon: 'none' })
       return
     }
@@ -290,7 +307,7 @@ Page({
       return
     }
 
-    wx.showLoading({ title: isRegister ? '注册中...' : '保存中...' })
+    wx.showLoading({ title: shouldCreateMember ? '注册中...' : '保存中...' })
 
     try {
       const payload = {
@@ -299,7 +316,10 @@ Page({
         avatarUrl: avatarUrl || DEFAULT_AVATAR_URL,
         playStyle: playStyle || ''
       }
-      const action = isRegister ? 'add' : 'update'
+      if (shouldCreateMember || isTournamentRegister) {
+        payload.claimStatus = 'claimed'
+      }
+      const action = shouldClaimExistingMember ? 'claimSelf' : (shouldCreateMember ? 'add' : 'update')
       const res = await callFunction({
         name: 'members',
         data: {
@@ -318,11 +338,47 @@ Page({
       }
 
       const result = res.result || {}
-      const app = getApp()
-      const currentMember = app && app.globalData ? app.globalData.currentMember : null
+      if (action === 'update' && isZeroUpdated(result)) {
+        wx.hideLoading()
+        wx.showToast({ title: '保存失败', icon: 'none' })
+        return
+      }
+      if (action === 'claimSelf' && (isZeroUpdated(result) || !isClaimedMemberResult(result))) {
+        wx.hideLoading()
+        wx.showToast({ title: '保存失败', icon: 'none' })
+        return
+      }
       let savedMember
       if (result.errMsg === 'already registered' && result.data) {
-        savedMember = result.data
+        if (isTournamentRegister && result.data.claimStatus !== 'claimed') {
+          const claimRes = await callFunction({
+            name: 'members',
+            data: {
+              action: 'claimSelf',
+              data: {
+                ...payload,
+                claimStatus: 'claimed'
+              }
+            }
+          })
+          if (claimRes.result && claimRes.result.success === false) {
+            wx.hideLoading()
+            wx.showToast({
+              title: (claimRes.result.error && claimRes.result.error.message) || '保存失败',
+              icon: 'none'
+            })
+            return
+          }
+          const claimResult = claimRes.result || {}
+          if (isZeroUpdated(claimResult) || !isClaimedMemberResult(claimResult)) {
+            wx.hideLoading()
+            wx.showToast({ title: '保存失败', icon: 'none' })
+            return
+          }
+          savedMember = claimResult.data
+        } else {
+          savedMember = result.data
+        }
       } else if (result.data) {
         savedMember = result.data
       } else {
@@ -330,6 +386,13 @@ Page({
           ...(currentMember || {}),
           ...payload,
           _id: result._id || (currentMember && currentMember._id)
+        }
+      }
+      if (isTournamentRegister) {
+        if (!savedMember || savedMember.claimStatus !== 'claimed') {
+          wx.hideLoading()
+          wx.showToast({ title: '保存失败', icon: 'none' })
+          return
         }
       }
 
@@ -343,6 +406,19 @@ Page({
       wx.showToast({ title: isRegister ? '注册成功' : '保存成功', icon: 'success' })
 
       setTimeout(() => {
+        if (this.data.from === 'tournament-register' && this.data.tournamentId) {
+          const eventChannel = this.getOpenerEventChannel && this.getOpenerEventChannel()
+          if (eventChannel && eventChannel.emit) {
+            eventChannel.emit('registrationIdentityReady')
+            wx.navigateBack({ delta: 1 })
+            return
+          }
+          console.warn('[edit-profile] event channel unavailable, redirecting to tournament detail')
+          wx.redirectTo({
+            url: `/pages/tournament-detail/index?id=${encodeURIComponent(this.data.tournamentId)}&entry=register`
+          })
+          return
+        }
         if (isRegister) {
           wx.reLaunch({ url: '/pages/mine/index' })
         } else {
@@ -356,3 +432,14 @@ Page({
     }
   }
 })
+
+function isZeroUpdated(result = {}) {
+  const stats = result.stats || result.data && result.data.stats
+  if (!stats) return false
+  const updated = stats.updated === undefined ? stats.updatedCount : stats.updated
+  return Number(updated) === 0
+}
+
+function isClaimedMemberResult(result = {}) {
+  return !!(result.data && result.data._id && result.data.claimStatus === 'claimed')
+}
