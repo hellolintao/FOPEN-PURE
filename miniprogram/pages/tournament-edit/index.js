@@ -293,10 +293,11 @@ Page({
         registrationPublished: true,
         sharePath
       })
-      if (wx.showShareMenu) {
-        wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+      if (wx.redirectTo) {
+        wx.redirectTo({ url: sharePath })
+      } else {
+        wx.showToast({ title: '已发布', icon: 'success' })
       }
-      wx.showToast({ title: '已发布', icon: 'success' })
     } catch (err) {
       console.error('[onPublishRegistration]', err)
       wx.showToast({ title: '发布失败', icon: 'none' })

@@ -189,7 +189,7 @@ describe('tournament-edit registration publishing flow', () => {
     }))
   })
 
-  test('step 2 can publish registration and prepare share path without entering schedule', async () => {
+  test('step 2 publishes registration and opens registration detail entry', async () => {
     const def = loadPage()
     const ctx = makeCtx(def, {
       tournamentId: 't1',
@@ -205,7 +205,7 @@ describe('tournament-edit registration publishing flow', () => {
     expect(ctx.data.step).toBe(2)
     expect(ctx.data.registrationPublished).toBe(true)
     expect(ctx.data.sharePath).toBe('/pages/tournament-detail/index?id=t1&entry=register')
-    expect(wx.showShareMenu).toHaveBeenCalledWith({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+    expect(wx.redirectTo).toHaveBeenCalledWith({ url: '/pages/tournament-detail/index?id=t1&entry=register' })
     expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
       name: 'match-results',
       data: expect.objectContaining({ action: 'bulkUpsertScheduledMatches' })
@@ -227,6 +227,7 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(ctx.data.registrationPublished).toBe(true)
     expect(ctx.data.sharePath).toBe('/pages/tournament-detail/index?id=t1&entry=register')
+    expect(wx.redirectTo).toHaveBeenCalledWith({ url: '/pages/tournament-detail/index?id=t1&entry=register' })
     expect(wx.showToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('至少选') }))
     expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
       name: 'tournament-registrations',
@@ -251,6 +252,7 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(ctx.data.registrationPublished).toBe(false)
     expect(wx.showShareMenu).not.toHaveBeenCalled()
+    expect(wx.redirectTo).not.toHaveBeenCalled()
     expect(wx.showToast).toHaveBeenCalledWith({ title: 'deadline expired', icon: 'none' })
   })
 
@@ -270,6 +272,7 @@ describe('tournament-edit registration publishing flow', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请先清空排程草稿再重新开放报名', icon: 'none' })
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
     expect(wx.showShareMenu).not.toHaveBeenCalled()
+    expect(wx.redirectTo).not.toHaveBeenCalled()
   })
 
   test('publish registration handles rejected cloud calls with fallback toast', async () => {
@@ -288,6 +291,7 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(wx.showToast).toHaveBeenCalledWith({ title: '发布失败', icon: 'none' })
     expect(wx.showShareMenu).not.toHaveBeenCalled()
+    expect(wx.redirectTo).not.toHaveBeenCalled()
     errSpy.mockRestore()
   })
 
