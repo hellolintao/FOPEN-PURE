@@ -179,6 +179,30 @@ describe('tournament-edit mixed regular flow', () => {
 })
 
 describe('tournament-edit registration publishing flow', () => {
+  test('new tournaments default registration deadline to the day before the match', () => {
+    const def = loadPage()
+
+    const expectedDeadlineDate = previousDate(def.data.form.startDate)
+    expect(def.data.form.registrationDeadlineAt).toBe(`${expectedDeadlineDate}T23:59:59+08:00`)
+    expect(def.data.registrationDeadlineDate).toBe(expectedDeadlineDate)
+    expect(def.data.registrationDeadlineDisplay).toBe(`${expectedDeadlineDate} 23:59`)
+  })
+
+  test('changing match date keeps default registration deadline on the previous day', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+
+    ctx.onFieldChange({
+      currentTarget: { dataset: { k: 'startDate' } },
+      detail: { value: '2026-06-10' }
+    })
+
+    expect(ctx.data.form.startDate).toBe('2026-06-10')
+    expect(ctx.data.form.registrationDeadlineAt).toBe('2026-06-09T23:59:59+08:00')
+    expect(ctx.data.registrationDeadlineDate).toBe('2026-06-09')
+    expect(ctx.data.registrationDeadlineDisplay).toBe('2026-06-09 23:59')
+  })
+
   test('step 2 requires registration deadline before publishing registration', async () => {
     const def = loadPage()
     const ctx = makeCtx(def, { tournamentId: 't1', form: { ...def.data.form, registrationDeadlineAt: '' } })
@@ -696,3 +720,12 @@ describe('tournament-edit registration publishing flow', () => {
     })
   })
 })
+
+function previousDate(date) {
+  const d = new Date(`${date}T00:00:00+08:00`)
+  d.setDate(d.getDate() - 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}

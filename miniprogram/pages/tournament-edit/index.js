@@ -2,6 +2,9 @@ const app = getApp()
 const { generateFirstRound } = require('../../utils/bracket-generator')
 const { assignToCourts, buildRegularSchedule } = require('../../utils/scheduler-mirror')
 
+const defaultStartDate = todayISODate()
+const defaultRegistrationDeadlineAt = defaultRegistrationDeadlineFromStartDate(defaultStartDate)
+
 Page({
   data: {
     step: 1,
@@ -9,15 +12,15 @@ Page({
     form: {
       name: '',
       location: '海峡奥体网球场',
-      startDate: todayISODate(),
+      startDate: defaultStartDate,
       type: 'mixed',
       format: 'regular',
       maxPlayers: 8,
-      registrationDeadlineAt: '',
+      registrationDeadlineAt: defaultRegistrationDeadlineAt,
       description: ''
     },
-    registrationDeadlineDate: '',
-    registrationDeadlineDisplay: '',
+    registrationDeadlineDate: deadlineDateValue(defaultRegistrationDeadlineAt),
+    registrationDeadlineDisplay: deadlineDisplay(defaultRegistrationDeadlineAt),
     registrationPublished: false,
     sharePath: '',
     scheduleStarted: false,
@@ -635,6 +638,17 @@ Page({
     const val = v !== undefined ? v : e.detail.value
     if (k && k.startsWith('pointsRules.')) {
       this.setData({ [k]: typeof val === 'string' ? (parseInt(val, 10) || 0) : val })
+    } else if (k === 'startDate') {
+      const currentDeadline = this.data.form.registrationDeadlineAt
+      const oldDefaultDeadline = defaultRegistrationDeadlineFromStartDate(this.data.form.startDate)
+      const patch = { 'form.startDate': val }
+      if (!currentDeadline || currentDeadline === oldDefaultDeadline) {
+        const nextDeadline = defaultRegistrationDeadlineFromStartDate(val)
+        patch['form.registrationDeadlineAt'] = nextDeadline
+        patch.registrationDeadlineDate = deadlineDateValue(nextDeadline)
+        patch.registrationDeadlineDisplay = deadlineDisplay(nextDeadline)
+      }
+      this.setData(patch)
     } else {
       this.setData({ [`form.${k}`]: val })
     }
@@ -960,6 +974,21 @@ function buildRegistrationSharePath(id) {
 function deadlineAtFromDate(date) {
   if (!date) return ''
   return `${date}T23:59:59+08:00`
+}
+
+function defaultRegistrationDeadlineFromStartDate(startDate) {
+  return deadlineAtFromDate(previousDateValue(startDate))
+}
+
+function previousDateValue(date) {
+  const m = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ''
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  d.setDate(d.getDate() - 1)
+  const y = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${month}-${day}`
 }
 
 function deadlineDateValue(value) {
