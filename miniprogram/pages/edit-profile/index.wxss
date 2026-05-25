@@ -181,6 +181,44 @@
 }
 
 /* ============================================================
+ * AGREEMENT
+ * ============================================================ */
+.agreement-panel {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background: var(--color-bg-2);
+  border: 2rpx solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.agreement-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.agreement-check {
+  flex: 0 0 auto;
+  padding-top: 2rpx;
+}
+
+.agreement-copy {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.agreement-link {
+  color: var(--color-ink);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+/* ============================================================
  * FOOTER
  * ============================================================ */
 .ep-footer {
@@ -214,6 +252,11 @@
 
 .footer-btn-primary {
   background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.footer-btn-disabled {
+  background: var(--color-muted-3);
   color: var(--color-bg);
 }
 

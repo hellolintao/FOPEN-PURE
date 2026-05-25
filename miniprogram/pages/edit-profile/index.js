@@ -13,6 +13,8 @@ Page({
     defaultAvatar: DEFAULT_AVATAR_URL,
     avatarPreviewUrl: '',
     avatarUploading: false,
+    agreementAccepted: false,
+    needsAgreement: false,
     showPrivacyDialog: false,
     privacyContractName: '用户隐私保护指引',
     formData: {
@@ -26,11 +28,13 @@ Page({
 
   onLoad(query) {
     const isRegister = (query && query.mode) === 'register'
+    const from = (query && query.from) || ''
     this.setupPrivacyAuthorization()
     this.setData({
       isRegister,
-      from: (query && query.from) || '',
-      tournamentId: (query && query.tournamentId) || ''
+      from,
+      tournamentId: (query && query.tournamentId) || '',
+      needsAgreement: isRegister || from === 'tournament-register'
     })
     wx.setNavigationBarTitle({ title: isRegister ? '注册' : '编辑资料' })
     if (!isRegister) {
@@ -267,6 +271,21 @@ Page({
     })
   },
 
+  onAgreementChange(e) {
+    const values = e && e.detail && Array.isArray(e.detail.value)
+      ? e.detail.value
+      : []
+    this.setData({ agreementAccepted: values.includes('accepted') })
+  },
+
+  onOpenUserAgreement() {
+    wx.navigateTo({ url: '/pages/user-agreement/index' })
+  },
+
+  onOpenPrivacyPolicy() {
+    wx.navigateTo({ url: '/pages/privacy-policy/index' })
+  },
+
   onCancel() {
     wx.navigateBack()
   },
@@ -304,6 +323,11 @@ Page({
 
     if (this.data.avatarUploading) {
       wx.showToast({ title: '头像上传中', icon: 'none' })
+      return
+    }
+
+    if ((shouldCreateMember || shouldClaimExistingMember) && !this.data.agreementAccepted) {
+      wx.showToast({ title: '请先阅读并同意协议', icon: 'none' })
       return
     }
 

@@ -1,0 +1,37 @@
+<view class="legal-page">
+  <view class="legal-head anim-stage-rise">
+    <text class="tape tape-stamped">FOPEN TERMS</text>
+    <text class="legal-title">用户服务协议</text>
+    <text class="legal-updated">更新日期：2026年5月25日</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">一、服务说明</text>
+    <text class="legal-body">Fuopen 为网球俱乐部、赛事组织者和会员提供会员资料维护、赛事报名、赛程记录、积分排行和相关管理服务。你使用本小程序，即表示你理解并同意本协议。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">二、注册与账号</text>
+    <text class="legal-body">注册时，你需要提供姓名或昵称、打法信息，并可自愿提供头像和手机号。平台会使用微信 OpenID 识别当前账号，避免重复注册并保护你的参赛记录。请确保提交的信息真实、准确、合法。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">三、使用规则</text>
+    <text class="legal-body">你应按真实身份参与俱乐部活动，不得冒用他人信息、恶意篡改比赛结果、干扰赛事管理或上传违法违规内容。管理员可根据俱乐部管理需要处理明显错误、重复或违规的信息。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">四、数据展示</text>
+    <text class="legal-body">你的昵称、头像、打法、报名状态、比赛成绩、积分和排行可能会在小程序内向其他会员展示，用于赛事组织、成绩统计和俱乐部活动记录。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">五、服务变更</text>
+    <text class="legal-body">我们可能根据功能迭代或运营需要调整服务内容。涉及个人信息处理规则的重大变化，将通过小程序页面或其他合理方式提示你。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">六、联系我们</text>
+    <text class="legal-body">如你对账号、会员信息或本协议有疑问，可通过俱乐部管理员与我们联系，我们会在合理时间内处理。</text>
+  </view>
+</view>

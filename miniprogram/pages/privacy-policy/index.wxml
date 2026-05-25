@@ -1,0 +1,42 @@
+<view class="legal-page">
+  <view class="legal-head anim-stage-rise">
+    <text class="tape tape-stamped">FOPEN PRIVACY</text>
+    <text class="legal-title">隐私政策</text>
+    <text class="legal-updated">更新日期：2026年5月25日</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">一、我们收集的信息</text>
+    <text class="legal-body">注册和使用过程中，我们会根据你主动填写或授权的内容收集姓名或昵称、头像、手机号、打法、报名记录、比赛成绩、积分排行，以及微信 OpenID 等账号识别信息。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">二、收集方式</text>
+    <text class="legal-body">上述信息主要来自你在注册页、编辑资料页、赛事报名页和比赛记录页的主动填写、选择或上传；头像会在你授权并选择图片后上传；OpenID 由微信小程序云开发环境提供，用于识别当前用户。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">三、使用目的</text>
+    <text class="legal-body">我们使用这些信息完成会员注册、身份识别、赛事报名、赛程编排、成绩统计、积分排行、管理员审核和异常问题处理，不会用于与俱乐部赛事管理无关的用途。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">四、存储与保护</text>
+    <text class="legal-body">你的会员资料和赛事数据存储在微信云开发数据库或云存储中。我们会通过权限控制、字段限制和最小必要原则保护信息，管理员仅在赛事管理和会员服务需要时查看或处理相关数据。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">五、展示与共享</text>
+    <text class="legal-body">为了完成赛事组织和俱乐部排行，你的昵称、头像、打法、比赛成绩、积分和报名状态可能在小程序内向其他会员展示。手机号、OpenID 等敏感识别信息不会在公开页面展示。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">六、你的权利</text>
+    <text class="legal-body">你可以在编辑资料页修改头像、姓名、手机号和打法。如需删除账号资料、撤回授权或处理个人信息相关问题，可联系俱乐部管理员协助处理。</text>
+  </view>
+
+  <view class="legal-section">
+    <text class="legal-section-title">七、未成年人保护</text>
+    <text class="legal-body">如你是未成年人，请在监护人同意和指导下使用本小程序。监护人如需查询、更正或删除未成年人信息，可联系俱乐部管理员。</text>
+  </view>
+</view>

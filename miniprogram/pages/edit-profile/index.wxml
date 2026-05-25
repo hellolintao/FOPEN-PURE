@@ -79,9 +79,24 @@
     </view>
   </view>
 
+  <view wx:if="{{needsAgreement}}" class="agreement-panel anim-stage-rise anim-delay-2">
+    <view class="agreement-row">
+      <checkbox-group class="agreement-check" bindchange="onAgreementChange">
+        <checkbox value="accepted" checked="{{agreementAccepted}}" color="#0B0C09" />
+      </checkbox-group>
+      <view class="agreement-copy">
+        <text>我已阅读并同意</text>
+        <text class="agreement-link" bindtap="onOpenUserAgreement">《用户服务协议》</text>
+        <text>和</text>
+        <text class="agreement-link" bindtap="onOpenPrivacyPolicy">《隐私政策》</text>
+        <text>，知晓平台将按政策收集、使用和存储注册信息。</text>
+      </view>
+    </view>
+  </view>
+
   <view class="ep-footer">
     <view wx:if="{{!isRegister}}" class="footer-btn footer-btn-ghost tap-scale" bindtap="onCancel">取消</view>
-    <view class="footer-btn footer-btn-primary tap-scale" bindtap="onSave">{{isRegister ? '完成注册' : '保存'}}</view>
+    <view class="footer-btn footer-btn-primary tap-scale {{needsAgreement && !agreementAccepted ? 'footer-btn-disabled' : ''}}" bindtap="onSave">{{isRegister ? '完成注册' : '保存'}}</view>
   </view>
 
   <view wx:if="{{showPrivacyDialog}}" class="privacy-mask">

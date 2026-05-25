@@ -15,6 +15,8 @@
     "pages/member-edit/index",
     "pages/setting/index",
     "pages/edit-profile/index",
+    "pages/user-agreement/index",
+    "pages/privacy-policy/index",
     "pages/tournament-brackets/index",
     "pages/tournament-score/index",
     "pages/round-settlement/index",

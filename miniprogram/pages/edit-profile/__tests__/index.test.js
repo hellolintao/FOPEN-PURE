@@ -61,6 +61,10 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
+function acceptAgreement(ctx) {
+  ctx.data.agreementAccepted = true
+}
+
 describe('edit-profile mode handling', () => {
   test('mode=register sets register title and does not load member', () => {
     const { pageDef } = loadPage()
@@ -110,13 +114,43 @@ describe('edit-profile mode handling', () => {
     ctx.onLoad({ mode: 'register', from: 'tournament-register', tournamentId: 't1' })
 
     expect(ctx.data.isRegister).toBe(true)
+    expect(ctx.data.needsAgreement).toBe(true)
     expect(ctx.data.from).toBe('tournament-register')
     expect(ctx.data.tournamentId).toBe('t1')
     expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '注册' })
   })
+
+  test('agreement checkbox and legal links update registration consent state', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+
+    ctx.onAgreementChange({ detail: { value: ['accepted'] } })
+    expect(ctx.data.agreementAccepted).toBe(true)
+
+    ctx.onAgreementChange({ detail: { value: [] } })
+    expect(ctx.data.agreementAccepted).toBe(false)
+
+    ctx.onOpenUserAgreement()
+    ctx.onOpenPrivacyPolicy()
+
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/user-agreement/index' })
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/privacy-policy/index' })
+  })
 })
 
 describe('edit-profile validation and save', () => {
+  test('register mode requires agreement consent before saving personal info', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    const ctx = makeCtx(pageDef, { isRegister: true, agreementAccepted: false })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请先阅读并同意协议', icon: 'none' })
+    expect(callFunction).not.toHaveBeenCalled()
+  })
+
   test('register mode requires playStyle', async () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef, { isRegister: true })
@@ -212,6 +246,7 @@ describe('edit-profile validation and save', () => {
     await flushPromises()
     jest.useFakeTimers()
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
     jest.runAllTimers()
@@ -258,6 +293,7 @@ describe('edit-profile validation and save', () => {
     const ctx = makeCtx(pageDef, { isRegister: true, from: 'tournament-register', tournamentId: 't1' })
     ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
 
     const savePromise = ctx.onSave()
     await flushPromises()
@@ -323,6 +359,7 @@ describe('edit-profile validation and save', () => {
     const ctx = makeCtx(pageDef, { isRegister: true, from: 'tournament-register', tournamentId: 't1' })
     ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
     jest.runAllTimers()
@@ -346,6 +383,7 @@ describe('edit-profile validation and save', () => {
     callFunction.mockResolvedValueOnce({ result: { _id: 'm1' } })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
     jest.runAllTimers()
@@ -369,6 +407,7 @@ describe('edit-profile validation and save', () => {
     callFunction.mockResolvedValueOnce({ result: { errMsg: 'already registered', data: existing } })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
     jest.runAllTimers()
@@ -393,6 +432,7 @@ describe('edit-profile validation and save', () => {
     callFunction.mockResolvedValueOnce({ result: { data: claimedMember } })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '标子', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
     jest.runAllTimers()
@@ -421,6 +461,7 @@ describe('edit-profile validation and save', () => {
     })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '标子', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
 
@@ -439,6 +480,7 @@ describe('edit-profile validation and save', () => {
     })
     const ctx = makeCtx(pageDef, { isRegister: true })
     ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+    acceptAgreement(ctx)
 
     await ctx.onSave()
 
