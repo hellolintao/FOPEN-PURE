@@ -157,8 +157,8 @@ describe('match page tournament entry permissions', () => {
         name: '5月周末赛',
         format: 'regular',
         type: 'singles',
-        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
-        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        registrationPublishedAt: '2099-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2099-05-24T18:00:00+08:00',
         scheduleStatus: 'none'
       }]
     })
