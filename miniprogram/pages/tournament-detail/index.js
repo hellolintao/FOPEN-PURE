@@ -320,7 +320,8 @@ Page({
   },
 
   _rebuildScheduleView() {
-    const view = buildScheduleView(this.data.tournament, this.data.brackets, this.data.freePlays)
+    const member = app.globalData && app.globalData.currentMember
+    const view = buildScheduleView(this.data.tournament, this.data.brackets, this.data.freePlays, currentMemberId(member))
     this.setData(view)
   },
 
@@ -1124,7 +1125,7 @@ function tournamentTypeText(type) {
   return 'SINGLES · 单打'
 }
 
-function buildScheduleView(tournament, brackets, freePlays) {
+function buildScheduleView(tournament, brackets, freePlays, memberId) {
   const schedulePlan = tournament && tournament.schedulePlan
   if (!schedulePlan || !Array.isArray(schedulePlan.courts) || schedulePlan.courts.length === 0) {
     return { scheduleCourts: [], scheduleRows: [] }
@@ -1152,16 +1153,26 @@ function buildScheduleView(tournament, brackets, freePlays) {
     if (!m.courtId || m.queueOrder === null || m.queueOrder === undefined) return
     if (!cellByCourt[m.courtId]) return
     const isDoubles = !!(m.player1 && m.player1.partnerId)
+    const player1Mine = sideHasMember(m.player1, memberId)
+    const player2Mine = sideHasMember(m.player2, memberId)
     cellByCourt[m.courtId][m.queueOrder] = {
+      matchId: m.matchId || m.sourceMatchId || m._id || '',
       kind: 'match',
       __rowKind: m.matchKind || 'bracket',
       __isDoubles: isDoubles,
+      __isMine: player1Mine || player2Mine,
+      __player1Mine: player1Mine,
+      __player2Mine: player2Mine,
       __player1Label: playerLabel(m.player1, m.bye),
       __player2Label: playerLabel(m.player2, m.bye),
       __doublesP1: m.player1 ? (m.player1.name || '?') : (m.bye ? 'BYE' : '?'),
       __doublesPartner1: (m.player1 && m.player1.partnerName) || '',
       __doublesP2: m.player2 ? (m.player2.name || '?') : (m.bye ? 'BYE' : '?'),
-      __doublesPartner2: (m.player2 && m.player2.partnerName) || ''
+      __doublesPartner2: (m.player2 && m.player2.partnerName) || '',
+      __doublesP1Mine: sidePrimaryHasMember(m.player1, memberId),
+      __doublesPartner1Mine: sidePartnerHasMember(m.player1, memberId),
+      __doublesP2Mine: sidePrimaryHasMember(m.player2, memberId),
+      __doublesPartner2Mine: sidePartnerHasMember(m.player2, memberId)
     }
   })
 
@@ -1201,6 +1212,23 @@ function playerLabel(p, bye) {
   if (!p) return bye ? 'BYE' : '?'
   if (p.id === 'BYE' || p.name === 'BYE') return 'BYE'
   return (p.name || '') + (p.partnerName ? '/' + p.partnerName : '')
+}
+
+function currentMemberId(member) {
+  return keyPart(member && (member._id || member.id || member.memberId || member.playerId))
+}
+
+function sideHasMember(side, memberId) {
+  const target = keyPart(memberId)
+  return !!target && sideIds(side).map(keyPart).includes(target)
+}
+
+function sidePrimaryHasMember(side, memberId) {
+  return !!keyPart(memberId) && keyPart(side && side.id) === keyPart(memberId)
+}
+
+function sidePartnerHasMember(side, memberId) {
+  return !!keyPart(memberId) && keyPart(side && side.partnerId) === keyPart(memberId)
 }
 
 function firstChar(name) {

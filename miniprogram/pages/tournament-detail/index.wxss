@@ -669,6 +669,7 @@
 }
 
 .schedule-cell {
+  position: relative;
   padding: 12rpx 8rpx;
 }
 
@@ -709,6 +710,11 @@
 .schedule-cell.cell-freePlay { background: var(--color-warn-wash); }
 .schedule-cell.cell-unavailable { background: var(--color-bg-3); color: var(--color-muted-2); }
 
+.schedule-cell.cell-mine {
+  background: var(--color-lime-soft);
+  box-shadow: inset 0 0 0 4rpx var(--color-lime);
+}
+
 .schedule-cell .match-line { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4rpx; }
 .schedule-cell .match-line.doubles { gap: 4rpx; }
 .schedule-cell .match-line.doubles .team-row { display: flex; align-items: center; gap: 6rpx; justify-content: center; }
@@ -731,6 +737,11 @@
   text-align: center;
   letter-spacing: 0;
   line-height: 1.15;
+}
+
+.schedule-cell.cell-mine .player-mine {
+  background: var(--color-lime);
+  border-color: var(--color-ink);
 }
 
 .schedule-cell .vs {

@@ -47,6 +47,18 @@ describe('tournament-detail WXML layout', () => {
     expect(wxml).not.toContain('>DEADLINE<')
     expect(wxml).not.toContain('>COURT TIME<')
   })
+
+  test('binds current-member schedule highlight classes', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+    const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')
+
+    expect(wxml).toContain("{{cell.__isMine ? 'cell-mine' : ''}}")
+    expect(wxml).toContain("{{cell.__player1Mine ? 'player-mine' : ''}}")
+    expect(wxml).toContain("{{cell.__player2Mine ? 'player-mine' : ''}}")
+    expect(wxml).not.toContain('mine-badge')
+    expect(wxml).not.toContain('我的</view>')
+    expect(wxss).not.toContain('inset 8rpx 0 0 var(--color-ink)')
+  })
 })
 
 function loadPage(options = {}) {
@@ -344,6 +356,74 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.phase).toBe('schedule_published')
     expect(ctx.data.showRegistrationModule).toBe(false)
     expect(ctx.data.showScheduleSection).toBe(true)
+  })
+
+  test('schedule view marks current member matches for default highlight', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } },
+      tournament: {
+        _id: 't1',
+        scheduleStatus: 'published',
+        status: 'upcoming',
+        schedulePlan: {
+          courts: [
+            { courtId: 'c1', name: '1号场', slots: ['2026-05-25T18:00:00+08:00'] },
+            { courtId: 'c2', name: '2号场', slots: ['2026-05-25T18:00:00+08:00'] }
+          ]
+        }
+      },
+      callFunction: ({ name, data }) => {
+        if (name === 'tournament-brackets' && data && data.action === 'getByTournament') {
+          return Promise.resolve({
+            result: {
+              success: true,
+              data: [{
+                round: 1,
+                matches: [
+                  {
+                    matchId: 'mine-match',
+                    courtId: 'c1',
+                    queueOrder: 0,
+                    matchKind: 'regularRound',
+                    player1: { id: 'm1', name: '陈一' },
+                    player2: { id: 'm2', name: '王五' }
+                  },
+                  {
+                    matchId: 'other-match',
+                    courtId: 'c2',
+                    queueOrder: 0,
+                    matchKind: 'regularRound',
+                    player1: { id: 'm3', name: '张三' },
+                    player2: { id: 'm4', name: '李四' }
+                  }
+                ]
+              }]
+            }
+          })
+        }
+        if (name === 'match-results') {
+          return Promise.resolve({ result: { success: true, data: { results: [] } } })
+        }
+        return Promise.resolve({ result: { success: true, data: { items: [] } } })
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    const cells = ctx.data.scheduleRows[0].cells
+    expect(cells[0]).toMatchObject({
+      matchId: 'mine-match',
+      __isMine: true,
+      __player1Mine: true,
+      __player2Mine: false
+    })
+    expect(cells[1]).toMatchObject({
+      matchId: 'other-match',
+      __isMine: false,
+      __player1Mine: false,
+      __player2Mine: false
+    })
   })
 
   test('legacy tournament keeps existing schedule and confirmed results visible', async () => {
