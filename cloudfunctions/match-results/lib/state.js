@@ -83,6 +83,54 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     await refreshTournamentSettlementStatus(result.tournamentId)
   }
 
+  async function voidMatch({ matchId, reason, admin }) {
+    if (!admin || !admin.isAdmin) throw new Error('UNAUTHORIZED')
+    const result = await findResultByMatchId(matchId)
+    if (!result) throw new Error('NOT_FOUND')
+    if (result.resultStatus === 'confirmed') throw new Error('INVALID_STATE')
+    if (!hasPlayableSides(result)) throw new Error('INVALID_STATE')
+
+    const now = new Date()
+    await db.collection('match_results').doc(result._id).update({
+      data: {
+        score: null,
+        resultStatus: 'voided',
+        status: 'cancelled',
+        winner: null,
+        winnerId: null,
+        loserId: null,
+        confirmedBy: null,
+        confirmedAt: null,
+        pointsAwarded: { source: 'voided', entries: [] },
+        voidReason: reason || '未完赛',
+        voidedBy: admin._id,
+        voidedAt: now,
+        updateTime: now
+      }
+    })
+
+    if (result.matchKind === 'bracket') {
+      const currentDocId = bracketDocId(result.tournamentId, result.round || 1)
+      const curDoc = await getDocOrNull('tournament_brackets', currentDocId)
+      if (curDoc) {
+        const curIdx = curDoc.matches.findIndex(m => m.position === (result.position || 1))
+        if (curIdx >= 0) {
+          const curUpdated = [...curDoc.matches]
+          curUpdated[curIdx] = {
+            ...curUpdated[curIdx],
+            winner: null,
+            status: 'cancelled',
+            resultStatus: 'voided'
+          }
+          await db.collection('tournament_brackets').doc(currentDocId).update({ data: { matches: curUpdated } })
+        }
+      }
+    }
+
+    await refreshTournamentSettlementStatus(result.tournamentId)
+    return { ok: true }
+  }
+
   async function clearDownstream(tournamentId, oldMatch) {
     if (!oldMatch || !oldMatch.round) return
     const nextRound = oldMatch.round + 1
@@ -136,12 +184,16 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     await db.collection('match_results').doc(result._id).update({
       data: {
         score,
+        status: 'completed',
         resultStatus: 'confirmed',
         winner: effectiveWinner,
         winnerId: effectiveWinner ? effectiveWinner.id : null,
         confirmedBy: admin._id,
         confirmedAt: new Date(),
-        pointsAwarded: { source: 'match', entries }
+        pointsAwarded: { source: 'match', entries },
+        voidReason: null,
+        voidedBy: null,
+        voidedAt: null
       }
     })
     // 同步当前轮 bracket 上的 winner（供 placement 判定 final 用）
@@ -222,7 +274,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const final = brackets.find(b => b.round === finalRound)
     if (!final || !final.matches[0] || !final.matches[0].winner) return { skipped: true, reason: 'missing_final_winner', finalRound }
     const all = (await db.collection('match_results').where({ tournamentId, matchKind: 'bracket' }).get()).data
-    if (all.some(r => !r.bye && r.resultStatus !== 'confirmed')) return { skipped: true, reason: 'not_all_confirmed', total: all.length }
+    if (all.some(r => isScoreableResult(r) && r.resultStatus !== 'confirmed')) return { skipped: true, reason: 'not_all_confirmed', total: all.length }
 
     let entries = awardLib.buildPlacementEntries(brackets, t.pointsRules.placement, t.type)
     // 云端历史包曾出现 bracket placement 计算为空但赛事已 completed 的情况。
@@ -245,17 +297,17 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
 
   async function refreshTournamentSettlementStatus(tournamentId) {
     const rows = (await db.collection('match_results').where({ tournamentId }).get()).data || []
-    const playable = rows.filter(isPlayableResult)
+    const playable = rows.filter(hasPlayableSides)
     if (playable.length === 0) return { skipped: true, reason: 'no_playable_matches' }
-    const allConfirmed = playable.every(r => r.resultStatus === 'confirmed')
-    if (allConfirmed) {
+    const allTerminal = playable.every(r => r.resultStatus === 'confirmed' || isNoScoreResult(r))
+    if (allTerminal) {
       const now = new Date()
       await db.collection('tournaments').doc(tournamentId).update({
         data: { status: 'completed', completedAt: now, updateTime: now }
       })
       return { skipped: false, status: 'completed' }
     }
-    const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed')
+    const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
     if (hasStarted) await markTournamentOngoing(tournamentId)
     return { skipped: true, reason: 'not_all_confirmed' }
   }
@@ -269,9 +321,17 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     })
   }
 
-  function isPlayableResult(row) {
+  function hasPlayableSides(row) {
     if (!row || row.bye) return false
     return !!(row.player1 && row.player2 && row.player1.id && row.player2.id)
+  }
+
+  function isNoScoreResult(row) {
+    return !!row && (row.resultStatus === 'voided' || row.status === 'cancelled' || row.status === 'voided')
+  }
+
+  function isScoreableResult(row) {
+    return hasPlayableSides(row) && !isNoScoreResult(row)
   }
 
 
@@ -431,7 +491,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     return (e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)
   }
 
-  return { submitResult, confirmAll, reconfirmMatch, clearDownstream, awardPlacementIfFinal }
+  return { submitResult, confirmAll, reconfirmMatch, voidMatch, clearDownstream, awardPlacementIfFinal }
 }
 
 module.exports = { createMatchStateService }

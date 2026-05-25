@@ -96,6 +96,16 @@ jest.mock('wx-server-sdk', () => {
   return api
 })
 
+test('timer config refreshes rank cache every 2 hours', () => {
+  const config = require('../config.json')
+
+  expect(config.triggers).toContainEqual({
+    name: 'rank-cache-every-2-hours',
+    type: 'timer',
+    config: '0 0 0/2 * * ? *'
+  })
+})
+
 describe('rankList enhancements', () => {
   beforeEach(() => {
     const cloud = require('wx-server-sdk')
@@ -242,7 +252,7 @@ describe('rankList enhancements', () => {
     expect(res.data.rankList[0].trendDelta).toBe(0)
   })
 
-  test('rankList returns stored daily cache without recomputing live rows', async () => {
+  test('rankList returns stored scheduled cache without recomputing live rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'LIVE', name: 'live player' })
     seedMatchesForMember('LIVE', 9, 0, 99)
@@ -291,7 +301,7 @@ describe('rankList enhancements', () => {
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
 
-  test('rankList recomputes live rows when stored daily cache is empty', async () => {
+  test('rankList recomputes live rows when stored scheduled cache is empty', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
     cloud.__rows.baseline_standings.push({
@@ -346,7 +356,7 @@ describe('rankList enhancements', () => {
     ])
   })
 
-  test('refreshRankCache writes singles and doubles daily cache rows', async () => {
+  test('refreshRankCache writes singles and doubles scheduled cache rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push(
       { _id: 'A', name: '甲', avatarUrl: 'a.png' },

@@ -162,11 +162,15 @@ function unpackMatchResultRows(res) {
 }
 
 function buildResultSummary(rows) {
-	const playable = (rows || []).filter(row => row && !row.bye && row.player1 && row.player2 && row.player1.id && row.player2.id)
+	const playable = (rows || []).filter(row => row && !isNoScoreResult(row) && !row.bye && row.player1 && row.player2 && row.player1.id && row.player2.id)
 	return {
 		playableCount: playable.length,
 		confirmedCount: playable.filter(row => row.resultStatus === 'confirmed').length
 	}
+}
+
+function isNoScoreResult(row) {
+	return !!row && (row.resultStatus === 'voided' || row.status === 'cancelled' || row.status === 'voided')
 }
 
 function isActiveRegistration(row) {

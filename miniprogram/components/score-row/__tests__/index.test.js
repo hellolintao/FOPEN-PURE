@@ -22,6 +22,7 @@ function makeCtx(data = {}) {
       isDoubles: false,
       isBye: false,
       isMissingPlayer: false,
+      isVoided: false,
       canEdit: false,
       statusLabel: '',
       submitLabel: '',
@@ -60,5 +61,26 @@ test('non-admin can edit their own unconfirmed match', () => {
 
   ctx._recomputeFlags(match, false, 'p1')
 
+  expect(ctx.data.canEdit).toBe(true)
+})
+
+test('admin can mark an unfinished match as voided', () => {
+  const ctx = makeCtx({ match, isAdmin: true, currentMemberId: 'admin1' })
+  wx.showModal.mockImplementationOnce(({ success }) => success({ confirm: true }))
+
+  ctx._recomputeFlags(match, true, 'admin1')
+  ctx.onVoidMatch()
+
+  expect(ctx.triggerEvent).toHaveBeenCalledWith('voidmatch', { matchId: 'm1' })
+})
+
+test('voided match shows no-score label and remains editable by admin for correction', () => {
+  const voided = { ...match, resultStatus: 'voided', status: 'cancelled', voidReason: '未完赛' }
+  const ctx = makeCtx({ match: voided, isAdmin: true, currentMemberId: 'admin1' })
+
+  ctx._recomputeFlags(voided, true, 'admin1')
+
+  expect(ctx.data.statusLabel).toBe('未赛')
+  expect(ctx.data.isVoided).toBe(true)
   expect(ctx.data.canEdit).toBe(true)
 })

@@ -731,6 +731,19 @@ exports.main = async (event, context) => {
       }
     }
 
+    case 'voidMatch': {
+      const { voidMatch } = require('./lib/handlers/submit')
+      const submitter = await resolveSubmitter()
+      if (!submitter) return fail('UNAUTHORIZED', '用户未注册')
+      try {
+        const ctx = buildSubmitCtx(submitter)
+        const data = await voidMatch(ctx, event)
+        return ok(data)
+      } catch (e) {
+        return fail(e.message || 'INTERNAL', e.message)
+      }
+    }
+
 
     case 'batchConfirm': {
       const { batchConfirm } = require('./lib/handlers/batch')

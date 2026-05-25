@@ -447,6 +447,78 @@ describe('confirmAll', () => {
   })
 })
 
+describe('voidMatch', () => {
+  test('admin marks unfinished regular match as voided and tournament settles after remaining scoreable matches are confirmed', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'ongoing'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [
+      {
+        _id: 'result_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm1',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 1,
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      },
+      {
+        _id: 'result_TR_m2',
+        tournamentId: 'TR',
+        sourceMatchId: 'm2',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 2,
+        player1: { id: 'C' },
+        player2: { id: 'D' },
+        playerIds: ['C', 'D'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      }
+    ]
+    seed.tournament_registrations = ['A', 'B', 'C', 'D'].map(id => ({ _id: `reg_${id}`, tournamentId: 'TR', playerId: id, registrationStatus: 'confirmed' }))
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'm1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.voidMatch({ matchId: 'm2', reason: '未完赛', admin: { _id: 'admin1', isAdmin: true } })
+
+    const voided = db.__all().match_results.find(x => x._id === 'result_TR_m2')
+    expect(voided).toMatchObject({
+      resultStatus: 'voided',
+      status: 'cancelled',
+      voidReason: '未完赛',
+      voidedBy: 'admin1'
+    })
+    expect(voided.score).toBeNull()
+    expect(voided.pointsAwarded).toEqual({ source: 'voided', entries: [] })
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__all().tournaments[0].completedAt).toBeDefined()
+  })
+
+  test('non-admin cannot mark a match voided', async () => {
+    const db = makeDb(seed4Knockout())
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.voidMatch({ matchId: 'r1m1', reason: '未完赛', admin: { _id: 'A', isAdmin: false } }))
+      .rejects.toThrow('UNAUTHORIZED')
+  })
+})
+
 describe('reconfirmMatch · winner 翻盘清后续', () => {
   test('winner 翻盘 → 清后续 bracket + match_results + tournament_points + status=ongoing', async () => {
     const db = makeDb(seed4Knockout())

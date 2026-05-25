@@ -687,6 +687,7 @@ function emptyResultDisplay() {
 function isPlayableResult(row) {
   return !!(
     row &&
+    !isNoScoreResult(row) &&
     !row.bye &&
     row.player1 &&
     row.player2 &&
@@ -695,6 +696,10 @@ function isPlayableResult(row) {
     !isByeSide(row.player1) &&
     !isByeSide(row.player2)
   )
+}
+
+function isNoScoreResult(row) {
+  return !!row && (row.resultStatus === 'voided' || row.status === 'cancelled' || row.status === 'voided')
 }
 
 function isByeSide(side) {

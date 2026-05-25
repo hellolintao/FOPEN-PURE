@@ -51,7 +51,9 @@ Component({
     isDoubles: false,
     isBye: false,
     isMissingPlayer: false,
+    isVoided: false,
     canEdit: false,
+    showVoidAction: false,
     statusLabel: '',
     submitLabel: '',
     showTbInput: false
@@ -82,6 +84,7 @@ Component({
       const isBye = !!m.bye
       const isMissingPlayer = !m.player1 || !m.player2 || !m.player1.id || !m.player2.id
       const isConfirmed = m.resultStatus === 'confirmed'
+      const isVoided = isNoScoreMatch(m)
       const isDoubles = !!(m.player1 && m.player1.partnerId)
       const isParticipant = !!(currentMemberId && (m.playerIds || []).includes(currentMemberId))
         || !!(currentMemberId && (
@@ -91,15 +94,18 @@ Component({
       // 普通会员仅可编辑自己参与的未确认比赛；管理员可修改已确认比赛，但未改动时确认按钮置灰。
       let canEdit
       if (isBye || isMissingPlayer) canEdit = false
+      else if (isVoided) canEdit = !!isAdmin
       else if (isConfirmed) canEdit = !!isAdmin
       else canEdit = !!isAdmin || isParticipant
+      const showVoidAction = !!(isAdmin && !isConfirmed && !isVoided && !isBye && !isMissingPlayer)
       const statusLabel = isBye ? '轮空'
         : isMissingPlayer ? '未开打'
+        : isVoided ? '未赛'
         : isConfirmed ? '已确认'
         : m.resultStatus === 'submitted' ? '待确认'
         : '待录入'
       const submitLabel = '确认'
-      this.setData({ isDoubles, isBye, isMissingPlayer, canEdit, statusLabel, submitLabel })
+      this.setData({ isDoubles, isBye, isMissingPlayer, isVoided, canEdit, showVoidAction, statusLabel, submitLabel })
       this.revalidate()
     },
 
@@ -230,11 +236,28 @@ Component({
       }
     },
 
+    onVoidMatch() {
+      const finalMatch = this.data.match
+      if (!finalMatch || !this.data.showVoidAction) return
+      wx.showModal({
+        title: '标记为未赛？',
+        content: '该比赛将不计分，也不会再阻塞赛事结算。',
+        confirmText: '标记未赛',
+        success: ({ confirm }) => {
+          if (confirm) this.triggerEvent('voidmatch', { matchId: finalMatch.sourceMatchId })
+        }
+      })
+    },
+
     stopBubble() {
       // 阻止编辑区点击折叠行
     }
   }
 })
+
+function isNoScoreMatch(match) {
+  return !!match && (match.resultStatus === 'voided' || match.status === 'cancelled' || match.status === 'voided')
+}
 
 function pickSingleDigit(raw) {
   const s = String(raw == null ? '' : raw)

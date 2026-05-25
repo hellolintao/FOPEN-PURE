@@ -120,6 +120,7 @@
 .status-pending   { background: var(--color-bg-3); color: var(--color-ink-3); }
 .status-submitted { background: var(--color-ink); color: var(--color-bg); }
 .status-confirmed { background: var(--color-lime); color: var(--color-ink); }
+.status-voided    { background: var(--color-bg-3); color: var(--color-muted); }
 .status-disputed  { background: var(--color-danger); color: var(--color-bg); }
 
 /* ============================================================
@@ -248,9 +249,18 @@
   font-weight: 700;
 }
 
+.actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
 .submit {
   margin: 0 !important;
+  min-width: 208rpx;
   height: 88rpx;
+  padding: 0 var(--space-6) !important;
   background: var(--color-ink) !important;
   color: var(--color-bg) !important;
   border-radius: var(--radius-pill) !important;
@@ -268,3 +278,23 @@
   background: var(--color-bg-3) !important;
   color: var(--color-muted) !important;
 }
+
+.void-action {
+  margin: 0 !important;
+  margin-right: auto !important;
+  height: 72rpx;
+  min-height: 72rpx;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  color: var(--color-muted) !important;
+  border-radius: 0 !important;
+  border: none !important;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.void-action::after { border: none; }

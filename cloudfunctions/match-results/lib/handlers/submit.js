@@ -17,4 +17,9 @@ async function reconfirmMatch(ctx, event) {
   return { ok: true }
 }
 
-module.exports = { submit, confirmAll, reconfirmMatch }
+async function voidMatch(ctx, event) {
+  const admin = ctx.submitter
+  return ctx.stateSvc.voidMatch({ matchId: event.matchId, reason: event.reason, admin })
+}
+
+module.exports = { submit, confirmAll, reconfirmMatch, voidMatch }

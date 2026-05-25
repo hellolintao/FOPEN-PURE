@@ -115,16 +115,17 @@ Page({
         .sort((a, b) => a[0] - b[0])
         .map(([round, matches]) => ({ round, matches }))
 
-      const confirmedCount = sorted.filter(r => r.resultStatus === 'confirmed').length
-      const submittedCount = sorted.filter(r => r.resultStatus === 'submitted').length
-      const pendingCount = sorted.filter(r => r.resultStatus !== 'confirmed' && r.resultStatus !== 'submitted').length
+      const scoreable = sorted.filter(r => this.isPlayableMatch(r))
+      const confirmedCount = scoreable.filter(r => r.resultStatus === 'confirmed').length
+      const submittedCount = scoreable.filter(r => r.resultStatus === 'submitted').length
+      const pendingCount = scoreable.filter(r => r.resultStatus !== 'confirmed' && r.resultStatus !== 'submitted').length
       this.setData({
         tournament,
         rowsByRound,
         confirmedCount,
         submittedCount,
         pendingCount,
-        totalCount: sorted.length,
+        totalCount: scoreable.length,
         empty: sorted.length === 0,
         error: sorted.length === 0 ? '比赛数据异常' : ''
       })
@@ -182,7 +183,11 @@ Page({
   },
 
   isPlayableMatch(m) {
-    return !!(m && !m.bye && m.player1 && m.player2 && m.player1.id && m.player2.id)
+    return !!(m && !this.isNoScoreMatch(m) && !m.bye && m.player1 && m.player2 && m.player1.id && m.player2.id)
+  },
+
+  isNoScoreMatch(m) {
+    return !!m && (m.resultStatus === 'voided' || m.status === 'cancelled' || m.status === 'voided')
   },
 
   collectActionableDrafts(draftMapOverride) {
@@ -252,6 +257,27 @@ Page({
     } catch (err) {
       console.error('[tournament-score] reconfirm', err)
       wx.showToast({ title: '更新失败', icon: 'none' })
+    }
+  },
+
+  async onVoidMatch(e) {
+    const { matchId } = e.detail || {}
+    if (!matchId) return
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'voidMatch', matchId, reason: '未完赛' }
+      })
+      const r = res.result
+      if (!r || !r.success) {
+        wx.showToast({ title: (r && r.error && r.error.message) || '标记失败', icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已标记未赛', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-score] voidMatch', err)
+      wx.showToast({ title: '标记失败', icon: 'none' })
     }
   },
 

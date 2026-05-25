@@ -51,6 +51,7 @@
             current-member-id="{{currentMemberId}}"
             bindsubmit="onSubmit"
             bindreconfirm="onReconfirm"
+            bindvoidmatch="onVoidMatch"
             binddraftchange="onDraftChange"
           />
         </view>

@@ -79,6 +79,9 @@
 
     <view wx:if="{{validationError}}" class="err">{{validationError}}</view>
 
-    <button class="submit {{submitDisabled ? 'submit-disabled' : ''}}" bindtap="onSubmit" disabled="{{submitDisabled}}" type="primary">{{submitLabel}}</button>
+    <view class="actions-row">
+      <button wx:if="{{showVoidAction}}" class="void-action" bindtap="onVoidMatch">标记未赛</button>
+      <button class="submit {{submitDisabled ? 'submit-disabled' : ''}}" bindtap="onSubmit" disabled="{{submitDisabled}}" type="primary">{{submitLabel}}</button>
+    </view>
   </view>
 </view>

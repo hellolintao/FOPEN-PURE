@@ -1,8 +1,9 @@
 const { callFunction } = require('../../utils/cloud')
 const { syncTabBar } = require('../../utils/tab-bar')
-const { getCacheEntry, isFresh, nextDailyRefreshAt, removeCache, setCache } = require('../../utils/page-cache')
+const { getCacheEntry, isFresh, removeCache, setCache } = require('../../utils/page-cache')
 
 const RANK_CACHE_VERSION = 'v3'
+const RANK_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000
 
 Page({
   data: {
@@ -57,7 +58,7 @@ Page({
       }))
       this.setData({ rankList: enriched })
       if (enriched.length > 0) {
-        setCache(cacheKey, { rankList: enriched }, { expiresAt: nextDailyRefreshAt() })
+        setCache(cacheKey, { rankList: enriched }, { ttlMs: RANK_REFRESH_INTERVAL_MS })
       } else {
         removeCache(cacheKey)
       }
@@ -90,7 +91,7 @@ Page({
       const data = res && res.result && res.result.data
       const starHero = data || { mode: 'empty', star: null, subtitle: null }
       this.setData({ starHero })
-      setCache(cacheKey, { starHero }, { expiresAt: nextDailyRefreshAt() })
+      setCache(cacheKey, { starHero }, { ttlMs: RANK_REFRESH_INTERVAL_MS })
     } catch (err) {
       console.error('[rank] loadHero error', err)
       this.setData({ starHero: { mode: 'empty', star: null, subtitle: null } })

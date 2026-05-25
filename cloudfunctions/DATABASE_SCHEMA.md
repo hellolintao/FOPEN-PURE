@@ -100,7 +100,7 @@
 
 ## rank_cache
 
-排行榜每日缓存。`points-engine` 每天 23:30 由 timer 触发 `refreshRankCache`，为当前赛季的单打、双打各写一条缓存；`rankList` 优先读取这里，避免排行榜每次进入页面都实时聚合 `match_results / tournament_points / baseline_standings`。
+排行榜定时缓存。`points-engine` 每 2 小时由 timer 触发 `refreshRankCache`，为当前赛季的单打、双打各写一条缓存；`rankList` 优先读取这里，避免排行榜每次进入页面都实时聚合 `match_results / tournament_points / baseline_standings`。
 
 | Field | Type | Description |
 |---|---|---|
@@ -319,8 +319,8 @@
 | `matches[].player2.registrationId` | String | 否 | 选手2的报名ID |
 | `matches[].bye` | Boolean | 否 | 是否轮空 |
 | `matches[].winner` | Object | 否 | Phase 7 后为获胜方对象；旧数据可能为 1 / 2 |
-| `matches[].status` | String | 否 | 比赛状态，'pending'（待开始）、'ongoing'（进行中）、'completed'（已完成） |
-| `matches[].resultStatus` | String | 否 | 结果状态：`pending` / `confirmed` / `disputed` |
+| `matches[].status` | String | 否 | 比赛状态，'pending'（待开始）、'ongoing'（进行中）、'completed'（已完成）、'cancelled'（未赛/作废，不计分） |
+| `matches[].resultStatus` | String | 否 | 结果状态：`pending` / `submitted` / `confirmed` / `voided` / `disputed`；`voided` 表示未完赛或未赛，不计分且不阻塞赛事结算 |
 | `matches[].courtId` | String | 否 | 首轮排程场地 |
 | `matches[].queueOrder` | Number | 否 | 首轮场地队列顺序 |
 | `nextRoundMatches` | Array | 否 | 下一轮对位映射 |
@@ -389,12 +389,16 @@
 | `playerIds` | Array | 是 | 参赛 member._id 列表，双打包含 4 人，BYE 跳过 |
 | `courtId` | String | 否 | 首轮排程场地 |
 | `queueOrder` | Number | 否 | 首轮场地队列顺序 |
-| `resultStatus` | String | 是 | `pending` / `confirmed` / `disputed` |
+| `resultStatus` | String | 是 | `pending` / `submitted` / `confirmed` / `voided` / `disputed`；`voided` 表示未完赛或未赛，不计分且不阻塞赛事结算 |
+| `status` | String | 否 | 兼容比赛状态；未赛/作废行写 `cancelled`，已确认行可写 `completed` |
 | `winner` | Object | 否 | 获胜方对象 |
 | `winnerId` | String | 否 | 获胜者ID |
 | `loserId` | String | 否 | 失败者ID |
 | `score` | String | 否 | 比分，格式如 "6-4, 6-3" |
 | `pointsAwarded` | Object | 否 | 积分发放快照 `{ source: 'match', entries: [{ memberId, points, role }] }`；role: 'winner'/'loser'；BYE 行 entries 为空。Phase 8 起统一此结构 |
+| `voidReason` | String | 否 | `resultStatus='voided'` 时的原因，默认 `未完赛` |
+| `voidedAt` | Date | 否 | `resultStatus='voided'` 的操作时间 |
+| `voidedBy` | String | 否 | 标记未赛/作废的管理员 member._id |
 | `submissions` | Array | 否 | 提交记录列表，结构见下"submissions 子结构"小节 |
 | `confirmedAt` | Date | 否 | 自动/仲裁 confirmed 时间 |
 | `confirmedBy` | String | 否 | 管理员仲裁时填 admin._id；双方一致 auto-confirm 时为 null |

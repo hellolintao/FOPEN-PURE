@@ -7,6 +7,7 @@ function loadPage() {
     showToast: jest.fn(),
     getStorageSync: jest.fn(),
     setStorageSync: jest.fn(),
+    removeStorageSync: jest.fn(),
   }
   global.Page = (def) => { pageDef = def }
   jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
@@ -14,12 +15,13 @@ function loadPage() {
   return pageDef
 }
 
-test('header copy says daily 23:30 update instead of realtime update', () => {
+test('header copy says rank data updates every 2 hours', () => {
   const fs = require('fs')
   const path = require('path')
   const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
 
-  expect(wxml).toContain('每日23:30更新')
+  expect(wxml).toContain('每2小时更新')
+  expect(wxml).not.toContain('每日23:30更新')
   expect(wxml).not.toContain('实时更新')
 })
 
@@ -47,6 +49,38 @@ test('loadRank maps decimal win rate to percent label', async () => {
   })
   expect(ctx.data.rankList).toEqual([{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75, winRatePct: '75%' }])
   expect(ctx.data.loading).toBe(false)
+})
+
+test('loadRank caches populated rank rows for 2 hours', async () => {
+  const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000)
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: { data: { rankList: [{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75 }] } }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  const cacheEntry = wx.setStorageSync.mock.calls[0][1]
+  expect(cacheEntry.expiresAt).toBe(1000 + 2 * 60 * 60 * 1000)
+  nowSpy.mockRestore()
+})
+
+test('loadHero caches weekly star data for 2 hours', async () => {
+  const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(2000)
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: { data: { mode: 'current', star: { memberId: 'A' }, subtitle: 'hot' } }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadHero()
+
+  const cacheEntry = wx.setStorageSync.mock.calls[0][1]
+  expect(cacheEntry.expiresAt).toBe(2000 + 2 * 60 * 60 * 1000)
+  nowSpy.mockRestore()
 })
 
 test('loadRank shows 0% for played matches and dash only for no matches', async () => {
@@ -92,7 +126,7 @@ test('onTabChange changes active tab and reloads rank and hero', () => {
   expect(ctx.loadHero).toHaveBeenCalled()
 })
 
-test('loadRank renders fresh daily page cache before refreshing cloud profile data', async () => {
+test('loadRank renders fresh 2-hour page cache before refreshing cloud profile data', async () => {
   const def = loadPage()
   const { callFunction } = require('../../../utils/cloud')
   wx.getStorageSync.mockReturnValue({

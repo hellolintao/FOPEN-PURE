@@ -150,6 +150,21 @@ test('member bottom button opens submit sheet with dirty local drafts', () => {
   })
 })
 
+test('void match calls cloud action and refreshes rows', async () => {
+  const def = loadPage()
+  wx.cloud.callFunction.mockResolvedValueOnce({ result: { success: true, data: { ok: true } } })
+  const ctx = makeCtx(def, {})
+  ctx.refresh = jest.fn()
+
+  await ctx.onVoidMatch({ detail: { matchId: 'm1' } })
+
+  expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+    name: 'match-results',
+    data: { action: 'voidMatch', matchId: 'm1', reason: '未完赛' },
+  })
+  expect(ctx.refresh).toHaveBeenCalled()
+})
+
 test('sheet close hides sheet and refreshes rows', () => {
   const def = loadPage()
   const ctx = makeCtx(def, {
