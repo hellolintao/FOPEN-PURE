@@ -162,6 +162,23 @@ test('member bottom button opens submit sheet with dirty local drafts', () => {
   })
 })
 
+test('confirmed match with void marker is excluded from scoreable totals', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {})
+  const voided = {
+    ...matchA,
+    resultStatus: 'confirmed',
+    status: 'completed',
+    score: null,
+    winner: null,
+    winnerId: null,
+    pointsAwarded: { source: 'match', entries: [] },
+  }
+
+  expect(ctx.isNoScoreMatch(voided)).toBe(true)
+  expect(ctx.isPlayableMatch(voided)).toBe(false)
+})
+
 test('void match calls cloud action and refreshes rows', async () => {
   const def = loadPage()
   wx.cloud.callFunction.mockResolvedValueOnce({ result: { success: true, data: { ok: true } } })
@@ -175,6 +192,21 @@ test('void match calls cloud action and refreshes rows', async () => {
     data: { action: 'voidMatch', matchId: 'm1', reason: '未完赛' },
   })
   expect(ctx.refresh).toHaveBeenCalled()
+})
+
+test('void match shows deployment hint when cloud action is missing', async () => {
+  const def = loadPage()
+  wx.cloud.callFunction.mockResolvedValueOnce({ result: { errMsg: 'invalid action' } })
+  const ctx = makeCtx(def, {})
+  ctx.refresh = jest.fn()
+
+  await ctx.onVoidMatch({ detail: { matchId: 'result_t1_m1' } })
+
+  expect(wx.showToast).toHaveBeenCalledWith({
+    title: '云函数未更新，请部署 match-results',
+    icon: 'none',
+  })
+  expect(ctx.refresh).not.toHaveBeenCalled()
 })
 
 test('sheet close hides sheet and refreshes rows', () => {

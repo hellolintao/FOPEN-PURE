@@ -221,7 +221,15 @@ Page({
   },
 
   isNoScoreMatch(m) {
-    return !!m && (m.resultStatus === 'voided' || m.status === 'cancelled' || m.status === 'voided')
+    return !!m && (
+      m.noScore === true
+      || m.voided === true
+      || m.resultStatus === 'voided'
+      || m.status === 'cancelled'
+      || m.status === 'voided'
+      || (m.pointsAwarded && m.pointsAwarded.source === 'voided')
+      || isCompatibilityNoScoreMatch(m)
+    )
   },
 
   collectActionableDrafts(draftMapOverride) {
@@ -304,15 +312,24 @@ Page({
       })
       const r = res.result
       if (!r || !r.success) {
-        wx.showToast({ title: (r && r.error && r.error.message) || '标记失败', icon: 'none' })
+        wx.showToast({ title: this.getCloudFailureMessage(r, '标记失败'), icon: 'none' })
         return
       }
       wx.showToast({ title: '已标记未赛', icon: 'success' })
       await this.refresh()
     } catch (err) {
       console.error('[tournament-score] voidMatch', err)
-      wx.showToast({ title: '标记失败', icon: 'none' })
+      wx.showToast({ title: this.getCloudFailureMessage(err, '标记失败'), icon: 'none' })
     }
+  },
+
+  getCloudFailureMessage(result, fallback) {
+    const message = (result && result.error && result.error.message)
+      || (result && result.message)
+      || (result && result.errMsg)
+      || fallback
+    if (/invalid action/i.test(message)) return '云函数未更新，请部署 match-results'
+    return message || fallback
   },
 
   onConfirmAll() {
@@ -506,5 +523,25 @@ function isScheduleBlocked(tournament) {
     tournament &&
     Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
     tournament.scheduleStatus !== 'published'
+  )
+}
+
+function isCompatibilityNoScoreMatch(match) {
+  const entries = match && match.pointsAwarded && match.pointsAwarded.entries
+  return !!(
+    match &&
+    match.player1 &&
+    match.player2 &&
+    match.player1.id &&
+    match.player2.id &&
+    match.resultStatus === 'confirmed' &&
+    match.status === 'completed' &&
+    match.pointsAwarded &&
+    match.pointsAwarded.source === 'match' &&
+    Array.isArray(entries) &&
+    entries.length === 0 &&
+    !match.score &&
+    !(match.winner && match.winner.id) &&
+    !match.winnerId
   )
 }

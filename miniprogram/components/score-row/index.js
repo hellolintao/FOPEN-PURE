@@ -244,9 +244,13 @@ Component({
         content: '该比赛将不计分，也不会再阻塞赛事结算。',
         confirmText: '标记未赛',
         success: ({ confirm }) => {
-          if (confirm) this.triggerEvent('voidmatch', { matchId: finalMatch.sourceMatchId })
+          if (confirm) this.triggerEvent('voidmatch', { matchId: this._resolveActionMatchId(finalMatch) })
         }
       })
+    },
+
+    _resolveActionMatchId(match) {
+      return (match && (match._id || match.sourceMatchId || match.matchId)) || ''
     },
 
     stopBubble() {
@@ -256,7 +260,35 @@ Component({
 })
 
 function isNoScoreMatch(match) {
-  return !!match && (match.resultStatus === 'voided' || match.status === 'cancelled' || match.status === 'voided')
+  return !!match && (
+    match.noScore === true
+    || match.voided === true
+    || match.resultStatus === 'voided'
+    || match.status === 'cancelled'
+    || match.status === 'voided'
+    || (match.pointsAwarded && match.pointsAwarded.source === 'voided')
+    || isCompatibilityNoScoreMatch(match)
+  )
+}
+
+function isCompatibilityNoScoreMatch(match) {
+  const entries = match && match.pointsAwarded && match.pointsAwarded.entries
+  return !!(
+    match &&
+    match.player1 &&
+    match.player2 &&
+    match.player1.id &&
+    match.player2.id &&
+    match.resultStatus === 'confirmed' &&
+    match.status === 'completed' &&
+    match.pointsAwarded &&
+    match.pointsAwarded.source === 'match' &&
+    Array.isArray(entries) &&
+    entries.length === 0 &&
+    !match.score &&
+    !(match.winner && match.winner.id) &&
+    !match.winnerId
+  )
 }
 
 function pickSingleDigit(raw) {

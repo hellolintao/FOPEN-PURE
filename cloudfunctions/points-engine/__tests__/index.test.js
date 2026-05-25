@@ -301,6 +301,69 @@ describe('rankList enhancements', () => {
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
 
+  test('rankList recomputes when stored cache is older than a confirmed match settlement', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'lele', name: '乐乐', avatarUrl: 'lele.png' },
+      { _id: 'opponent', name: '对手', avatarUrl: 'opponent.png' }
+    )
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'lele', name: '乐乐', avatarUrl: 'lele.png', totalPoints: 20, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      ]
+    })
+    cloud.__rows.match_results.push(
+      {
+        _id: 'm_old',
+        seasonId: 'season_2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: new Date('2026-05-20T15:00:00Z'),
+        updateTime: new Date('2026-05-20T15:00:00Z'),
+        createTime: new Date('2026-05-20T14:50:00Z'),
+        pointsAwarded: { entries: [{ memberId: 'lele', points: 20, role: 'winner' }] }
+      },
+      {
+        _id: 'm_new',
+        seasonId: 'season_2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: new Date('2026-05-20T16:05:00Z'),
+        updateTime: new Date('2026-05-20T16:05:00Z'),
+        createTime: new Date('2026-05-20T15:55:00Z'),
+        pointsAwarded: {
+          entries: [
+            { memberId: 'opponent', points: 20, role: 'winner' },
+            { memberId: 'lele', points: 10, role: 'loser' }
+          ]
+        }
+      }
+    )
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    const lele = res.data.rankList.find(row => row._id === 'lele')
+    const stats = await main({ action: 'playerStats', playerId: 'lele', currentSeasonId: 'season_2026' })
+
+    expect(lele).toMatchObject({
+      _id: 'lele',
+      totalPoints: 30,
+      winCount: 1,
+      lossCount: 1,
+      winRate: 0.5
+    })
+    expect(lele.winCount).toBe(stats.data.stats.singles.winCount)
+    expect(lele.lossCount).toBe(stats.data.stats.singles.lossCount)
+    expect(lele.winRate).toBe(stats.data.stats.singles.winRate)
+    expect(res.data.cachedAt).toBeUndefined()
+  })
+
   test('rankList recomputes live rows when stored scheduled cache is empty', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })

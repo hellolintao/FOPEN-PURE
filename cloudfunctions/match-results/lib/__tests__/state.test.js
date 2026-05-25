@@ -5,9 +5,11 @@ const scoreRule = require('../score-rule')
 function makeDb(seed) {
   const collections = JSON.parse(JSON.stringify(seed))
   const createdCollections = []
+  const REMOVE_FIELD = Symbol('remove')
+  const failedUpdates = new Map()
   // a very simple in-memory db emulator
   // Supports: doc(id).get/update/set/remove, where({...}).get/remove, where({...}).orderBy/limit ignored
-  return {
+  const database = {
     serverDate: () => new Date(),
     async createCollection(name) {
       createdCollections.push(name)
@@ -15,12 +17,19 @@ function makeDb(seed) {
     },
     collection(name) {
       const rows = collections[name] = collections[name] || []
-      return _coll(rows)
+      return _coll(rows, name)
     },
     __all: () => collections,
-    __created: () => createdCollections
+    __created: () => createdCollections,
+    __failUpdate: (collectionName, id, error) => {
+      failedUpdates.set(`${collectionName}/${id}`, error)
+    }
   }
-  function _coll(rows) {
+  database.__enableRemoveCommand = () => {
+    database.command = { remove: () => REMOVE_FIELD }
+  }
+  return database
+  function _coll(rows, collectionName) {
     return {
       doc(id) {
         return {
@@ -32,7 +41,15 @@ function makeDb(seed) {
           async update({ data }) {
             const r = rows.find(x => x._id === id)
             if (!r) throw new Error('not found: ' + id)
-            Object.assign(r, data)
+            const failed = failedUpdates.get(`${collectionName}/${id}`)
+            if (typeof failed === 'function') {
+              const error = failed(data)
+              if (error) throw error
+            } else if (failed) throw failed
+            for (const [key, value] of Object.entries(data || {})) {
+              if (value === REMOVE_FIELD) delete r[key]
+              else r[key] = value
+            }
           },
           async set({ data }) {
             if (Object.prototype.hasOwnProperty.call(data, '_id')) throw new Error('cannot update _id')
@@ -629,6 +646,8 @@ describe('voidMatch', () => {
       voidedBy: 'admin1'
     })
     expect(voided.score).toBeNull()
+    expect(voided.winner).toBeNull()
+    expect(voided.winnerId).toBeNull()
     expect(voided.pointsAwarded).toEqual({ source: 'voided', entries: [] })
     expect(db.__all().tournaments[0].status).toBe('completed')
     expect(db.__all().tournaments[0].completedAt).toBeDefined()
@@ -640,6 +659,182 @@ describe('voidMatch', () => {
 
     await expect(svc.voidMatch({ matchId: 'r1m1', reason: '未完赛', admin: { _id: 'A', isAdmin: false } }))
       .rejects.toThrow('UNAUTHORIZED')
+  })
+
+  test('marks stale scored row voided and clears stale score fields', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'ongoing'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [{
+      _id: 'result_TR_m1',
+      tournamentId: 'TR',
+      sourceMatchId: 'm1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'A' },
+      player2: { id: 'B' },
+      playerIds: ['A', 'B'],
+      resultStatus: 'submitted',
+      status: 'ongoing',
+      score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      winner: { id: 'A' },
+      winnerId: 'A',
+      loserId: 'B',
+      confirmedBy: 'admin0',
+      confirmedAt: new Date('2026-05-01T00:00:00.000Z'),
+      tournamentType: 'singles',
+      seasonId: 'S1',
+      pointsAwarded: { source: 'match', entries: [{ memberId: 'A', points: 20 }] }
+    }]
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.voidMatch({ matchId: 'result_TR_m1', reason: '未完赛', admin: { _id: 'admin1', isAdmin: true } })
+
+    const voided = db.__all().match_results[0]
+    expect(voided).toMatchObject({
+      resultStatus: 'voided',
+      status: 'cancelled',
+      voidReason: '未完赛',
+      voidedBy: 'admin1'
+    })
+    expect(voided.score).toBeNull()
+    expect(voided.winner).toBeNull()
+    expect(voided.winnerId).toBeNull()
+    expect(voided.loserId).toBeNull()
+    expect(voided.confirmedBy).toBeNull()
+    expect(voided.confirmedAt).toBeNull()
+    expect(voided.pointsAwarded).toEqual({ source: 'voided', entries: [] })
+  })
+
+  test('voidMatch falls back to marker collection when match_results updates are rejected', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'ongoing'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [{
+      _id: 'result_TR_m1',
+      tournamentId: 'TR',
+      sourceMatchId: 'm1',
+      matchKind: 'regularRound',
+      round: 1,
+      position: 1,
+      player1: { id: 'A' },
+      player2: { id: 'B' },
+      playerIds: ['A', 'B'],
+      resultStatus: 'pending',
+      tournamentType: 'singles',
+      seasonId: 'S1'
+    }]
+    const db = makeDb(seed)
+    db.__failUpdate('match_results', 'result_TR_m1', new Error('document.update:fail -502001 database request fail'))
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.voidMatch({ matchId: 'result_TR_m1', reason: '未完赛', admin: { _id: 'admin1', isAdmin: true } })
+
+    expect(db.__created()).toContain('match_result_voids')
+    expect(db.__all().match_result_voids).toEqual([
+      expect.objectContaining({
+        _id: 'result_TR_m1',
+        resultId: 'result_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm1',
+        reason: '未完赛',
+        markedBy: 'admin1'
+      })
+    ])
+    expect(db.__all().tournaments[0].status).toBe('completed')
+  })
+
+  test('falls back to schema-compatible confirmed no-score marker when database rejects new voided fields', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments[0] = {
+      ...seed.tournaments[0],
+      _id: 'TR',
+      type: 'singles',
+      format: 'regular',
+      status: 'ongoing'
+    }
+    seed.tournament_brackets = []
+    seed.match_results = [
+      {
+        _id: 'result_TR_m1',
+        tournamentId: 'TR',
+        sourceMatchId: 'm1',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 1,
+        player1: { id: 'A' },
+        player2: { id: 'B' },
+        playerIds: ['A', 'B'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      },
+      {
+        _id: 'result_TR_m2',
+        tournamentId: 'TR',
+        sourceMatchId: 'm2',
+        matchKind: 'regularRound',
+        round: 1,
+        position: 2,
+        player1: { id: 'C' },
+        player2: { id: 'D' },
+        playerIds: ['C', 'D'],
+        resultStatus: 'pending',
+        tournamentType: 'singles',
+        seasonId: 'S1',
+        pointsAwarded: null
+      }
+    ]
+    const db = makeDb(seed)
+    let updateAttempts = 0
+    db.__failUpdate('match_results', 'result_TR_m2', data => {
+      updateAttempts += 1
+      if (
+        data &&
+        (
+          data.resultStatus === 'voided' ||
+          data.status === 'cancelled' ||
+          data.voidReason ||
+          (data.pointsAwarded && data.pointsAwarded.source === 'voided')
+        )
+      ) return new Error('document.update:fail -502001 database request fail')
+      return null
+    })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'm1', score: { sets: [{ a: 4, b: 2 }], tiebreak: null }, submitter: { _id: 'admin1', isAdmin: true } })
+    await svc.voidMatch({ matchId: 'm2', reason: '未完赛', admin: { _id: 'admin1', isAdmin: true } })
+
+    const voided = db.__all().match_results.find(x => x._id === 'result_TR_m2')
+    expect(updateAttempts).toBe(2)
+    expect(voided).toMatchObject({
+      resultStatus: 'confirmed',
+      status: 'completed',
+      score: null,
+      winner: null,
+      winnerId: null,
+      loserId: null,
+      confirmedBy: 'admin1',
+      pointsAwarded: { source: 'match', entries: [] }
+    })
+    expect(voided.voidReason).toBeUndefined()
+    expect(voided.voidedBy).toBeUndefined()
+    expect(db.__all().tournaments[0].status).toBe('completed')
   })
 })
 

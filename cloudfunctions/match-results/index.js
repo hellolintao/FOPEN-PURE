@@ -12,6 +12,7 @@ const { createMatchStateService } = require('./lib/state')
 const awardLib = require('./lib/award')
 const scoreRule = require('./lib/score-rule')
 const stateSvc = createMatchStateService({ db, awardLib, scoreRule })
+const VOID_MARKERS_COLLECTION = 'match_result_voids'
 
 function resolveMatchType(match, tournamentOrType) {
   const fallback = typeof tournamentOrType === 'string'
@@ -480,7 +481,8 @@ function buildQueryCtx(submitter) {
       queryMatchResults: async ({ resultStatus, tournamentId, limit }) => {
         const where = { resultStatus }
         if (tournamentId) where.tournamentId = tournamentId
-        return (await db.collection('match_results').where(where).orderBy('updateTime', 'desc').limit(limit).get()).data
+        const rows = (await db.collection('match_results').where(where).orderBy('updateTime', 'desc').limit(limit).get()).data
+        return excludeVoidMarkedRows(rows)
       },
       countMatchResults: async ({ resultStatus, tournamentId }) => {
         const where = { resultStatus }
@@ -500,20 +502,74 @@ function buildQueryCtx(submitter) {
         if (!ids.length) return []
         return (await db.collection('members').where({ _id: _.in(ids) }).get()).data
       },
-      pagedFetchSubmitted: async () => pagedFetchSubmitted(),
-      listByTournament: async (tournamentId) => (await collection
-        .where({ tournamentId })
-        .orderBy('round', 'asc')
-        .orderBy('position', 'asc')
-        .orderBy('createTime', 'asc')
-        .limit(500)
-        .get()).data,
-      listByPlayerNotConfirmed: async (memberId) => (await collection.where({
-        playerIds: _.in([memberId]),
-        resultStatus: _.neq('confirmed'),
-      }).orderBy('round', 'asc').limit(200).get()).data,
+      pagedFetchSubmitted: async () => excludeVoidMarkedRows(await pagedFetchSubmitted()),
+      listByTournament: async (tournamentId) => {
+        const rows = (await collection
+          .where({ tournamentId })
+          .orderBy('round', 'asc')
+          .orderBy('position', 'asc')
+          .orderBy('createTime', 'asc')
+          .limit(500)
+          .get()).data
+        return applyVoidMarkersToRows(rows)
+      },
+      listByPlayerNotConfirmed: async (memberId) => {
+        const rows = (await collection.where({
+          playerIds: _.in([memberId]),
+          resultStatus: _.neq('confirmed'),
+        }).orderBy('round', 'asc').limit(200).get()).data
+        return excludeVoidMarkedRows(rows)
+      },
     },
   }
+}
+
+async function applyVoidMarkersToRows(rows) {
+  const list = rows || []
+  if (!list.length) return list
+  const markers = await listVoidMarkersForRows(list)
+  if (!markers.length) return list
+  const byResultId = new Map()
+  const bySourceMatchId = new Map()
+  for (const marker of markers) {
+    if (marker.resultId) byResultId.set(marker.resultId, marker)
+    if (marker.sourceMatchId) bySourceMatchId.set(marker.sourceMatchId, marker)
+  }
+  return list.map(row => {
+    const marker = byResultId.get(row._id) || bySourceMatchId.get(row.sourceMatchId || row.matchId)
+    if (!marker) return row
+    return {
+      ...row,
+      noScore: true,
+      voided: true,
+      voidReason: marker.reason || '未完赛',
+      voidedBy: marker.markedBy || '',
+      voidedAt: marker.markedAt || null
+    }
+  })
+}
+
+async function excludeVoidMarkedRows(rows) {
+  const marked = await applyVoidMarkersToRows(rows)
+  return marked.filter(row => !(row && row.noScore === true))
+}
+
+async function listVoidMarkersForRows(rows) {
+  const tournamentIds = [...new Set((rows || []).map(row => row && row.tournamentId).filter(Boolean))]
+  if (!tournamentIds.length) return []
+  try {
+    const where = tournamentIds.length === 1 ? { tournamentId: tournamentIds[0] } : { tournamentId: _.in(tournamentIds) }
+    const res = await db.collection(VOID_MARKERS_COLLECTION).where(where).limit(500).get()
+    return res.data || []
+  } catch (e) {
+    if (isCollectionMissing(e)) return []
+    throw e
+  }
+}
+
+function isCollectionMissing(e) {
+  const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+  return (e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)
 }
 
 function buildSubmitCtx(submitter) {

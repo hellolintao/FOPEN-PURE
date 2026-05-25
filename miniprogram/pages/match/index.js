@@ -218,5 +218,33 @@ function buildResultSummary(rows) {
 	}
 }
 function isNoScoreResult(row) {
-	return !!row && (row.resultStatus === 'voided' || row.status === 'cancelled' || row.status === 'voided')
+	return !!row && (
+		row.noScore === true
+		|| row.voided === true
+		|| row.resultStatus === 'voided'
+		|| row.status === 'cancelled'
+		|| row.status === 'voided'
+		|| (row.pointsAwarded && row.pointsAwarded.source === 'voided')
+		|| isCompatibilityNoScoreResult(row)
+	)
+}
+
+function isCompatibilityNoScoreResult(row) {
+	const entries = row && row.pointsAwarded && row.pointsAwarded.entries
+	return !!(
+		row &&
+		row.player1 &&
+		row.player2 &&
+		row.player1.id &&
+		row.player2.id &&
+		row.resultStatus === 'confirmed' &&
+		row.status === 'completed' &&
+		row.pointsAwarded &&
+		row.pointsAwarded.source === 'match' &&
+		Array.isArray(entries) &&
+		entries.length === 0 &&
+		!row.score &&
+		!(row.winner && row.winner.id) &&
+		!row.winnerId
+	)
 }

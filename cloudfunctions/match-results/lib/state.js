@@ -1,4 +1,5 @@
 const { isActiveScoreRow } = require('./active-row')
+const VOID_MARKERS_COLLECTION = 'match_result_voids'
 
 function createMatchStateService({ db, awardLib, scoreRule }) {
   const SCHEDULE_NOT_PUBLISHED_MESSAGE = '赛程发布后才能录入成绩'
@@ -37,6 +38,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
       await db.collection('match_results').doc(result._id).update({
         data: { score, resultStatus: 'submitted' }
       })
+      await removeVoidMarker(result._id)
       await markTournamentOngoing(result.tournamentId)
     }
   }
@@ -95,23 +97,51 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     if (!hasPlayableSides(result)) throw new Error('INVALID_STATE')
 
     const now = new Date()
-    await db.collection('match_results').doc(result._id).update({
-      data: {
-        score: null,
+    const canonicalVoidMarker = {
+      pointsAwarded: { source: 'voided', entries: [] },
+      voidReason: reason || '未完赛',
+      voidedBy: admin._id,
+      voidedAt: now,
+      updateTime: now
+    }
+    let voidStatus = 'cancelled'
+    let voidResultStatus = 'voided'
+    try {
+      await updateDoc('match_results', result._id, {
         resultStatus: 'voided',
         status: 'cancelled',
+        score: null,
         winner: null,
         winnerId: null,
         loserId: null,
         confirmedBy: null,
         confirmedAt: null,
-        pointsAwarded: { source: 'voided', entries: [] },
-        voidReason: reason || '未完赛',
-        voidedBy: admin._id,
-        voidedAt: now,
-        updateTime: now
+        ...canonicalVoidMarker
+      }, 'voidMatch update')
+    } catch (e) {
+      if (!isDatabaseRequestFailure(e)) throw e
+      voidStatus = 'completed'
+      voidResultStatus = 'confirmed'
+      try {
+        await updateDoc('match_results', result._id, {
+          resultStatus: 'confirmed',
+          status: 'completed',
+          score: null,
+          winner: null,
+          winnerId: null,
+          loserId: null,
+          confirmedBy: admin._id,
+          confirmedAt: now,
+          pointsAwarded: { source: 'match', entries: [] },
+          updateTime: now
+        }, 'voidMatch compatibility update')
+      } catch (compatError) {
+        if (!isDatabaseRequestFailure(compatError)) throw compatError
+        voidStatus = result.status || 'pending'
+        voidResultStatus = result.resultStatus || 'pending'
+        await upsertVoidMarker(result, reason, admin, now)
       }
-    })
+    }
 
     if (result.matchKind === 'bracket') {
       const currentDocId = bracketDocId(result.tournamentId, result.round || 1)
@@ -123,10 +153,10 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
           curUpdated[curIdx] = {
             ...curUpdated[curIdx],
             winner: null,
-            status: 'cancelled',
-            resultStatus: 'voided'
+            status: voidStatus,
+            resultStatus: voidResultStatus
           }
-          await db.collection('tournament_brackets').doc(currentDocId).update({ data: { matches: curUpdated } })
+          await updateDoc('tournament_brackets', currentDocId, { matches: curUpdated }, 'voidMatch bracket update').catch(() => null)
         }
       }
     }
@@ -213,6 +243,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
         voidedAt: null
       }
     })
+    await removeVoidMarker(result._id)
     // 同步当前轮 bracket 上的 winner（供 placement 判定 final 用）
     if (result.matchKind === 'bracket') {
       const currentDocId = bracketDocId(result.tournamentId, result.round || 1)
@@ -270,14 +301,52 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   async function removeResultFields(resultId, fields) {
-    const command = db && db.command
-    if (!command || typeof command.remove !== 'function') return
+    if (!hasRemoveCommand()) return
+    const command = db.command
     const data = {}
     for (const field of fields || []) data[field] = command.remove()
     if (Object.keys(data).length === 0) return
-    await db.collection('match_results').doc(resultId).update({
-      data
-    })
+    await updateDoc('match_results', resultId, data, 'match result field cleanup')
+  }
+
+  function hasRemoveCommand() {
+    const command = db && db.command
+    return !!(command && typeof command.remove === 'function')
+  }
+
+  async function updateDoc(collectionName, docId, data, context) {
+    try {
+      await db.collection(collectionName).doc(docId).update({ data: stripUndefined(data) })
+    } catch (e) {
+      const message = (e && (e.message || e.errMsg || e.code)) || String(e)
+      throw new Error(`${context || 'document update'} failed: ${collectionName}/${docId}: ${message}`)
+    }
+  }
+
+  async function setDoc(collectionName, docId, data, context) {
+    try {
+      await db.collection(collectionName).doc(docId).set({ data: stripUndefined(data) })
+    } catch (e) {
+      const message = (e && (e.message || e.errMsg || e.code)) || String(e)
+      throw new Error(`${context || 'document set'} failed: ${collectionName}/${docId}: ${message}`)
+    }
+  }
+
+  function stripUndefined(value) {
+    if (Array.isArray(value)) return value.map(stripUndefined)
+    if (isPlainObject(value)) {
+      return Object.entries(value).reduce((out, [key, item]) => {
+        if (typeof item !== 'undefined') out[key] = stripUndefined(item)
+        return out
+      }, {})
+    }
+    return value
+  }
+
+  function isPlainObject(value) {
+    if (!value || typeof value !== 'object' || value instanceof Date) return false
+    const proto = Object.getPrototypeOf(value)
+    return proto === Object.prototype || proto === null
   }
 
   async function maybeAwardPlacement(tournamentId) {
@@ -290,7 +359,8 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const finalRound = awardLib.finalRoundOf(slots)
     const final = brackets.find(b => b.round === finalRound)
     if (!final || !final.matches[0] || !final.matches[0].winner) return { skipped: true, reason: 'missing_final_winner', finalRound }
-    const all = ((await db.collection('match_results').where({ tournamentId, matchKind: 'bracket' }).get()).data || []).filter(isActiveScoreRow)
+    const allRows = ((await db.collection('match_results').where({ tournamentId, matchKind: 'bracket' }).get()).data || []).filter(isActiveScoreRow)
+    const all = await applyVoidMarkers(tournamentId, allRows)
     if (all.some(r => isScoreableResult(r) && r.resultStatus !== 'confirmed')) return { skipped: true, reason: 'not_all_confirmed', total: all.length }
 
     let entries = awardLib.buildPlacementEntries(brackets, t.pointsRules.placement, t.type)
@@ -313,15 +383,14 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   async function refreshTournamentSettlementStatus(tournamentId) {
-    const rows = (await db.collection('match_results').where({ tournamentId }).get()).data || []
+    const rawRows = (await db.collection('match_results').where({ tournamentId }).get()).data || []
+    const rows = await applyVoidMarkers(tournamentId, rawRows)
     const playable = rows.filter(hasPlayableSides)
     if (playable.length === 0) return { skipped: true, reason: 'no_playable_matches' }
     const allTerminal = playable.every(r => r.resultStatus === 'confirmed' || isNoScoreResult(r))
     if (allTerminal) {
       const now = new Date()
-      await db.collection('tournaments').doc(tournamentId).update({
-        data: { status: 'completed', completedAt: now, updateTime: now }
-      })
+      await updateDoc('tournaments', tournamentId, { status: 'completed', completedAt: now, updateTime: now }, 'tournament settlement update')
       return { skipped: false, status: 'completed' }
     }
     const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
@@ -333,9 +402,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const t = await getTournament(tournamentId)
     if (!t || ['draft', 'cancelled'].includes(t.status)) return
     const now = new Date()
-    await db.collection('tournaments').doc(tournamentId).update({
-      data: { status: 'ongoing', completedAt: null, updateTime: now }
-    })
+    await updateDoc('tournaments', tournamentId, { status: 'ongoing', completedAt: null, updateTime: now }, 'tournament ongoing update')
   }
 
   function hasPlayableSides(row) {
@@ -344,11 +411,95 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   function isNoScoreResult(row) {
-    return !!row && (row.resultStatus === 'voided' || row.status === 'cancelled' || row.status === 'voided')
+    return !!row && (
+      row.noScore === true
+      || row.voided === true
+      || row.resultStatus === 'voided'
+      || row.status === 'cancelled'
+      || row.status === 'voided'
+      || (row.pointsAwarded && row.pointsAwarded.source === 'voided')
+      || isCompatibilityNoScoreResult(row)
+    )
+  }
+
+  function isCompatibilityNoScoreResult(row) {
+    const entries = row && row.pointsAwarded && row.pointsAwarded.entries
+    return !!(
+      hasPlayableSides(row)
+      && row.resultStatus === 'confirmed'
+      && row.status === 'completed'
+      && row.pointsAwarded
+      && row.pointsAwarded.source === 'match'
+      && Array.isArray(entries)
+      && entries.length === 0
+      && !row.score
+      && !(row.winner && row.winner.id)
+      && !row.winnerId
+    )
   }
 
   function isScoreableResult(row) {
     return hasPlayableSides(row) && !isNoScoreResult(row)
+  }
+
+  async function upsertVoidMarker(result, reason, admin, now) {
+    await ensureCollection(VOID_MARKERS_COLLECTION)
+    await setDoc(VOID_MARKERS_COLLECTION, result._id, {
+      resultId: result._id,
+      tournamentId: result.tournamentId,
+      sourceMatchId: result.sourceMatchId || result.matchId || '',
+      matchKind: result.matchKind || '',
+      round: result.round || null,
+      position: result.position || null,
+      reason: reason || '未完赛',
+      markedBy: admin._id,
+      markedAt: now,
+      updateTime: now
+    }, 'voidMatch marker upsert')
+  }
+
+  async function removeVoidMarker(resultId) {
+    if (!resultId) return
+    try {
+      await db.collection(VOID_MARKERS_COLLECTION).doc(resultId).remove()
+    } catch (e) {
+      if (isCollectionMissing(e) || isDocumentMissing(e)) return
+      throw e
+    }
+  }
+
+  async function applyVoidMarkers(tournamentId, rows) {
+    const markers = await listVoidMarkersByTournament(tournamentId)
+    if (!markers.length) return rows || []
+    const byResultId = new Map()
+    const bySourceMatchId = new Map()
+    for (const marker of markers) {
+      if (marker.resultId) byResultId.set(marker.resultId, marker)
+      if (marker.sourceMatchId) bySourceMatchId.set(marker.sourceMatchId, marker)
+    }
+    return (rows || []).map(row => {
+      const marker = byResultId.get(row._id) || bySourceMatchId.get(row.sourceMatchId || row.matchId)
+      if (!marker) return row
+      return {
+        ...row,
+        noScore: true,
+        voided: true,
+        voidReason: marker.reason || '未完赛',
+        voidedBy: marker.markedBy || '',
+        voidedAt: marker.markedAt || null
+      }
+    })
+  }
+
+  async function listVoidMarkersByTournament(tournamentId) {
+    if (!tournamentId) return []
+    try {
+      const res = await db.collection(VOID_MARKERS_COLLECTION).where({ tournamentId }).get()
+      return res.data || []
+    } catch (e) {
+      if (isCollectionMissing(e)) return []
+      throw e
+    }
   }
 
 
@@ -514,6 +665,16 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   function isCollectionMissing(e) {
     const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
     return (e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)
+  }
+
+  function isDocumentMissing(e) {
+    const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+    return /document not exist|not found/i.test(text)
+  }
+
+  function isDatabaseRequestFailure(e) {
+    const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+    return (e && e.errCode === -502001) || /-502001|database request fail/i.test(text)
   }
 
   return {

@@ -60,7 +60,7 @@ async function recompute({ tournamentId }) {
 async function rankListCompat({ type = 'singles', currentSeasonId }) {
   if (!currentSeasonId) return { success: true, data: { rankList: [] } }
   const cached = await fetchRankCache({ seasonId: currentSeasonId, type })
-  if (cached && cached.rankList.length > 0) {
+  if (cached && cached.rankList.length > 0 && await isRankCacheCurrent({ cached, seasonId: currentSeasonId, type })) {
     return {
       success: true,
       data: {
@@ -70,7 +70,11 @@ async function rankListCompat({ type = 'singles', currentSeasonId }) {
       }
     }
   }
-  return { success: true, data: { rankList: await buildRankList({ seasonId: currentSeasonId, type }) } }
+  const rankList = await buildRankList({ seasonId: currentSeasonId, type })
+  if (rankList.length > 0) {
+    await persistRankCache({ seasonId: currentSeasonId, type, rankList })
+  }
+  return { success: true, data: { rankList } }
 }
 
 async function buildRankList({ seasonId, type = 'singles' }) {
@@ -128,6 +132,70 @@ async function refreshRankCache({ seasonId, now } = {}) {
     refreshedTypes.push(type)
   }
   return { success: true, data: { seasonId: resolvedSeasonId, cacheDate, refreshedTypes } }
+}
+
+async function persistRankCache({ seasonId, type, rankList }) {
+  const computedAt = new Date()
+  try {
+    await upsertRankCache({
+      _id: rankCacheId(seasonId, type),
+      seasonId,
+      type,
+      rankList,
+      cacheDate: toBeijingDateKey(computedAt),
+      computedAt,
+      updateTime: computedAt
+    })
+  } catch (err) {
+    console.error('[points-engine] persistRankCache failed', err)
+  }
+}
+
+async function isRankCacheCurrent({ cached, seasonId, type }) {
+  const cachedAt = toTime(cached && (cached.computedAt || cached.updateTime))
+  if (!Number.isFinite(cachedAt)) return false
+  const latestInputAt = await fetchLatestRankInputAt({ seasonId, type })
+  return latestInputAt <= cachedAt
+}
+
+async function fetchLatestRankInputAt({ seasonId, type }) {
+  const [latestMatchAt, latestPlacementAt, latestBaselineAt] = await Promise.all([
+    fetchLatestCollectionTimestamp('match_results', { seasonId, resultStatus: 'confirmed', tournamentType: type }, ['updateTime', 'confirmedAt', 'createTime']),
+    fetchLatestCollectionTimestamp('tournament_points', { seasonId, tournamentType: type }, ['updateTime', 'awardedAt', 'createTime']),
+    fetchLatestCollectionTimestamp('baseline_standings', { seasonId, type }, ['updateTime', 'createTime'])
+  ])
+  return Math.max(latestMatchAt, latestPlacementAt, latestBaselineAt, 0)
+}
+
+async function fetchLatestCollectionTimestamp(collectionName, filter, fields) {
+  try {
+    let latest = 0
+    const pageSize = 100
+    for (let skip = 0; skip < 5000; skip += pageSize) {
+      const page = (await db.collection(collectionName)
+        .where(filter)
+        .skip(skip)
+        .limit(pageSize)
+        .get()).data || []
+      latest = Math.max(latest, ...page.map(row => latestTimestampFrom(row, fields)))
+      if (page.length < pageSize) break
+    }
+    return latest
+  } catch (err) {
+    if (isMissingCollectionError(err)) return 0
+    throw err
+  }
+}
+
+function latestTimestampFrom(row, fields) {
+  return Math.max(...(fields || []).map(field => toTime(row && row[field])).filter(Number.isFinite), 0)
+}
+
+function toTime(value) {
+  if (!value) return NaN
+  if (value instanceof Date) return value.getTime()
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : NaN
 }
 
 async function fetchRankCache({ seasonId, type }) {
