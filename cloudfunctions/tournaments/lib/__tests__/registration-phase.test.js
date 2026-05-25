@@ -1,15 +1,80 @@
 const mockCloudCallFunction = jest.fn()
 const mockBracketGet = jest.fn()
+const mockCollections = {
+  tournaments: new Map(),
+  tournament_brackets: new Map(),
+  match_results: new Map()
+}
 const mockDb = {
   command: {
     set: value => value,
-    or: conditions => ({ $or: conditions })
+    or: conditions => ({ $or: conditions }),
+    gt: value => ({ $gt: value }),
+    in: values => ({ $in: values })
   },
   serverDate: jest.fn(() => 'SERVER_DATE'),
   collection: jest.fn((name) => {
     if (name === 'tournament_brackets') {
       return {
-        doc: jest.fn(() => ({ get: mockBracketGet }))
+        doc: jest.fn((id) => ({
+          get: mockBracketGet
+        })),
+        where: jest.fn((query) => ({
+          get: jest.fn(async () => ({
+            data: Array.from(mockCollections.tournament_brackets.values()).filter(row => {
+              if (query && query.tournamentId && row.tournamentId !== query.tournamentId) return false
+              if (query && query.round && query.round.$gt !== undefined && !(row.round > query.round.$gt)) return false
+              return true
+            })
+          }))
+        }))
+      }
+    }
+    if (name === 'match_results') {
+      return {
+        doc: jest.fn((id) => ({
+          get: jest.fn(async () => {
+            const row = mockCollections.match_results.get(id)
+            return row ? { data: row } : null
+          }),
+          update: jest.fn(async ({ data }) => {
+            const current = mockCollections.match_results.get(id) || { _id: id }
+            mockCollections.match_results.set(id, { ...current, ...data })
+          }),
+          remove: jest.fn(async () => {
+            mockCollections.match_results.delete(id)
+          })
+        })),
+        add: jest.fn(async ({ data }) => {
+          mockCollections.match_results.set(data._id, data)
+          return { _id: data._id }
+        }),
+        where: jest.fn((query) => ({
+          get: jest.fn(async () => ({
+            data: Array.from(mockCollections.match_results.values()).filter(row => {
+              if (query && query.tournamentId && row.tournamentId !== query.tournamentId) return false
+              if (query && query.matchKind && query.matchKind.$in && !query.matchKind.$in.includes(row.matchKind)) return false
+              return true
+            })
+          }))
+        }))
+      }
+    }
+    if (name === 'tournaments') {
+      return {
+        doc: jest.fn((id) => ({
+          get: jest.fn(async () => {
+            const row = mockCollections.tournaments.get(id)
+            return row ? { data: row } : null
+          }),
+          update: jest.fn(async ({ data }) => {
+            const current = mockCollections.tournaments.get(id) || { _id: id }
+            mockCollections.tournaments.set(id, { ...current, ...data })
+          })
+        })),
+        where: jest.fn(() => ({
+          count: jest.fn().mockResolvedValue({ total: 0 })
+        }))
       }
     }
     return {
@@ -184,46 +249,73 @@ describe('buildRegistrationPhaseCtx bulk upsert bridge', () => {
   beforeEach(() => {
     mockCloudCallFunction.mockReset()
     mockBracketGet.mockReset()
+    Object.values(mockCollections).forEach(collection => collection.clear())
   })
 
-  test('passes schedulePlan.matches and queues to match-results without schedulePlan', async () => {
+  test('generates score rows inside tournaments without losing caller identity to match-results', async () => {
+    const matches = [{
+      matchId: 'm1',
+      round: 1,
+      position: 1,
+      player1: { id: 'memberA', name: 'A' },
+      player2: { id: 'memberB', name: 'B' }
+    }]
+    const queues = [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] }]
+    const ctx = __test__.buildRegistrationPhaseCtx({ _id: 'adminA', openid: 'openA', admin: true })
+    mockCollections.tournaments.set('tournament_1', { _id: 'tournament_1', seasonId: 'season_2026', type: 'singles' })
+    mockCloudCallFunction.mockResolvedValue({
+      result: { success: false, error: { code: 'UNAUTHORIZED', message: '用户未注册' } }
+    })
+
+    const res = await ctx.db.bulkUpsertScheduledMatches('tournament_1', { matches, queues })
+
+    expect(res).toEqual({ success: true, data: { count: 1 } })
+    expect(mockCloudCallFunction).not.toHaveBeenCalled()
+    expect(mockCollections.match_results.get('result_1_m1')).toMatchObject({
+      tournamentId: 'tournament_1',
+      seasonId: 'season_2026',
+      playerIds: ['memberA', 'memberB'],
+      courtId: 'c1',
+      queueOrder: 0,
+      resultStatus: 'pending'
+    })
+  })
+
+  test('passes schedulePlan.matches and queues to local score-row generation', async () => {
     const matches = [{ matchId: 'm1', round: 1, position: 1 }]
     const queues = [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 1 }] }]
     const ctx = __test__.buildRegistrationPhaseCtx({ _id: 'memberA', openid: 'openA', admin: true })
+    mockCollections.tournaments.set('tournament_1', { _id: 'tournament_1', seasonId: 'season_2026', type: 'singles' })
     mockCloudCallFunction.mockResolvedValue({ result: { success: true, data: { count: 1 } } })
 
     const res = await ctx.db.bulkUpsertScheduledMatches('tournament_1', { matches, queues })
 
     expect(res).toEqual({ success: true, data: { count: 1 } })
-    expect(mockCloudCallFunction).toHaveBeenCalledWith({
-      name: 'match-results',
-      data: {
-        action: 'bulkUpsertScheduledMatches',
-        tournamentId: 'tournament_1',
-        matches,
-        queues
-      }
+    expect(mockCloudCallFunction).not.toHaveBeenCalled()
+    expect(mockCollections.match_results.get('result_1_m1')).toMatchObject({
+      tournamentId: 'tournament_1',
+      sourceMatchId: 'm1',
+      queueOrder: 1
     })
-    expect(mockCloudCallFunction.mock.calls[0][0].data).not.toHaveProperty('schedulePlan')
   })
 
   test('loads round one bracket matches when current schedulePlan only stores queues', async () => {
     const matches = [{ matchId: 'm1', round: 1, position: 1 }]
     const queues = [{ courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 1 }] }]
     const ctx = __test__.buildRegistrationPhaseCtx({ _id: 'memberA', openid: 'openA', admin: true })
+    mockCollections.tournaments.set('tournament_1', { _id: 'tournament_1', seasonId: 'season_2026', type: 'singles' })
     mockBracketGet.mockResolvedValue({ data: { matches } })
     mockCloudCallFunction.mockResolvedValue({ result: { success: true, data: { count: 1 } } })
 
     const res = await ctx.db.bulkUpsertScheduledMatches('tournament_1', { queues })
 
     expect(res).toEqual({ success: true, data: { count: 1 } })
-    expect(mockCloudCallFunction.mock.calls[0][0].data).toMatchObject({
-      action: 'bulkUpsertScheduledMatches',
+    expect(mockCloudCallFunction).not.toHaveBeenCalled()
+    expect(mockCollections.match_results.get('result_1_m1')).toMatchObject({
       tournamentId: 'tournament_1',
-      matches,
-      queues
+      sourceMatchId: 'm1',
+      queueOrder: 1
     })
-    expect(mockCloudCallFunction.mock.calls[0][0].data).not.toHaveProperty('schedulePlan')
   })
 
   test('returns precise error before match-results when no matches can be found', async () => {

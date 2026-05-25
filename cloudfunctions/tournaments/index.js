@@ -2,10 +2,12 @@
 const cloud = require('wx-server-sdk')
 const { validateTournament } = require('./lib/validate')
 const { isActiveRegistration } = require('../_shared/tournament-phase')
+const { createScheduledMatchResultService } = require('../_shared/scheduled-match-results')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournaments')
+const scheduledMatchResults = createScheduledMatchResultService({ db, command: _ })
 const REGISTRATION_QUERY_CHUNK_SIZE = 20
 const REGISTRATION_PAGE_SIZE = 1000
 const REGISTRATION_MAX_PAGES_PER_CHUNK = 5
@@ -388,16 +390,11 @@ function buildRegistrationPhaseCtx(member) {
       bulkUpsertScheduledMatches: async (tournamentId, schedulePlan) => {
         const payload = await buildBulkUpsertSchedulePayload(tournamentId, schedulePlan)
         if (!payload.success) return payload
-        const r = await cloud.callFunction({
-          name: 'match-results',
-          data: {
-            action: 'bulkUpsertScheduledMatches',
-            tournamentId,
-            matches: payload.data.matches,
-            queues: payload.data.queues
-          }
+        return scheduledMatchResults.upsertScheduledMatches({
+          tournamentId,
+          matches: payload.data.matches,
+          queues: payload.data.queues
         })
-        return r.result
       }
     }
   }
