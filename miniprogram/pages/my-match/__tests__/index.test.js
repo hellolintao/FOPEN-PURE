@@ -55,6 +55,23 @@ test('onPendingRow navigates to tournament score anchor', () => {
   })
 })
 
+test('renders registration block and opens tournament detail from registration row', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const def = loadPage()
+  const ctx = makeCtx(def)
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('我的报名')
+  expect(wxml).toContain('bindtap="onRegistrationRow"')
+
+  ctx.onRegistrationRow({ currentTarget: { dataset: { tournamentid: 't1' } } })
+
+  expect(wx.navigateTo).toHaveBeenCalledWith({
+    url: '/pages/tournament-detail/index?id=t1',
+  })
+})
+
 test('onRecordNow opens first pending match', () => {
   const def = loadPage()
   const ctx = makeCtx(def, {

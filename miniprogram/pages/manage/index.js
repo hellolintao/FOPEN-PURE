@@ -55,9 +55,13 @@ Page({
   },
 
   onBracketTap(e) {
-    const { tournamentid, round } = e.currentTarget.dataset;
+    const { tournamentid, bracketid, round } = e.currentTarget.dataset;
+    const group = (this.data.bracketsList || []).find(item => item._id === bracketid) || null;
+    const firstMatch = group && Array.isArray(group.matches) ? group.matches[0] : null;
+    const matchId = firstMatch && firstMatch.matchId ? `&matchId=${encodeURIComponent(firstMatch.matchId)}` : '';
+    const resultId = firstMatch && firstMatch.resultId ? `&resultId=${encodeURIComponent(firstMatch.resultId)}` : '';
     wx.navigateTo({
-      url: `/pages/tournament-score/index?tournamentId=${tournamentid}&round=${round}`
+      url: `/pages/tournament-score/index?tournamentId=${tournamentid}&round=${round}${matchId}${resultId}`
     });
   },
 

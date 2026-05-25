@@ -257,6 +257,37 @@ exports.main = async (event, context) => {
         }
       })
     }
+    case 'claimSelf': {
+      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
+      const v = validateMemberAdd(payload)
+      if (!v.valid) {
+        return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
+      }
+      if (!openid) {
+        return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先登录' } }
+      }
+      const existingRes = await collection.where({ openid }).get()
+      const existing = (existingRes.data || [])[0]
+      if (!existing) {
+        return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先完善资料' } }
+      }
+      const now = db.serverDate()
+      const updateData = {
+        ...payload,
+        claimStatus: 'claimed',
+        status: 'active',
+        updateTime: now
+      }
+      const updateResult = await collection.where({ openid }).update({ data: updateData })
+      const updated = (updateResult && updateResult.stats && updateResult.stats.updated) || (updateResult && updateResult.updated) || 0
+      if (updated <= 0) {
+        return {
+          success: false,
+          error: { code: 'CLAIM_FAILED', message: '认领失败' }
+        }
+      }
+      return { data: { ...existing, ...updateData } }
+    }
     case 'delete': {
       // 删除会员 by openid
       return await collection.where({ openid }).remove()

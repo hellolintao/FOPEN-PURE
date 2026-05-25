@@ -269,7 +269,7 @@ withdrawDeadlineAt = 比赛开始日期当天 00:00
 
 退出后的处理：
 
-- `tournament_registrations.status` 置为 `cancelled`。
+- `tournament_registrations.registrationStatus` 置为 `withdrew`。
 - 记录 `cancelledAt`、`cancelledBy`、`cancelReason`（可为空）。
 - 参赛人员数量更新。
 - `my-match` 不再把该赛事显示为有效报名。

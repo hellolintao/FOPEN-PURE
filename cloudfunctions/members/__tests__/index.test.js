@@ -432,6 +432,68 @@ describe('members cloud function', () => {
     });
   });
 
+  test('action=claimSelf persists claimed status for openid-bound unclaimed member', async () => {
+    const existing = {
+      _id: 'member-openid-unclaimed',
+      openid: mockState.openid,
+      name: '旧名',
+      claimStatus: 'unclaimed',
+      status: 'active',
+      admin: false
+    };
+    mockState.whereGetData = [existing];
+
+    const result = await main({
+      action: 'claimSelf',
+      data: {
+        name: '张三',
+        phone: '13800000000',
+        avatarUrl: 'cloud://avatar',
+        playStyle: 'vers'
+      }
+    }, {});
+
+    expect(mockCollection.where).toHaveBeenNthCalledWith(1, { openid: mockState.openid });
+    expect(mockQuery.update).toHaveBeenCalledWith({
+      data: {
+        name: '张三',
+        phone: '13800000000',
+        avatarUrl: 'cloud://avatar',
+        playStyle: 'vers',
+        claimStatus: 'claimed',
+        status: 'active',
+        updateTime: mockState.serverDate
+      }
+    });
+    expect(result).toEqual({
+      data: {
+        ...existing,
+        name: '张三',
+        phone: '13800000000',
+        avatarUrl: 'cloud://avatar',
+        playStyle: 'vers',
+        claimStatus: 'claimed',
+        status: 'active',
+        updateTime: mockState.serverDate
+      }
+    });
+  });
+
+  test('action=claimSelf returns failure when no openid-bound row is updated', async () => {
+    mockState.whereGetData = [{ _id: 'member-openid-unclaimed', openid: mockState.openid, name: '旧名', claimStatus: 'unclaimed' }];
+    mockState.whereUpdateResult = { stats: { updated: 0 } };
+
+    const result = await main({
+      action: 'claimSelf',
+      data: { name: '张三', playStyle: 'vers' }
+    }, {});
+
+    expect(result).toMatchObject({
+      success: false,
+      error: { code: 'CLAIM_FAILED' }
+    });
+  });
+
   test('action=updateById missing _id returns error and does not doc()', async () => {
     const result = await main({
       action: 'updateById',

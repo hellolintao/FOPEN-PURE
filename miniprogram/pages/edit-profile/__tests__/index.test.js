@@ -5,6 +5,7 @@ function loadPage(overrides = {}) {
   global.wx = {
     navigateBack: jest.fn(),
     navigateTo: jest.fn(),
+    redirectTo: jest.fn(),
     reLaunch: jest.fn(),
     showToast: jest.fn(),
     showModal: jest.fn(),
@@ -46,6 +47,20 @@ function makeCtx(def, data = {}) {
   return ctx
 }
 
+function flushPromises() {
+  return Promise.resolve().then(() => Promise.resolve())
+}
+
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe('edit-profile mode handling', () => {
   test('mode=register sets register title and does not load member', () => {
     const { pageDef } = loadPage()
@@ -73,6 +88,31 @@ describe('edit-profile mode handling', () => {
     expect(ctx.data.formData.playStyle).toBe('vers')
     expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '编辑资料' })
     expect(callFunction).not.toHaveBeenCalled()
+  })
+
+  test('tournament-register query stores return context for save', () => {
+    const { pageDef } = loadPage({
+      currentMember: { name: '李四', phone: '13800000000', avatarUrl: 'cloud://avatar', playStyle: 'vers' }
+    })
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLoad({ from: 'tournament-register', tournamentId: 't1' })
+
+    expect(ctx.data.from).toBe('tournament-register')
+    expect(ctx.data.tournamentId).toBe('t1')
+    expect(ctx.data.isRegister).toBe(false)
+  })
+
+  test('tournament-register mode stores return context and uses register validation', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLoad({ mode: 'register', from: 'tournament-register', tournamentId: 't1' })
+
+    expect(ctx.data.isRegister).toBe(true)
+    expect(ctx.data.from).toBe('tournament-register')
+    expect(ctx.data.tournamentId).toBe('t1')
+    expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '注册' })
   })
 })
 
@@ -110,6 +150,192 @@ describe('edit-profile validation and save', () => {
 
     expect(callFunction).toHaveBeenCalledTimes(1)
     expect(callFunction.mock.calls[0][0].data.action).toBe('update')
+  })
+
+  test('edit mode treats zero updated rows as save failure', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { stats: { updated: 0 } } })
+    const ctx = makeCtx(pageDef, { isRegister: false })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: null }
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '保存失败', icon: 'none' })
+    expect(wx.navigateBack).not.toHaveBeenCalled()
+  })
+
+  test('tournament register save emits event channel and navigates back without duplicating detail page', async () => {
+    jest.useFakeTimers()
+    const emit = jest.fn()
+    const { pageDef, app } = loadPage({
+      currentMember: { _id: 'm1', name: '旧名', admin: false, claimStatus: 'claimed' }
+    })
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { data: { _id: 'm1', name: '张三', admin: false, claimStatus: 'claimed', playStyle: 'vers' } } })
+    const ctx = makeCtx(pageDef, { from: 'tournament-register', tournamentId: 't1' })
+    ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(app.globalData.currentMember).toMatchObject({ _id: 'm1', name: '张三' })
+    expect(emit).toHaveBeenCalledWith('registrationIdentityReady')
+    expect(wx.navigateBack).toHaveBeenCalledWith({ delta: 1 })
+    expect(wx.redirectTo).not.toHaveBeenCalled()
+    expect(wx.reLaunch).not.toHaveBeenCalled()
+    jest.useRealTimers()
+  })
+
+  test('tournament register missing member creates claimed member before emitting event', async () => {
+    const emit = jest.fn()
+    const { pageDef, app } = loadPage({ currentMember: null })
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction
+      .mockResolvedValueOnce({ result: { data: [] } })
+      .mockResolvedValueOnce({
+        result: {
+          data: {
+            _id: 'm-new',
+            name: '张三',
+            admin: false,
+            claimStatus: 'claimed',
+            playStyle: 'vers'
+          }
+        }
+      })
+    const ctx = makeCtx(pageDef)
+    ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
+
+    ctx.onLoad({ from: 'tournament-register', tournamentId: 't1' })
+    await flushPromises()
+    jest.useFakeTimers()
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(callFunction).toHaveBeenLastCalledWith(expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'add',
+        data: expect.objectContaining({
+          name: '张三',
+          claimStatus: 'claimed'
+        })
+      })
+    }))
+    expect(app.globalData.currentMember).toMatchObject({
+      _id: 'm-new',
+      claimStatus: 'claimed'
+    })
+    expect(emit).toHaveBeenCalledWith('registrationIdentityReady')
+    expect(wx.navigateBack).toHaveBeenCalledWith({ delta: 1 })
+    jest.useRealTimers()
+  })
+
+  test('tournament register already registered unclaimed member claims through backend before emitting event', async () => {
+    jest.useFakeTimers()
+    const emit = jest.fn()
+    const claim = deferred()
+    const { pageDef, app } = loadPage({ currentMember: null })
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction
+      .mockResolvedValueOnce({
+        result: {
+          errMsg: 'already registered',
+          data: {
+            _id: 'm-existing',
+            name: '旧名',
+            admin: false,
+            claimStatus: 'unclaimed',
+            playStyle: 'vers'
+          }
+        }
+      })
+      .mockReturnValueOnce(claim.promise)
+    const ctx = makeCtx(pageDef, { isRegister: true, from: 'tournament-register', tournamentId: 't1' })
+    ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    const savePromise = ctx.onSave()
+    await flushPromises()
+
+    expect(callFunction).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({ action: 'add' })
+    }))
+    expect(callFunction).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'claimSelf',
+        data: expect.objectContaining({ name: '张三', claimStatus: 'claimed' })
+      })
+    }))
+    expect(app.globalData.currentMember).toBeNull()
+    expect(emit).not.toHaveBeenCalled()
+
+    claim.resolve({
+      result: {
+        data: {
+          _id: 'm-existing',
+          name: '张三',
+          admin: false,
+          claimStatus: 'claimed',
+          playStyle: 'vers'
+        }
+      }
+    })
+    await savePromise
+    jest.runAllTimers()
+
+    expect(app.globalData.currentMember).toMatchObject({
+      _id: 'm-existing',
+      name: '张三',
+      claimStatus: 'claimed'
+    })
+    expect(emit).toHaveBeenCalledWith('registrationIdentityReady')
+    expect(wx.navigateBack).toHaveBeenCalledWith({ delta: 1 })
+    jest.useRealTimers()
+  })
+
+  test('tournament register already registered unclaimed member does not emit when backend claim fails', async () => {
+    jest.useFakeTimers()
+    const emit = jest.fn()
+    const existing = {
+      _id: 'm-existing',
+      name: '旧名',
+      admin: false,
+      claimStatus: 'unclaimed',
+      playStyle: 'vers'
+    }
+    const { pageDef, app } = loadPage({ currentMember: null })
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction
+      .mockResolvedValueOnce({ result: { errMsg: 'already registered', data: existing } })
+      .mockResolvedValueOnce({
+        result: {
+          success: false,
+          error: { code: 'CLAIM_FAILED', message: '认领失败' }
+        }
+      })
+    const ctx = makeCtx(pageDef, { isRegister: true, from: 'tournament-register', tournamentId: 't1' })
+    ctx.getOpenerEventChannel = jest.fn(() => ({ emit }))
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
+    expect(callFunction).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({ action: 'claimSelf' })
+    }))
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '认领失败', icon: 'none' })
+    expect(app.globalData.currentMember).toBeNull()
+    expect(emit).not.toHaveBeenCalled()
+    expect(wx.navigateBack).not.toHaveBeenCalled()
+    jest.useRealTimers()
   })
 
   test('register success stores new member with _id and reLaunches to mine', async () => {

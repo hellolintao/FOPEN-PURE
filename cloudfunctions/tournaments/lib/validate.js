@@ -1,5 +1,7 @@
-// Legacy validator — kept for backward compatibility with old code paths.
-// New code should use validateSchedulePlan / validatePointsRules instead.
+// Legacy courtTimeGrid validator is kept for backward compatibility with old code paths.
+const TOURNAMENT_TYPES = ['singles', 'doubles', 'mixed'];
+const SCHEDULE_STATUSES = ['none', 'draft', 'published'];
+
 function validateCourtTimeGrid(grid) {
   const errors = [];
   if (grid == null) return { valid: true, errors };
@@ -85,4 +87,66 @@ function validatePointsRules(pr) {
   return errors;
 }
 
-module.exports = { validateCourtTimeGrid, validateSchedulePlan, validatePointsRules };
+/**
+ * Validate tournament payload.
+ * isDraft=true: only require minimal fields.
+ * isDraft=false: full validation, except scheduleStatus none/draft may defer schedulePlan.
+ * @param {object} data
+ * @param {{ isDraft: boolean }} opts
+ * @returns {string[]}
+ */
+function validateTournament(data = {}, { isDraft = false } = {}) {
+  const errors = [];
+
+  if (!data.name || data.name.trim() === '') errors.push('赛事名称不能为空');
+  if (!data.type || !TOURNAMENT_TYPES.includes(data.type)) {
+    errors.push('赛事类型必须是 singles、doubles 或 mixed');
+  }
+  if (!data.format || !['regular', 'knockout'].includes(data.format)) {
+    errors.push('赛制必须是 regular(常规赛) 或 knockout(淘汰赛)');
+  }
+  if (data.format === 'knockout' && data.type === 'mixed') {
+    errors.push('淘汰赛不支持 mixed 类型');
+  }
+  if (!data.startDate) errors.push('开始日期不能为空');
+  if (!data.seasonId) errors.push('所属赛季不能为空');
+
+  if (data.scheduleStatus !== undefined && !SCHEDULE_STATUSES.includes(data.scheduleStatus)) {
+    errors.push('scheduleStatus 必须是 none、draft 或 published');
+  }
+  if (data.scheduleNeedsRevision !== undefined && typeof data.scheduleNeedsRevision !== 'boolean') {
+    errors.push('scheduleNeedsRevision 必须是布尔值');
+  }
+
+  if (data.startDate && data.endDate) {
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (start > end) errors.push('结束日期不能早于开始日期');
+  }
+
+  if (isDraft) return errors;
+
+  if (shouldValidateSchedulePlan(data)) {
+    errors.push(...validateSchedulePlan(data.schedulePlan));
+  }
+
+  errors.push(...validatePointsRules(data.pointsRules));
+
+  if (data.format === 'knockout') {
+    const max = data.maxPlayers;
+    if (!max || max < 2) errors.push('淘汰赛 maxPlayers 不能小于 2');
+  }
+
+  return errors;
+}
+
+function shouldValidateSchedulePlan(data) {
+  return data.scheduleStatus !== 'none' && data.scheduleStatus !== 'draft';
+}
+
+module.exports = {
+  validateCourtTimeGrid,
+  validateSchedulePlan,
+  validatePointsRules,
+  validateTournament
+};

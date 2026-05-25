@@ -12,6 +12,7 @@ const db = cloud.database();
 const { schedule } = require('./lib/greedy');
 const { generateRoundRobin } = require('./lib/pairing/round-robin');
 const { generateKnockout } = require('./lib/pairing/knockout-bracket');
+const { isActiveRegistration } = require('../_shared/tournament-phase');
 
 /**
  * Scheduler entry.
@@ -103,7 +104,7 @@ async function loadRegistrations(tournamentId) {
     .where({ tournamentId })
     .get();
   const data = (res && res.data) || [];
-  return data.filter((r) => r.status !== 'withdrew' && r.status !== 'cancelled');
+  return data.filter(isActiveRegistration);
 }
 
 function decideTotalRounds(explicit, tournament) {

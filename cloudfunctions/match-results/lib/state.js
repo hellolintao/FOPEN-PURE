@@ -1,4 +1,8 @@
+const { isActiveScoreRow } = require('./active-row')
+
 function createMatchStateService({ db, awardLib, scoreRule }) {
+  const SCHEDULE_NOT_PUBLISHED_MESSAGE = '赛程发布后才能录入成绩'
+
   async function submitResult({ matchId, score, submitter }) {
     if (!submitter || !submitter._id) throw new Error('UNAUTHORIZED')
     const sets0 = score && score.sets && score.sets[0]
@@ -39,7 +43,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
 
   async function confirmAll({ tournamentId, admin }) {
     if (!admin || !admin.isAdmin) throw new Error('UNAUTHORIZED')
-    const submitted = (await db.collection('match_results').where({ tournamentId, resultStatus: 'submitted' }).get()).data
+    const submitted = ((await db.collection('match_results').where({ tournamentId, resultStatus: 'submitted' }).get()).data || []).filter(isActiveScoreRow)
     let count = 0
     const tournament = await getTournament(tournamentId)
     for (const r of submitted) {
@@ -170,6 +174,19 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     return maybeAwardPlacement(tournamentId)
   }
 
+  async function assertSchedulePublishedForMatch(matchId) {
+    const result = await findResultByMatchId(matchId)
+    if (!result || !result.tournamentId) return
+    const tournament = await getTournament(result.tournamentId)
+    assertSchedulePublished(tournament)
+  }
+
+  async function assertSchedulePublishedForTournament(tournamentId) {
+    if (!tournamentId) return
+    const tournament = await getTournament(tournamentId)
+    assertSchedulePublished(tournament)
+  }
+
   // —— internal helpers ——
 
   async function confirmOne(result, tournament, score, winner, admin) {
@@ -273,7 +290,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const finalRound = awardLib.finalRoundOf(slots)
     const final = brackets.find(b => b.round === finalRound)
     if (!final || !final.matches[0] || !final.matches[0].winner) return { skipped: true, reason: 'missing_final_winner', finalRound }
-    const all = (await db.collection('match_results').where({ tournamentId, matchKind: 'bracket' }).get()).data
+    const all = ((await db.collection('match_results').where({ tournamentId, matchKind: 'bracket' }).get()).data || []).filter(isActiveScoreRow)
     if (all.some(r => isScoreableResult(r) && r.resultStatus !== 'confirmed')) return { skipped: true, reason: 'not_all_confirmed', total: all.length }
 
     let entries = awardLib.buildPlacementEntries(brackets, t.pointsRules.placement, t.type)
@@ -322,7 +339,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   function hasPlayableSides(row) {
-    if (!row || row.bye) return false
+    if (!isActiveScoreRow(row) || row.bye) return false
     return !!(row.player1 && row.player2 && row.player1.id && row.player2.id)
   }
 
@@ -405,14 +422,22 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
 
   async function findResultByMatchId(matchId) {
     const byId = await getDocOrNull('match_results', matchId)
-    if (byId) return byId
+    if (isActiveScoreRow(byId)) return byId
     const rows = (await db.collection('match_results').where({ sourceMatchId: matchId }).get()).data
-    return rows[0] || null
+    return (rows || []).find(isActiveScoreRow) || null
   }
 
   async function getTournament(tournamentId) {
     const res = await db.collection('tournaments').doc(tournamentId).get()
     return res.data
+  }
+
+  function assertSchedulePublished(tournament) {
+    if (!tournament || !Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return
+    if (tournament.scheduleStatus === 'published') return
+    const err = new Error(SCHEDULE_NOT_PUBLISHED_MESSAGE)
+    err.code = 'SCHEDULE_NOT_PUBLISHED'
+    throw err
   }
 
   async function getDocOrNull(collectionName, docId) {
@@ -491,7 +516,16 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     return (e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)
   }
 
-  return { submitResult, confirmAll, reconfirmMatch, voidMatch, clearDownstream, awardPlacementIfFinal }
+  return {
+    submitResult,
+    confirmAll,
+    reconfirmMatch,
+    voidMatch,
+    clearDownstream,
+    awardPlacementIfFinal,
+    assertSchedulePublishedForMatch,
+    assertSchedulePublishedForTournament
+  }
 }
 
 module.exports = { createMatchStateService }

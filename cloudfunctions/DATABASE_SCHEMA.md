@@ -155,7 +155,7 @@
 
 ## 3. tournaments（赛事表）
 
-存储赛事的基本信息、草稿归属、排程计划和积分规则。Phase 7 新创建流程使用 `schedulePlan`，旧 `courtTimeGrid` 仅作为历史兼容字段保留。
+存储赛事的基本信息、草稿归属、排程计划和积分规则。Phase 7 新创建流程使用 `schedulePlan`，旧 `courtTimeGrid` 仅作为历史只读兼容字段保留；新代码写入排程时统一写 `schedulePlan`。
 
 ### 字段说明
 
@@ -172,11 +172,17 @@
 | `status` | String | 是 | 持久化生命周期：`draft`（草稿）/ `upcoming`（已发布待开始）/ `ongoing`（已开始录分）/ `completed`（比分已全部确认并结算）。前端展示态会优先按 `schedulePlan.courts[].slots` 精确时间窗口派生“待开始 / 进行中 / 已结束”，无具体时间时退回按 `startDate/endDate` 派生，并把 `completed` 展示为“已结算”。 |
 | `description` | String | 否 | 赛事描述 |
 | `maxPlayers` | Number | 否 | 淘汰赛最大参赛人数 |
+| `registrationDeadlineAt` | Date/String | 报名发布后必填 | 微信报名截止时间；报名发布时必须晚于当前时间 |
+| `registrationPublishedAt` | Date/String | 否 | 报名入口发布时间；存在时进入新阶段模型 |
+| `scheduleStatus` | String | 新流程必填 | `none` / `draft` / `published`；缺失时按遗留赛事展示 |
+| `schedulePublishedAt` | Date/String | 否 | 赛程发布时间 |
+| `scheduleNeedsRevision` | Boolean | 否 | 成员退赛或赛程编辑导致管理员需确认，缺省为 `false` |
+| `confirmedCount` | Number | 否 | `registrationStatus === "confirmed"` 的计数，用于淘汰赛单打容量事务和工作台软警告 |
 | `schedulePlan` | Object | 非 draft 必填 | 20 分钟粒度场地排程（Phase 7 2026-05-15 起固定 slotMinutes=20，UI 用 1 小时格但入库展开 3 个 slot），结构见下 |
 | `pointsRules` | Object | 非 draft 必填 | Phase 7 积分规则，结构见下 |
 | `createdBy` | String | draft 必填 | 创建者 member._id，用于“我的草稿”过滤 |
 | `createdByOpenid` | String | 否 | 创建者 OPENID，仅后端使用 |
-| `courtTimeGrid` | Object | 否 | 旧 20 分钟排程字段，仅历史兼容 |
+| `courtTimeGrid` | Object | 否 | 旧 20 分钟排程字段，仅历史只读兼容；新代码写 `schedulePlan` |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 是 | 更新时间 |
 | `completedAt` | Date | 否 | 全部可打比赛确认并结算的时间，`status='completed'` 时写入 |
@@ -244,11 +250,18 @@
 | `partnerName` | String | 双打+淘汰赛 必填 | 双打搭档姓名（常规赛双打可空） |
 | `teamName` | String | 否 | 双打时的队伍名称（淘汰赛常用） |
 | `seed` | Number | 否 | 种子排名，范围：1-64 |
-| `registrationStatus` | String | 否 | Phase 7 报名状态：`confirmed` / `withdrew`，bulkSet 默认 `confirmed` |
-| `status` | String | 否 | 旧报名状态字段，历史兼容 |
+| `registrationStatus` | String | 是 | `confirmed` / `withdrew`；新代码统一读写此字段 |
+| `status` | String | 否 | 旧字段，保留兼容只读，新代码不写 |
+| `source` | String | 否 | `admin` / `wechat` |
+| `cancelledAt` | Date | `registrationStatus === "withdrew"` 时必填 | 自助退赛或管理员代退时间 |
+| `cancelledBy` | String | `registrationStatus === "withdrew"` 时必填 | 操作者 `members._id` |
+| `cancelReason` | String | 否 | 退赛原因，本期可空 |
+| `reregisteredAt` | Date | 否 | 退赛后重新报名时间 |
 | `registerTime` | String | 是 | 报名时间 |
 | `createTime` | Date | 是 | 创建时间 |
 | `updateTime` | Date | 否 | 更新时间 |
+
+退赛记录使用 `registrationStatus = "withdrew"` 标记；已退赛/取消报名的行不物理删除，保留审计和重新报名复用。
 
 ### 数据示例
 

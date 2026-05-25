@@ -2,13 +2,15 @@ const fs = require('fs')
 const path = require('path')
 
 describe('tournament-detail WXML layout', () => {
-  test('orders results, schedule, roster, points, and delete sections in main content', () => {
+  test('orders phase, hero, roster, schedule, points, results, and delete sections in main content', () => {
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
     const markers = [
-      '<!-- RESULTS -->',
-      '<!-- SCHEDULE -->',
+      '<!-- PHASE -->',
+      '<!-- HERO -->',
       '<!-- REGISTRATIONS -->',
+      '<!-- SCHEDULE -->',
       '<!-- POINTS RULES -->',
+      '<!-- RESULTS -->',
       '<!-- DELETE -->'
     ]
     const positions = markers.map(marker => wxml.indexOf(marker))
@@ -20,6 +22,8 @@ describe('tournament-detail WXML layout', () => {
     expect(positions[1]).toBeLessThan(positions[2])
     expect(positions[2]).toBeLessThan(positions[3])
     expect(positions[3]).toBeLessThan(positions[4])
+    expect(positions[4]).toBeLessThan(positions[5])
+    expect(positions[5]).toBeLessThan(positions[6])
   })
 
   test('uses a standings table above stable keyed result match rows', () => {
@@ -30,7 +34,7 @@ describe('tournament-detail WXML layout', () => {
     expect(wxml).toContain('wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId"')
   })
 
-  test('uses Chinese hero labels and a full-width wrapping court time row', () => {
+  test('uses localized hero labels and a full-width wrapping court time row', () => {
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
 
     expect(wxml).toContain('比赛时间')
@@ -55,6 +59,7 @@ function loadPage(options = {}) {
   const seasons = options.seasons || {}
   const currentSeason = options.currentSeason || null
   const members = options.members || []
+  const callFunction = options.callFunction
   const registrationChain = {
     where: jest.fn(() => ({
       orderBy: jest.fn(() => ({
@@ -89,10 +94,20 @@ function loadPage(options = {}) {
     showLoading: jest.fn(),
     hideLoading: jest.fn(),
     showShareMenu: jest.fn(),
+    pageScrollTo: jest.fn(),
+    createSelectorQuery: jest.fn(() => ({
+      select: jest.fn(() => ({
+        boundingClientRect: jest.fn(callback => {
+          callback({ top: 180 })
+          return { exec: jest.fn() }
+        })
+      }))
+    })),
     stopPullDownRefresh: jest.fn(),
     cloud: {
       database: jest.fn(() => db),
       callFunction: jest.fn(({ name, data }) => {
+        if (callFunction) return callFunction({ name, data })
         if (name === 'match-results') {
           return Promise.resolve({ result: { success: true, data: { results: matchResults } } })
         }
@@ -126,6 +141,461 @@ function makeCtx(def, data = {}) {
 }
 
 describe('tournament-detail score permissions', () => {
+  test('registration open member sees registration phase and register CTA', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm2' }, isAdmin: false } },
+      tournament: {
+        _id: 't1',
+        name: '5月周末赛',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: []
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', entry: 'register', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.phase).toBe('registration_open')
+    expect(ctx.data.primaryActionLabel).toBe('我要报名')
+    expect(ctx.data.showRegistrationStatusCard).toBe(false)
+    expect(ctx.data.selfRegistrationSupported).toBe(true)
+  })
+
+  test('builds hero display fields for season, location, deadlines, and full court time', async () => {
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: '测试05224',
+        type: 'mixed',
+        format: 'regular',
+        status: 'upcoming',
+        seasonId: 'season_1740000000000',
+        location: '海峡奥体网球场',
+        startDate: '2026-05-22',
+        registrationDeadlineAt: '2026-05-31T23:59:00+08:00',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        scheduleStatus: 'none',
+        schedulePlan: {
+          slotMinutes: 20,
+          courts: [
+            {
+              courtId: 'c1',
+              name: '比赛2',
+              location: '室内A区',
+              slots: [
+                '2026-05-22T08:00',
+                '2026-05-22T08:20',
+                '2026-05-22T08:40',
+                '2026-05-22T09:00',
+                '2026-05-22T09:20',
+                '2026-05-22T09:40'
+              ]
+            },
+            {
+              courtId: 'c2',
+              name: '中心场',
+              location: '西门',
+              slots: ['2026-05-22T14:00', '2026-05-22T14:20']
+            }
+          ]
+        }
+      },
+      seasons: {
+        season_1740000000000: { _id: 'season_1740000000000', name: '2026 春季赛' }
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.tournamentDisplay).toMatchObject({
+      seasonText: '2026 春季赛',
+      matchTimeText: '2026-05-22',
+      locationText: '海峡奥体网球场',
+      registrationDeadlineLabel: '5月31日 23:59',
+      withdrawDeadlineLabel: '5月21日 24:00',
+      courtTimeText: '比赛2（室内A区）：08:00-10:00；中心场（西门）：14:00-14:40'
+    })
+  })
+
+  test('falls back to current season when direct season lookup fails', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { pageDef } = loadPage({
+        rejectSeasonGet: true,
+        tournament: { _id: 't1', name: '测试05224', type: 'mixed', format: 'regular', status: 'upcoming', seasonId: 'stale_season', startDate: '2026-05-22' },
+        currentSeason: {
+          seasonId: 'season_1740000000000',
+          season: { _id: 'season_1740000000000', name: '2026 春季赛' }
+        }
+      })
+      const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+      await ctx.loadTournamentDetail()
+
+      expect(ctx.data.tournament.seasonName).toBe('2026 春季赛')
+      expect(ctx.data.tournamentDisplay.seasonText).toBe('2026 春季赛')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  test('registered member before withdraw deadline sees withdraw CTA and no waiting button', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } },
+      tournament: {
+        _id: 't1',
+        startDate: '2026-05-24',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-21T10:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: [{ _id: 'reg1', playerId: 'm1', registrationStatus: 'confirmed' }]
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-23T23:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.phase).toBe('pending_schedule')
+    expect(ctx.data.primaryActionLabel).toBe('退出报名')
+    expect(ctx.data.showWaitingScheduleButton).toBe(false)
+  })
+
+  test('admin pending schedule sees share edit and arrange actions', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin1' }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        startDate: '2026-05-24',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-21T10:00:00+08:00',
+        scheduleStatus: 'none'
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排对局'])
+  })
+
+  test('registration open non-creator admin can register while keeping edit action', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin2', openid: 'openid-admin2', admin: true }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        createdBy: 'admin1',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: []
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.isAdmin).toBe(true)
+    expect(ctx.data.isCreator).toBe(false)
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '我要报名', '安排对局'])
+    expect(ctx.data.primaryActionLabel).toBe('安排对局')
+  })
+
+  test('registration open creator admin keeps management actions without self-register CTA', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin1', openid: 'openid-admin1', admin: true }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        createdBy: 'admin1',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations: []
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.isCreator).toBe(true)
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排对局'])
+    expect(ctx.data.footerActions.map(a => a.key)).not.toContain('registerSelf')
+  })
+
+  test('schedule published shows schedule before roster and hides registration module', async () => {
+    const { pageDef } = loadPage({
+      tournament: { _id: 't1', scheduleStatus: 'published', status: 'upcoming', schedulePlan: { courts: [] } }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.phase).toBe('schedule_published')
+    expect(ctx.data.showRegistrationModule).toBe(false)
+    expect(ctx.data.showScheduleSection).toBe(true)
+  })
+
+  test('legacy tournament keeps existing schedule and confirmed results visible', async () => {
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 'legacy1',
+        name: 'Legacy Cup',
+        status: 'upcoming',
+        startDate: '2026-05-25',
+        schedulePlan: {
+          slotMinutes: 20,
+          courts: [{ courtId: 'c1', name: '1号场', slots: ['2026-05-25T18:00:00+08:00'] }]
+        }
+      },
+      registrations: [
+        { playerId: 'A', playerName: 'A', registrationStatus: 'confirmed' },
+        { playerId: 'B', playerName: 'B', registrationStatus: 'confirmed' }
+      ],
+      matchResults: [
+        {
+          _id: 'm1',
+          player1: { id: 'A', name: 'A' },
+          player2: { id: 'B', name: 'B' },
+          winner: { id: 'A', name: 'A' },
+          score: { sets: [{ a: 4, b: 2 }] },
+          resultStatus: 'confirmed'
+        }
+      ]
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 'legacy1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.phase).toBe('legacy')
+    expect(ctx.data.showScheduleSection).toBe(true)
+    expect(ctx.data.showResultsSection).toBe(true)
+    expect(ctx.data.resultDisplay.visible).toBe(true)
+    expect(ctx.data.scheduleCourts).toHaveLength(1)
+  })
+
+  test('schedule published admin can edit schedule and enter score from footer', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin1' }, isAdmin: true } },
+      tournament: { _id: 't1', scheduleStatus: 'published', status: 'upcoming', schedulePlan: { courts: [] } }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑赛程', '录入成绩'])
+  })
+
+  test('results admin can adjust results from footer without registration module', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin1' }, isAdmin: true } },
+      tournament: { _id: 't1', scheduleStatus: 'published', status: 'completed', schedulePlan: { courts: [] } }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.phase).toBe('results')
+    expect(ctx.data.showRegistrationModule).toBe(false)
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '调整成绩'])
+  })
+
+  test('knockout doubles hides unsupported self-register CTA', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm2' }, isAdmin: false } },
+      tournament: {
+        _id: 't1',
+        type: 'doubles',
+        format: 'knockout',
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.selfRegistrationSupported).toBe(false)
+    expect(ctx.data.primaryActionLabel).toBe('')
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享'])
+  })
+
+  test.each([
+    ['missing identity', null],
+    ['unclaimed identity', { _id: 'm1', claimStatus: 'unclaimed' }]
+  ])('onRegisterSelf navigates to edit profile for %s', async (_caseName, member) => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: member, isAdmin: false } }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.navigateTo).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/pages/edit-profile/index?mode=register&from=tournament-register&tournamentId=t1',
+      events: expect.objectContaining({
+        registrationIdentityReady: expect.any(Function)
+      })
+    }))
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tournament-registrations'
+    }))
+  })
+
+  test('onRegisterSelf lets bound non-creator admin register without opening profile editor', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin2', openid: 'openid-admin2', admin: true }, isAdmin: true } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: true, data: { registrationId: 'reg_admin2' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      tournament: { _id: 't1', createdBy: 'admin1' },
+      isCreator: false
+    })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.navigateTo).not.toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('/pages/edit-profile/index')
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'selfRegister', tournamentId: 't1' }
+    })
+    expect(ctx.refresh).toHaveBeenCalled()
+  })
+
+  test('onRegisterSelf lets bound legacy member register without opening profile editor', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1', openid: 'openid-a', name: 'Alice' }, isAdmin: false } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: true, data: { registrationId: 'reg_m1' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      tournament: { _id: 't1', createdBy: 'admin1' },
+      isCreator: false
+    })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.navigateTo).not.toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('/pages/edit-profile/index')
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'selfRegister', tournamentId: 't1' }
+    })
+    expect(ctx.refresh).toHaveBeenCalled()
+  })
+
+  test('onRegisterSelf maps backend registration errors to clear toast', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1', openid: 'openid-a', claimStatus: 'claimed' }, isAdmin: false } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: false, error: { code: 'CAPACITY_FULL' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '名额已满', icon: 'none' })
+    expect(ctx.refresh).not.toHaveBeenCalled()
+  })
+
+  test('onWithdrawSelf confirms modal and maps withdraw errors', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1', claimStatus: 'claimed' }, isAdmin: false } },
+      callFunction: ({ name }) => {
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: false, error: { code: 'WITHDRAW_CLOSED' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    wx.showModal.mockImplementationOnce(({ success }) => success({ confirm: true }))
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', withdrawDeadlineLabel: '5月23日 24:00' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onWithdrawSelf()
+
+    expect(wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '退出报名',
+      content: '确定退出本次赛事？退赛截止为 5月23日 24:00'
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: { action: 'withdraw', tournamentId: 't1' }
+    })
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '已过退赛截止时间', icon: 'none' })
+    expect(ctx.refresh).not.toHaveBeenCalled()
+  })
+
+  test('onConfirmScheduleRevision does not refresh when backend returns failure', async () => {
+    const { pageDef } = loadPage({
+      callFunction: ({ name }) => {
+        if (name === 'tournaments') {
+          return Promise.resolve({ result: { success: false, error: { message: '没有权限' } } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onConfirmScheduleRevision()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '没有权限', icon: 'none' })
+    expect(ctx.refresh).not.toHaveBeenCalled()
+  })
+
+  test('onConfirmScheduleRevision handles backend rejection without refreshing', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const { pageDef } = loadPage({
+      callFunction: ({ name }) => {
+        if (name === 'tournaments') return Promise.reject(new Error('network'))
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onConfirmScheduleRevision()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '确认失败', icon: 'none' })
+    expect(ctx.refresh).not.toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
   test('participant can enter score page', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } },
@@ -230,83 +700,6 @@ describe('tournament-detail score permissions', () => {
     await ctx.loadTournamentDetail()
 
     expect(ctx.data.tournament.seasonName).toBe('2026 春季赛')
-  })
-
-  test('falls back to current season when direct season lookup fails', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      const { pageDef } = loadPage({
-        rejectSeasonGet: true,
-        tournament: { _id: 't1', name: '五月排位赛', type: 'singles', format: 'regular', status: 'upcoming', seasonId: 'stale_season', startDate: '2026-05-22' },
-        currentSeason: {
-          seasonId: 'season_1740000000000',
-          season: { _id: 'season_1740000000000', name: '2026 春季赛' }
-        }
-      })
-      const ctx = makeCtx(pageDef, { tournamentId: 't1' })
-
-      await ctx.loadTournamentDetail()
-
-      expect(ctx.data.tournament.seasonName).toBe('2026 春季赛')
-      expect(ctx.data.tournamentDisplay.seasonText).toBe('2026 春季赛')
-    } finally {
-      warnSpy.mockRestore()
-    }
-  })
-
-  test('builds hero display fields for season, location, deadlines, and full court time', async () => {
-    const { pageDef } = loadPage({
-      tournament: {
-        _id: 't1',
-        name: '五月排位赛',
-        type: 'mixed',
-        format: 'regular',
-        status: 'upcoming',
-        seasonId: 'season_1740000000000',
-        location: '海峡奥体网球场',
-        startDate: '2026-05-22',
-        registrationDeadlineAt: '2026-05-31T23:59:00+08:00',
-        schedulePlan: {
-          slotMinutes: 20,
-          courts: [
-            {
-              courtId: 'c1',
-              name: '比赛2',
-              location: '室内A区',
-              slots: [
-                '2026-05-22T08:00',
-                '2026-05-22T08:20',
-                '2026-05-22T08:40',
-                '2026-05-22T09:00',
-                '2026-05-22T09:20',
-                '2026-05-22T09:40'
-              ]
-            },
-            {
-              courtId: 'c2',
-              name: '中心场',
-              location: '西门',
-              slots: ['2026-05-22T14:00', '2026-05-22T14:20']
-            }
-          ]
-        }
-      },
-      seasons: {
-        season_1740000000000: { _id: 'season_1740000000000', name: '2026 春季赛' }
-      }
-    })
-    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
-
-    await ctx.loadTournamentDetail()
-
-    expect(ctx.data.tournamentDisplay).toMatchObject({
-      seasonText: '2026 春季赛',
-      matchTimeText: '2026-05-22',
-      locationText: '海峡奥体网球场',
-      registrationDeadlineText: '5月31日 23:59',
-      withdrawDeadlineText: '5月21日 24:00',
-      courtTimeText: '比赛2（室内A区）：08:00-10:00；中心场（西门）：14:00-14:40'
-    })
   })
 
   test('loads stale upcoming tournament with all confirmed matches as settled', async () => {
@@ -677,6 +1070,24 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.onShareAppMessage()).toEqual({
       title: '五月排位赛 · 进行中',
       path: '/pages/tournament-detail/index?id=t1'
+    })
+  })
+
+  test('shares registration-open detail with registration entry path', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      showRegistrationModule: true,
+      tournament: { _id: 't1', name: '五月排位赛', status: 'upcoming' }
+    })
+
+    expect(ctx.onShareAppMessage()).toEqual({
+      title: '五月排位赛 · 待开始',
+      path: '/pages/tournament-detail/index?id=t1&entry=register'
+    })
+    expect(ctx.onShareTimeline()).toEqual({
+      title: '五月排位赛 · 待开始',
+      query: 'id=t1&entry=register'
     })
   })
 })

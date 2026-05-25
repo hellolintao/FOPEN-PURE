@@ -1,4 +1,5 @@
 // query handlers: submittedQueue / listByTournament / listByPlayer / pendingReviewItems
+const { isActiveScoreRow } = require('../active-row')
 async function submittedQueue(ctx, event) {
   if (!ctx.isAdmin) {
     const err = new Error('需要管理员权限')
@@ -6,9 +7,10 @@ async function submittedQueue(ctx, event) {
     throw err
   }
   const rows = await ctx.db.pagedFetchSubmitted()
-  if (rows.length === 0) return { items: [] }
+  const activeRows = rows.filter(isActiveScoreRow)
+  if (activeRows.length === 0) return { items: [] }
   const grouped = {}
-  for (const r of rows) grouped[r.tournamentId] = (grouped[r.tournamentId] || 0) + 1
+  for (const r of activeRows) grouped[r.tournamentId] = (grouped[r.tournamentId] || 0) + 1
   const tournamentIds = Object.keys(grouped)
   const tournaments = await ctx.db.getTournamentsByIds(tournamentIds)
   const tMap = Object.fromEntries(tournaments.map(t => [t._id, t]))
@@ -21,13 +23,43 @@ async function submittedQueue(ctx, event) {
   }
 }
 
+function canExposeScoreRows(tournament) {
+  if (!tournament) return false
+  if (tournament.scheduleStatus === 'published') return true
+  if (!Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return true
+  return false
+}
+
+async function filterRowsByScheduleVisibility(ctx, rows) {
+  const activeRows = rows.filter(isActiveScoreRow)
+  if (ctx.isAdmin) return activeRows
+
+  const tournamentCache = new Map()
+  const visibleRows = []
+  for (const row of activeRows) {
+    if (!row.tournamentId) {
+      visibleRows.push(row)
+      continue
+    }
+    if (!tournamentCache.has(row.tournamentId)) {
+      tournamentCache.set(row.tournamentId, await ctx.db.getTournament(row.tournamentId))
+    }
+    if (canExposeScoreRows(tournamentCache.get(row.tournamentId))) {
+      visibleRows.push(row)
+    }
+  }
+  return visibleRows
+}
+
 async function listByTournament(ctx, event) {
   if (!event.tournamentId) {
     const err = new Error('tournamentId 必填')
     err.code = 'INVALID_ARG'
     throw err
   }
-  const results = await ctx.db.listByTournament(event.tournamentId)
+  const tournament = await ctx.db.getTournament(event.tournamentId)
+  if (!ctx.isAdmin && !canExposeScoreRows(tournament)) return { results: [] }
+  const results = (await ctx.db.listByTournament(event.tournamentId)).filter(isActiveScoreRow)
   return { results }
 }
 
@@ -37,7 +69,7 @@ async function listByPlayer(ctx, event) {
     err.code = 'INVALID_ARG'
     throw err
   }
-  const matches = await ctx.db.listByPlayerNotConfirmed(event.memberId)
+  const matches = await filterRowsByScheduleVisibility(ctx, await ctx.db.listByPlayerNotConfirmed(event.memberId))
   return { matches }
 }
 
@@ -51,7 +83,7 @@ async function pendingReviewItems(ctx, payload) {
   const limit = Math.min(Math.max(parseInt(payload && payload.limit, 10) || 50, 1), 100)
 
   const total = await ctx.db.countMatchResults({ resultStatus: 'submitted', tournamentId })
-  const rows = await ctx.db.queryMatchResults({ resultStatus: 'submitted', tournamentId, limit })
+  const rows = (await ctx.db.queryMatchResults({ resultStatus: 'submitted', tournamentId, limit })).filter(isActiveScoreRow)
 
   const tournamentIds = [...new Set(rows.map(r => r.tournamentId))]
   const tournamentDocs = await ctx.db.getTournamentsByIds(tournamentIds)
@@ -93,7 +125,7 @@ async function pendingEntryGroups(ctx, payload) {
   const limit = Math.min(Math.max(parseInt(payload && payload.limit, 10) || 50, 1), 200)
 
   const total = await ctx.db.countMatchResults({ resultStatus: 'pending', tournamentId })
-  const rows = await ctx.db.queryMatchResults({ resultStatus: 'pending', tournamentId, limit })
+  const rows = (await ctx.db.queryMatchResults({ resultStatus: 'pending', tournamentId, limit })).filter(isActiveScoreRow)
   const playableRows = rows.filter(isPlayablePending)
 
   const tournamentIds = [...new Set(playableRows.map(r => r.tournamentId).filter(Boolean))]
@@ -146,7 +178,7 @@ async function pendingEntryGroups(ctx, payload) {
 }
 
 function isPlayablePending(row) {
-  if (!row || row.bye || row.resultStatus !== 'pending') return false
+  if (!isActiveScoreRow(row) || row.bye || row.resultStatus !== 'pending') return false
   return !!(row.player1 && row.player2 && row.player1.id && row.player2.id)
 }
 
@@ -171,4 +203,18 @@ function formatTime(date) {
   return `${hh}:${mm}`
 }
 
-module.exports = { submittedQueue, listByTournament, listByPlayer, pendingReviewItems, pendingEntryGroups }
+module.exports = {
+  submittedQueue,
+  listByTournament,
+  listByPlayer,
+  pendingReviewItems,
+  pendingEntryGroups,
+  canExposeScoreRows,
+  isActiveScoreRow,
+  __test__: {
+    canExposeScoreRows,
+    isActiveScoreRow,
+    listByTournamentWithCtx: listByTournament,
+    listByPlayerWithCtx: listByPlayer,
+  },
+}

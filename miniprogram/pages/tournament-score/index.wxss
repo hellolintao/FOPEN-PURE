@@ -129,6 +129,17 @@
   border-bottom: none;
 }
 
+.score-row-wrap {
+  position: relative;
+}
+
+.score-row-target {
+  background: rgba(199, 255, 62, 0.18);
+  outline: 4rpx solid rgba(199, 255, 62, 0.72);
+  outline-offset: -4rpx;
+  box-shadow: inset 8rpx 0 0 var(--color-lime);
+}
+
 /* ============================================================
  * EMPTY
  * ============================================================ */

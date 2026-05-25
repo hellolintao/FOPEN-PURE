@@ -4,6 +4,7 @@
       <text class="tape tape-stamped">{{tournament.format === 'knockout' ? 'KNOCKOUT' : 'REGULAR'}}</text>
       <text wx:if="{{tournament.format === 'knockout'}}" class="tape tape-ghost">单淘汰</text>
       <text wx:else class="tape tape-ghost">常规赛</text>
+      <text wx:if="{{adjustMode}}" class="tape tape-ghost">成绩修正</text>
     </view>
     <text class="head-title">{{tournament.name}}</text>
 
@@ -27,9 +28,9 @@
   <skeleton-loader wx:if="{{loading && rowsByRound.length === 0}}" rows="{{4}}" />
 
   <view wx:if="{{!loading && error}}" class="empty-state">
-    <text class="tape">比赛数据异常</text>
+    <text class="tape">{{scheduleGateBlocked ? '赛程未发布' : '比赛数据异常'}}</text>
     <text class="empty-hint">{{error}}</text>
-    <button class="empty-action" bindtap="refresh">重新加载</button>
+    <button wx:if="{{!scheduleGateBlocked}}" class="empty-action" bindtap="refresh">重新加载</button>
   </view>
 
   <view wx:elif="{{!loading && empty}}" class="empty-state">
@@ -44,7 +45,7 @@
         <text class="round-count num">{{g.matches.length}} 场</text>
       </view>
       <view class="round-rows">
-        <view wx:for="{{g.matches}}" wx:for-item="m" wx:key="_id" id="row-{{m.sourceMatchId}}">
+        <view wx:for="{{g.matches}}" wx:for-item="m" wx:key="_id" id="row-{{m.rowAnchorId}}" class="score-row-wrap {{m.isTarget ? 'score-row-target' : ''}}">
           <score-row
             match="{{m}}"
             is-admin="{{isAdmin}}"

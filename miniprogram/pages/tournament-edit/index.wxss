@@ -78,6 +78,10 @@
   padding: var(--space-5);
 }
 
+.registration-card {
+  gap: var(--space-2);
+}
+
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -138,6 +142,18 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+}
+
+.compact-field {
+  padding-bottom: 0;
+}
+
+.field-hint {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-muted);
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .label {
@@ -406,4 +422,23 @@
   flex: 2;
   background: var(--color-ink);
   color: var(--color-bg);
+}
+
+.footer button.next {
+  line-height: 1;
+}
+
+.footer-three .back,
+.footer-three .next {
+  flex: 1;
+  padding: 0 12rpx;
+  font-size: 24rpx;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.footer .next.secondary {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  border: 2rpx solid var(--color-ink);
 }

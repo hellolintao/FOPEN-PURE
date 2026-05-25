@@ -7,6 +7,7 @@ const { spawnSync } = require('child_process')
 
 const projectRoot = path.resolve(__dirname, '..')
 const cloudRoot = path.join(projectRoot, 'cloudfunctions')
+const sharedRoot = path.join(cloudRoot, '_shared')
 const defaultCli = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 
 function usage() {
@@ -72,7 +73,11 @@ function walkFiles(dir, base = dir) {
 
 function flatJsName(relPath) {
   if (relPath === 'index.js') return 'index.js'
-  return relPath.replace(/\.js$/, '').split(path.sep).join('_') + '.js'
+  return relPath
+    .replace(/\.js$/, '')
+    .split(path.sep)
+    .filter(part => part && part !== '.' && part !== '..')
+    .join('_') + '.js'
 }
 
 function normalizeModulePath(modulePath) {
@@ -106,23 +111,41 @@ function prepareFunction(functionName, buildRoot) {
   const outDir = path.join(buildRoot, functionName)
   ensureDir(outDir)
 
-  const files = walkFiles(sourceDir)
-  const jsFiles = files.filter(file => file.endsWith('.js'))
-  const jsByRel = new Set(jsFiles.map(file => path.normalize(file)))
+  const entries = walkFiles(sourceDir).map(rel => ({
+    rel: path.normalize(rel),
+    sourcePath: path.join(sourceDir, rel),
+    functionLocal: true
+  }))
 
-  for (const rel of files) {
-    const sourcePath = path.join(sourceDir, rel)
+  if (fs.existsSync(sharedRoot)) {
+    for (const rel of walkFiles(sharedRoot).filter(file => file.endsWith('.js'))) {
+      entries.push({
+        rel: path.normalize(path.join('..', '_shared', rel)),
+        sourcePath: path.join(sharedRoot, rel),
+        functionLocal: false
+      })
+    }
+  }
+
+  const jsByRel = new Set(
+    entries
+      .filter(entry => entry.rel.endsWith('.js'))
+      .map(entry => entry.rel)
+  )
+
+  for (const entry of entries) {
+    const rel = entry.rel
     if (rel.endsWith('.js')) {
       const targetPath = path.join(outDir, flatJsName(rel))
-      const rewritten = rewriteRequires(fs.readFileSync(sourcePath, 'utf8'), path.normalize(rel), jsByRel)
+      const rewritten = rewriteRequires(fs.readFileSync(entry.sourcePath, 'utf8'), rel, jsByRel)
       fs.writeFileSync(targetPath, rewritten)
       continue
     }
 
-    if (rel.includes(path.sep)) {
+    if (entry.functionLocal && rel.includes(path.sep)) {
       throw new Error(`Unsupported nested non-JS file in ${functionName}: ${rel}`)
     }
-    fs.copyFileSync(sourcePath, path.join(outDir, rel))
+    if (entry.functionLocal) fs.copyFileSync(entry.sourcePath, path.join(outDir, rel))
   }
 
   return outDir
@@ -192,9 +215,19 @@ function main() {
   }
 }
 
-try {
-  main()
-} catch (err) {
-  console.error(err.message)
-  process.exit(1)
+if (require.main === module) {
+  try {
+    main()
+  } catch (err) {
+    console.error(err.message)
+    process.exit(1)
+  }
+}
+
+module.exports = {
+  parseArgs,
+  flatJsName,
+  resolveLocalRequire,
+  rewriteRequires,
+  prepareFunction
 }

@@ -91,6 +91,34 @@ describe('match page tournament entry permissions', () => {
     expect(ctx.data.tournaments[0].__permissionKind).toBe('admin')
   })
 
+  test('sorts tournaments by creation time descending so newest appears first', async () => {
+    const { pageDef } = loadPage({
+      tournaments: [
+        { _id: 'old', name: '旧赛事', type: 'singles', createTime: '2026-05-20T10:00:00+08:00' },
+        { _id: 'new', name: '新赛事', type: 'singles', createTime: '2026-05-22T10:00:00+08:00' },
+        { _id: 'mid', name: '中间赛事', type: 'singles', createdAt: '2026-05-21T10:00:00+08:00' }
+      ]
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments.map(t => t._id)).toEqual(['new', 'mid', 'old'])
+  })
+
+  test('decorates admin schedule-published events as editable', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { isAdmin: true }, refreshIdentity: jest.fn().mockResolvedValue(null) },
+      tournaments: [{ _id: 't1', name: 'FU Open', type: 'singles', scheduleStatus: 'published' }]
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__permissionLabel).toBe('可编辑')
+    expect(ctx.data.tournaments[0].__permissionKind).toBe('admin')
+  })
+
   test('decorates participant events as scoreable', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false }, refreshIdentity: jest.fn().mockResolvedValue(null) },
@@ -104,6 +132,60 @@ describe('match page tournament entry permissions', () => {
 
     expect(ctx.data.tournaments[0].__permissionLabel).toBe('可录分')
     expect(ctx.data.tournaments[0].__permissionKind).toBe('participant')
+  })
+
+  test('decorates participant schedule-published events as registered', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false }, refreshIdentity: jest.fn().mockResolvedValue(null) },
+      tournaments: [{ _id: 't1', name: 'FU Open', type: 'singles', scheduleStatus: 'published' }],
+      registrationsByTournament: {
+        t1: [{ playerId: 'm1', playerName: 'A', registrationStatus: 'confirmed' }]
+      }
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__permissionLabel).toBe('已报名')
+    expect(ctx.data.tournaments[0].__permissionKind).toBe('participant')
+  })
+
+  test('decorates registration open tournament as available to register for viewer', async () => {
+    const { pageDef } = loadPage({
+      tournaments: [{
+        _id: 't1',
+        name: '5月周末赛',
+        format: 'regular',
+        type: 'singles',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      }]
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__statusLabel).toBe('报名中')
+    expect(ctx.data.tournaments[0].__permissionLabel).toBe('可报名')
+  })
+
+  test('decorates participant pending schedule as waiting for schedule', async () => {
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false }, refreshIdentity: jest.fn().mockResolvedValue(null) },
+      tournaments: [{
+        _id: 't1',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-21T10:00:00+08:00',
+        scheduleStatus: 'none'
+      }],
+      registrationsByTournament: { t1: [{ playerId: 'm1', registrationStatus: 'confirmed' }] }
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(ctx.data.tournaments[0].__permissionLabel).toBe('等待赛程')
   })
 
   test('decorates non-participant events as view only', async () => {

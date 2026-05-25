@@ -131,6 +131,89 @@ describe('tournament status helpers', () => {
     })
   })
 
+  test('uses new registration phase labels when phase fields are present', () => {
+    expect(getTournamentStatusMeta({
+      status: 'draft',
+      registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+      registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+      scheduleStatus: 'none'
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'registration',
+      label: '报名中',
+      hint: '可报名',
+      scoreActionLabel: '我要报名',
+      canShare: true
+    })
+
+    expect(getTournamentStatusMeta({
+      registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+      registrationDeadlineAt: '2026-05-21T10:00:00+08:00',
+      scheduleStatus: 'none'
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'pendingSchedule',
+      label: '待排程',
+      hint: '报名已截止',
+      scoreActionLabel: '等待赛程'
+    })
+  })
+
+  test('keeps cancelled lifecycle meta when registration fields are present', () => {
+    expect(getTournamentStatusMeta({
+      status: 'cancelled',
+      registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+      registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+      scheduleStatus: 'none'
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'cancelled',
+      label: '已取消',
+      hint: '赛事已取消',
+      canShare: false
+    })
+  })
+
+  test('uses new schedule and result phase labels when phase fields are present', () => {
+    expect(getTournamentStatusMeta({
+      scheduleStatus: 'draft',
+      registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+      registrationDeadlineAt: '2026-05-24T18:00:00+08:00'
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'scheduleDraft',
+      label: '赛程待发布',
+      hint: '草稿仅管理员可见',
+      scoreActionLabel: '发布赛程'
+    })
+
+    expect(getTournamentStatusMeta({
+      scheduleStatus: 'published',
+      resultSummary: { playableCount: 1, confirmedCount: 0 }
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'upcoming',
+      label: '赛程已发布',
+      hint: '可录分',
+      scoreActionLabel: '录入成绩'
+    })
+
+    expect(getTournamentStatusMeta({
+      scheduleStatus: 'published',
+      resultSummary: { playableCount: 1, confirmedCount: 1 }
+    }, { now: '2026-05-21T12:00:00+08:00' })).toMatchObject({
+      kind: 'settled',
+      label: '已结算',
+      scoreActionLabel: '查看成绩'
+    })
+  })
+
+  test('keeps legacy date-window behavior when new phase fields are absent', () => {
+    expect(getTournamentStatusMeta({
+      status: 'upcoming',
+      startDate: '2026-05-19',
+      endDate: '2026-05-19'
+    }, { now: '2026-05-19T12:00:00+08:00' })).toMatchObject({
+      kind: 'ongoing',
+      label: '进行中'
+    })
+  })
+
   test('decorates tournament rows with stable status display fields', () => {
     const row = decorateTournamentStatus({ _id: 't1', name: 'FU Open', status: 'ongoing' })
 

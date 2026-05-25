@@ -24,7 +24,7 @@
   <!-- Loaded -->
   <block wx:elif="{{loadState === 'loaded'}}">
     <!-- Empty -->
-    <view wx:if="{{summary.pending.length === 0 && summary.submitted.length === 0 && summary.confirmed.length === 0}}" class="mm-state">
+    <view wx:if="{{summary.registrations.length === 0 && summary.pending.length === 0 && summary.submitted.length === 0 && summary.confirmed.length === 0}}" class="mm-state">
       <empty-state icon="sprout" title="本周没有比赛" subtitle="加入下一场赛事或查看历史" action="查看赛程" bindaction="onViewSchedule" />
     </view>
 
@@ -35,6 +35,21 @@
         <text class="mm-hero-big">{{summary.pending.length > 0 ? ('你有 ' + summary.pending.length + ' 场待录分') : (summary.submitted.length > 0 ? (summary.submitted.length + ' 场等管理员确认') : '本周没有比赛')}}</text>
         <view wx:if="{{summary.pending.length > 0}}" class="mm-hero-cta" bindtap="onRecordNow">→ 现在录</view>
         <view wx:else class="mm-hero-cta mm-hero-cta--sec" bindtap="onViewSchedule">查看赛程</view>
+      </view>
+
+      <!-- 我的报名 -->
+      <view wx:if="{{summary.registrations.length > 0}}" class="mm-block">
+        <view class="mm-block-title">
+          <text>我的报名</text>
+          <status-tag type="muted" text="{{summary.registrations.length}}" />
+        </view>
+        <view class="mm-row" wx:for="{{summary.registrations}}" wx:key="tournamentId" data-tournamentid="{{item.tournamentId}}" bindtap="onRegistrationRow">
+          <view class="mm-row-l">
+            <text class="mm-row-t">{{item.tournamentName}}</text>
+            <text class="mm-row-s">{{item.withdrawDeadlineLabel ? ('可退至 ' + item.withdrawDeadlineLabel) : item.statusLabel}}</text>
+          </view>
+          <status-tag type="{{item.canWithdraw ? 'amber' : 'muted'}}" text="{{item.statusLabel}}" />
+        </view>
       </view>
 
       <!-- 待录分 -->

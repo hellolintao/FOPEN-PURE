@@ -7,6 +7,8 @@ Page({
     laterRounds: [],   // [{ round, matches }]
     freePlays: [],
     loading: false,
+    scheduleGateBlocked: false,
+    scheduleGateMessage: '',
     decoratedCourts: []  // schedulePlan.courts each annotated with [r1 matches that map to it] + [freePlays that map to it]
   },
 
@@ -22,12 +24,25 @@ Page({
   },
 
   async refresh() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, scheduleGateBlocked: false, scheduleGateMessage: '' })
     try {
       const tRes = await wx.cloud.callFunction({
         name: 'tournaments', data: { action: 'get', id: this.data.tournamentId }
       })
       const tournament = tRes.result && tRes.result.data
+      if (isScheduleBlocked(tournament)) {
+        this.setData({
+          tournament,
+          schedulePlan: (tournament && tournament.schedulePlan) || null,
+          r1Matches: [],
+          laterRounds: [],
+          freePlays: [],
+          decoratedCourts: [],
+          scheduleGateBlocked: true,
+          scheduleGateMessage: '赛程发布后才能查看对阵'
+        })
+        return
+      }
 
       const bRes = await wx.cloud.callFunction({
         name: 'tournament-brackets', data: { action: 'getByTournament', tournamentId: this.data.tournamentId }
@@ -82,7 +97,7 @@ Page({
   },
 
   onEditSchedule() {
-    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}` })
+    wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3&mode=edit-schedule` })
   }
 })
 
@@ -90,4 +105,12 @@ function playerLabel(player) {
   if (!player) return '待定'
   if (player.name) return player.partnerName ? `${player.name} / ${player.partnerName}` : player.name
   return '待定'
+}
+
+function isScheduleBlocked(tournament) {
+  return !!(
+    tournament &&
+    Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
+    tournament.scheduleStatus !== 'published'
+  )
 }
