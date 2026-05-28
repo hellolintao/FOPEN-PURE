@@ -1,6 +1,8 @@
 const { createMatchStateService } = require('../state')
+const { knockoutBracketDocId } = require('../group-knockout-id')
 const award = require('../award')
 const scoreRule = require('../score-rule')
+const { knockoutBracketDocId: tournamentKnockoutBracketDocId } = require('../../../tournament-brackets/lib/group-knockout')
 
 function makeDb(seed) {
   const collections = JSON.parse(JSON.stringify(seed))
@@ -122,6 +124,56 @@ function seed4Knockout() {
     tournament_points: []
   }
 }
+
+function seedGroupKnockoutFinal(overrides = {}) {
+  const {
+    format = 'group_knockout',
+    groupKnockoutPhase = 'knockout_published'
+  } = overrides
+  const tournament = {
+    _id: 'tournament_1',
+    format,
+    type: 'singles',
+    seasonId: 'season_2026',
+    scheduleStatus: 'published',
+    pointsRules: { winLoss: { win: 20, loss: 10, walkover: 0 } },
+    status: 'ongoing'
+  }
+  if (typeof groupKnockoutPhase !== 'undefined') tournament.groupKnockoutPhase = groupKnockoutPhase
+  return {
+    tournaments: [tournament],
+    tournament_brackets: [{
+      _id: 'bracket_1_knockout_round_3',
+      tournamentId: 'tournament_1',
+      stage: 'knockout',
+      round: 3,
+      matches: [{ matchId: 'final', round: 3, position: 1, player1: { id: 'a1' }, player2: { id: 'b1' } }]
+    }],
+    match_results: [{
+      _id: 'result_1_final',
+      tournamentId: 'tournament_1',
+      sourceMatchId: 'final',
+      matchKind: 'bracket',
+      stage: 'knockout',
+      round: 3,
+      position: 1,
+      player1: { id: 'a1' },
+      player2: { id: 'b1' },
+      playerIds: ['a1', 'b1'],
+      resultStatus: 'pending',
+      tournamentType: 'singles',
+      seasonId: 'season_2026',
+      pointsAwarded: null
+    }],
+    tournament_registrations: ['a1', 'b1'].map(id => ({ _id: `reg_${id}`, tournamentId: 'tournament_1', playerId: id, registrationStatus: 'confirmed' })),
+    tournament_points: []
+  }
+}
+
+test('match-results group knockout bracket ids stay in sync with tournament-brackets', () => {
+  expect(knockoutBracketDocId('tournament_1', 2)).toBe(tournamentKnockoutBracketDocId('tournament_1', 2))
+  expect(knockoutBracketDocId('T1', 3)).toBe(tournamentKnockoutBracketDocId('T1', 3))
+})
 
 describe('submitResult', () => {
   test('pending → admin submit → confirmed + award', async () => {
@@ -484,6 +536,102 @@ describe('submitResult', () => {
     const r2r = db.__all().match_results.find(x => x._id === 'result_T1_r2m1')
     expect(r2b.matches[0].player1).toEqual({ id: 'A' })
     expect(r2r.player1).toEqual({ id: 'A' })
+  })
+
+  test('group knockout bracket advancement uses knockout bracket doc ids', async () => {
+    const seed = seed4Knockout()
+    seed.tournaments = [{
+      _id: 'tournament_1',
+      format: 'group_knockout',
+      type: 'singles',
+      seasonId: 'season_2026',
+      scheduleStatus: 'published',
+      pointsRules: { winLoss: { win: 20, loss: 10, walkover: 0 } }
+    }]
+    seed.tournament_brackets = [{
+      _id: 'bracket_1_knockout_round_2',
+      tournamentId: 'tournament_1',
+      stage: 'knockout',
+      round: 2,
+      matches: [{ matchId: 'sf1', round: 2, position: 1, player1: null, player2: null }]
+    }]
+    seed.match_results = [{
+      _id: 'result_1_qf1',
+      tournamentId: 'tournament_1',
+      sourceMatchId: 'qf1',
+      matchKind: 'bracket',
+      stage: 'knockout',
+      round: 1,
+      position: 1,
+      player1: { id: 'a1', name: 'A1' },
+      player2: { id: 'c2', name: 'C2' },
+      resultStatus: 'pending',
+      tournamentType: 'singles',
+      seasonId: 'season_2026',
+      playerIds: ['a1', 'c2']
+    }]
+    seed.tournament_registrations = ['a1', 'c2'].map(id => ({ _id: `reg_${id}`, tournamentId: 'tournament_1', playerId: id, registrationStatus: 'confirmed' }))
+    seed.tournament_points = []
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'qf1', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournament_brackets.find(b => b._id === 'bracket_1_knockout_round_2').matches[0].player1).toEqual({ id: 'a1', name: 'A1' })
+  })
+
+  test('completed group knockout tournament with confirmed final row triggers points recompute once', async () => {
+    const db = makeDb(seedGroupKnockoutFinal())
+    db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'final', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__testPointsEngine).toHaveBeenCalledTimes(1)
+    expect(db.__testPointsEngine).toHaveBeenCalledWith({ action: 'recompute', tournamentId: 'tournament_1' })
+  })
+
+  test('non group knockout completion does not trigger points recompute', async () => {
+    const db = makeDb(seedGroupKnockoutFinal({ format: 'regular', groupKnockoutPhase: undefined }))
+    db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'final', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__testPointsEngine).not.toHaveBeenCalled()
+  })
+
+  test('completed group knockout phase does not trigger points recompute again', async () => {
+    const db = makeDb(seedGroupKnockoutFinal({ groupKnockoutPhase: 'completed' }))
+    db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'final', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('completed')
+    expect(db.__testPointsEngine).not.toHaveBeenCalled()
+  })
+
+  test('group knockout settlement failure leaves tournament completed without setting phase', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const db = makeDb(seedGroupKnockoutFinal())
+    db.__testPointsEngine = jest.fn().mockResolvedValue({
+      success: false,
+      error: { code: 'POINTS_ENGINE_FAILED', message: 'boom' }
+    })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    try {
+      await svc.submitResult({ matchId: 'final', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+      expect(db.__all().tournaments[0].status).toBe('completed')
+      expect(db.__all().tournaments[0].groupKnockoutPhase).toBe('knockout_published')
+      expect(db.__testPointsEngine).toHaveBeenCalledTimes(1)
+    } finally {
+      consoleSpy.mockRestore()
+    }
   })
 })
 

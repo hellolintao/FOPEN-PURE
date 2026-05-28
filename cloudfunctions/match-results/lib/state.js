@@ -1,4 +1,5 @@
 const { isActiveScoreRow } = require('./active-row')
+const { bracketDocId } = require('./group-knockout-id')
 const VOID_MARKERS_COLLECTION = 'match_result_voids'
 
 function createMatchStateService({ db, awardLib, scoreRule }) {
@@ -144,7 +145,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     }
 
     if (result.matchKind === 'bracket') {
-      const currentDocId = bracketDocId(result.tournamentId, result.round || 1)
+      const currentDocId = bracketDocId(result.tournamentId, result.round || 1, result.stage)
       const curDoc = await getDocOrNull('tournament_brackets', currentDocId)
       if (curDoc) {
         const curIdx = curDoc.matches.findIndex(m => m.position === (result.position || 1))
@@ -168,7 +169,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   async function clearDownstream(tournamentId, oldMatch) {
     if (!oldMatch || !oldMatch.round) return
     const nextRound = oldMatch.round + 1
-    const docId = bracketDocId(tournamentId, nextRound)
+    const docId = bracketDocId(tournamentId, nextRound, oldMatch.stage)
     const doc = await getDocOrNull('tournament_brackets', docId)
     if (!doc) return
     const oldPosition = oldMatch.position || 1
@@ -195,7 +196,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
       // 递归向下清（如果还有下一轮）
       const refreshed = await getDocOrNull('match_results', nextResultId)
       if (refreshed) {
-        await clearDownstream(tournamentId, { ...refreshed, round: nextRound, position: nextPosition })
+        await clearDownstream(tournamentId, { ...refreshed, round: nextRound, position: nextPosition, stage: refreshed.stage || oldMatch.stage })
       }
     }
   }
@@ -246,7 +247,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     await removeVoidMarker(result._id)
     // 同步当前轮 bracket 上的 winner（供 placement 判定 final 用）
     if (result.matchKind === 'bracket') {
-      const currentDocId = bracketDocId(result.tournamentId, result.round || 1)
+      const currentDocId = bracketDocId(result.tournamentId, result.round || 1, result.stage)
       const curDoc = await getDocOrNull('tournament_brackets', currentDocId)
       if (curDoc) {
         const curIdx = curDoc.matches.findIndex(m => m.position === (result.position || 1))
@@ -266,7 +267,7 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     // 推进下一轮 bracket + 同步 R+1 match_results 占位（修订 #2）
     if (result.matchKind === 'bracket' && winner) {
       const nextRound = (result.round || 1) + 1
-      const docId = bracketDocId(result.tournamentId, nextRound)
+      const docId = bracketDocId(result.tournamentId, nextRound, result.stage)
       const nextDoc = await getDocOrNull('tournament_brackets', docId)
       if (nextDoc) {
         const oldPosition = result.position || 1
@@ -391,11 +392,40 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     if (allTerminal) {
       const now = new Date()
       await updateDoc('tournaments', tournamentId, { status: 'completed', completedAt: now, updateTime: now }, 'tournament settlement update')
+      await maybeTriggerGroupKnockoutSettlement(tournamentId)
       return { skipped: false, status: 'completed' }
     }
     const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
     if (hasStarted) await markTournamentOngoing(tournamentId)
     return { skipped: true, reason: 'not_all_confirmed' }
+  }
+
+  async function maybeTriggerGroupKnockoutSettlement(tournamentId) {
+    const tournament = await getTournament(tournamentId)
+    if (!tournament || tournament.format !== 'group_knockout') return { skipped: true, reason: 'not_group_knockout' }
+    if (tournament.groupKnockoutPhase === 'completed') return { skipped: true, reason: 'already_settled' }
+
+    const finalRows = ((await db.collection('match_results').where({ tournamentId, stage: 'knockout', round: 3 }).get()).data || []).filter(isActiveScoreRow)
+    const final = finalRows[0]
+    if (!final || final.resultStatus !== 'confirmed') return { skipped: true, reason: 'final_not_confirmed' }
+
+    const res = await cloudCallPointsEngine({ tournamentId })
+    if (!(res && res.success)) {
+      console.error('[match-results] group knockout settlement failed for', tournamentId, res && res.error)
+      return { skipped: true, reason: 'points_failed', error: res && res.error }
+    }
+    return { skipped: false }
+  }
+
+  async function cloudCallPointsEngine({ tournamentId }) {
+    try {
+      if (db.__testPointsEngine) return await db.__testPointsEngine({ action: 'recompute', tournamentId })
+      const cloud = require('wx-server-sdk')
+      const res = await cloud.callFunction({ name: 'points-engine', data: { action: 'recompute', tournamentId } })
+      return res && res.result
+    } catch (e) {
+      return { success: false, error: { code: 'POINTS_ENGINE_FAILED', message: (e && e.message) || String(e) } }
+    }
   }
 
   async function markTournamentOngoing(tournamentId) {
@@ -637,11 +667,6 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
 
   function resolveMatchType(match, tournament) {
     return (match && (match.type || match.tournamentType)) || (tournament && tournament.type) || 'singles'
-  }
-
-  function bracketDocId(tournamentId, round) {
-    const normalized = String(tournamentId || '').replace(/^tournament_/, '')
-    return `bracket_${normalized}_round_${round}`
   }
 
   async function ensureCollection(name) {
