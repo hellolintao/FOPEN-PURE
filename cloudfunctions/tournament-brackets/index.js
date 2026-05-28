@@ -733,7 +733,7 @@ function confirmedGroupResult(result, expectedMatchesById) {
     result.resultStatus === 'confirmed' &&
     (
       (expected && couldBeGroupResultForExpectedMatch(result)) ||
-      (result.stage === 'group' && result.matchKind === 'group' && GROUP_CODES.includes(result.groupCode))
+      (result.stage !== 'knockout' && (result.matchKind == null || result.matchKind === 'group') && GROUP_CODES.includes(result.groupCode))
     )
   )
 }

@@ -623,6 +623,30 @@ test('confirmKnockoutSeeds rejects unrelated extra confirmed group rows even whe
   expect(mockState.collections.tournaments.get(tournament._id).groupKnockoutPhase).toBe('group_completed')
 })
 
+test('confirmKnockoutSeeds rejects unrelated extra confirmed legacy group row without matchKind', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  seedGroupResult(tournament._id, 'A', groups[0].slots[0], groups[0].slots[1], 4, 1, {
+    _id: `result_${tournament._id}_A_legacy_unrelated`,
+    sourceMatchId: 'legacy_unrelated_A',
+    matchKind: undefined,
+  })
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({
+    code: 'GROUPS_NOT_READY',
+    details: {
+      unrelatedResultIds: [`result_${tournament._id}_A_legacy_unrelated`],
+    },
+  })
+  expect(mockState.collections.tournaments.get(tournament._id).groupKnockoutPhase).toBe('group_completed')
+})
+
 test('confirmKnockoutSeeds rejects confirmed result players that do not match the bracket match', async () => {
   const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
   const groups = buildGroups()
