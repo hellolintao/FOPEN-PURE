@@ -247,6 +247,50 @@ describe('validateTournament', () => {
   });
 });
 
+describe('group_knockout validation', () => {
+  test('allows singles group knockout with 16 sign bracket', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 16,
+      maxPlayers: 16,
+      scheduleStatus: 'published',
+      schedulePlan: null
+    }), { isDraft: false });
+    expect(errors).toEqual([]);
+  });
+
+  test.each(['doubles', 'mixed'])('rejects group knockout %s', (type) => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type,
+      bracketSize: 16,
+      maxPlayers: 16
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛只支持 singles 类型');
+  });
+
+  test('requires bracketSize 12 or 16', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 14,
+      maxPlayers: 14
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 bracketSize 必须是 12 或 16');
+  });
+
+  test('requires maxPlayers to equal bracketSize when supplied', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 12,
+      maxPlayers: 16
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
+  });
+});
+
 function validTournament(overrides = {}) {
   return {
     name: '5月周末赛',

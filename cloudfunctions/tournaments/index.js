@@ -23,6 +23,41 @@ function generateTournamentId() {
   return `tournament_${year}_${timestamp.toString().slice(-6)}_${random}`
 }
 
+function normalizeTournamentPayload(data = {}) {
+  const payload = { ...data }
+  if (payload.format !== 'group_knockout') return payload
+
+  const bracketSize = Number(payload.bracketSize || payload.maxPlayers || 16)
+  return {
+    ...payload,
+    type: 'singles',
+    bracketSize,
+    maxPlayers: bracketSize,
+    scheduleStatus: 'none',
+    groupDrawMode: payload.groupDrawMode || 'onsite',
+    groupKnockoutPhase: payload.groupKnockoutPhase || 'group_draft',
+    groupRankSnapshot: payload.groupRankSnapshot ?? null,
+    knockoutSeedSnapshot: payload.knockoutSeedSnapshot ?? null,
+  }
+}
+
+function normalizeTournamentUpdatePatch(patch = {}, current = {}) {
+  const format = patch.format || current.format
+  if (format !== 'group_knockout') return normalizeTournamentPayload(patch)
+
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(patch, key)
+  return normalizeTournamentPayload({
+    ...patch,
+    format: 'group_knockout',
+    bracketSize: hasOwn('bracketSize') ? patch.bracketSize : current.bracketSize,
+    maxPlayers: hasOwn('maxPlayers') ? patch.maxPlayers : current.maxPlayers,
+    groupDrawMode: hasOwn('groupDrawMode') ? patch.groupDrawMode : current.groupDrawMode,
+    groupKnockoutPhase: hasOwn('groupKnockoutPhase') ? patch.groupKnockoutPhase : current.groupKnockoutPhase,
+    groupRankSnapshot: hasOwn('groupRankSnapshot') ? patch.groupRankSnapshot : current.groupRankSnapshot,
+    knockoutSeedSnapshot: hasOwn('knockoutSeedSnapshot') ? patch.knockoutSeedSnapshot : current.knockoutSeedSnapshot,
+  })
+}
+
 /**
  * Build a standard success envelope.
  * @param {object} data
@@ -67,7 +102,7 @@ async function resolveMemberByOpenid(openid, database = db, command = _) {
 // ---------------------------------------------------------------------------
 
 async function actionCreate(event) {
-  const { data = {} } = event
+  const data = normalizeTournamentPayload((event && event.data) || {})
   const status = data.status || 'upcoming'
   const isDraft = status === 'draft'
 
@@ -104,8 +139,14 @@ async function actionCreate(event) {
     location: data.location || '',
     status,
     description: data.description || '',
+    ...(data.scheduleStatus !== undefined ? { scheduleStatus: data.scheduleStatus } : {}),
     schedulePlan: data.schedulePlan || null,
     maxPlayers: data.maxPlayers || null,
+    ...(data.bracketSize !== undefined ? { bracketSize: data.bracketSize } : {}),
+    ...(data.groupDrawMode !== undefined ? { groupDrawMode: data.groupDrawMode } : {}),
+    ...(data.groupKnockoutPhase !== undefined ? { groupKnockoutPhase: data.groupKnockoutPhase } : {}),
+    ...(data.groupRankSnapshot !== undefined ? { groupRankSnapshot: data.groupRankSnapshot } : {}),
+    ...(data.knockoutSeedSnapshot !== undefined ? { knockoutSeedSnapshot: data.knockoutSeedSnapshot } : {}),
     pointsRules: data.pointsRules || null,
     // Legacy field — kept for backward compatibility with old pages until Task 14
     courtTimeGrid: data.courtTimeGrid || null,
@@ -130,7 +171,8 @@ async function actionCreate(event) {
 // ---------------------------------------------------------------------------
 
 async function actionUpdate(event) {
-  const { id, data = {} } = event
+  const { id } = event
+  const data = (event && event.data) || {}
   if (!id) return fail('MISSING_ID', 'id 不能为空')
 
   const now = db.serverDate()
@@ -139,8 +181,9 @@ async function actionUpdate(event) {
   // are validated against the full document state (spec: Phase 7 Task 2).
   const cur = await collection.doc(id).get().catch(() => null)
   if (!cur || !cur.data) return fail('NOT_FOUND', '赛事不存在')
-  const merged = { ...cur.data, ...data }
-  const isDraft = (data.status || merged.status) === 'draft'
+  const updatePatch = normalizeTournamentUpdatePatch(data, cur.data)
+  const merged = normalizeTournamentPayload({ ...cur.data, ...updatePatch })
+  const isDraft = (updatePatch.status || merged.status) === 'draft'
   const errors = validateTournament(merged, { isDraft })
   if (errors.length > 0) {
     return fail('VALIDATION_ERROR', '数据校验失败', errors)
@@ -149,7 +192,7 @@ async function actionUpdate(event) {
   // 嵌套对象字段必须用 _.set() 包一层，否则 TCB 会把 { schedulePlan: {...} }
   // 展开成 dot-path 写入，遇到旧 doc 上 schedulePlan=null 时会报
   // "Cannot create field 'courts' in element {schedulePlan: null}"
-  const updateData = { ...data, updateTime: now }
+  const updateData = { ...updatePatch, updateTime: now }
   if (updateData.schedulePlan !== undefined) {
     updateData.schedulePlan = _.set(updateData.schedulePlan)
   }
@@ -458,23 +501,31 @@ exports.main = async (event, context) => {
     // ── Legacy action: keep old contract so tournament-edit still works ──
     case 'add': {
       // Old callers read res.result._id or res.result.data._id, and check errMsg
-      const errors = validateTournament(data || {})
+      const normalizedData = normalizeTournamentPayload(data || {})
+      const errors = validateTournament(normalizedData)
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
-      const tournamentId = (data && data._id) || generateTournamentId()
+      const tournamentId = (normalizedData && normalizedData._id) || generateTournamentId()
       const addData = {
         _id: tournamentId,
-        seasonId: (data && data.seasonId) || '',
-        name: data.name,
-        type: data.type,
-        format: (data && data.format) || 'regular',
-        startDate: data.startDate,
-        endDate: (data && data.endDate) || '',
-        location: (data && data.location) || '',
-        status: (data && data.status) || 'upcoming',
-        description: (data && data.description) || '',
-        config: (data && data.config) || {
+        seasonId: (normalizedData && normalizedData.seasonId) || '',
+        name: normalizedData.name,
+        type: normalizedData.type,
+        format: (normalizedData && normalizedData.format) || 'regular',
+        startDate: normalizedData.startDate,
+        endDate: (normalizedData && normalizedData.endDate) || '',
+        location: (normalizedData && normalizedData.location) || '',
+        status: (normalizedData && normalizedData.status) || 'upcoming',
+        description: (normalizedData && normalizedData.description) || '',
+        ...(normalizedData.scheduleStatus !== undefined ? { scheduleStatus: normalizedData.scheduleStatus } : {}),
+        ...(normalizedData.bracketSize !== undefined ? { bracketSize: normalizedData.bracketSize } : {}),
+        ...(normalizedData.groupDrawMode !== undefined ? { groupDrawMode: normalizedData.groupDrawMode } : {}),
+        ...(normalizedData.groupKnockoutPhase !== undefined ? { groupKnockoutPhase: normalizedData.groupKnockoutPhase } : {}),
+        ...(normalizedData.groupRankSnapshot !== undefined ? { groupRankSnapshot: normalizedData.groupRankSnapshot } : {}),
+        ...(normalizedData.knockoutSeedSnapshot !== undefined ? { knockoutSeedSnapshot: normalizedData.knockoutSeedSnapshot } : {}),
+        maxPlayers: normalizedData.maxPlayers || null,
+        config: (normalizedData && normalizedData.config) || {
           maxPlayers: 16,
           currentRound: 1,
           totalRounds: 4,
@@ -482,13 +533,13 @@ exports.main = async (event, context) => {
           eliminationType: 'single',
           seedPlayers: []
         },
-        pointsRules: (data && data.pointsRules) || {
+        pointsRules: (normalizedData && normalizedData.pointsRules) || {
           win: 100,
           loss: 20,
           walkover: 50,
           bonusByRound: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
         },
-        courtTimeGrid: (data && data.courtTimeGrid) || null,
+        courtTimeGrid: (normalizedData && normalizedData.courtTimeGrid) || null,
         createTime: now,
         updateTime: now
       }
@@ -504,11 +555,12 @@ exports.main = async (event, context) => {
 
     // ── Legacy action: keep old errMsg contract so tournament-edit still works ──
     case 'update': {
-      const errors = validateTournament(data || {})
+      const normalizedData = normalizeTournamentPayload(data || {})
+      const errors = validateTournament(normalizedData)
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
-      const updateData = { ...(data || {}), updateTime: now }
+      const updateData = { ...normalizedData, updateTime: now }
       return collection.doc(id).update({ data: updateData })
     }
 
@@ -621,5 +673,6 @@ exports.__test__ = {
   resolveMemberByOpenid,
   isAdminMember,
   validateTournament,
+  normalizeTournamentPayload,
   buildRegistrationPhaseCtx,
 }

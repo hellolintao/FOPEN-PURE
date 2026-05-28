@@ -1,5 +1,7 @@
 // Legacy courtTimeGrid validator is kept for backward compatibility with old code paths.
 const TOURNAMENT_TYPES = ['singles', 'doubles', 'mixed'];
+const TOURNAMENT_FORMATS = ['regular', 'knockout', 'group_knockout'];
+const GROUP_KNOCKOUT_BRACKET_SIZES = [12, 16];
 const SCHEDULE_STATUSES = ['none', 'draft', 'published'];
 
 function validateCourtTimeGrid(grid) {
@@ -102,11 +104,14 @@ function validateTournament(data = {}, { isDraft = false } = {}) {
   if (!data.type || !TOURNAMENT_TYPES.includes(data.type)) {
     errors.push('赛事类型必须是 singles、doubles 或 mixed');
   }
-  if (!data.format || !['regular', 'knockout'].includes(data.format)) {
-    errors.push('赛制必须是 regular(常规赛) 或 knockout(淘汰赛)');
+  if (!data.format || !TOURNAMENT_FORMATS.includes(data.format)) {
+    errors.push('赛制必须是 regular(常规赛)、knockout(淘汰赛) 或 group_knockout(小组赛+淘汰赛)');
   }
   if (data.format === 'knockout' && data.type === 'mixed') {
     errors.push('淘汰赛不支持 mixed 类型');
+  }
+  if (data.format === 'group_knockout') {
+    validateGroupKnockout(data, errors);
   }
   if (!data.startDate) errors.push('开始日期不能为空');
   if (!data.seasonId) errors.push('所属赛季不能为空');
@@ -141,7 +146,24 @@ function validateTournament(data = {}, { isDraft = false } = {}) {
 }
 
 function shouldValidateSchedulePlan(data) {
+  if (data.format === 'group_knockout') return false;
   return data.scheduleStatus !== 'none' && data.scheduleStatus !== 'draft';
+}
+
+function validateGroupKnockout(data, errors) {
+  if (data.type && data.type !== 'singles') {
+    errors.push('小组赛+淘汰赛只支持 singles 类型');
+  }
+
+  const bracketSize = Number(data.bracketSize);
+  if (!GROUP_KNOCKOUT_BRACKET_SIZES.includes(bracketSize)) {
+    errors.push('小组赛+淘汰赛 bracketSize 必须是 12 或 16');
+    return;
+  }
+
+  if (data.maxPlayers !== undefined && data.maxPlayers !== null && Number(data.maxPlayers) !== bracketSize) {
+    errors.push('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
+  }
 }
 
 module.exports = {
