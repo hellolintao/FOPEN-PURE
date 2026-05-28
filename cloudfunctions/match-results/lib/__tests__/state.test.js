@@ -210,6 +210,39 @@ function seedGroupKnockoutGroupsOnly() {
   }
 }
 
+function seedGroupKnockoutWithPendingGroupRow() {
+  const seed = seedGroupKnockoutGroupsOnly()
+  seed.tournament_brackets[0].matches.push({
+    matchId: 'group_a_2',
+    stage: 'group',
+    groupCode: 'A',
+    position: 2,
+    player1: { id: 'a3' },
+    player2: { id: 'a4' }
+  })
+  seed.match_results.push({
+    _id: 'result_1_group_a_2',
+    tournamentId: 'tournament_1',
+    sourceMatchId: 'group_a_2',
+    matchKind: 'group',
+    stage: 'group',
+    groupCode: 'A',
+    position: 2,
+    player1: { id: 'a3' },
+    player2: { id: 'a4' },
+    playerIds: ['a3', 'a4'],
+    resultStatus: 'pending',
+    tournamentType: 'singles',
+    seasonId: 'season_2026',
+    pointsAwarded: null
+  })
+  seed.tournament_registrations.push(
+    { _id: 'reg_a3', tournamentId: 'tournament_1', playerId: 'a3', registrationStatus: 'confirmed' },
+    { _id: 'reg_a4', tournamentId: 'tournament_1', playerId: 'a4', registrationStatus: 'confirmed' }
+  )
+  return seed
+}
+
 test('match-results group knockout bracket ids stay in sync with tournament-brackets', () => {
   expect(knockoutBracketDocId('tournament_1', 2)).toBe(tournamentKnockoutBracketDocId('tournament_1', 2))
   expect(knockoutBracketDocId('T1', 3)).toBe(tournamentKnockoutBracketDocId('T1', 3))
@@ -674,7 +707,7 @@ describe('submitResult', () => {
     }
   })
 
-  test('group knockout with only confirmed group rows stays ongoing and does not trigger points recompute', async () => {
+  test('group knockout with only confirmed group rows advances to group_completed without completing tournament', async () => {
     const db = makeDb(seedGroupKnockoutGroupsOnly())
     db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })
@@ -682,6 +715,20 @@ describe('submitResult', () => {
     await svc.submitResult({ matchId: 'group_a_1', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
 
     expect(db.__all().tournaments[0].status).toBe('ongoing')
+    expect(db.__all().tournaments[0].groupKnockoutPhase).toBe('group_completed')
+    expect(db.__all().tournaments[0].completedAt).toBeFalsy()
+    expect(db.__testPointsEngine).not.toHaveBeenCalled()
+  })
+
+  test('group knockout with pending group rows remains group_published', async () => {
+    const db = makeDb(seedGroupKnockoutWithPendingGroupRow())
+    db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'group_a_1', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('ongoing')
+    expect(db.__all().tournaments[0].groupKnockoutPhase).toBe('group_published')
     expect(db.__all().tournaments[0].completedAt).toBeFalsy()
     expect(db.__testPointsEngine).not.toHaveBeenCalled()
   })

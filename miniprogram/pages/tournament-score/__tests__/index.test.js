@@ -181,7 +181,7 @@ test('confirmed match with void marker is excluded from scoreable totals', () =>
 
 test('group knockout score rows group by group then knockout round', async () => {
   const pageDef = loadPage({
-    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles', groupKnockoutPhase: 'group_published' },
     matchResults: [
       { _id: 'g1', sourceMatchId: 'g1', stage: 'group', matchKind: 'group', groupCode: 'A', round: 1, position: 1, resultStatus: 'pending', player1: { id: 'a1' }, player2: { id: 'a2' } },
       { _id: 'qf1', sourceMatchId: 'qf1', stage: 'knockout', matchKind: 'bracket', round: 1, position: 1, resultStatus: 'pending', player1: { id: 'a1' }, player2: { id: 'c2' } },
@@ -205,7 +205,7 @@ test('group knockout legacy rows without stage or group stay visible under fallb
     player2: { id: 'a2' },
   }
   const pageDef = loadPage({
-    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles', groupKnockoutPhase: 'group_published' },
     matchResults: [legacyRow],
   })
   const ctx = makeCtx(pageDef, { tournamentId: 't1' })
@@ -222,7 +222,7 @@ test('group knockout legacy rows without stage or group stay visible under fallb
 
 test('group knockout legacy fallback row can still be anchored', async () => {
   const pageDef = loadPage({
-    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles', groupKnockoutPhase: 'group_published' },
     matchResults: [{
       _id: 'legacy_result_1',
       sourceMatchId: 'legacy_match_1',
@@ -362,6 +362,45 @@ test.each(['draft', 'none'])('%s schedule blocks score page with clear message',
 
   expect(ctx.data.rowsByRound).toEqual([])
   expect(ctx.data.empty).toBe(true)
+  expect(ctx.data.error).toBe('赛程发布后才能录入成绩')
+})
+
+test('group knockout published group phase allows scoring before schedule is published', async () => {
+  const pageDef = loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      scheduleStatus: 'none',
+      groupKnockoutPhase: 'group_published',
+    },
+    matchResults: [matchA],
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.scheduleGateBlocked).toBe(false)
+  expect(ctx.data.rowsByRound[0].matches).toHaveLength(1)
+  expect(ctx.data.totalCount).toBe(1)
+  expect(ctx.data.error).toBe('')
+})
+
+test('group knockout draft phase remains blocked even when match rows exist', async () => {
+  const pageDef = loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      scheduleStatus: 'none',
+      groupKnockoutPhase: 'group_draft',
+    },
+    matchResults: [matchA],
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.scheduleGateBlocked).toBe(true)
+  expect(ctx.data.rowsByRound).toEqual([])
   expect(ctx.data.error).toBe('赛程发布后才能录入成绩')
 })
 

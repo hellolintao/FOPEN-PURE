@@ -974,6 +974,85 @@ function getOpenidSafe() {
   }
 }
 
+function resultIdForMatch(tournamentId, matchId) {
+  return `result_${String(tournamentId || '').replace('tournament_', '')}_${matchId}`
+}
+
+function collectPlayerIdsFromMatch(match) {
+  return [playerIdOf(match && match.player1), playerIdOf(match && match.player2)].filter(Boolean)
+}
+
+function winnerFromByeMatch(match) {
+  if (!match || !match.bye) return null
+  if (match.player1 && !match.player2) return match.player1
+  if (match.player2 && !match.player1) return match.player2
+  return null
+}
+
+function buildMatchResultSkeleton({ tournament, match, now }) {
+  const winner = winnerFromByeMatch(match)
+  return {
+    _id: resultIdForMatch(tournament._id, match.matchId),
+    tournamentId: tournament._id,
+    seasonId: tournament.seasonId,
+    tournamentType: tournament.type || match.type,
+    type: tournament.type || match.type,
+    format: tournament.format,
+    stage: match.stage,
+    groupCode: match.groupCode,
+    groupSlot1: match.groupSlot1,
+    groupSlot2: match.groupSlot2,
+    matchKind: match.matchKind,
+    sourceMatchId: match.matchId,
+    round: match.round,
+    position: match.position,
+    player1: match.player1 || null,
+    player2: match.player2 || null,
+    playerIds: collectPlayerIdsFromMatch(match),
+    score: null,
+    status: match.status || 'pending',
+    resultStatus: match.resultStatus || 'pending',
+    winner,
+    winnerId: winner ? playerIdOf(winner) : null,
+    pointsAwarded: null,
+    createTime: now,
+    updateTime: now
+  }
+}
+
+function shouldPreserveExistingResult(row) {
+  return !!(
+    row &&
+    (
+      row.resultStatus === 'confirmed' ||
+      row.resultStatus === 'submitted' ||
+      row.score
+    )
+  )
+}
+
+async function upsertPendingMatchResultRows({ tournament, matches, now }) {
+  const resultCollection = db.collection('match_results')
+  for (const match of matches || []) {
+    if (!match || !match.matchId) continue
+    const row = buildMatchResultSkeleton({ tournament, match, now })
+    const current = await resultCollection.doc(row._id).get().catch(() => ({ data: null }))
+    const existing = current && current.data
+    if (shouldPreserveExistingResult(existing)) continue
+    if (existing) {
+      const { _id, createTime, ...updateData } = row
+      await resultCollection.doc(row._id).update({
+        data: {
+          ...updateData,
+          createTime: existing.createTime || createTime
+        }
+      })
+    } else {
+      await resultCollection.add({ data: row })
+    }
+  }
+}
+
 async function handleConfirmKnockoutSeeds({ tournamentId }) {
   if (!tournamentId) {
     return fail('INVALID_ARG', 'tournamentId 必填')
@@ -1058,6 +1137,11 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
       data: doc
     })
   }
+  await upsertPendingMatchResultRows({
+    tournament: ctx.tournament,
+    matches: knockoutDocs.flatMap(doc => doc.matches || []),
+    now
+  })
 
   const confirmedBy = getOpenidSafe()
   const manualOverrides = manualOverridesFromTournament(ctx.tournament)
@@ -1331,6 +1415,11 @@ async function handleGenerateGroupMatches({ tournamentId }) {
       }
     })
   }
+  await upsertPendingMatchResultRows({
+    tournament: loaded.tournament,
+    matches,
+    now
+  })
 
   await db.collection('tournaments').doc(tournamentId).update({
     data: {

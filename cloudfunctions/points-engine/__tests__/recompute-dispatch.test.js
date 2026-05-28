@@ -180,24 +180,44 @@ test('group_knockout recompute persists one entry per player idempotently and co
   expect(byMember.get('a3')).toMatchObject({ rowId: 'g_a1_a3', points: 25, rank: 'group' })
 })
 
-test('group_knockout recompute clears stale pending rows without scoring them', async () => {
-  mockState.collections.match_results.set('pending_stale', pendingGroupRow('pending_stale', 'pending_a', 'pending_b'))
+test('group_knockout recompute rejects incomplete bracket without mutating stale points or phase', async () => {
+  mockState.collections.match_results.delete('final')
+  mockState.collections.tournaments.set('t1', {
+    ...mockState.collections.tournaments.get('t1'),
+    groupKnockoutPhase: 'group_completed',
+  })
+  const beforeRows = new Map([...mockState.collections.match_results.entries()].map(([id, row]) => [id, { ...row, pointsAwarded: row.pointsAwarded && { ...row.pointsAwarded } }]))
   const { main } = require('../index')
 
   const res = await main({ action: 'recompute', tournamentId: 't1' })
 
-  expect(res).toMatchObject({ success: true, data: { source: 'group_knockout', count: 11 } })
-  expect(mockState.collections.match_results.get('pending_stale').pointsAwarded).toEqual({
-    source: 'group_knockout',
-    entries: []
+  expect(res).toMatchObject({
+    success: false,
+    error: { code: 'GROUP_KNOCKOUT_NOT_READY' }
   })
+  expect(mockState.collections.tournaments.get('t1').groupKnockoutPhase).toBe('group_completed')
+  for (const [id, row] of beforeRows) {
+    expect(mockState.collections.match_results.get(id).pointsAwarded).toEqual(row.pointsAwarded)
+  }
+})
 
-  const entries = [...mockState.collections.match_results.values()]
-    .flatMap(row => row.pointsAwarded.entries || [])
-  expect(entries).not.toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ memberId: 'pending_a' }),
-      expect.objectContaining({ memberId: 'pending_b' })
-    ])
-  )
+test('group_knockout recompute rejects active pending rows without clearing stale points', async () => {
+  mockState.collections.match_results.set('pending_stale', pendingGroupRow('pending_stale', 'pending_a', 'pending_b'))
+  mockState.collections.tournaments.set('t1', {
+    ...mockState.collections.tournaments.get('t1'),
+    groupKnockoutPhase: 'knockout_published',
+  })
+  const { main } = require('../index')
+
+  const res = await main({ action: 'recompute', tournamentId: 't1' })
+
+  expect(res).toMatchObject({
+    success: false,
+    error: { code: 'GROUP_KNOCKOUT_NOT_READY' }
+  })
+  expect(mockState.collections.tournaments.get('t1').groupKnockoutPhase).toBe('knockout_published')
+  expect(mockState.collections.match_results.get('pending_stale').pointsAwarded).toEqual({
+    source: 'stale',
+    entries: [{ memberId: 'pending_a', points: 999, rank: 'stale' }]
+  })
 })

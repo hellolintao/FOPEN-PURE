@@ -62,6 +62,17 @@ async function recomputeGroupKnockout({ tournamentId, tournament }) {
     .where({ tournamentId })
     .limit(500)
     .get()).data || []
+  const readiness = validateGroupKnockoutReadyForRecompute(allRows)
+  if (!readiness.ready) {
+    return {
+      success: false,
+      error: {
+        code: 'GROUP_KNOCKOUT_NOT_READY',
+        message: readiness.message,
+        details: readiness.details
+      }
+    }
+  }
   const confirmedRows = allRows.filter(row => row.resultStatus === 'confirmed')
   const entries = buildGroupKnockoutPointEntries({ tournament, rows: confirmedRows })
   const carrierByMember = pickGroupKnockoutCarrierMatches(confirmedRows, entries.map(entry => entry.memberId))
@@ -91,6 +102,55 @@ async function recomputeGroupKnockout({ tournamentId, tournament }) {
   })
 
   return { success: true, data: { count, source: 'group_knockout' } }
+}
+
+function validateGroupKnockoutReadyForRecompute(rows) {
+  const activeRows = (rows || []).filter(isActiveScoreRow)
+  const final = activeRows.find(row => (
+    row.stage === 'knockout' &&
+    Number(row.round) === 3 &&
+    row.resultStatus === 'confirmed' &&
+    winnerIdOf(row)
+  ))
+  const openRows = activeRows.filter(row => (
+    isScoreableGroupKnockoutRow(row) &&
+    (row.resultStatus === 'pending' || row.resultStatus === 'submitted')
+  ))
+  if (!final || openRows.length > 0) {
+    return {
+      ready: false,
+      message: !final ? '小组淘汰赛决赛尚未确认' : '小组淘汰赛仍有未确认比分',
+      details: {
+        finalConfirmed: !!final,
+        openResultIds: openRows.map(row => row._id || row.sourceMatchId).filter(Boolean)
+      }
+    }
+  }
+  return { ready: true }
+}
+
+function isActiveScoreRow(row) {
+  return !!(
+    row &&
+    row.resultStatus !== 'invalidated' &&
+    row.matchKind !== 'history' &&
+    row.matchKind !== 'audit' &&
+    !row.archivedFrom
+  )
+}
+
+function isScoreableGroupKnockoutRow(row) {
+  if (!row || row.bye || row.noScore || row.voided) return false
+  if (row.resultStatus === 'voided') return false
+  if (row.status === 'cancelled' || row.status === 'voided') return false
+  return !!(row.player1 && row.player2 && collectGroupKnockoutSideIds(row.player1).length && collectGroupKnockoutSideIds(row.player2).length)
+}
+
+function winnerIdOf(row) {
+  const winner = row && row.winner
+  return (winner && (winner.id || winner.memberId || winner.playerId || winner._id)) ||
+    (row && (row.winnerId || row.winnerMemberId)) ||
+    ''
 }
 
 function pickGroupKnockoutCarrierMatches(rows, memberIds) {

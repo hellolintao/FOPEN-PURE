@@ -162,6 +162,7 @@ function seedTournament(overrides = {}) {
     name: 'Group knockout',
     format: 'group_knockout',
     type: 'singles',
+    seasonId: 'season_2026',
     bracketSize: 12,
     groupKnockoutPhase: 'group_draft',
     scheduleStatus: 'none',
@@ -455,6 +456,27 @@ test('generateGroupMatches reads saved groups, writes group bracket docs, and pu
     type: 'singles',
     status: 'pending',
     resultStatus: 'pending',
+  })
+  const groupResultRows = Array.from(mockState.collections.match_results.values())
+    .filter(row => row.stage === 'group')
+  expect(groupResultRows).toHaveLength(12)
+  expect(mockState.collections.match_results.get(`result_gk_1_${groupBrackets[0].matches[0].matchId}`)).toMatchObject({
+    tournamentId: tournament._id,
+    seasonId: tournament.seasonId,
+    tournamentType: 'singles',
+    type: 'singles',
+    format: 'group_knockout',
+    stage: 'group',
+    groupCode: 'A',
+    groupSlot1: 1,
+    groupSlot2: 2,
+    matchKind: 'group',
+    sourceMatchId: groupBrackets[0].matches[0].matchId,
+    resultStatus: 'pending',
+    score: null,
+    winner: null,
+    pointsAwarded: null,
+    playerIds: ['p1', 'p2'],
   })
   expect(mockState.collections.tournament_brackets.get(oldGroupBracketId)).toMatchObject({
     _id: oldGroupBracketId,
@@ -777,6 +799,50 @@ test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots'
     expect(bracket.matches.every(match => match.player1 === null && match.player2 === null)).toBe(true)
     expect(bracket.matches.every(match => match.player1Source === undefined && match.player2Source === undefined)).toBe(true)
   }
+  const knockoutResultRows = Array.from(mockState.collections.match_results.values())
+    .filter(row => row.stage === 'knockout')
+    .sort((a, b) => (a.round - b.round) || (a.position - b.position))
+  expect(knockoutResultRows).toHaveLength(7)
+  expect(knockoutResultRows.filter(row => row.round === 1)).toHaveLength(4)
+  expect(knockoutResultRows.filter(row => row.round === 2)).toHaveLength(2)
+  expect(knockoutResultRows.filter(row => row.round === 3)).toHaveLength(1)
+  expect(mockState.collections.match_results.get(`result_gk_1_${knockoutBrackets[0].matches[0].matchId}`)).toMatchObject({
+    tournamentId: tournament._id,
+    seasonId: tournament.seasonId,
+    tournamentType: 'singles',
+    type: 'singles',
+    format: 'group_knockout',
+    stage: 'knockout',
+    matchKind: 'bracket',
+    sourceMatchId: knockoutBrackets[0].matches[0].matchId,
+    round: 1,
+    position: 1,
+    player1: { id: 'p1' },
+    player2: { id: 'p8' },
+    playerIds: ['p1', 'p8'],
+    resultStatus: 'pending',
+    score: null,
+    winner: null,
+    pointsAwarded: null,
+  })
+  expect(mockState.collections.match_results.get(`result_gk_1_${knockoutBrackets[1].matches[0].matchId}`)).toMatchObject({
+    stage: 'knockout',
+    round: 2,
+    position: 1,
+    player1: null,
+    player2: null,
+    playerIds: [],
+    resultStatus: 'pending',
+  })
+  expect(mockState.collections.match_results.get(`result_gk_1_${knockoutBrackets[2].matches[0].matchId}`)).toMatchObject({
+    stage: 'knockout',
+    round: 3,
+    position: 1,
+    player1: null,
+    player2: null,
+    playerIds: [],
+    resultStatus: 'pending',
+  })
   expect(GROUP_CODES.map(groupCode => mockState.collections.tournament_brackets.has(groupBracketDocId(tournament._id, groupCode)))).toEqual([true, true, true, true])
 
   const updatedTournament = mockState.collections.tournaments.get(tournament._id)

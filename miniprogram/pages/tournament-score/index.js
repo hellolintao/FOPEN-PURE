@@ -511,6 +511,10 @@ Page({
 })
 
 function isScheduleBlocked(tournament) {
+  if (tournament && tournament.format === 'group_knockout') {
+    return !['group_published', 'group_completed', 'knockout_published', 'completed']
+      .includes(tournament.groupKnockoutPhase)
+  }
   return !!(
     tournament &&
     Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&

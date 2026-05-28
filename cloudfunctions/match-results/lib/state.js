@@ -391,6 +391,8 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
     const tournament = await getTournament(tournamentId)
     if (tournament && tournament.format === 'group_knockout' && !hasConfirmedGroupKnockoutFinal(rows)) {
+      const groupPhaseRefresh = await refreshGroupKnockoutGroupPhase(tournament, rows, playable)
+      if (!groupPhaseRefresh.skipped) return groupPhaseRefresh
       if (hasStarted) await markTournamentOngoing(tournamentId)
       return { skipped: true, reason: 'group_knockout_final_not_confirmed' }
     }
@@ -403,6 +405,31 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     }
     if (hasStarted) await markTournamentOngoing(tournamentId)
     return { skipped: true, reason: 'not_all_confirmed' }
+  }
+
+  async function refreshGroupKnockoutGroupPhase(tournament, rows, playable) {
+    if (!tournament || tournament.groupKnockoutPhase !== 'group_published') {
+      return { skipped: true, reason: 'group_phase_not_refreshable' }
+    }
+    const groupRows = (playable || []).filter(row => row.stage === 'group' || row.matchKind === 'group')
+    if (groupRows.length === 0) return { skipped: true, reason: 'no_group_rows' }
+    const allGroupTerminal = groupRows.every(row => row.resultStatus === 'confirmed' || isNoScoreResult(row))
+    if (!allGroupTerminal) return { skipped: true, reason: 'group_rows_not_terminal' }
+
+    const activeKnockoutRows = (rows || []).filter(row => isActiveScoreRow(row) && row.stage === 'knockout')
+    const hasActiveKnockoutRows = activeKnockoutRows.some(hasPlayableSides)
+    if (hasActiveKnockoutRows || tournament.groupKnockoutPhase === 'knockout_published') {
+      return { skipped: true, reason: 'knockout_already_active' }
+    }
+
+    const now = new Date()
+    await updateDoc('tournaments', tournament._id, {
+      status: 'ongoing',
+      groupKnockoutPhase: 'group_completed',
+      completedAt: null,
+      updateTime: now
+    }, 'group knockout group phase update')
+    return { skipped: false, status: 'ongoing', groupKnockoutPhase: 'group_completed' }
   }
 
   function hasConfirmedGroupKnockoutFinal(rows) {
