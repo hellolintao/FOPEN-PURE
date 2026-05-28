@@ -9,6 +9,7 @@ const { aggregateWeeklyPlayerDelta } = require('./lib/weekly-delta')
 const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
 const { computeH2H } = require('./lib/player-h2h')
+const { buildGroupKnockoutPointEntries } = require('./lib/group-knockout')
 
 exports.main = async (event = {}) => {
   const action = event.action || 'refreshRankCache'
@@ -43,6 +44,7 @@ async function recompute({ tournamentId }) {
   const tRes = await db.collection('tournaments').doc(tournamentId).get()
   const t = tRes.data
   if (!t) return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+  if (t.format === 'group_knockout') return await recomputeGroupKnockout({ tournamentId, tournament: t })
   const rows = (await db.collection('match_results').where({ tournamentId, resultStatus: 'confirmed' }).limit(500).get()).data
   let count = 0
   for (const r of rows) {
@@ -53,6 +55,75 @@ async function recompute({ tournamentId }) {
     count++
   }
   return { success: true, data: { count } }
+}
+
+async function recomputeGroupKnockout({ tournamentId, tournament }) {
+  const rows = (await db.collection('match_results')
+    .where({ tournamentId, resultStatus: 'confirmed' })
+    .limit(500)
+    .get()).data || []
+  const entries = buildGroupKnockoutPointEntries({ tournament, rows })
+  const carrierByMember = pickGroupKnockoutCarrierMatches(rows, entries.map(entry => entry.memberId))
+
+  for (const row of rows) {
+    if (row.bye) continue
+    await replacePointsAwarded(row._id, { source: 'group_knockout', entries: [] })
+  }
+
+  const entriesByCarrier = new Map()
+  for (const entry of entries) {
+    const carrierId = carrierByMember.get(entry.memberId)
+    if (!carrierId) continue
+    const carrierEntries = entriesByCarrier.get(carrierId) || []
+    carrierEntries.push({ memberId: entry.memberId, points: entry.points, rank: entry.rank })
+    entriesByCarrier.set(carrierId, carrierEntries)
+  }
+
+  let count = 0
+  for (const [carrierId, carrierEntries] of entriesByCarrier) {
+    await replacePointsAwarded(carrierId, { source: 'group_knockout', entries: carrierEntries })
+    count += carrierEntries.length
+  }
+
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: { groupKnockoutPhase: 'completed', updateTime: new Date() }
+  })
+
+  return { success: true, data: { count, source: 'group_knockout' } }
+}
+
+function pickGroupKnockoutCarrierMatches(rows, memberIds) {
+  const memberSet = new Set(memberIds || [])
+  const carrierRows = new Map()
+  for (const row of rows || []) {
+    if (!row || row.bye) continue
+    for (const side of [row.player1, row.player2]) {
+      for (const memberId of collectGroupKnockoutSideIds(side)) {
+        if (!memberSet.has(memberId)) continue
+        const current = carrierRows.get(memberId)
+        if (!current || isBetterGroupKnockoutCarrier(row, current)) carrierRows.set(memberId, row)
+      }
+    }
+  }
+  return new Map([...carrierRows.entries()].map(([memberId, row]) => [memberId, row._id]))
+}
+
+function isBetterGroupKnockoutCarrier(row, current) {
+  const rowRound = Number(row.round) || 0
+  const currentRound = Number(current.round) || 0
+  if (rowRound !== currentRound) return rowRound > currentRound
+  return groupKnockoutStageWeight(row.stage) > groupKnockoutStageWeight(current.stage)
+}
+
+function groupKnockoutStageWeight(stage) {
+  return stage === 'knockout' ? 1 : 0
+}
+
+function collectGroupKnockoutSideIds(side) {
+  if (!side) return []
+  const ids = [side.id || side.memberId || side.playerId || side._id]
+  if (side.partnerId) ids.push(side.partnerId)
+  return ids.filter(Boolean)
 }
 
 // ─── Compat wrappers (旧前端 contract) ──────────────────────────
