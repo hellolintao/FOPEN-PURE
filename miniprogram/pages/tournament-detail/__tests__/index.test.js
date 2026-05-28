@@ -181,6 +181,18 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.footerActions.map(a => a.key)).toContain('enterScore')
   })
 
+  test('group knockout completed knockout keeps bracket score and resettle actions', async () => {
+    const ctx = await loadDetail({
+      tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'knockout_published', status: 'completed', scheduleStatus: 'none' },
+      isAdmin: true
+    })
+    expect(ctx.data.footerActions.map(a => a.key)).toEqual(expect.arrayContaining([
+      'viewBracket',
+      'enterScore',
+      'resettleGroupKnockout'
+    ]))
+  })
+
   test('registration open member sees registration phase and register CTA', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: { _id: 'm2' }, isAdmin: false } },

@@ -672,11 +672,12 @@ function buildGroupKnockoutDetailPhaseState({
     footerActions.push(footerAction('arrangeGroupBracket', '安排签表', 'cta-lime flex-1'))
   } else if (isAdmin && phase === 'group_completed') {
     footerActions.push(footerAction('confirmKnockoutSeeds', '确认8强', 'cta-lime flex-1'))
-  } else if (needsResettle) {
-    footerActions.push(footerAction('resettleGroupKnockout', '重新结算', 'cta-lime flex-1'))
   } else if (phase === 'group_published' || phase === 'knockout_published') {
     footerActions.push(footerAction('viewBracket', '查看签表', 'cta-secondary'))
     footerActions.push(footerAction('enterScore', scoreActionLabel || '录入成绩', 'cta-lime flex-1'))
+    if (needsResettle) {
+      footerActions.push(footerAction('resettleGroupKnockout', '重新结算', 'cta-lime flex-1'))
+    }
   } else {
     footerActions.push(footerAction('viewBracket', '查看签表', 'cta-lime flex-1'))
   }
