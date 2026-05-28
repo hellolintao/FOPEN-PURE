@@ -68,6 +68,202 @@
   color: var(--color-muted);
 }
 
+.bracket-empty.compact {
+  padding: var(--space-6) 0;
+}
+
+/* ============================================================
+ * GROUP KNOCKOUT
+ * ============================================================ */
+.gk-tabs {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: var(--space-5);
+}
+
+.gk-tab {
+  height: 56rpx;
+  padding: 0 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  font-size: 24rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  box-sizing: border-box;
+}
+
+.gk-tab.active {
+  color: var(--color-bg);
+  background: var(--color-ink);
+}
+
+.gk-panel,
+.gk-group-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.gk-group-card,
+.gk-round {
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  padding: var(--space-4);
+  box-sizing: border-box;
+}
+
+.gk-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 2rpx solid var(--color-ink);
+}
+
+.gk-group-title {
+  font-size: 32rpx;
+  line-height: 1.2;
+  font-weight: 900;
+  color: var(--color-ink);
+}
+
+.gk-group-meta {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+.gk-slot {
+  display: grid;
+  grid-template-columns: 48rpx minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 72rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.gk-slot:last-child {
+  border-bottom: 0;
+}
+
+.slot-no {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 20rpx;
+  font-weight: 900;
+}
+
+.slot-player {
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gk-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56rpx minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 76rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.gk-match:last-child {
+  border-bottom: 0;
+}
+
+.gk-player-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 0;
+}
+
+.gk-player-wrap.right {
+  justify-content: flex-end;
+}
+
+.gk-player {
+  min-width: 0;
+  font-size: 27rpx;
+  font-weight: 800;
+  color: var(--color-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gk-player.right {
+  text-align: right;
+}
+
+.gk-source {
+  flex-shrink: 0;
+  padding: 4rpx 8rpx;
+  border: 2rpx solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  font-size: 18rpx;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.gk-vs {
+  text-align: center;
+  font-size: 20rpx;
+  font-weight: 900;
+  color: var(--color-muted-2);
+}
+
+.gk-match.is-bye .gk-player {
+  color: var(--color-muted-2);
+}
+
+.gk-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: var(--space-3);
+  border: 2rpx solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--color-danger);
+  background: var(--color-bg);
+}
+
+.gk-action {
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 28rpx;
+  font-weight: 900;
+  text-align: center;
+  box-sizing: border-box;
+}
+
 /* ============================================================
  * ROUND SECTION
  * ============================================================ */

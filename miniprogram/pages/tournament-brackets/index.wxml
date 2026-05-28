@@ -16,13 +16,123 @@
       </view>
       <text class="head-title">{{tournament.name}}</text>
       <view class="head-sub">
-        <text class="head-sub-text">首轮排程 · 共 {{decoratedCourts.length}} 片场地</text>
+        <text wx:if="{{tournament.format === 'group_knockout'}}" class="head-sub-text">小组赛 · 淘汰赛签表</text>
+        <text wx:else class="head-sub-text">首轮排程 · 共 {{decoratedCourts.length}} 片场地</text>
         <view
-          wx:if="{{tournament.status === 'draft' || tournament.status === 'upcoming'}}"
+          wx:if="{{tournament.format !== 'group_knockout' && (tournament.status === 'draft' || tournament.status === 'upcoming')}}"
           class="head-action cta-secondary tap-scale"
           bindtap="onEditSchedule">编辑排程</view>
       </view>
     </view>
+
+    <block wx:if="{{tournament.format === 'group_knockout'}}">
+      <view class="gk-tabs">
+        <view
+          wx:for="{{tabs}}"
+          wx:for-item="tab"
+          wx:key="key"
+          data-key="{{tab.key}}"
+          bindtap="onTabTap"
+          class="gk-tab {{activeTab === tab.key ? 'active' : ''}}">
+          <text>{{tab.label}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{activeTab === 'group'}}" class="gk-panel">
+        <block wx:if="{{tournament.groupKnockoutPhase === 'group_draft'}}">
+          <view class="gk-group-grid">
+            <view
+              wx:for="{{arrangeGroups}}"
+              wx:for-item="group"
+              wx:key="groupCode"
+              class="gk-group-card">
+              <view class="gk-group-head">
+                <text class="gk-group-title">{{group.groupCode}}组</text>
+                <text class="gk-group-meta">{{group.slots.length}} 位</text>
+              </view>
+              <view
+                wx:for="{{group.slots}}"
+                wx:for-item="slot"
+                wx:key="slotNo"
+                class="gk-slot">
+                <text class="slot-no num">{{slot.slotNo}}</text>
+                <text class="slot-player">{{slot.playerName || '选择选手'}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{arrangeErrors.length}}" class="gk-errors">
+            <text wx:for="{{arrangeErrors}}" wx:key="*this">{{item}}</text>
+          </view>
+
+          <view class="gk-action tap-scale" bindtap="onGenerateGroupMatches">确认分组并生成小组赛</view>
+        </block>
+
+        <block wx:else>
+          <view wx:if="{{!groupKnockout.groupBrackets.length}}" class="bracket-empty compact">
+            <text class="bracket-empty-hint">小组赛对阵待生成</text>
+          </view>
+          <block wx:else>
+            <view
+              wx:for="{{groupKnockout.groupBrackets}}"
+              wx:for-item="bracket"
+              wx:key="_id"
+              class="gk-group-card">
+              <view class="gk-group-head">
+                <text class="gk-group-title">{{bracket.groupCode}}组</text>
+                <text class="gk-group-meta">{{bracket.matches.length}} 场</text>
+              </view>
+              <view
+                wx:for="{{bracket.matches}}"
+                wx:for-item="match"
+                wx:key="matchId"
+                class="gk-match {{match.bye ? 'is-bye' : ''}}">
+                <text class="gk-player">{{match.__player1Name}}</text>
+                <text class="gk-vs num">VS</text>
+                <text class="gk-player right">{{match.__player2Name}}</text>
+              </view>
+            </view>
+          </block>
+        </block>
+      </view>
+
+      <view wx:if="{{activeTab === 'knockout'}}" class="gk-panel">
+        <view wx:if="{{!groupKnockout.knockoutBrackets.length}}" class="bracket-empty compact">
+          <text class="tape">淘汰赛</text>
+          <text class="bracket-empty-hint">待小组赛结束并确认 8 强</text>
+        </view>
+
+        <block wx:else>
+          <view
+            wx:for="{{groupKnockout.knockoutBrackets}}"
+            wx:for-item="round"
+            wx:key="_id"
+            class="gk-round">
+            <view class="round-banner">
+              <text class="tape tape-ghost">ROUND {{fmt.pad2(round.round)}}</text>
+              <text class="round-banner-sub">{{fmt.roundLabel(round.round, groupKnockout.knockoutBrackets[groupKnockout.knockoutBrackets.length-1].round)}}</text>
+            </view>
+            <view
+              wx:for="{{round.matches}}"
+              wx:for-item="match"
+              wx:key="matchId"
+              class="gk-match {{match.bye ? 'is-bye' : ''}}">
+              <view class="gk-player-wrap">
+                <text wx:if="{{match.player1Source}}" class="gk-source">{{match.player1Source}}</text>
+                <text class="gk-player">{{match.__player1Name}}</text>
+              </view>
+              <text class="gk-vs num">VS</text>
+              <view class="gk-player-wrap right">
+                <text wx:if="{{match.player2Source}}" class="gk-source">{{match.player2Source}}</text>
+                <text class="gk-player right">{{match.__player2Name}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+    </block>
+
+    <block wx:else>
 
     <!-- EMPTY -->
     <view wx:if="{{scheduleGateBlocked}}" class="bracket-empty">
@@ -102,6 +212,8 @@
         </view>
       </view>
     </view>
+
+    </block>
 
   </block>
 </view>
