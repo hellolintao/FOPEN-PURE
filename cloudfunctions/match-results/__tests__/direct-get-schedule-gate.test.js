@@ -11,6 +11,33 @@ function mockChainableQuery(data = []) {
   return query
 }
 
+function mockMatchesValue(actual, expected) {
+  if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
+    if (Object.prototype.hasOwnProperty.call(expected, '$in')) {
+      return Array.isArray(actual)
+        ? actual.some(value => expected.$in.includes(value))
+        : expected.$in.includes(actual)
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, '$gt')) {
+      return actual > expected.$gt
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, '$neq')) {
+      return actual !== expected.$neq
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, 'regexp')) {
+      return new RegExp(expected.regexp, expected.options || '').test(String(actual || ''))
+    }
+  }
+  return actual === expected
+}
+
+function mockMatchesQuery(doc, query) {
+  if (!query || Object.keys(query).length === 0) return true
+  if (query.$and) return query.$and.every(part => mockMatchesQuery(doc, part))
+  if (query.$or) return query.$or.some(part => mockMatchesQuery(doc, part))
+  return Object.entries(query).every(([key, expected]) => mockMatchesValue(doc[key], expected))
+}
+
 jest.mock('wx-server-sdk', () => {
   const command = {
     or: conditions => ({ $or: conditions }),
@@ -24,15 +51,7 @@ jest.mock('wx-server-sdk', () => {
     if (name === 'match_results') {
       const rowsForQuery = query => {
         const rows = Object.values(mockState.rows || {})
-        if (!query || Object.keys(query).length === 0) return rows
-        if (query.tournamentId) return rows.filter(row => row.tournamentId === query.tournamentId)
-        if (query.$and) {
-          return query.$and.reduce((acc, part) => acc.filter(row => {
-            if (part.tournamentId) return row.tournamentId === part.tournamentId
-            return true
-          }), rows)
-        }
-        return rows
+        return rows.filter(row => mockMatchesQuery(row, query))
       }
       return {
         doc: id => ({
@@ -51,6 +70,14 @@ jest.mock('wx-server-sdk', () => {
           mockState.rows[data._id] = { ...data }
           return { _id: data._id }
         }),
+      }
+    }
+
+    if (name === 'tournament_brackets') {
+      return {
+        where: jest.fn(query => mockChainableQuery(
+          (mockState.brackets || []).filter(bracket => mockMatchesQuery(bracket, query))
+        )),
       }
     }
 
@@ -101,7 +128,39 @@ function setState({ scheduleStatus, isAdmin = false }) {
     rows: {
       r1: { _id: 'r1', tournamentId: 't1', resultStatus: 'pending' },
     },
+    brackets: [],
     tournaments: { t1: tournament },
+  }
+}
+
+function setGroupKnockoutTournament() {
+  mockState.tournaments.t1 = {
+    _id: 't1',
+    seasonId: 'season_2026',
+    type: 'singles',
+    format: 'group_knockout',
+    scheduleStatus: 'published'
+  }
+}
+
+function groupScoreRow(overrides = {}) {
+  return {
+    _id: 'result_t1_gk_t1_gA_p1',
+    tournamentId: 't1',
+    seasonId: 'season_2026',
+    tournamentType: 'singles',
+    format: 'group_knockout',
+    matchKind: 'group',
+    sourceMatchId: 'gk_t1_gA_p1',
+    stage: 'group',
+    groupCode: 'A',
+    round: 1,
+    position: 1,
+    player1: { id: 'a1', name: 'A1' },
+    player2: { id: 'a2', name: 'A2' },
+    playerIds: ['a1', 'a2'],
+    resultStatus: 'pending',
+    ...overrides
   }
 }
 
@@ -228,13 +287,7 @@ describe('direct get schedule visibility gate', () => {
 
   test('bulkUpsertScheduledMatches preserves group stage fields', async () => {
     setState({ scheduleStatus: 'published', isAdmin: true })
-    mockState.tournaments.t1 = {
-      _id: 't1',
-      seasonId: 'season_2026',
-      type: 'singles',
-      format: 'group_knockout',
-      scheduleStatus: 'published'
-    }
+    setGroupKnockoutTournament()
 
     const result = await main({
       action: 'bulkUpsertScheduledMatches',
@@ -260,6 +313,174 @@ describe('direct get schedule visibility gate', () => {
       groupCode: 'A',
       tournamentType: 'singles',
       playerIds: ['a1', 'a2']
+    })
+  })
+
+  test.each(['submitted', 'confirmed'])('bulkUpsertScheduledMatches refuses to remove %s group rows', async (resultStatus) => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    setGroupKnockoutTournament()
+    const staleRow = groupScoreRow({
+      _id: 'result_t1_stale_group',
+      sourceMatchId: 'stale_group',
+      resultStatus,
+      score: '4-2',
+      confirmedBy: resultStatus === 'confirmed' ? 'admin1' : null
+    })
+    mockState.rows[staleRow._id] = staleRow
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    let result
+    try {
+      result = await main({
+        action: 'bulkUpsertScheduledMatches',
+        tournamentId: 't1',
+        matches: [],
+        queues: []
+      })
+    } finally {
+      errorSpy.mockRestore()
+    }
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION',
+        message: '赛程变更影响已确认成绩，请先清空比分并重新发布'
+      }
+    })
+    expect(mockState.rows.result_t1_stale_group).toEqual(staleRow)
+  })
+
+  test('bulkUpsertScheduledMatches removes pending stale group rows', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    setGroupKnockoutTournament()
+    mockState.rows.result_t1_stale_group = groupScoreRow({
+      _id: 'result_t1_stale_group',
+      sourceMatchId: 'stale_group',
+      resultStatus: 'pending'
+    })
+
+    const result = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: []
+    })
+
+    expect(result).toEqual({ success: true, data: { count: 0 } })
+    expect(mockState.rows.result_t1_stale_group).toBeUndefined()
+  })
+
+  test('bulkUpsertScheduledMatches preserves confirmed group row on same-id schedule merge', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    setGroupKnockoutTournament()
+    mockState.rows.result_t1_gk_t1_gA_p1 = groupScoreRow({
+      stage: '',
+      groupCode: '',
+      resultStatus: 'confirmed',
+      score: '4-2',
+      confirmedBy: 'admin1',
+      confirmedAt: 'confirmed-at'
+    })
+
+    const result = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [{
+        matchId: 'gk_t1_gA_p1',
+        matchKind: 'group',
+        stage: 'group',
+        groupCode: 'A',
+        round: 1,
+        position: 1,
+        type: 'singles',
+        player1: { id: 'a1', name: 'A1' },
+        player2: { id: 'a2', name: 'A2' }
+      }],
+      queues: []
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockState.rows.result_t1_gk_t1_gA_p1).toMatchObject({
+      stage: 'group',
+      groupCode: 'A',
+      score: '4-2',
+      resultStatus: 'confirmed',
+      confirmedBy: 'admin1',
+      confirmedAt: 'confirmed-at'
+    })
+  })
+
+  test('bulkUpsertScheduledMatches precreates only knockout skeletons for group knockout tournaments', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    setGroupKnockoutTournament()
+    mockState.brackets = [
+      {
+        _id: 'group_round_2',
+        tournamentId: 't1',
+        stage: 'group',
+        round: 2,
+        matches: [{ matchId: 'gk_t1_group_r2_p1', round: 2, position: 1, type: 'singles' }]
+      },
+      {
+        _id: 'knockout_round_2',
+        tournamentId: 't1',
+        stage: 'knockout',
+        round: 2,
+        matches: [{ matchId: 'gk_t1_knockout_r2_p1', round: 2, position: 1, type: 'singles' }]
+      }
+    ]
+
+    const groupKnockoutResult = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: []
+    })
+
+    expect(groupKnockoutResult).toEqual({ success: true, data: { count: 1 } })
+    expect(mockState.rows.result_t1_gk_t1_group_r2_p1).toBeUndefined()
+    expect(mockState.rows.result_t1_gk_t1_knockout_r2_p1).toMatchObject({
+      stage: 'knockout',
+      matchKind: 'bracket',
+      round: 2
+    })
+
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      format: 'knockout',
+      scheduleStatus: 'published'
+    }
+    mockState.brackets = [
+      {
+        _id: 'regular_round_1',
+        tournamentId: 't1',
+        round: 1,
+        matches: [{ matchId: 'regular_r1_p1', round: 1, position: 1, type: 'singles' }]
+      },
+      {
+        _id: 'regular_round_2',
+        tournamentId: 't1',
+        round: 2,
+        matches: [{ matchId: 'regular_r2_p1', round: 2, position: 1, type: 'singles' }]
+      }
+    ]
+
+    const regularResult = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: []
+    })
+
+    expect(regularResult).toEqual({ success: true, data: { count: 1 } })
+    expect(mockState.rows.result_t1_regular_r1_p1).toBeUndefined()
+    expect(mockState.rows.result_t1_regular_r2_p1).toMatchObject({
+      matchKind: 'bracket',
+      round: 2
     })
   })
 })

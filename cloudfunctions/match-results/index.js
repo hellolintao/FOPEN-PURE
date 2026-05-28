@@ -340,7 +340,7 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
       matchKind: _.in(['bracket', 'regularRound', 'extra', 'group'])
     }).get().catch(() => ({ data: [] }))
     for (const doc of (orphanRes.data || [])) {
-      if (shouldRemoveOrphanMatchDoc(doc, seen)) {
+      if (canRemoveOrphanMatchDoc(doc, seen)) {
         await collection.doc(doc._id).remove().catch(() => null)
       }
     }
@@ -357,9 +357,7 @@ function mergeScheduledMatchDoc(existing, scheduled) {
   if (!existing || !isActiveScoreRow(existing)) return merged
   if (!hasPreservableScoreState(existing)) return merged
   if (!hasSameResultIdentity(existing, scheduled)) {
-    const err = new Error('赛程变更影响已确认成绩，请先清空比分并重新发布')
-    err.code = 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION'
-    throw err
+    throw createScheduleImpactInvalidationError()
   }
   return {
     ...merged,
@@ -385,8 +383,22 @@ function shouldRemoveOrphanMatchDoc(doc, seen) {
   return true
 }
 
+function canRemoveOrphanMatchDoc(doc, seen) {
+  if (!shouldRemoveOrphanMatchDoc(doc, seen)) return false
+  if (isActiveScoreRow(doc) && hasPreservableScoreState(doc)) {
+    throw createScheduleImpactInvalidationError()
+  }
+  return true
+}
+
 function hasPreservableScoreState(row) {
   return row && ['submitted', 'confirmed'].includes(row.resultStatus)
+}
+
+function createScheduleImpactInvalidationError() {
+  const err = new Error('赛程变更影响已确认成绩，请先清空比分并重新发布')
+  err.code = 'SCHEDULE_IMPACT_REQUIRES_INVALIDATION'
+  return err
 }
 
 function hasSameResultIdentity(existing, scheduled) {
