@@ -49,6 +49,11 @@ const players = [
   { playerId: 'p4', playerName: 'D' },
 ]
 
+const makePlayers = count => Array.from({ length: count }, (_, index) => ({
+  playerId: `p${index + 1}`,
+  playerName: `P${index + 1}`
+}))
+
 describe('tournament-edit mixed regular flow', () => {
   test('regular tournament defaults to mixed', () => {
     const def = loadPage()
@@ -97,6 +102,97 @@ describe('tournament-edit mixed regular flow', () => {
 
     expect(ctx.data.form.bracketSize).toBe(12)
     expect(ctx.data.form.maxPlayers).toBe(12)
+  })
+
+  test('group knockout switch from non-group draft normalizes invalid hidden bracket size', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, { form: { ...def.data.form, format: 'regular', type: 'mixed', maxPlayers: 8, bracketSize: 8 } })
+
+    ctx.onChipTap({ currentTarget: { dataset: { k: 'format', v: 'group_knockout' } } })
+
+    expect(ctx.data.form.format).toBe('group_knockout')
+    expect(ctx.data.form.type).toBe('singles')
+    expect(ctx.data.form.bracketSize).toBe(16)
+    expect(ctx.data.form.maxPlayers).toBe(16)
+  })
+
+  test('group knockout hydrate forces singles and synced maxPlayers for existing bracket size', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+    wx.cloud.callFunction
+      .mockResolvedValueOnce({
+        result: {
+          success: true,
+          data: {
+            _id: 't1',
+            name: '小组赛',
+            type: 'mixed',
+            format: 'group_knockout',
+            bracketSize: 12,
+            maxPlayers: 8,
+            groupDrawMode: 'preset'
+          }
+        }
+      })
+      .mockResolvedValueOnce({ result: { success: true, data: [] } })
+      .mockResolvedValueOnce({ result: { success: true, data: [] } })
+      .mockResolvedValueOnce({ result: { success: true, data: { items: [] } } })
+
+    await ctx.hydrateDraft('t1')
+
+    expect(ctx.data.form.format).toBe('group_knockout')
+    expect(ctx.data.form.type).toBe('singles')
+    expect(ctx.data.form.bracketSize).toBe(12)
+    expect(ctx.data.form.maxPlayers).toBe(12)
+    expect(ctx.data.form.groupDrawMode).toBe('preset')
+  })
+
+  test('group knockout persist requires exactly bracket size players', async () => {
+    const def = loadPage()
+    const baseData = {
+      form: { ...def.data.form, format: 'group_knockout', type: 'singles', bracketSize: 12, maxPlayers: 12 },
+      schedulePlanCourts: [{ courtId: 'c1', slots: ['2026-05-25T18:00'] }]
+    }
+    const under = makeCtx(def, { ...baseData, selectedPlayers: makePlayers(11) })
+    const over = makeCtx(def, { ...baseData, selectedPlayers: makePlayers(13) })
+    const exact = makeCtx(def, { ...baseData, selectedPlayers: makePlayers(12) })
+
+    await expect(under.persistStep2Inputs()).resolves.toBe(false)
+    expect(wx.showToast).toHaveBeenLastCalledWith({ title: '小组赛+淘汰赛需正好 12 位球员', icon: 'none' })
+    expect(wx.cloud.callFunction).not.toHaveBeenCalled()
+
+    wx.showToast.mockClear()
+    wx.cloud.callFunction.mockClear()
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: [] } })
+    await expect(over.persistStep2Inputs()).resolves.toBe(false)
+    expect(wx.showToast).toHaveBeenLastCalledWith({ title: '小组赛+淘汰赛需正好 12 位球员', icon: 'none' })
+    expect(wx.cloud.callFunction).not.toHaveBeenCalled()
+
+    wx.showToast.mockClear()
+    wx.cloud.callFunction.mockClear()
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: [] } })
+    await expect(exact.persistStep2Inputs()).resolves.toBe(true)
+    expect(wx.showToast).not.toHaveBeenCalledWith({ title: '小组赛+淘汰赛需正好 12 位球员', icon: 'none' })
+  })
+
+  test('group knockout add player blocks picker when bracket is full', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      form: { ...def.data.form, format: 'group_knockout', type: 'singles', bracketSize: 12, maxPlayers: 12 },
+      selectedPlayers: makePlayers(12)
+    })
+
+    ctx.onAddPlayer()
+
+    expect(ctx.data.picker.show).toBe(false)
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '签位已满', icon: 'none' })
+  })
+
+  test('group knockout disables doubles and mixed type chips', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain("form.type === 'doubles' ? 'active' : ''}} {{form.format === 'group_knockout' ? 'disabled' : ''}}")
+    expect(wxml).toContain("form.format === 'knockout' || form.format === 'group_knockout' ? 'disabled' : ''")
   })
 
   test('mixed regular default schedule alternates singles, doubles, free play each hour', () => {

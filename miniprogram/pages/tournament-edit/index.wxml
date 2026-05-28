@@ -46,7 +46,7 @@
       <text class="label">类别 *</text>
       <view class="chip-row">
         <text class="chip {{form.type === 'singles' ? 'active' : ''}}" bindtap="onChipTap" data-k="type" data-v="singles">单打</text>
-        <text class="chip {{form.type === 'doubles' ? 'active' : ''}}" bindtap="onChipTap" data-k="type" data-v="doubles">双打</text>
+        <text class="chip {{form.type === 'doubles' ? 'active' : ''}} {{form.format === 'group_knockout' ? 'disabled' : ''}}" bindtap="onChipTap" data-k="type" data-v="doubles">双打</text>
         <text class="chip {{form.type === 'mixed' ? 'active' : ''}} {{form.format === 'knockout' || form.format === 'group_knockout' ? 'disabled' : ''}}" bindtap="onChipTap" data-k="type" data-v="mixed">混合</text>
       </view>
     </view>

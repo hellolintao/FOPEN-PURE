@@ -82,6 +82,11 @@ Page({
     const tRes = await wx.cloud.callFunction({ name: 'tournaments', data: { action: 'get', id } })
     const t = (tRes.result && tRes.result.data) || null
     if (!t) return
+    const format = t.format || 'regular'
+    const isGroupKnockout = format === 'group_knockout'
+    const bracketSize = isGroupKnockout
+      ? normalizeGroupKnockoutBracketSize(t.bracketSize || t.maxPlayers)
+      : (t.bracketSize || t.maxPlayers || 16)
 
     this.setData({
       tournamentId: id,
@@ -89,10 +94,10 @@ Page({
         name: t.name || '',
         location: t.location || '',
         startDate: t.startDate || '',
-        type: t.type || 'singles',
-        format: t.format || 'regular',
-        maxPlayers: t.maxPlayers || 8,
-        bracketSize: t.bracketSize || t.maxPlayers || 16,
+        type: isGroupKnockout ? 'singles' : (t.type || 'singles'),
+        format,
+        maxPlayers: isGroupKnockout ? bracketSize : (t.maxPlayers || 8),
+        bracketSize,
         groupDrawMode: t.groupDrawMode || 'onsite',
         registrationDeadlineAt: t.registrationDeadlineAt || '',
         description: t.description || ''
@@ -207,6 +212,13 @@ Page({
     const requirePlayers = options.requirePlayers !== false
     const saveRegistrations = options.saveRegistrations !== false
     const minPlayers = this._minPlayers()
+    if (requirePlayers && this.data.form.format === 'group_knockout') {
+      const bracketSize = normalizeGroupKnockoutBracketSize(this.data.form.bracketSize)
+      if (this.data.selectedPlayers.length !== bracketSize) {
+        wx.showToast({ title: `小组赛+淘汰赛需正好 ${bracketSize} 位球员`, icon: 'none' })
+        return false
+      }
+    }
     if (requirePlayers && this.data.selectedPlayers.length < minPlayers) {
       const isKD = this.data.form.type === 'doubles' && this.data.form.format === 'knockout'
       const unit = isKD ? '组队伍' : '位球员'
@@ -664,7 +676,7 @@ Page({
       const patch = { 'form.format': v }
       if (v === 'knockout' && this.data.form.type === 'mixed') patch['form.type'] = 'singles'
       if (v === 'group_knockout') {
-        const bracketSize = Number(this.data.form.bracketSize) || 16
+        const bracketSize = normalizeGroupKnockoutBracketSize(this.data.form.bracketSize)
         patch['form.type'] = 'singles'
         patch['form.bracketSize'] = bracketSize
         patch['form.maxPlayers'] = bracketSize
@@ -762,6 +774,10 @@ Page({
     const isDoubles = this.data.form.type === 'doubles'
     const isKnockoutDoubles = isDoubles && this.data.form.format === 'knockout'
     const remaining = this._remainingPlayerSlots()
+    if (this.data.form.format === 'group_knockout' && remaining <= 0) {
+      wx.showToast({ title: '签位已满', icon: 'none' })
+      return
+    }
     this.setData({
       picker: {
         show: true,
@@ -785,7 +801,7 @@ Page({
   _remainingPlayerSlots() {
     if (this.data.form.format === 'group_knockout') {
       const cap = this.data.form.bracketSize || 16
-      return Math.max(1, cap - this.data.selectedPlayers.length)
+      return Math.max(0, cap - this.data.selectedPlayers.length)
     }
     if (this.data.form.format === 'knockout') {
       const cap = this.data.form.maxPlayers || 8
@@ -947,6 +963,11 @@ function _errMsg(res, fallback) {
   }
   if (r.errMsg) return r.errMsg
   return fallback
+}
+
+function normalizeGroupKnockoutBracketSize(value) {
+  const size = Number(value)
+  return size === 12 || size === 16 ? size : 16
 }
 
 function unpackList(res, dataFields) {
