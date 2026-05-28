@@ -19,6 +19,14 @@ function groups16() {
   }))
 }
 
+function groups12() {
+  const ids = players(['a1','a2','a3','b1','b2','b3','c1','c2','c3','d1','d2','d3'])
+  return GROUP_CODES.map((code, groupIndex) => ({
+    groupCode: code,
+    slots: [1, 2, 3].map((slotNo, i) => ({ slotNo, ...ids[groupIndex * 3 + i] }))
+  }))
+}
+
 describe('group knockout rules', () => {
   test('exposes supported phases and default points', () => {
     expect(GROUP_KNOCKOUT_PHASES).toContain('group_draft')
@@ -40,6 +48,19 @@ describe('group knockout rules', () => {
     ])
   })
 
+  test('rejects duplicate group codes and unknown group codes', () => {
+    const groups = groups16()
+    groups[3] = { ...groups[3], groupCode: 'A' }
+    groups.push({
+      groupCode: 'E',
+      slots: [1, 2, 3, 4].map((slotNo, i) => ({ slotNo, ...players(['e1','e2','e3','e4'])[i] }))
+    })
+    expect(validateGroupAssignments({ bracketSize: 16, groups })).toEqual(expect.arrayContaining([
+      'A组重复出现',
+      'E组不是支持的小组'
+    ]))
+  })
+
   test('generates 16-sign group matches in fixed slot order', () => {
     const matches = generateGroupMatches({ tournamentId: 'tournament_1', bracketSize: 16, groups: groups16(), now: 1700000000000 })
     expect(matches).toHaveLength(24)
@@ -57,6 +78,16 @@ describe('group knockout rules', () => {
     })
   })
 
+  test('generates 12-sign group matches in fixed slot order', () => {
+    const matches = generateGroupMatches({ tournamentId: 'tournament_12', bracketSize: 12, groups: groups12(), now: 1700000000000 })
+    expect(matches).toHaveLength(12)
+    expect(matches.filter(m => m.groupCode === 'A').map(m => [m.groupSlot1, m.groupSlot2])).toEqual([
+      [1, 2], [1, 3], [2, 3]
+    ])
+    expect(matches.map(m => m.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    expect(matches.every(m => m.status === 'pending')).toBe(true)
+  })
+
   test('builds fixed knockout bracket from frozen seeds', () => {
     const seeds = {
       A1: { id: 'a1', name: 'A1' },
@@ -70,11 +101,46 @@ describe('group knockout rules', () => {
     }
     const brackets = generateKnockoutMatches({ tournamentId: 'tournament_1', seeds, now: 1700000000000 })
     expect(brackets).toHaveLength(3)
+    expect(brackets[0]).toMatchObject({
+      _id: 'bracket_1_knockout_round_1',
+      bracketId: 'bracket_1_knockout_round_1',
+      tournamentId: 'tournament_1',
+      format: 'group_knockout',
+      type: 'singles',
+      stage: 'knockout',
+      round: 1
+    })
+    expect(brackets[0].matches[0]).toMatchObject({
+      matchKind: 'bracket',
+      stage: 'knockout',
+      player1: { id: 'a1', name: 'A1' },
+      player2: { id: 'c2', name: 'C2' }
+    })
     expect(brackets[0].matches.map(m => [m.player1Source, m.player2Source])).toEqual([
       ['A1', 'C2'], ['B1', 'D2'], ['C1', 'A2'], ['D1', 'B2']
     ])
+    expect(brackets[1].matches[0]).toMatchObject({
+      matchKind: 'bracket',
+      stage: 'knockout',
+      player1: null,
+      player2: null
+    })
     expect(brackets[1].matches[0].player1Source).toBeUndefined()
     expect(groupBracketDocId('tournament_1', 'A')).toBe('bracket_1_group_A')
     expect(knockoutBracketDocId('tournament_1', 2)).toBe('bracket_1_knockout_round_2')
+  })
+
+  test('uses null players for missing knockout seeds', () => {
+    const brackets = generateKnockoutMatches({
+      tournamentId: 'tournament_1',
+      seeds: { A1: { id: 'a1', name: 'A1' } },
+      now: 1700000000000
+    })
+    expect(brackets[0].matches[0]).toMatchObject({
+      player1Source: 'A1',
+      player2Source: 'C2',
+      player1: { id: 'a1', name: 'A1' },
+      player2: null
+    })
   })
 })

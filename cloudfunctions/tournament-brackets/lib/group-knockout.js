@@ -62,9 +62,28 @@ function validateGroupAssignments({ bracketSize, groups }) {
   if (!Array.isArray(groups)) return ['groups 必须是数组']
 
   const errors = []
-  const groupsByCode = new Map(groups.map(group => [group && group.groupCode, group]))
+  const supportedGroupCodes = new Set(GROUP_CODES)
+  const groupsByCode = new Map()
+  const duplicateGroupCodes = new Set()
   const seenPlayerIds = new Set()
   const duplicatePlayerIds = new Set()
+
+  for (const group of groups) {
+    const groupCode = group && group.groupCode
+    if (!supportedGroupCodes.has(groupCode)) {
+      errors.push(`${groupCode || '未知'}组不是支持的小组`)
+      continue
+    }
+    if (groupsByCode.has(groupCode)) {
+      duplicateGroupCodes.add(groupCode)
+      continue
+    }
+    groupsByCode.set(groupCode, group)
+  }
+
+  for (const groupCode of duplicateGroupCodes) {
+    errors.push(`${groupCode}组重复出现`)
+  }
 
   for (const groupCode of GROUP_CODES) {
     const group = groupsByCode.get(groupCode)
@@ -162,7 +181,7 @@ function generateGroupMatches({ tournamentId, bracketSize, groups, now }) {
 }
 
 function seedToPlayer(seed) {
-  if (!seed) return { id: 'TBD', name: 'TBD' }
+  if (!seed) return null
   return {
     id: seed.playerId || seed.id,
     name: seed.playerName || seed.name,
@@ -170,16 +189,12 @@ function seedToPlayer(seed) {
   }
 }
 
-function tbdPlayer() {
-  return { id: 'TBD', name: 'TBD' }
-}
-
 function buildKnockoutMatch({ tournamentId, normalizedTournamentId, round, position, timestamp, player1, player2, player1Source, player2Source }) {
   const match = {
     matchId: `gk_${normalizedTournamentId}_ko_r${round}_p${position}_${timestamp}`,
     tournamentId,
     bracketId: knockoutBracketDocId(tournamentId, round),
-    matchKind: 'knockout',
+    matchKind: 'bracket',
     stage: 'knockout',
     round,
     position,
@@ -214,8 +229,8 @@ function generateKnockoutMatches({ tournamentId, seeds, now }) {
         round: roundConfig.round,
         position,
         timestamp,
-        player1: pairing ? seedToPlayer(seeds && seeds[pairing[0]]) : tbdPlayer(),
-        player2: pairing ? seedToPlayer(seeds && seeds[pairing[1]]) : tbdPlayer(),
+        player1: pairing ? seedToPlayer(seeds && seeds[pairing[0]]) : null,
+        player2: pairing ? seedToPlayer(seeds && seeds[pairing[1]]) : null,
         player1Source: pairing && pairing[0],
         player2Source: pairing && pairing[1]
       }))
@@ -225,7 +240,8 @@ function generateKnockoutMatches({ tournamentId, seeds, now }) {
       _id: knockoutBracketDocId(tournamentId, roundConfig.round),
       bracketId: knockoutBracketDocId(tournamentId, roundConfig.round),
       tournamentId,
-      matchKind: 'knockout',
+      format: 'group_knockout',
+      type: 'singles',
       stage: 'knockout',
       round: roundConfig.round,
       roundName: roundConfig.name,
