@@ -536,16 +536,22 @@ function groupRowsByRound(rows) {
 }
 
 function groupGroupKnockoutRows(rows) {
+  const sourceRows = rows || []
+  const assigned = new Set()
   const output = []
   for (const code of ['A', 'B', 'C', 'D']) {
-    const matches = (rows || []).filter(row => row.stage === 'group' && row.groupCode === code)
+    const matches = sourceRows.filter(row => row.groupCode === code && (row.stage === 'group' || !row.stage))
+    for (const row of matches) assigned.add(row)
     if (matches.length) output.push({ round: `group_${code}`, label: `${code}组`, matches })
   }
   const roundLabels = { 1: '8强', 2: '半决赛', 3: '决赛' }
   for (const round of [1, 2, 3]) {
-    const matches = (rows || []).filter(row => row.stage === 'knockout' && Number(row.round) === round)
+    const matches = sourceRows.filter(row => row.stage === 'knockout' && Number(row.round) === round)
+    for (const row of matches) assigned.add(row)
     if (matches.length) output.push({ round: `knockout_${round}`, label: roundLabels[round], matches })
   }
+  const matches = sourceRows.filter(row => !assigned.has(row))
+  if (matches.length) output.push({ round: 'other', label: '其他', matches })
   return output
 }
 

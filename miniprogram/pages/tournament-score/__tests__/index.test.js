@@ -194,6 +194,54 @@ test('group knockout score rows group by group then knockout round', async () =>
   expect(ctx.data.rowsByRound.map(row => row.label)).toEqual(['A组', '8强'])
 })
 
+test('group knockout legacy rows without stage or group stay visible under fallback group', async () => {
+  const legacyRow = {
+    _id: 'legacy1',
+    sourceMatchId: 'legacy1',
+    round: 4,
+    position: 1,
+    resultStatus: 'pending',
+    player1: { id: 'a1' },
+    player2: { id: 'a2' },
+  }
+  const pageDef = loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    matchResults: [legacyRow],
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound).toMatchObject([
+    { round: 'other', label: '其他', matches: [{ _id: 'legacy1' }] },
+  ])
+  expect(ctx.data.totalCount).toBe(1)
+  expect(ctx.getAllMatches().map(row => row._id)).toEqual(['legacy1'])
+  expect(ctx.getAllMatches()).toHaveLength(ctx.data.totalCount)
+})
+
+test('group knockout legacy fallback row can still be anchored', async () => {
+  const pageDef = loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    matchResults: [{
+      _id: 'legacy_result_1',
+      sourceMatchId: 'legacy_match_1',
+      round: 4,
+      position: 1,
+      resultStatus: 'pending',
+      player1: { id: 'a1' },
+      player2: { id: 'a2' },
+    }],
+  })
+  const ctx = makeCtx(pageDef)
+  ctx.onLoad({ tournamentId: 't1', resultId: 'legacy_result_1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound[0].label).toBe('其他')
+  expect(ctx.getAnchorRowId()).toBe('legacy_match_1')
+})
+
 test('void match calls cloud action and refreshes rows', async () => {
   const def = loadPage()
   wx.cloud.callFunction.mockResolvedValueOnce({ result: { success: true, data: { ok: true } } })
