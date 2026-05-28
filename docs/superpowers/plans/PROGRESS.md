@@ -30,13 +30,45 @@
 
 ## 当前应该做什么
 
-**👉 Phase 10-2 已合并到 `main`，并完成云函数部署与小程序上传。**
+**👉 Group Knockout 赛制已在 `codex/group-knockout` 完成本地代码与回归验证，待配置目标云环境后执行 16 人种子赛 DevTools 手工验收与部署。**
 
-后续如需继续发版流程，可在微信公众平台提交审核版本 `10.2.0`。
+后续如需继续发版流程，先用目标云环境跑 `FOPEN_CLOUD_ENV=<env> FOPEN_CLEANUP_CONFIRM=<env> node scripts/e2e-regression-smoke.js`，再按 16 人小组赛+淘汰赛手工清单验证详情页、签表页、录分页和积分结算。
 
 ---
 
 ## 执行日志（按时间倒序）
+
+### 2026-05-28 · Group Knockout 赛制代码完成（12/16 签小组赛+淘汰赛）
+
+实施方式：superpowers:subagent-driven-development。分支 `codex/group-knockout`，Tasks 1-15 均完成，Task 13/14 经过 worker + spec review + quality review，review 发现的 legacy row 保护问题已由 follow-up commit 修复。
+
+已落地能力：
+
+- 新增 `group_knockout` 赛制：12/16 签固定 4 组，小组前 2 进入 8 强；QF 对阵为 A1-C2、B1-D2、C1-A2、D1-B2。
+- 支持预排签表和现场抽签后录入分组；签表页仅保留「小组赛 / 淘汰赛」两个 tab，详情页沿用既有顶部流程状态。
+- 详情页 footer 在待安排阶段展示「安排签表」，小组赛/淘汰赛阶段展示「查看签表」「录入比分」等既有底部操作。
+- 签表页展示分组签表、小组赛对阵、淘汰赛晋级链路；来源标签只在 8 强位置展示。
+- 录分页按小组赛/淘汰赛分组展示比分行，兼容 legacy rows。
+- 后端支持保存分组、生成小组赛、确认 8 强、淘汰赛推进、积分结算、报名容量限制、撤回分组和撤回 8 强重排。
+- 积分规则：12 签冠军/亚军/四强/八强为 250/150/100/65，止步小组赛按胜 20 / 负 10；16 签为 500/350/250/180，止步小组赛按胜 50 / 负 25。
+- reset 安全保护：小组赛已有 confirmed 成绩禁止撤回分组；淘汰赛已有 confirmed 成绩禁止撤回 8 强；legacy group/KO rows 均纳入保护。
+
+本地验证：
+
+- `cloudfunctions/tournaments`: 84/84
+- `cloudfunctions/tournament-brackets`: 130/130
+- `cloudfunctions/match-results`: 180/180
+- `cloudfunctions/points-engine`: 95/95
+- `cloudfunctions/_shared`: 37/37
+- `cloudfunctions/tournament-registrations`: 34/34
+- `miniprogram`: 272/272
+- `scripts`: 57/57
+- `scripts/check-tournament-phase-parity.sh`: passed
+
+未执行 / 待完成：
+
+- `node scripts/e2e-regression-smoke.js` 未进入业务 smoke；脚本按安全门中止，原因是 `FOPEN_CLOUD_ENV` 和 `FOPEN_CLEANUP_CONFIRM` 均未设置。
+- DevTools 16 人种子赛手工验收未执行；需要目标云环境与可清理测试数据后，按创建赛事 → 安排签表 → 小组比分 → 确认 8 强 → 淘汰赛比分 → 积分结算完整走一遍。
 
 ### 2026-05-17 · Phase 10-2 deploy + merge（target env）
 
