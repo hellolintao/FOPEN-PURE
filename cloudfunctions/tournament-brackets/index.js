@@ -399,6 +399,18 @@ exports.main = async (event, context) => {
         return await handleConfirmKnockoutSeeds(event)
       }
 
+      case 'resetGroups': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+        return await handleResetGroups(event)
+      }
+
+      case 'resetKnockoutSeeds': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+        return await handleResetKnockoutSeeds(event)
+      }
+
       case 'regenerateDraft': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
@@ -588,11 +600,25 @@ async function loadGroupKnockoutContext(tournamentId) {
 
 async function removeDocsByQuery(targetCollection, query) {
   const oldDocs = await targetCollection.where(query).get().catch(() => ({ data: [] }))
+  let removed = 0
   for (const doc of (oldDocs.data || [])) {
     if (doc && doc._id) {
       await targetCollection.doc(doc._id).remove().catch(() => null)
+      removed += 1
     }
   }
+  return removed
+}
+
+async function removeDocsById(targetCollection, docs) {
+  let removed = 0
+  for (const doc of (docs || [])) {
+    if (doc && doc._id) {
+      await targetCollection.doc(doc._id).remove().catch(() => null)
+      removed += 1
+    }
+  }
+  return removed
 }
 
 function orderGroups(groups) {
@@ -1057,6 +1083,122 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   })
 
   return { success: true, data: { seeds, knockoutRounds: knockoutDocs.length } }
+}
+
+async function handleResetGroups({ tournamentId }) {
+  if (!tournamentId) {
+    return fail('INVALID_ARG', 'tournamentId 必填')
+  }
+
+  const ctx = await loadGroupKnockoutContext(tournamentId)
+  if (!ctx.tournament) {
+    return fail('NOT_FOUND', tournamentId)
+  }
+  if (ctx.tournament.format !== 'group_knockout') {
+    return fail('INVALID_FORMAT', '赛事不是小组赛+淘汰赛赛制')
+  }
+
+  const phase = currentGroupKnockoutPhase(ctx.tournament)
+  if (phase !== 'group_published') {
+    return phaseLocked(phase)
+  }
+
+  const confirmedGroupResults = ctx.results.filter(result => (
+    isActiveScoreRow(result) &&
+    result.stage === 'group' &&
+    result.resultStatus === 'confirmed'
+  ))
+  if (confirmedGroupResults.length) {
+    return {
+      success: false,
+      error: {
+        code: 'GROUP_ALREADY_STARTED',
+        message: '小组赛已有确认成绩，不能撤回分组',
+        resultIds: confirmedGroupResults.map(result => result._id || resultSourceMatchId(result))
+      }
+    }
+  }
+
+  const resultCollection = db.collection('match_results')
+  const removedBrackets = await removeDocsByQuery(collection, { tournamentId, stage: 'group' })
+  const removedRows = await removeDocsByQuery(resultCollection, { tournamentId, stage: 'group' })
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: {
+      groupRankSnapshot: null,
+      groupKnockoutPhase: 'group_draft',
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true, data: { removedBrackets, removedRows } }
+}
+
+async function archiveKnockoutSeedSnapshot(tournamentId, snapshot, overwrittenAt) {
+  if (!snapshot) return
+  await db.collection('tournament_snapshots').add({
+    data: {
+      _id: `snapshot_${tournamentId}_knockoutSeedSnapshot_${Date.now()}`,
+      tournamentId,
+      kind: 'knockoutSeedSnapshot',
+      snapshot,
+      overwrittenAt
+    }
+  })
+}
+
+async function handleResetKnockoutSeeds({ tournamentId }) {
+  if (!tournamentId) {
+    return fail('INVALID_ARG', 'tournamentId 必填')
+  }
+
+  const ctx = await loadGroupKnockoutContext(tournamentId)
+  if (!ctx.tournament) {
+    return fail('NOT_FOUND', tournamentId)
+  }
+  if (ctx.tournament.format !== 'group_knockout') {
+    return fail('INVALID_FORMAT', '赛事不是小组赛+淘汰赛赛制')
+  }
+
+  const phase = currentGroupKnockoutPhase(ctx.tournament)
+  if (phase !== 'knockout_published') {
+    return phaseLocked(phase)
+  }
+
+  const expectedGroupSourceMatchIds = new Set(expectedGroupMatchesByIdFromBrackets(ctx.brackets).keys())
+  const knockoutSourceMatchIds = knockoutSourceMatchIdsFromBrackets(ctx.brackets, tournamentId)
+  const activeKnockoutResults = ctx.results.filter(result => isKnockoutResult(result, expectedGroupSourceMatchIds, knockoutSourceMatchIds))
+  const confirmedKnockoutResults = activeKnockoutResults.filter(result => result.resultStatus === 'confirmed')
+  if (confirmedKnockoutResults.length) {
+    return {
+      success: false,
+      error: {
+        code: 'KNOCKOUT_ALREADY_STARTED',
+        message: '淘汰赛已有确认成绩，不能撤回淘汰赛签表',
+        resultIds: confirmedKnockoutResults.map(result => result._id || resultSourceMatchId(result))
+      }
+    }
+  }
+
+  const resultCollection = db.collection('match_results')
+  const removedBrackets = await removeDocsByQuery(collection, { tournamentId, stage: 'knockout' })
+  const removedStageRows = await removeDocsByQuery(resultCollection, { tournamentId, stage: 'knockout' })
+  const removedLegacyRows = await removeDocsById(
+    resultCollection,
+    activeKnockoutResults.filter(result => result.stage !== 'knockout')
+  )
+  const removedRows = removedStageRows + removedLegacyRows
+  const now = db.serverDate()
+  await archiveKnockoutSeedSnapshot(tournamentId, ctx.tournament.knockoutSeedSnapshot, now)
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: {
+      knockoutSeedSnapshot: null,
+      groupRankSnapshot: null,
+      groupKnockoutPhase: 'group_completed',
+      updateTime: now
+    }
+  })
+
+  return { success: true, data: { removedBrackets, removedRows } }
 }
 
 async function handleSaveGroups({ tournamentId, groups }) {
