@@ -142,6 +142,14 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 - 每位选手在本赛事最终只写一条积分结果。
 - 管理员手动调整小组排名后，晋级名单和最终积分按冻结后的排名快照计算。
 
+### 结算触发
+
+- **触发点**：决赛 `match_results.resultStatus` 从 `pending` 更新为 `confirmed` 时，由确认录分的云函数同步调用 `points-engine` 入口。前端无独立"结算"按钮。
+- **入口分支**：`points-engine` 在赛事维度结算时按 `tournament.format` 分发。`format === 'group_knockout'` 走新分支，**不复用**现有 winLoss 路径——[points-engine/index.js:50](cloudfunctions/points-engine/index.js:50) 默认按 `pointsRules.winLoss` 对所有 confirmed 比赛累加胜负分，新赛制必须在该路径之前显式判断 format 并提前 return，避免给晋级者多算小组赛胜负分。
+- **幂等**：结算前按 `tournamentId + playerId` 查既有积分记录，若存在则 update 覆盖、不存在则 insert，保证"每位选手只一条结果"，支持失败重试。
+- **失败回滚**：结算失败时 `groupKnockoutPhase` 不更新为 `completed`，决赛比分保留 confirmed，下次手动触发（重新确认决赛 / 后台重跑）可重试。
+- **降级**：`pointsRules.groupKnockout` 缺失时按 `bracketSize` 取默认配置（见 L237-247），不阻断结算，但写入告警日志。
+
 ## 状态流转
 
 赛事顶部仍沿用现有详情页流程状态，但 `group_knockout` 内部需要更细的阶段字段。
@@ -157,6 +165,20 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 | `completed` | 决赛确认，赛事结算完成 |
 
 对应详情页顶部流程可显示为：报名、签表/小组赛、淘汰赛、赛果。具体文案按当前页面已有 `phaseSteps` 模型适配，不新增第二套流程条。
+
+允许的状态迁移（未列出的迁移在云函数层直接拒绝）：
+
+| from | to | 触发条件 |
+|---|---|---|
+| `group_draft` | `group_published` | 管理员保存分组并发布小组赛 |
+| `group_published` | `group_draft` | 管理员撤回，前提是尚无任何小组赛已录分（详见"修改与重建规则"） |
+| `group_published` | `group_completed` | 全部小组赛比分确认，且无 `manualTiebreakRequired` 未解决 |
+| `group_completed` | `group_published` | 管理员修改任一已确认小组赛成绩，系统自动回退（清空 `groupRankSnapshot`） |
+| `group_completed` | `knockout_published` | 管理员点击"确认 8 强"，冻结 `groupRankSnapshot` 和 `knockoutSeedSnapshot` |
+| `knockout_published` | `group_completed` | 淘汰赛尚无任何比分确认时，管理员撤回 8 强重排 |
+| `knockout_published` | `completed` | 决赛 `match_results.resultStatus === 'confirmed'` 且结算成功 |
+
+进度细分（如"小组赛已录 7/12 场"）不进 enum，按需从 `match_results` 的 `resultStatus === 'confirmed'` 计数派生，避免状态机和数据双写。
 
 ## 创建与安排签表流程
 
@@ -259,16 +281,12 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
     { slotNo: 1, playerId, playerName, registrationId },
     { slotNo: 2, playerId, playerName, registrationId }
   ],
-  rankingSnapshot: null | {
-    rows: [],
-    manualOverride: false,
-    overrideBy: '',
-    overrideAt: null
-  },
   createTime,
   updateTime
 }
 ```
+
+排名快照统一存放在 `tournaments.groupRankSnapshot`，作为单一真相，避免双写不一致。`tournament_groups` 不保存排名结果；查询时由 `getGroupKnockoutBracket` 从 `match_results` 按需实时计算。`groupRankSnapshot` 仅在管理员点击"确认 8 强"时一次性冻结。
 
 ### tournament_brackets
 
@@ -388,13 +406,24 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 - 是否晋级
 - 是否需要管理员手动排序
 
-排序规则：
+小组赛不允许平局，所有比赛必须分出胜负。
 
-1. 胜场数。
-2. 两人同胜场时，看相互胜负。
-3. 多人同胜场时，看净胜局。
-4. 仍相同时，看总胜局。
-5. 仍无法判定时，标记该组需要管理员手动排序。
+排序规则按下列顺序依次判定：
+
+1. 胜场数（`wins`）多者排前。
+2. 仍并列且并列人数 N=2：看两人之间的相互胜负（`headToHead`），胜者排前。
+3. 仍并列且并列人数 N≥3：跳过相互胜负（避免 A>B>C>A 循环时的递归歧义），直接进入下一项。
+4. 净胜局（`gameDiff` = 组内全部比赛 winGames − lostGames，统计范围是组内所有比赛，不只是同分人之间）多者排前。
+5. 总胜局（`totalGamesWon` = 组内全部比赛累计赢的局数）多者排前。
+6. 仍无法判定，标记 `manualTiebreakRequired = true`，必须由管理员手动指定 1/2/3/4 名次后才能确认 8 强。
+
+字段命名约定：
+
+- `wins` / `losses`：胜场、负场数
+- `gameDiff`：净胜局
+- `totalGamesWon`：总胜局
+- `headToHead`：仅在 N=2 并列时记录
+- `manualTiebreakRequired`：是否阻断"确认 8 强"
 
 管理员手动排序后，需要记录覆盖快照：
 
@@ -487,7 +516,14 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 ### 8 强已确认但淘汰赛未录分
 
 - 如果小组赛成绩被管理员修改，允许重新计算排名并重新生成 8 强。
-- 重新生成前需要明确提示会覆盖当前淘汰赛签表。
+- 触发前置校验：所有 `stage: 'knockout'` 的 `match_results` 必须为 `pending`；任一为 `confirmed` 即阻断，提示先清空该淘汰赛成绩。
+- 重新生成时的具体动作：
+  1. 删除 `bracket_${shortId}_knockout_round_1/2/3` 三份 `tournament_brackets` 文档。
+  2. 删除所有 `stage: 'knockout'` 的 pending `match_results`。
+  3. 将旧 `knockoutSeedSnapshot` 归档到 `tournament_history.knockoutSeedSnapshots[]` 子文档（或独立 `tournament_snapshots` 集合），保留 `seeds`、`confirmedBy`、`confirmedAt`，并写入 `overwrittenBy`、`overwrittenAt`，便于纠纷追溯。
+  4. 清空 `tournaments.knockoutSeedSnapshot` 和 `tournaments.groupRankSnapshot`。
+  5. 将 `groupKnockoutPhase` 回退到 `group_completed`，等待管理员重新点击"确认 8 强"。
+- 重新生成前 UI 必须明确提示："此操作将清空当前淘汰赛签表，旧 8 强种子会归档保留。"
 
 ### 淘汰赛已有成绩
 
@@ -530,10 +566,11 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 
 ### tournaments
 
-- 校验 `format` 允许 `group_knockout`。
-- `group_knockout` 只允许 `type: 'singles'`。
-- 校验 `bracketSize` 必须为 12 或 16。
-- 保存和返回 `groupKnockoutPhase`、`groupDrawMode`、快照字段。
+- `cloudfunctions/tournaments/lib/validate.js` 当前 format 白名单 `['regular', 'knockout']` 扩为 `['regular', 'knockout', 'group_knockout']`。
+- `group_knockout` 必须显式拒绝 `type: 'doubles'` 和 `type: 'mixed'`，只允许 `'singles'`（现有 `knockout` 只 reject `mixed`，新赛制要单独加一条 doubles 拒绝规则，不要复用 knockout 的判断）。
+- 校验 `bracketSize`：`group_knockout` 时必须是 12 或 16，其他赛制忽略该字段。
+- `maxPlayers` 与 `bracketSize` 的关系：保存 `group_knockout` 时同步写入 `maxPlayers = bracketSize`，保持现有 `maxPlayers` 校验路径不变；新代码不再单独读 `maxPlayers`，避免双字段失同步。
+- 保存和返回 `groupKnockoutPhase`、`groupDrawMode`、`groupRankSnapshot`、`knockoutSeedSnapshot`。
 - 管理后台和赛事详情查询需要返回新阶段摘要。
 
 ### tournament-registrations
@@ -556,10 +593,11 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 
 ### match-results
 
-- `bulkUpsertScheduledMatches` 支持 `matchKind: 'group'` 和 `stage: 'group'`。
-- 确认小组赛比分后触发小组排名刷新或让查询时实时计算。
-- 确认淘汰赛比分后复用现有 `matchKind: 'bracket'` 推进逻辑，但 bracket doc id 需要按 `stage: 'knockout'` 解析。
-- 结算时新增 `group_knockout` 积分逻辑。
+- `cloudfunctions/match-results/index.js` 当前 matchKind 白名单 `_.in(['bracket', 'regularRound', 'extra'])` 扩为 `_.in(['bracket', 'regularRound', 'extra', 'group'])`，否则 `bulkUpsertScheduledMatches` 写入 `matchKind: 'group'` 时会被现有校验直接拒掉。
+- `bulkUpsertScheduledMatches` 支持 `matchKind: 'group'` 和 `stage: 'group'`，写入时强制带 `groupCode`。
+- 确认小组赛比分后，让排名按需在查询时实时计算（不冻结、不写回 `tournament_groups`），避免单场录分都触发全组排名重写。
+- 确认淘汰赛比分后复用现有 `matchKind: 'bracket'` 推进逻辑，但 bracket doc id 需要按 `stage: 'knockout'` 解析（旧解析按 `bracket_xxx_round_${r}` 直接 lookup，新解析要先看 `stage`）。
+- 结算入口新增 `group_knockout` 分支，详见"结算触发"。
 
 ### points-engine
 
@@ -573,19 +611,28 @@ FOPEN 需要新增一个独立赛制：小组赛 + 淘汰赛。赛事规模支�
 ### 后端单元测试
 
 - `validateTournament` 接受合法 `group_knockout` 单打赛事。
-- `validateTournament` 拒绝 `group_knockout` 双打和混合。
+- `validateTournament` 拒绝 `group_knockout` 双打（`doubles`）和混合（`mixed`）。
 - `validateTournament` 拒绝非 12/16 的 `bracketSize`。
 - `saveGroups` 校验每组人数、缺位、重复选手。
-- 12 签生成 4 组 x 3 场小组赛。
-- 16 签生成 4 组 x 6 场小组赛。
-- 小组排名覆盖胜场、两人相互胜负、多人净胜局、总胜局、手动排序。
+- `saveGroups` 在报名人数 ≠ `bracketSize` 时阻断保存并返回明确错误。
+- 12 签生成 4 组 × 3 场小组赛。
+- 16 签生成 4 组 × 6 场小组赛。
+- 小组排名覆盖：胜场、两人相互胜负、多人净胜局、总胜局、手动排序。
+- 三人循环并列（A>B>C>A 全部 2-1）走净胜局分支，不递归看相互胜负。
+- `gameDiff` 统计范围是组内所有比赛，不只是同分人之间的比赛。
+- 任一组 `manualTiebreakRequired === true` 时 `confirmKnockoutSeeds` 阻断并返回需要手动排序的组列表。
 - 8 强对位固定为 A1-C2、B1-D2、C1-A2、D1-B2。
 - 确认 8 强后生成 3 轮淘汰赛。
 - 8 强首轮带来源标签，半决赛和决赛不带来源标签。
 - 淘汰赛胜者推进到下一轮。
-- 小组赛成绩变更时，淘汰赛未开始允许重建，已开始阻止重建。
+- 小组赛成绩变更时，淘汰赛未开始允许重建；任一淘汰赛 `match_results.resultStatus === 'confirmed'` 时阻止重建。
+- 重建 8 强会删除旧的 3 份淘汰赛 bracket 文档和全部 pending `stage: 'knockout'` 的 `match_results`，并把旧 `knockoutSeedSnapshot` 归档保留。
+- 状态机：未列出的迁移（如 `group_draft` → `knockout_published`）被云函数直接拒绝。
+- `pointsRules.groupKnockout` 缺失时按 `bracketSize` 回填默认配置并写告警，不阻断结算。
 - 12 签积分：晋级者只拿名次分，未晋级者只拿 20/10 胜负分。
 - 16 签积分：晋级者只拿名次分，未晋级者只拿 50/25 胜负分。
+- 结算幂等：同一赛事重复触发结算，每位选手只保留一条积分记录。
+- 结算入口：`format === 'group_knockout'` 不走 `pointsRules.winLoss` 默认路径，晋级者不会被多算小组赛胜负分。
 
 ### 前端测试
 
