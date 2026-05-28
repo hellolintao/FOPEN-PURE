@@ -314,12 +314,24 @@ function explicitWinnerId(result) {
     (result && (result.winnerId || result.winnerPlayerId))
 }
 
-function tiebreakWinnerRow(result, player1Row, player2Row) {
-  const tiebreak = result && result.score && result.score.tiebreak
+function parseTiebreakScore(tiebreak) {
   if (!tiebreak) return null
 
-  const a = Number(tiebreak.a)
-  const b = Number(tiebreak.b)
+  if (typeof tiebreak === 'string') {
+    const match = tiebreak.trim().match(/^(\d+)\s*-\s*(\d+)$/)
+    if (!match) return null
+    return { a: Number(match[1]), b: Number(match[2]) }
+  }
+
+  return { a: Number(tiebreak.a), b: Number(tiebreak.b) }
+}
+
+function tiebreakWinnerRow(result, player1Row, player2Row) {
+  const tiebreak = result && result.score && result.score.tiebreak
+  const score = parseTiebreakScore(tiebreak)
+  if (!score) return null
+
+  const { a, b } = score
   if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null
   return a > b ? player1Row : player2Row
 }

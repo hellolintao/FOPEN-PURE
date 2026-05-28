@@ -246,6 +246,25 @@ describe('calculateGroupStandings', () => {
     ])
   })
 
+  test('derives tied set winner from string tiebreak without explicit winner', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('tb-string', 'A', 'a', 'b', 3, 3, {
+        score: { sets: [{ a: 3, b: 3 }], tiebreak: '5-7' },
+        winner: undefined,
+        winnerId: undefined
+      })
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.map(r => ({ id: r.playerId, wins: r.wins, losses: r.losses, totalGamesWon: r.totalGamesWon, gameDiff: r.gameDiff }))).toEqual([
+      { id: 'b', wins: 1, losses: 0, totalGamesWon: 3, gameDiff: 0 },
+      { id: 'a', wins: 0, losses: 1, totalGamesWon: 3, gameDiff: 0 }
+    ])
+  })
+
   test('uses explicit winner fields for tied set winners', () => {
     const groups = [{
       groupCode: 'A',
@@ -267,6 +286,25 @@ describe('calculateGroupStandings', () => {
     expect(standings.A.rows.find(r => r.playerId === 'c').wins).toBe(1)
     expect(standings.A.rows.find(r => r.playerId === 'b').losses).toBe(1)
     expect(standings.A.rows.find(r => r.playerId === 'd').losses).toBe(1)
+  })
+
+  test('uses totalGamesWon after wins and gameDiff are tied', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('tg1', 'A', 'a', 'b', 4, 2),
+      row('tg2', 'A', 'b', 'c', 6, 4),
+      row('tg3', 'A', 'c', 'a', 5, 3)
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.map(r => ({ id: r.playerId, wins: r.wins, gameDiff: r.gameDiff, totalGamesWon: r.totalGamesWon }))).toEqual([
+      { id: 'c', wins: 1, gameDiff: 0, totalGamesWon: 9 },
+      { id: 'b', wins: 1, gameDiff: 0, totalGamesWon: 8 },
+      { id: 'a', wins: 1, gameDiff: 0, totalGamesWon: 7 }
+    ])
+    expect(standings.A.manualTiebreakRequired).toBe(false)
   })
 
   test('ignores pending knockout and bracket rows while accepting rows without explicit stage markers', () => {
