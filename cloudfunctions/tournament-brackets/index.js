@@ -5,6 +5,12 @@ const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournament_brackets')
 const { advanceWinner, finalRoundOf } = require('./lib/generator')
+const {
+  GROUP_CODES,
+  validateGroupAssignments,
+  generateGroupMatches: buildGroupMatches,
+  groupBracketDocId,
+} = require('./lib/group-knockout')
 
 // 生成对位表ID
 function generateBracketId(tournamentId, round) {
@@ -356,6 +362,18 @@ exports.main = async (event, context) => {
         return await handleSaveSchedule(event)
       }
 
+      case 'saveGroups': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+        return await handleSaveGroups(event)
+      }
+
+      case 'generateGroupMatches': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+        return await handleGenerateGroupMatches(event)
+      }
+
       case 'regenerateDraft': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
@@ -496,6 +514,147 @@ function buildDefaultScheduleCtx() {
 
 async function handleSaveSchedule(event) {
   return handleSaveScheduleWithCtx(buildDefaultScheduleCtx(), event)
+}
+
+async function loadGroupKnockoutTournament(tournamentId) {
+  if (!tournamentId) {
+    return { error: fail('INVALID_ARG', 'tournamentId 必填') }
+  }
+
+  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tournament = tournamentRes && tournamentRes.data
+  if (!tournament) {
+    return { error: fail('NOT_FOUND', tournamentId) }
+  }
+  if (tournament.format !== 'group_knockout') {
+    return { error: fail('INVALID_FORMAT', '赛事不是小组赛+淘汰赛赛制') }
+  }
+
+  return { tournament }
+}
+
+async function removeDocsByQuery(targetCollection, query) {
+  const oldDocs = await targetCollection.where(query).get().catch(() => ({ data: [] }))
+  for (const doc of (oldDocs.data || [])) {
+    if (doc && doc._id) {
+      await targetCollection.doc(doc._id).remove().catch(() => null)
+    }
+  }
+}
+
+function orderGroups(groups) {
+  return (groups || []).slice().sort((a, b) => {
+    const aIndex = GROUP_CODES.indexOf(a && a.groupCode)
+    const bIndex = GROUP_CODES.indexOf(b && b.groupCode)
+    if (aIndex === -1 && bIndex === -1) return String(a && a.groupCode).localeCompare(String(b && b.groupCode))
+    if (aIndex === -1) return 1
+    if (bIndex === -1) return -1
+    return aIndex - bIndex
+  })
+}
+
+async function handleSaveGroups({ tournamentId, groups }) {
+  const loaded = await loadGroupKnockoutTournament(tournamentId)
+  if (loaded.error) return loaded.error
+
+  const phase = loaded.tournament.groupKnockoutPhase || 'group_draft'
+  if (phase !== 'group_draft') {
+    return fail('PHASE_LOCKED', '当前阶段不允许调整小组签表')
+  }
+
+  const errors = validateGroupAssignments({
+    bracketSize: loaded.tournament.bracketSize,
+    groups,
+  })
+  if (errors.length) {
+    return {
+      success: false,
+      error: { code: 'VALIDATION_FAILED', message: errors.join('; '), errors }
+    }
+  }
+
+  const now = db.serverDate()
+  const groupCollection = db.collection('tournament_groups')
+  await removeDocsByQuery(groupCollection, { tournamentId })
+
+  for (const group of orderGroups(groups)) {
+    await groupCollection.add({
+      data: {
+        _id: `group_${tournamentId}_${group.groupCode}`,
+        tournamentId,
+        groupCode: group.groupCode,
+        slots: group.slots,
+        createTime: now,
+        updateTime: now
+      }
+    })
+  }
+
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: {
+      updateTime: now
+    }
+  })
+
+  return { success: true, data: { count: GROUP_CODES.length } }
+}
+
+async function handleGenerateGroupMatches({ tournamentId }) {
+  const loaded = await loadGroupKnockoutTournament(tournamentId)
+  if (loaded.error) return loaded.error
+
+  const groupCollection = db.collection('tournament_groups')
+  const groupRes = await groupCollection.where({ tournamentId }).get().catch(() => ({ data: [] }))
+  const groups = orderGroups(groupRes.data || [])
+  const errors = validateGroupAssignments({
+    bracketSize: loaded.tournament.bracketSize,
+    groups,
+  })
+  if (errors.length) {
+    return {
+      success: false,
+      error: { code: 'VALIDATION_FAILED', message: errors.join('; '), errors }
+    }
+  }
+
+  await removeDocsByQuery(collection, { tournamentId, stage: 'group' })
+
+  const now = db.serverDate()
+  const matches = buildGroupMatches({
+    tournamentId,
+    bracketSize: loaded.tournament.bracketSize,
+    groups,
+  })
+  const matchesByGroupCode = GROUP_CODES.reduce((acc, groupCode) => {
+    acc[groupCode] = matches.filter(match => match.groupCode === groupCode)
+    return acc
+  }, {})
+
+  for (const groupCode of GROUP_CODES) {
+    await collection.add({
+      data: {
+        _id: groupBracketDocId(tournamentId, groupCode),
+        tournamentId,
+        format: 'group_knockout',
+        stage: 'group',
+        groupCode,
+        round: 1,
+        type: 'singles',
+        matches: matchesByGroupCode[groupCode],
+        createTime: now,
+        updateTime: now
+      }
+    })
+  }
+
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: {
+      groupKnockoutPhase: 'group_published',
+      updateTime: now
+    }
+  })
+
+  return { success: true, data: { count: matches.length } }
 }
 
 async function handleSaveScheduleWithCtx(ctx, { tournamentId, queues }) {
