@@ -92,6 +92,25 @@ function koRow(id, round, player1, player2, winnerId) {
   }
 }
 
+function pendingGroupRow(id, player1, player2) {
+  return {
+    _id: id,
+    tournamentId: 't1',
+    seasonId: 's1',
+    tournamentType: 'singles',
+    stage: 'group',
+    matchKind: 'group',
+    round: 1,
+    resultStatus: 'pending',
+    player1: { id: player1 },
+    player2: { id: player2 },
+    pointsAwarded: {
+      source: 'stale',
+      entries: [{ memberId: player1, points: 999, rank: 'stale' }]
+    }
+  }
+}
+
 function seedState() {
   mockState = {
     collections: {
@@ -159,4 +178,26 @@ test('group_knockout recompute persists one entry per player idempotently and co
   expect(byMember.get('b1')).toMatchObject({ rowId: 'sf_1', points: 250, rank: 'semifinal' })
   expect(byMember.get('c2')).toMatchObject({ rowId: 'qf_1', points: 180, rank: 'quarterfinal' })
   expect(byMember.get('a3')).toMatchObject({ rowId: 'g_a1_a3', points: 25, rank: 'group' })
+})
+
+test('group_knockout recompute clears stale pending rows without scoring them', async () => {
+  mockState.collections.match_results.set('pending_stale', pendingGroupRow('pending_stale', 'pending_a', 'pending_b'))
+  const { main } = require('../index')
+
+  const res = await main({ action: 'recompute', tournamentId: 't1' })
+
+  expect(res).toMatchObject({ success: true, data: { source: 'group_knockout', count: 11 } })
+  expect(mockState.collections.match_results.get('pending_stale').pointsAwarded).toEqual({
+    source: 'group_knockout',
+    entries: []
+  })
+
+  const entries = [...mockState.collections.match_results.values()]
+    .flatMap(row => row.pointsAwarded.entries || [])
+  expect(entries).not.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ memberId: 'pending_a' }),
+      expect.objectContaining({ memberId: 'pending_b' })
+    ])
+  )
 })

@@ -58,14 +58,15 @@ async function recompute({ tournamentId }) {
 }
 
 async function recomputeGroupKnockout({ tournamentId, tournament }) {
-  const rows = (await db.collection('match_results')
-    .where({ tournamentId, resultStatus: 'confirmed' })
+  const allRows = (await db.collection('match_results')
+    .where({ tournamentId })
     .limit(500)
     .get()).data || []
-  const entries = buildGroupKnockoutPointEntries({ tournament, rows })
-  const carrierByMember = pickGroupKnockoutCarrierMatches(rows, entries.map(entry => entry.memberId))
+  const confirmedRows = allRows.filter(row => row.resultStatus === 'confirmed')
+  const entries = buildGroupKnockoutPointEntries({ tournament, rows: confirmedRows })
+  const carrierByMember = pickGroupKnockoutCarrierMatches(confirmedRows, entries.map(entry => entry.memberId))
 
-  for (const row of rows) {
+  for (const row of allRows) {
     if (row.bye) continue
     await replacePointsAwarded(row._id, { source: 'group_knockout', entries: [] })
   }
