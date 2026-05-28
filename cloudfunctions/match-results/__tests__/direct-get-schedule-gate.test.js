@@ -225,6 +225,43 @@ describe('direct get schedule visibility gate', () => {
 
     expect(res.data.map(row => row._id)).toEqual(['publishedRow', 'legacyRow'])
   })
+
+  test('bulkUpsertScheduledMatches preserves group stage fields', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      format: 'group_knockout',
+      scheduleStatus: 'published'
+    }
+
+    const result = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [{
+        matchId: 'gk_t1_gA_p1',
+        matchKind: 'group',
+        stage: 'group',
+        groupCode: 'A',
+        round: 1,
+        position: 1,
+        type: 'singles',
+        player1: { id: 'a1', name: 'A1' },
+        player2: { id: 'a2', name: 'A2' }
+      }],
+      queues: []
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockState.rows.result_t1_gk_t1_gA_p1).toMatchObject({
+      matchKind: 'group',
+      stage: 'group',
+      groupCode: 'A',
+      tournamentType: 'singles',
+      playerIds: ['a1', 'a2']
+    })
+  })
 })
 
 describe('direct legacy score writes schedule gate', () => {

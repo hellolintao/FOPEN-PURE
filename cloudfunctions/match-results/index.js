@@ -245,6 +245,11 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
         tournamentId,
         seasonId: tournament.seasonId,
         tournamentType: matchType,
+        format: tournament.format || '',
+        stage: m.stage || (m.matchKind === 'group' ? 'group' : ''),
+        groupCode: m.groupCode || '',
+        groupSlot1: m.groupSlot1 || null,
+        groupSlot2: m.groupSlot2 || null,
         matchKind: m.matchKind || 'bracket',
         sourceMatchId: m.matchId,
         round: m.round,
@@ -278,7 +283,9 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
 
     // 2. Pre-create R2+ skeleton match_results from tournament_brackets
     const skeletonRes = await db.collection('tournament_brackets')
-      .where({ tournamentId, round: _.gt(1) })
+      .where(tournament.format === 'group_knockout'
+        ? { tournamentId, stage: 'knockout', round: _.gt(1) }
+        : { tournamentId, round: _.gt(1) })
       .get()
       .catch(() => ({ data: [] }))
     for (const bracket of (skeletonRes.data || [])) {
@@ -293,6 +300,11 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
           tournamentId,
           seasonId: tournament.seasonId,
           tournamentType: matchType,
+          format: tournament.format || '',
+          stage: m.stage || bracket.stage || '',
+          groupCode: m.groupCode || bracket.groupCode || '',
+          groupSlot1: m.groupSlot1 || null,
+          groupSlot2: m.groupSlot2 || null,
           matchKind: 'bracket',
           sourceMatchId: m.matchId,
           round: m.round,
@@ -325,7 +337,7 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
     // 3. Delete orphan rows (this tournament, bracket/regularRound/extra kinds, not in seen)
     const orphanRes = await collection.where({
       tournamentId,
-      matchKind: _.in(['bracket', 'regularRound', 'extra'])
+      matchKind: _.in(['bracket', 'regularRound', 'extra', 'group'])
     }).get().catch(() => ({ data: [] }))
     for (const doc of (orphanRes.data || [])) {
       if (shouldRemoveOrphanMatchDoc(doc, seen)) {
