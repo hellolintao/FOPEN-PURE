@@ -16,6 +16,8 @@ Page({
       type: 'mixed',
       format: 'regular',
       maxPlayers: 8,
+      bracketSize: 16,
+      groupDrawMode: 'onsite',
       registrationDeadlineAt: defaultRegistrationDeadlineAt,
       description: ''
     },
@@ -90,6 +92,8 @@ Page({
         type: t.type || 'singles',
         format: t.format || 'regular',
         maxPlayers: t.maxPlayers || 8,
+        bracketSize: t.bracketSize || t.maxPlayers || 16,
+        groupDrawMode: t.groupDrawMode || 'onsite',
         registrationDeadlineAt: t.registrationDeadlineAt || '',
         description: t.description || ''
       },
@@ -659,7 +663,27 @@ Page({
     if (k === 'format') {
       const patch = { 'form.format': v }
       if (v === 'knockout' && this.data.form.type === 'mixed') patch['form.type'] = 'singles'
+      if (v === 'group_knockout') {
+        const bracketSize = Number(this.data.form.bracketSize) || 16
+        patch['form.type'] = 'singles'
+        patch['form.bracketSize'] = bracketSize
+        patch['form.maxPlayers'] = bracketSize
+        patch['form.groupDrawMode'] = this.data.form.groupDrawMode || 'onsite'
+      }
       this.setData(patch)
+      return
+    }
+    if (k === 'bracketSize') {
+      const size = parseInt(v, 10)
+      this.setData({ 'form.bracketSize': size, 'form.maxPlayers': size })
+      return
+    }
+    if (k === 'groupDrawMode') {
+      this.setData({ 'form.groupDrawMode': v })
+      return
+    }
+    if (k === 'type' && this.data.form.format === 'group_knockout' && v !== 'singles') {
+      wx.showToast({ title: '小组赛+淘汰赛只支持单打', icon: 'none' })
       return
     }
     if (k === 'type' && v === 'mixed' && this.data.form.format === 'knockout') {
@@ -751,6 +775,7 @@ Page({
   },
 
   _minPlayers() {
+    if (this.data.form.format === 'group_knockout') return this.data.form.bracketSize || 16
     // 单打 / knockout 双打：至少 2（个人 or 队伍）；regular 双打：至少 4 人。
     if (this.data.form.type === 'mixed') return 4
     if (this.data.form.type === 'doubles' && this.data.form.format === 'regular') return 4
@@ -758,6 +783,10 @@ Page({
   },
 
   _remainingPlayerSlots() {
+    if (this.data.form.format === 'group_knockout') {
+      const cap = this.data.form.bracketSize || 16
+      return Math.max(1, cap - this.data.selectedPlayers.length)
+    }
     if (this.data.form.format === 'knockout') {
       const cap = this.data.form.maxPlayers || 8
       return Math.max(1, cap - this.data.selectedPlayers.length)

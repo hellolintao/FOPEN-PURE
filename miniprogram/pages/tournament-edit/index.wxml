@@ -39,6 +39,7 @@
       <view class="chip-row">
         <text class="chip {{form.format === 'knockout' ? 'active' : ''}}" bindtap="onChipTap" data-k="format" data-v="knockout">单淘汰</text>
         <text class="chip {{form.format === 'regular' ? 'active' : ''}}" bindtap="onChipTap" data-k="format" data-v="regular">常规赛</text>
+        <text class="chip {{form.format === 'group_knockout' ? 'active' : ''}}" bindtap="onChipTap" data-k="format" data-v="group_knockout">小组+淘汰</text>
       </view>
     </view>
     <view class="field">
@@ -46,12 +47,26 @@
       <view class="chip-row">
         <text class="chip {{form.type === 'singles' ? 'active' : ''}}" bindtap="onChipTap" data-k="type" data-v="singles">单打</text>
         <text class="chip {{form.type === 'doubles' ? 'active' : ''}}" bindtap="onChipTap" data-k="type" data-v="doubles">双打</text>
-        <text class="chip {{form.type === 'mixed' ? 'active' : ''}} {{form.format === 'knockout' ? 'disabled' : ''}}" bindtap="onChipTap" data-k="type" data-v="mixed">混合</text>
+        <text class="chip {{form.type === 'mixed' ? 'active' : ''}} {{form.format === 'knockout' || form.format === 'group_knockout' ? 'disabled' : ''}}" bindtap="onChipTap" data-k="type" data-v="mixed">混合</text>
       </view>
     </view>
     <view wx:if="{{form.format === 'knockout'}}" class="field">
       <text class="label">最大参赛人数</text>
       <input class="input" type="number" bindinput="onFieldChange" data-k="maxPlayers" value="{{form.maxPlayers}}" />
+    </view>
+    <view wx:if="{{form.format === 'group_knockout'}}" class="field">
+      <text class="label label-strong">签位规模</text>
+      <view class="chip-row">
+        <text class="chip {{form.bracketSize === 12 ? 'active' : ''}}" bindtap="onChipTap" data-k="bracketSize" data-v="12">12签</text>
+        <text class="chip {{form.bracketSize === 16 ? 'active' : ''}}" bindtap="onChipTap" data-k="bracketSize" data-v="16">16签</text>
+      </view>
+    </view>
+    <view wx:if="{{form.format === 'group_knockout'}}" class="field">
+      <text class="label label-strong">分组方式</text>
+      <view class="chip-row">
+        <text class="chip {{form.groupDrawMode === 'onsite' ? 'active' : ''}}" bindtap="onChipTap" data-k="groupDrawMode" data-v="onsite">现场抽签后录入</text>
+        <text class="chip {{form.groupDrawMode === 'preset' ? 'active' : ''}}" bindtap="onChipTap" data-k="groupDrawMode" data-v="preset">提前设计</text>
+      </view>
     </view>
 
     <view class="field field-points">

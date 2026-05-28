@@ -77,6 +77,28 @@ describe('tournament-edit mixed regular flow', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '淘汰赛不支持混合', icon: 'none' })
   })
 
+  test('group knockout locks type to singles and defaults bracket size', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def)
+
+    ctx.onChipTap({ currentTarget: { dataset: { k: 'format', v: 'group_knockout' } } })
+
+    expect(ctx.data.form.format).toBe('group_knockout')
+    expect(ctx.data.form.type).toBe('singles')
+    expect(ctx.data.form.bracketSize).toBe(16)
+    expect(ctx.data.form.maxPlayers).toBe(16)
+  })
+
+  test('group knockout bracket size syncs maxPlayers', () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, { form: { ...def.data.form, format: 'group_knockout', type: 'singles', bracketSize: 16, maxPlayers: 16 } })
+
+    ctx.onChipTap({ currentTarget: { dataset: { k: 'bracketSize', v: '12' } } })
+
+    expect(ctx.data.form.bracketSize).toBe(12)
+    expect(ctx.data.form.maxPlayers).toBe(12)
+  })
+
   test('mixed regular default schedule alternates singles, doubles, free play each hour', () => {
     const def = loadPage()
     const ctx = makeCtx(def, {
