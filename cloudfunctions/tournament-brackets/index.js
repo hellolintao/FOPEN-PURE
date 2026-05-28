@@ -764,6 +764,15 @@ function confirmedGroupResult(result, expectedMatchesById) {
   )
 }
 
+function isGroupResult(result, expectedMatchesById) {
+  if (!isActiveScoreRow(result)) return false
+  const sourceMatchId = resultSourceMatchId(result)
+  return !!(
+    result.stage === 'group' ||
+    (expectedMatchesById && expectedMatchesById.has(sourceMatchId) && couldBeGroupResultForExpectedMatch(result))
+  )
+}
+
 function groupNotReady(message, groupCodes, details) {
   return {
     success: false,
@@ -1103,11 +1112,9 @@ async function handleResetGroups({ tournamentId }) {
     return phaseLocked(phase)
   }
 
-  const confirmedGroupResults = ctx.results.filter(result => (
-    isActiveScoreRow(result) &&
-    result.stage === 'group' &&
-    result.resultStatus === 'confirmed'
-  ))
+  const expectedGroupMatchesById = expectedGroupMatchesByIdFromBrackets(ctx.brackets)
+  const activeGroupResults = ctx.results.filter(result => isGroupResult(result, expectedGroupMatchesById))
+  const confirmedGroupResults = activeGroupResults.filter(result => result.resultStatus === 'confirmed')
   if (confirmedGroupResults.length) {
     return {
       success: false,
@@ -1121,7 +1128,12 @@ async function handleResetGroups({ tournamentId }) {
 
   const resultCollection = db.collection('match_results')
   const removedBrackets = await removeDocsByQuery(collection, { tournamentId, stage: 'group' })
-  const removedRows = await removeDocsByQuery(resultCollection, { tournamentId, stage: 'group' })
+  const removedStageRows = await removeDocsByQuery(resultCollection, { tournamentId, stage: 'group' })
+  const removedLegacyRows = await removeDocsById(
+    resultCollection,
+    activeGroupResults.filter(result => result.stage !== 'group')
+  )
+  const removedRows = removedStageRows + removedLegacyRows
   await db.collection('tournaments').doc(tournamentId).update({
     data: {
       groupRankSnapshot: null,
