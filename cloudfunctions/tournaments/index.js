@@ -27,35 +27,75 @@ function normalizeTournamentPayload(data = {}) {
   const payload = { ...data }
   if (payload.format !== 'group_knockout') return payload
 
-  const bracketSize = Number(payload.bracketSize || payload.maxPlayers || 16)
+  const bracketSize = Number(payload.bracketSize)
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(payload, key)
   return {
     ...payload,
-    type: 'singles',
+    type: payload.type || 'singles',
     bracketSize,
-    maxPlayers: bracketSize,
-    scheduleStatus: 'none',
-    groupDrawMode: payload.groupDrawMode || 'onsite',
-    groupKnockoutPhase: payload.groupKnockoutPhase || 'group_draft',
-    groupRankSnapshot: payload.groupRankSnapshot ?? null,
-    knockoutSeedSnapshot: payload.knockoutSeedSnapshot ?? null,
+    maxPlayers: payload.maxPlayers == null ? bracketSize : Number(payload.maxPlayers),
+    scheduleStatus: hasOwn('scheduleStatus') ? payload.scheduleStatus : 'none',
+    groupDrawMode: hasOwn('groupDrawMode') ? payload.groupDrawMode : 'onsite',
+    groupKnockoutPhase: hasOwn('groupKnockoutPhase') ? payload.groupKnockoutPhase : 'group_draft',
+    groupRankSnapshot: hasOwn('groupRankSnapshot') ? payload.groupRankSnapshot : null,
+    knockoutSeedSnapshot: hasOwn('knockoutSeedSnapshot') ? payload.knockoutSeedSnapshot : null,
   }
+}
+
+function buildTournamentUpdateValidationData(patch = {}, current = {}) {
+  const merged = { ...current, ...patch }
+  if (merged.format === 'group_knockout' &&
+      Object.prototype.hasOwnProperty.call(patch, 'bracketSize') &&
+      !Object.prototype.hasOwnProperty.call(patch, 'maxPlayers')) {
+    merged.maxPlayers = Number(patch.bracketSize)
+  }
+  return merged
 }
 
 function normalizeTournamentUpdatePatch(patch = {}, current = {}) {
   const format = patch.format || current.format
-  if (format !== 'group_knockout') return normalizeTournamentPayload(patch)
-
   const hasOwn = (key) => Object.prototype.hasOwnProperty.call(patch, key)
-  return normalizeTournamentPayload({
-    ...patch,
-    format: 'group_knockout',
-    bracketSize: hasOwn('bracketSize') ? patch.bracketSize : current.bracketSize,
-    maxPlayers: hasOwn('maxPlayers') ? patch.maxPlayers : current.maxPlayers,
-    groupDrawMode: hasOwn('groupDrawMode') ? patch.groupDrawMode : current.groupDrawMode,
-    groupKnockoutPhase: hasOwn('groupKnockoutPhase') ? patch.groupKnockoutPhase : current.groupKnockoutPhase,
-    groupRankSnapshot: hasOwn('groupRankSnapshot') ? patch.groupRankSnapshot : current.groupRankSnapshot,
-    knockoutSeedSnapshot: hasOwn('knockoutSeedSnapshot') ? patch.knockoutSeedSnapshot : current.knockoutSeedSnapshot,
-  })
+  const currentHasOwn = (key) => Object.prototype.hasOwnProperty.call(current, key)
+  if (format !== 'group_knockout') return { ...patch }
+
+  const updatePatch = { ...patch }
+  const bracketSize = Number(hasOwn('bracketSize') ? patch.bracketSize : current.bracketSize)
+
+  if (hasOwn('bracketSize')) {
+    updatePatch.bracketSize = bracketSize
+    if (!hasOwn('maxPlayers')) {
+      updatePatch.maxPlayers = bracketSize
+    }
+  } else if (hasOwn('maxPlayers') && patch.maxPlayers != null) {
+    updatePatch.maxPlayers = Number(patch.maxPlayers)
+  }
+
+  if (!current.type && !patch.type) {
+    updatePatch.type = 'singles'
+  }
+
+  if (patch.format === 'group_knockout') {
+    if (!hasOwn('maxPlayers') && !currentHasOwn('maxPlayers') && Number.isFinite(bracketSize)) {
+      updatePatch.maxPlayers = bracketSize
+    }
+    if (!hasOwn('scheduleStatus') && !currentHasOwn('scheduleStatus')) {
+      updatePatch.scheduleStatus = 'none'
+    }
+    if (!hasOwn('groupDrawMode') && !currentHasOwn('groupDrawMode')) {
+      updatePatch.groupDrawMode = 'onsite'
+    }
+    if (!hasOwn('groupKnockoutPhase') && !currentHasOwn('groupKnockoutPhase')) {
+      updatePatch.groupKnockoutPhase = 'group_draft'
+    }
+    if (!hasOwn('groupRankSnapshot') && !currentHasOwn('groupRankSnapshot')) {
+      updatePatch.groupRankSnapshot = null
+    }
+    if (!hasOwn('knockoutSeedSnapshot') && !currentHasOwn('knockoutSeedSnapshot')) {
+      updatePatch.knockoutSeedSnapshot = null
+    }
+  }
+
+  return updatePatch
 }
 
 /**
@@ -102,14 +142,15 @@ async function resolveMemberByOpenid(openid, database = db, command = _) {
 // ---------------------------------------------------------------------------
 
 async function actionCreate(event) {
-  const data = normalizeTournamentPayload((event && event.data) || {})
-  const status = data.status || 'upcoming'
+  const rawData = (event && event.data) || {}
+  const status = rawData.status || 'upcoming'
   const isDraft = status === 'draft'
 
-  const errors = validateTournament(data, { isDraft })
+  const errors = validateTournament(rawData, { isDraft })
   if (errors.length > 0) {
     return fail('VALIDATION_ERROR', '数据校验失败', errors)
   }
+  const data = normalizeTournamentPayload(rawData)
 
   // Resolve creator
   let createdBy = null
@@ -181,13 +222,13 @@ async function actionUpdate(event) {
   // are validated against the full document state (spec: Phase 7 Task 2).
   const cur = await collection.doc(id).get().catch(() => null)
   if (!cur || !cur.data) return fail('NOT_FOUND', '赛事不存在')
-  const updatePatch = normalizeTournamentUpdatePatch(data, cur.data)
-  const merged = normalizeTournamentPayload({ ...cur.data, ...updatePatch })
-  const isDraft = (updatePatch.status || merged.status) === 'draft'
+  const merged = buildTournamentUpdateValidationData(data, cur.data)
+  const isDraft = (data.status || merged.status) === 'draft'
   const errors = validateTournament(merged, { isDraft })
   if (errors.length > 0) {
     return fail('VALIDATION_ERROR', '数据校验失败', errors)
   }
+  const updatePatch = normalizeTournamentUpdatePatch(data, cur.data)
 
   // 嵌套对象字段必须用 _.set() 包一层，否则 TCB 会把 { schedulePlan: {...} }
   // 展开成 dot-path 写入，遇到旧 doc 上 schedulePlan=null 时会报
@@ -501,11 +542,12 @@ exports.main = async (event, context) => {
     // ── Legacy action: keep old contract so tournament-edit still works ──
     case 'add': {
       // Old callers read res.result._id or res.result.data._id, and check errMsg
-      const normalizedData = normalizeTournamentPayload(data || {})
-      const errors = validateTournament(normalizedData)
+      const rawData = data || {}
+      const errors = validateTournament(rawData)
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
+      const normalizedData = normalizeTournamentPayload(rawData)
       const tournamentId = (normalizedData && normalizedData._id) || generateTournamentId()
       const addData = {
         _id: tournamentId,
@@ -555,11 +597,12 @@ exports.main = async (event, context) => {
 
     // ── Legacy action: keep old errMsg contract so tournament-edit still works ──
     case 'update': {
-      const normalizedData = normalizeTournamentPayload(data || {})
-      const errors = validateTournament(normalizedData)
+      const rawData = data || {}
+      const errors = validateTournament(rawData)
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
+      const normalizedData = normalizeTournamentPayload(rawData)
       const updateData = { ...normalizedData, updateTime: now }
       return collection.doc(id).update({ data: updateData })
     }

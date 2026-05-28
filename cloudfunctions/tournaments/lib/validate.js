@@ -2,6 +2,14 @@
 const TOURNAMENT_TYPES = ['singles', 'doubles', 'mixed'];
 const TOURNAMENT_FORMATS = ['regular', 'knockout', 'group_knockout'];
 const GROUP_KNOCKOUT_BRACKET_SIZES = [12, 16];
+const GROUP_DRAW_MODES = ['preset', 'onsite'];
+const GROUP_KNOCKOUT_PHASES = [
+  'group_draft',
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed'
+];
 const SCHEDULE_STATUSES = ['none', 'draft', 'published'];
 
 function validateCourtTimeGrid(grid) {
@@ -99,9 +107,12 @@ function validatePointsRules(pr) {
  */
 function validateTournament(data = {}, { isDraft = false } = {}) {
   const errors = [];
+  const isGroupKnockout = data.format === 'group_knockout';
 
   if (!data.name || data.name.trim() === '') errors.push('赛事名称不能为空');
-  if (!data.type || !TOURNAMENT_TYPES.includes(data.type)) {
+  if (!data.type && !isGroupKnockout) {
+    errors.push('赛事类型必须是 singles、doubles 或 mixed');
+  } else if (data.type && !TOURNAMENT_TYPES.includes(data.type)) {
     errors.push('赛事类型必须是 singles、doubles 或 mixed');
   }
   if (!data.format || !TOURNAMENT_FORMATS.includes(data.format)) {
@@ -110,7 +121,7 @@ function validateTournament(data = {}, { isDraft = false } = {}) {
   if (data.format === 'knockout' && data.type === 'mixed') {
     errors.push('淘汰赛不支持 mixed 类型');
   }
-  if (data.format === 'group_knockout') {
+  if (isGroupKnockout) {
     validateGroupKnockout(data, errors);
   }
   if (!data.startDate) errors.push('开始日期不能为空');
@@ -156,13 +167,25 @@ function validateGroupKnockout(data, errors) {
   }
 
   const bracketSize = Number(data.bracketSize);
-  if (!GROUP_KNOCKOUT_BRACKET_SIZES.includes(bracketSize)) {
+  const hasValidBracketSize = GROUP_KNOCKOUT_BRACKET_SIZES.includes(bracketSize);
+  if (!hasValidBracketSize) {
     errors.push('小组赛+淘汰赛 bracketSize 必须是 12 或 16');
-    return;
   }
 
-  if (data.maxPlayers !== undefined && data.maxPlayers !== null && Number(data.maxPlayers) !== bracketSize) {
+  if (hasValidBracketSize && data.maxPlayers !== undefined && data.maxPlayers !== null && Number(data.maxPlayers) !== bracketSize) {
     errors.push('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
+  }
+
+  if (data.scheduleStatus !== undefined && data.scheduleStatus !== 'none') {
+    errors.push('小组赛+淘汰赛 scheduleStatus 必须是 none');
+  }
+
+  if (data.groupDrawMode !== undefined && !GROUP_DRAW_MODES.includes(data.groupDrawMode)) {
+    errors.push('小组赛+淘汰赛 groupDrawMode 必须是 preset 或 onsite');
+  }
+
+  if (data.groupKnockoutPhase !== undefined && !GROUP_KNOCKOUT_PHASES.includes(data.groupKnockoutPhase)) {
+    errors.push('小组赛+淘汰赛 groupKnockoutPhase 无效');
   }
 }
 

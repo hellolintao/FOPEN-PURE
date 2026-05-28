@@ -254,7 +254,6 @@ describe('group_knockout validation', () => {
       type: 'singles',
       bracketSize: 16,
       maxPlayers: 16,
-      scheduleStatus: 'published',
       schedulePlan: null
     }), { isDraft: false });
     expect(errors).toEqual([]);
@@ -288,6 +287,40 @@ describe('group_knockout validation', () => {
       maxPlayers: 16
     }), { isDraft: false });
     expect(errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
+  });
+
+  test('rejects published scheduleStatus', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 16,
+      maxPlayers: 16,
+      scheduleStatus: 'published',
+      schedulePlan: null
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 scheduleStatus 必须是 none');
+  });
+
+  test('rejects invalid groupDrawMode', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 16,
+      maxPlayers: 16,
+      groupDrawMode: 'random'
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 groupDrawMode 必须是 preset 或 onsite');
+  });
+
+  test('rejects invalid groupKnockoutPhase', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 16,
+      maxPlayers: 16,
+      groupKnockoutPhase: 'knockout_ready'
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 groupKnockoutPhase 无效');
   });
 });
 
