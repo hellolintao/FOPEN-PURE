@@ -152,7 +152,35 @@ function makeCtx(def, data = {}) {
   }
 }
 
+async function loadDetail(options = {}) {
+  const { pageDef } = loadPage({
+    ...options,
+    app: options.app || { globalData: { currentMember: { _id: 'admin1' }, isAdmin: !!options.isAdmin } }
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: (options.tournament && options.tournament._id) || 't1' })
+
+  await ctx.refresh()
+
+  return ctx
+}
+
 describe('tournament-detail score permissions', () => {
+  test('group knockout draft shows arrange bracket footer action', async () => {
+    const ctx = await loadDetail({
+      tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'group_draft', status: 'upcoming', scheduleStatus: 'none' },
+      isAdmin: true
+    })
+    expect(ctx.data.footerActions.map(a => a.key)).toContain('arrangeGroupBracket')
+  })
+
+  test('group knockout published shows score action', async () => {
+    const ctx = await loadDetail({
+      tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'group_published', status: 'upcoming', scheduleStatus: 'published' },
+      isAdmin: true
+    })
+    expect(ctx.data.footerActions.map(a => a.key)).toContain('enterScore')
+  })
+
   test('registration open member sees registration phase and register CTA', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: { _id: 'm2' }, isAdmin: false } },

@@ -54,6 +54,28 @@
       </view>
     </view>
 
+    <!-- GROUP KNOCKOUT BRACKET -->
+    <view wx:if="{{tournament.format === 'group_knockout'}}" class="td-section anim-stage-rise anim-delay-2">
+      <view class="td-section-head">
+        <text class="tape">签表 · BRACKET</text>
+        <text class="td-section-count">{{tournamentDisplay.groupKnockoutProgressText}}</text>
+      </view>
+      <view class="gk-summary">
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">分组签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.groupDrawStatusText}}</text>
+        </view>
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">小组赛签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.groupStageStatusText}}</text>
+        </view>
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">淘汰赛签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.knockoutStatusText}}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- REGISTRATIONS -->
     <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-3">
       <view class="td-section-head">
@@ -162,7 +184,17 @@
           <text class="point-card-label">弃</text>
         </view>
       </view>
-      <view wx:if="{{tournamentDisplay.pointsMode === 'placement'}}" class="points-placement">
+      <view wx:if="{{tournamentDisplay.pointsMode === 'groupKnockout'}}" class="points-row gk-points-row">
+        <view class="point-card point-win">
+          <text class="point-card-num num">{{tournamentDisplay.groupWin}}</text>
+          <text class="point-card-label">小组胜</text>
+        </view>
+        <view class="point-card point-loss">
+          <text class="point-card-num num">{{tournamentDisplay.groupLoss}}</text>
+          <text class="point-card-label">小组负</text>
+        </view>
+      </view>
+      <view wx:if="{{tournamentDisplay.pointsMode === 'placement' || tournamentDisplay.pointsMode === 'groupKnockout'}}" class="points-placement">
         <view class="placement-row" wx:for="{{tournamentDisplay.placementRows}}" wx:key="label">
           <text class="placement-label">{{item.label}}</text>
           <text class="placement-divider"></text>
@@ -229,6 +261,10 @@
     <view wx:elif="{{item.key === 'resumeDraft'}}" class="footer-cta {{item.className}}" bindtap="onResumeDraft">{{item.label}}</view>
     <view wx:elif="{{item.key === 'edit'}}" class="footer-cta {{item.className}}" bindtap="onEdit">{{item.label}}</view>
     <view wx:elif="{{item.key === 'arrangeSchedule'}}" class="footer-cta {{item.className}}" bindtap="onArrangeSchedule">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'arrangeGroupBracket'}}" class="footer-cta {{item.className}}" bindtap="onArrangeGroupBracket">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'viewBracket'}}" class="footer-cta {{item.className}}" bindtap="onViewBracket">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'confirmKnockoutSeeds'}}" class="footer-cta {{item.className}}" bindtap="onConfirmKnockoutSeeds">{{item.label}}</view>
+    <view wx:elif="{{item.key === 'resettleGroupKnockout'}}" class="footer-cta {{item.className}}" bindtap="onResettleGroupKnockout">{{item.label}}</view>
     <view wx:elif="{{item.key === 'editSchedule'}}" class="footer-cta {{item.className}}" bindtap="onEditSchedule">{{item.label}}</view>
     <view wx:elif="{{item.key === 'enterScore'}}" class="footer-cta {{item.className}} {{canOpenScore ? '' : 'cta-disabled'}}" bindtap="onEnterScore">{{item.label}}</view>
     <view wx:elif="{{item.key === 'adjustResults'}}" class="footer-cta {{item.className}}" bindtap="onAdjustResults">{{item.label}}</view>

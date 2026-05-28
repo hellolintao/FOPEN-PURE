@@ -421,6 +421,50 @@ Page({
     wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3` })
   },
 
+  onArrangeGroupBracket() {
+    wx.navigateTo({ url: `/pages/tournament-brackets/index?id=${this.data.tournamentId}&mode=arrange` })
+  },
+
+  onViewBracket() {
+    wx.navigateTo({ url: `/pages/tournament-brackets/index?id=${this.data.tournamentId}` })
+  },
+
+  async onConfirmKnockoutSeeds() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'tournament-brackets',
+        data: { action: 'confirmKnockoutSeeds', tournamentId: this.data.tournamentId }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '确认失败'), icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已生成8强', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-detail] confirm knockout seeds failed', err)
+      wx.showToast({ title: '确认失败', icon: 'none' })
+    }
+  },
+
+  async onResettleGroupKnockout() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'points-engine',
+        data: { action: 'recompute', tournamentId: this.data.tournamentId }
+      })
+      if (!_isSuccess(res)) {
+        wx.showToast({ title: _errMsg(res, '结算失败'), icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已重新结算', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      console.error('[tournament-detail] resettle group knockout failed', err)
+      wx.showToast({ title: '结算失败', icon: 'none' })
+    }
+  },
+
   onEditSchedule() {
     wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3&mode=edit-schedule` })
   },
@@ -554,6 +598,19 @@ function buildDetailPhaseState({
   const activeRegs = (registrations || []).filter(isActiveRegistration)
   const phase = derivePhase(tournament, { now, resultSummary })
   const withdraw = getWithdrawDeadline(tournament)
+
+  if (tournament.format === 'group_knockout') {
+    return buildGroupKnockoutDetailPhaseState({
+      tournament,
+      registrations,
+      isAdmin,
+      isParticipant,
+      canOpenScore,
+      scoreActionLabel,
+      entry
+    })
+  }
+
   const selfRegistrationSupported = !(tournament.format === 'knockout' && tournament.type === 'doubles')
   const canMemberWithdraw = !!(
     isParticipant &&
@@ -594,6 +651,76 @@ function buildDetailPhaseState({
     primaryActionLabel: primaryAction ? primaryAction.label : '',
     selfRegistrationSupported
   }
+}
+
+function buildGroupKnockoutDetailPhaseState({
+  tournament,
+  registrations,
+  isAdmin,
+  isParticipant,
+  canOpenScore,
+  scoreActionLabel,
+  entry
+}) {
+  const activeRegs = (registrations || []).filter(isActiveRegistration)
+  const phase = tournament.groupKnockoutPhase || 'group_draft'
+  const withdraw = getWithdrawDeadline(tournament)
+  const footerActions = [footerAction('share', '分享', 'cta-secondary share-cta', { openType: 'share' })]
+  const needsResettle = !!(isAdmin && phase === 'knockout_published' && tournament.status === 'completed')
+
+  if (isAdmin && phase === 'group_draft') {
+    footerActions.push(footerAction('arrangeGroupBracket', '安排签表', 'cta-lime flex-1'))
+  } else if (isAdmin && phase === 'group_completed') {
+    footerActions.push(footerAction('confirmKnockoutSeeds', '确认8强', 'cta-lime flex-1'))
+  } else if (needsResettle) {
+    footerActions.push(footerAction('resettleGroupKnockout', '重新结算', 'cta-lime flex-1'))
+  } else if (phase === 'group_published' || phase === 'knockout_published') {
+    footerActions.push(footerAction('viewBracket', '查看签表', 'cta-secondary'))
+    footerActions.push(footerAction('enterScore', scoreActionLabel || '录入成绩', 'cta-lime flex-1'))
+  } else {
+    footerActions.push(footerAction('viewBracket', '查看签表', 'cta-lime flex-1'))
+  }
+
+  const primaryAction = footerActions.slice().reverse().find(action => action.key !== 'share')
+
+  return {
+    phase,
+    entry: entry || '',
+    phaseSteps: buildGroupKnockoutPhaseSteps(phase),
+    activeRegistrationCount: activeRegs.length,
+    withdrawDeadlineLabel: withdraw.label,
+    showRegistrationModule: false,
+    showRegistrationStatusCard: false,
+    showWaitingScheduleButton: false,
+    showScheduleSection: false,
+    showResultsSection: phase === 'completed',
+    footerActions,
+    canOpenScore,
+    primaryActionLabel: primaryAction ? primaryAction.label : '',
+    selfRegistrationSupported: true
+  }
+}
+
+function buildGroupKnockoutPhaseSteps(phase) {
+  const steps = [
+    { key: 'registration', label: '报名' },
+    { key: 'group', label: phase === 'group_draft' ? '签表' : '小组赛' },
+    { key: 'knockout', label: '淘汰赛' },
+    { key: 'results', label: '赛果' }
+  ]
+  const activeIndex = (
+    phase === 'group_draft' ||
+    phase === 'group_published' ||
+    phase === 'group_completed'
+  )
+    ? 1
+    : (phase === 'knockout_published' ? 2 : 3)
+
+  return steps.map((step, index) => ({
+    ...step,
+    active: index === activeIndex,
+    done: index < activeIndex
+  }))
 }
 
 function buildPhaseSteps(phase) {
@@ -696,14 +823,18 @@ function buildTournamentDisplay(tournament, resultSummary) {
   const placement = pointsRules.placement || {}
   const winLoss = pointsRules.winLoss || {}
   const isKnockout = safeTournament.format === 'knockout'
+  const isGroupKnockout = safeTournament.format === 'group_knockout'
+  const groupKnockoutPoints = getGroupKnockoutPointRules(safeTournament)
+  const displayPlacement = isGroupKnockout ? groupKnockoutPoints.placement : placement
+  const groupKnockoutStatus = buildGroupKnockoutStatusText(safeTournament.groupKnockoutPhase || 'group_draft')
   const statusMeta = getTournamentStatusMeta(withResultSummary(safeTournament, resultSummary))
 
   const placementRows = [
-    { label: '冠军', value: placement.champion },
-    { label: '亚军', value: placement.runnerUp },
-    { label: '四强', value: placement.semifinal },
-    { label: '八强', value: placement.quarterfinal },
-    { label: '参赛', value: placement.participation }
+    { label: '冠军', value: displayPlacement.champion },
+    { label: '亚军', value: displayPlacement.runnerUp },
+    { label: '四强', value: displayPlacement.semifinal },
+    { label: '八强', value: displayPlacement.quarterfinal },
+    { label: '参赛', value: displayPlacement.participation }
   ].filter(row => row.value !== undefined && row.value !== null)
 
   const withdraw = getWithdrawDeadline(safeTournament)
@@ -720,7 +851,7 @@ function buildTournamentDisplay(tournament, resultSummary) {
     showRoundInfo: isKnockout,
     currentRound: config.currentRound || 1,
     totalRounds: config.totalRounds || '-',
-    formatText: isKnockout ? '淘汰赛' : '常规赛',
+    formatText: isGroupKnockout ? '小组+淘汰' : (isKnockout ? '淘汰赛' : '常规赛'),
     statusKind: statusMeta.kind,
     statusLabel: statusMeta.label,
     statusHint: statusMeta.hint,
@@ -733,12 +864,69 @@ function buildTournamentDisplay(tournament, resultSummary) {
     withdrawDeadlineText,
     hasSeedPlayers: Array.isArray(config.seedPlayers) && config.seedPlayers.length > 0,
     seedPlayersText: Array.isArray(config.seedPlayers) ? config.seedPlayers.join(', ') : '',
-    pointsMode: isKnockout ? 'placement' : 'winLoss',
+    pointsMode: isGroupKnockout ? 'groupKnockout' : (isKnockout ? 'placement' : 'winLoss'),
     win: typeof winLoss.win === 'number' ? winLoss.win : '-',
     loss: typeof winLoss.loss === 'number' ? winLoss.loss : '-',
     walkover: typeof winLoss.walkover === 'number' ? winLoss.walkover : undefined,
-    placementRows
+    groupWin: typeof groupKnockoutPoints.group.win === 'number' ? groupKnockoutPoints.group.win : '-',
+    groupLoss: typeof groupKnockoutPoints.group.loss === 'number' ? groupKnockoutPoints.group.loss : '-',
+    placementRows,
+    groupKnockoutProgressText: groupKnockoutStatus.progressText,
+    groupDrawStatusText: groupKnockoutStatus.groupDrawStatusText,
+    groupStageStatusText: groupKnockoutStatus.groupStageStatusText,
+    knockoutStatusText: groupKnockoutStatus.knockoutStatusText
   }
+}
+
+function getGroupKnockoutPointRules(tournament) {
+  const size = String(Number(tournament.bracketSize) || Number(tournament.maxPlayers) || 16)
+  const defaults = {
+    12: { placement: { champion: 250, runnerUp: 150, semifinal: 100, quarterfinal: 65 }, group: { win: 20, loss: 10 } },
+    16: { placement: { champion: 500, runnerUp: 350, semifinal: 250, quarterfinal: 180 }, group: { win: 50, loss: 25 } }
+  }
+  const groupKnockout = (tournament.pointsRules && tournament.pointsRules.groupKnockout) || {}
+  const fallback = defaults[size] || defaults[16]
+  const override = groupKnockout[size] || {}
+  return {
+    placement: { ...fallback.placement, ...(override.placement || {}) },
+    group: { ...fallback.group, ...(override.group || {}) }
+  }
+}
+
+function buildGroupKnockoutStatusText(phase) {
+  const map = {
+    group_draft: {
+      progressText: '待安排签表',
+      groupDrawStatusText: '待安排',
+      groupStageStatusText: '待生成',
+      knockoutStatusText: '待生成'
+    },
+    group_published: {
+      progressText: '小组赛进行中',
+      groupDrawStatusText: '已安排',
+      groupStageStatusText: '进行中',
+      knockoutStatusText: '待生成'
+    },
+    group_completed: {
+      progressText: '待确认8强',
+      groupDrawStatusText: '已安排',
+      groupStageStatusText: '已完成',
+      knockoutStatusText: '待确认'
+    },
+    knockout_published: {
+      progressText: '淘汰赛进行中',
+      groupDrawStatusText: '已安排',
+      groupStageStatusText: '已完成',
+      knockoutStatusText: '进行中'
+    },
+    completed: {
+      progressText: '已完成',
+      groupDrawStatusText: '已安排',
+      groupStageStatusText: '已完成',
+      knockoutStatusText: '已完成'
+    }
+  }
+  return map[phase] || map.group_draft
 }
 
 function extractSeasonRecord(res) {

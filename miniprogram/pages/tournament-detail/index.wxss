@@ -200,6 +200,38 @@
   margin-left: auto;
 }
 
+.gk-summary {
+  border-top: 4rpx solid var(--color-ink);
+  border-bottom: 4rpx solid var(--color-ink);
+}
+
+.gk-summary-row {
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-top: 1rpx solid var(--color-border);
+}
+
+.gk-summary-row:first-child { border-top: 0; }
+
+.gk-summary-title {
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 900;
+  color: var(--color-ink);
+}
+
+.gk-summary-status {
+  flex: 0 0 auto;
+  max-width: 220rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-muted);
+  text-align: right;
+}
+
 /* ============================================================
  * RESULTS
  * ============================================================ */
@@ -431,6 +463,11 @@
 .point-loss .point-card-label { color: var(--color-muted-2); }
 
 .point-wo { background: var(--color-bg-3); }
+
+.gk-points-row {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: var(--space-4);
+}
 
 .points-placement {
   display: flex;
