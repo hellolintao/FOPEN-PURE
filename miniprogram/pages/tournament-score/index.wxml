@@ -41,7 +41,8 @@
   <block wx:if="{{!error}}">
     <view wx:for="{{rowsByRound}}" wx:for-item="g" wx:key="round" class="round-group anim-stage-rise">
       <view class="round-banner">
-        <text class="tape tape-lime tape-stamped-lime">ROUND {{g.round < 10 ? '0' : ''}}{{g.round}}</text>
+        <text wx:if="{{g.label}}" class="tape tape-lime tape-stamped-lime">{{g.label}}</text>
+        <text wx:else class="tape tape-lime tape-stamped-lime">ROUND {{g.round < 10 ? '0' : ''}}{{g.round}}</text>
         <text class="round-count num">{{g.matches.length}} 场</text>
       </view>
       <view class="round-rows">

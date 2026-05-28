@@ -130,15 +130,7 @@ Page({
         isTarget: this.isTargetRow(r),
         canAdminAdjust: !!(this.data.adjustMode && this.data.isAdmin && r.resultStatus === 'confirmed')
       }))
-      const byRound = new Map()
-      for (const r of sorted) {
-        const k = r.round || 1
-        if (!byRound.has(k)) byRound.set(k, [])
-        byRound.get(k).push(r)
-      }
-      const rowsByRound = [...byRound.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(([round, matches]) => ({ round, matches }))
+      const rowsByRound = groupScoreRows(tournament, sorted)
 
       const scoreable = sorted.filter(r => this.isPlayableMatch(r))
       const confirmedCount = scoreable.filter(r => r.resultStatus === 'confirmed').length
@@ -524,6 +516,37 @@ function isScheduleBlocked(tournament) {
     Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
     tournament.scheduleStatus !== 'published'
   )
+}
+
+function groupScoreRows(tournament, rows) {
+  if (tournament && tournament.format === 'group_knockout') return groupGroupKnockoutRows(rows)
+  return groupRowsByRound(rows)
+}
+
+function groupRowsByRound(rows) {
+  const byRound = new Map()
+  for (const r of rows || []) {
+    const k = r.round || 1
+    if (!byRound.has(k)) byRound.set(k, [])
+    byRound.get(k).push(r)
+  }
+  return [...byRound.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, matches]) => ({ round, matches }))
+}
+
+function groupGroupKnockoutRows(rows) {
+  const output = []
+  for (const code of ['A', 'B', 'C', 'D']) {
+    const matches = (rows || []).filter(row => row.stage === 'group' && row.groupCode === code)
+    if (matches.length) output.push({ round: `group_${code}`, label: `${code}组`, matches })
+  }
+  const roundLabels = { 1: '8强', 2: '半决赛', 3: '决赛' }
+  for (const round of [1, 2, 3]) {
+    const matches = (rows || []).filter(row => row.stage === 'knockout' && Number(row.round) === round)
+    if (matches.length) output.push({ round: `knockout_${round}`, label: roundLabels[round], matches })
+  }
+  return output
 }
 
 function isCompatibilityNoScoreMatch(match) {

@@ -179,6 +179,21 @@ test('confirmed match with void marker is excluded from scoreable totals', () =>
   expect(ctx.isPlayableMatch(voided)).toBe(false)
 })
 
+test('group knockout score rows group by group then knockout round', async () => {
+  const pageDef = loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', type: 'singles' },
+    matchResults: [
+      { _id: 'g1', sourceMatchId: 'g1', stage: 'group', matchKind: 'group', groupCode: 'A', round: 1, position: 1, resultStatus: 'pending', player1: { id: 'a1' }, player2: { id: 'a2' } },
+      { _id: 'qf1', sourceMatchId: 'qf1', stage: 'knockout', matchKind: 'bracket', round: 1, position: 1, resultStatus: 'pending', player1: { id: 'a1' }, player2: { id: 'c2' } },
+    ],
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.rowsByRound.map(row => row.label)).toEqual(['A组', '8强'])
+})
+
 test('void match calls cloud action and refreshes rows', async () => {
   const def = loadPage()
   wx.cloud.callFunction.mockResolvedValueOnce({ result: { success: true, data: { ok: true } } })
