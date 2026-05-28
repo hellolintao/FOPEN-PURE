@@ -6,7 +6,8 @@ const {
   generateGroupMatches,
   generateKnockoutMatches,
   knockoutBracketDocId,
-  groupBracketDocId
+  groupBracketDocId,
+  calculateGroupStandings
 } = require('../group-knockout')
 
 const players = ids => ids.map(id => ({ playerId: id, playerName: id.toUpperCase(), registrationId: `reg_${id}` }))
@@ -142,5 +143,99 @@ describe('group knockout rules', () => {
       player1: { id: 'a1', name: 'A1' },
       player2: null
     })
+  })
+})
+
+function row(id, groupCode, player1, player2, a, b) {
+  const winner = a > b ? player1 : player2
+  return {
+    _id: `result_${id}`,
+    sourceMatchId: id,
+    stage: 'group',
+    matchKind: 'group',
+    groupCode,
+    player1: { id: player1, name: player1.toUpperCase() },
+    player2: { id: player2, name: player2.toUpperCase() },
+    score: { sets: [{ a, b }], tiebreak: null },
+    resultStatus: 'confirmed',
+    winner: { id: winner, name: winner.toUpperCase() }
+  }
+}
+
+describe('calculateGroupStandings', () => {
+  test('orders two-player tie by head-to-head', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c', 'd'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('m1', 'A', 'a', 'b', 4, 1),
+      row('m2', 'A', 'a', 'c', 4, 1),
+      row('m3', 'A', 'd', 'a', 4, 1),
+      row('m4', 'A', 'b', 'c', 4, 1),
+      row('m5', 'A', 'b', 'd', 4, 1),
+      row('m6', 'A', 'c', 'd', 4, 1)
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.map(r => r.playerId)).toEqual(['a', 'b', 'c', 'd'])
+    expect(standings.A.manualTiebreakRequired).toBe(false)
+    expect(standings.A.rows[0].headToHead).toBe('beat b')
+    expect(standings.A.rows[1].headToHead).toBe('lost to a')
+    expect(standings.A.rows.map(r => ({ id: r.playerId, source: r.source, promoted: r.promoted }))).toEqual([
+      { id: 'a', source: 'A1', promoted: true },
+      { id: 'b', source: 'A2', promoted: true },
+      { id: 'c', source: '', promoted: false },
+      { id: 'd', source: '', promoted: false }
+    ])
+  })
+
+  test('three-player circular tie uses gameDiff over recursive head-to-head', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('m1', 'A', 'a', 'b', 4, 3),
+      row('m2', 'A', 'b', 'c', 4, 1),
+      row('m3', 'A', 'c', 'a', 4, 0)
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.map(r => ({ id: r.playerId, gameDiff: r.gameDiff }))).toEqual([
+      { id: 'b', gameDiff: 2 },
+      { id: 'c', gameDiff: 1 },
+      { id: 'a', gameDiff: -3 }
+    ])
+    expect(standings.A.rows[0].playerId).toBe('b')
+    expect(standings.A.rows.map(r => r.headToHead)).toEqual(['', '', ''])
+  })
+
+  test('marks unresolved ties for manual ordering', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('m1', 'A', 'a', 'b', 4, 2),
+      row('m2', 'A', 'a', 'c', 2, 4),
+      row('m3', 'A', 'b', 'c', 4, 2)
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.manualTiebreakRequired).toBe(true)
+  })
+
+  test('manual override freezes requested ordering', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase(), registrationId: `reg_${id}` }))
+    }]
+    const override = { finalRows: [{ playerId: 'c' }, { playerId: 'a' }, { playerId: 'b' }], overrideBy: 'admin1' }
+    const standings = calculateGroupStandings({ groups, results: [], manualOverrides: { A: override } })
+    expect(standings.A.rows.map(r => ({ id: r.playerId, rank: r.rank, source: r.source, promoted: r.promoted }))).toEqual([
+      { id: 'c', rank: 1, source: 'A1', promoted: true },
+      { id: 'a', rank: 2, source: 'A2', promoted: true },
+      { id: 'b', rank: 3, source: '', promoted: false }
+    ])
+    expect(standings.A.manualOverride).toBe(override)
+    expect(standings.A.manualTiebreakRequired).toBe(false)
   })
 })

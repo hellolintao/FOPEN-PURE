@@ -250,6 +250,238 @@ function generateKnockoutMatches({ tournamentId, seeds, now }) {
   })
 }
 
+function playerKey(playerId) {
+  return String(playerId == null ? '' : playerId)
+}
+
+function createStandingRow(slot, groupCode, originalIndex) {
+  return {
+    playerId: slot && (slot.playerId || slot.id),
+    playerName: (slot && (slot.playerName || slot.name)) || '',
+    registrationId: (slot && (slot.registrationId || slot._id)) || null,
+    groupCode,
+    wins: 0,
+    losses: 0,
+    gameDiff: 0,
+    totalGamesWon: 0,
+    headToHead: '',
+    rank: 0,
+    source: '',
+    promoted: false,
+    __originalIndex: originalIndex
+  }
+}
+
+function publicStandingRow(row) {
+  const { __originalIndex, ...publicRow } = row
+  return publicRow
+}
+
+function resultParticipantId(result, side) {
+  const player = result && result[side]
+  return (player && (player.id || player.playerId || player._id)) ||
+    (result && (result[`${side}Id`] || result[`${side}PlayerId`]))
+}
+
+function firstSetScore(result) {
+  const sets = result && result.score && result.score.sets
+  const firstSet = Array.isArray(sets) ? sets[0] : null
+  if (!firstSet) return null
+
+  const a = Number(firstSet.a)
+  const b = Number(firstSet.b)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null
+  return { a, b }
+}
+
+function confirmedGroupResults(results, groupCode) {
+  return (Array.isArray(results) ? results : []).filter(result => (
+    result &&
+    result.resultStatus === 'confirmed' &&
+    (result.stage === 'group' || result.matchKind === 'group') &&
+    result.groupCode === groupCode
+  ))
+}
+
+function headToHeadKey(playerId1, playerId2) {
+  return [playerKey(playerId1), playerKey(playerId2)].sort().join('::')
+}
+
+function applyResultToRows(result, rowsByPlayerId, headToHeadResults) {
+  const player1Id = resultParticipantId(result, 'player1')
+  const player2Id = resultParticipantId(result, 'player2')
+  const player1Row = rowsByPlayerId.get(playerKey(player1Id))
+  const player2Row = rowsByPlayerId.get(playerKey(player2Id))
+  const score = firstSetScore(result)
+
+  if (!player1Row || !player2Row || !score) return
+
+  player1Row.totalGamesWon += score.a
+  player2Row.totalGamesWon += score.b
+  player1Row.gameDiff += score.a - score.b
+  player2Row.gameDiff += score.b - score.a
+
+  const winnerRow = score.a > score.b ? player1Row : player2Row
+  const loserRow = score.a > score.b ? player2Row : player1Row
+  winnerRow.wins += 1
+  loserRow.losses += 1
+
+  const key = headToHeadKey(player1Row.playerId, player2Row.playerId)
+  if (!headToHeadResults.has(key)) {
+    headToHeadResults.set(key, {
+      winnerId: winnerRow.playerId,
+      loserId: loserRow.playerId
+    })
+  }
+}
+
+function bucketRowsByMetric(rows, metric) {
+  const bucketsByValue = new Map()
+  for (const row of rows) {
+    const value = row[metric]
+    if (!bucketsByValue.has(value)) bucketsByValue.set(value, [])
+    bucketsByValue.get(value).push(row)
+  }
+
+  return Array.from(bucketsByValue.entries())
+    .sort(([a], [b]) => Number(b) - Number(a))
+    .map(([, bucketRows]) => bucketRows)
+}
+
+function orderByMetrics(rows, metrics) {
+  let buckets = [rows.slice()]
+
+  for (const metric of metrics) {
+    const nextBuckets = []
+    for (const bucket of buckets) {
+      if (bucket.length <= 1) {
+        nextBuckets.push(bucket)
+        continue
+      }
+      nextBuckets.push(...bucketRowsByMetric(bucket, metric))
+    }
+    buckets = nextBuckets
+  }
+
+  let unresolved = false
+  const ordered = []
+  for (const bucket of buckets) {
+    if (bucket.length > 1) unresolved = true
+    ordered.push(...bucket.slice().sort((a, b) => a.__originalIndex - b.__originalIndex))
+  }
+
+  return { ordered, unresolved }
+}
+
+function orderTwoPlayerTieByHeadToHead(rows, headToHeadResults) {
+  const result = headToHeadResults.get(headToHeadKey(rows[0].playerId, rows[1].playerId))
+  if (!result) return null
+
+  const winnerRow = rows.find(row => playerKey(row.playerId) === playerKey(result.winnerId))
+  const loserRow = rows.find(row => playerKey(row.playerId) === playerKey(result.loserId))
+  if (!winnerRow || !loserRow) return null
+
+  winnerRow.headToHead = `beat ${loserRow.playerId}`
+  loserRow.headToHead = `lost to ${winnerRow.playerId}`
+  return [winnerRow, loserRow]
+}
+
+function rankRows(rows, headToHeadResults) {
+  const winBuckets = bucketRowsByMetric(rows, 'wins')
+  const ordered = []
+  let manualTiebreakRequired = false
+
+  for (const bucket of winBuckets) {
+    if (bucket.length === 1) {
+      ordered.push(bucket[0])
+      continue
+    }
+
+    if (bucket.length === 2) {
+      const headToHeadOrder = orderTwoPlayerTieByHeadToHead(bucket, headToHeadResults)
+      if (headToHeadOrder) {
+        ordered.push(...headToHeadOrder)
+        continue
+      }
+    }
+
+    const metricOrder = orderByMetrics(bucket, ['gameDiff', 'totalGamesWon'])
+    ordered.push(...metricOrder.ordered)
+    manualTiebreakRequired = manualTiebreakRequired || metricOrder.unresolved
+  }
+
+  return { ordered, manualTiebreakRequired }
+}
+
+function assignRanksAndPromotion(rows, groupCode) {
+  return rows.map((row, index) => publicStandingRow({
+    ...row,
+    rank: index + 1,
+    source: index < 2 ? `${groupCode}${index + 1}` : '',
+    promoted: index < 2
+  }))
+}
+
+function orderRowsByManualOverride(rows, manualOverride) {
+  const rowsByPlayerId = new Map(rows.map(row => [playerKey(row.playerId), row]))
+  const usedPlayerIds = new Set()
+  const ordered = []
+
+  for (const overrideRow of manualOverride.finalRows) {
+    const overridePlayerId = overrideRow && (overrideRow.playerId || overrideRow.id)
+    const row = rowsByPlayerId.get(playerKey(overridePlayerId))
+    if (!row || usedPlayerIds.has(playerKey(row.playerId))) continue
+
+    ordered.push(row)
+    usedPlayerIds.add(playerKey(row.playerId))
+  }
+
+  for (const row of rows) {
+    if (usedPlayerIds.has(playerKey(row.playerId))) continue
+    ordered.push(row)
+  }
+
+  return ordered
+}
+
+function calculateGroupStandings({ groups, results, manualOverrides } = {}) {
+  const standings = {}
+
+  for (const group of Array.isArray(groups) ? groups : []) {
+    const groupCode = group && group.groupCode
+    const rows = (Array.isArray(group && group.slots) ? group.slots : [])
+      .slice()
+      .sort((a, b) => (a.slotNo || 0) - (b.slotNo || 0))
+      .map((slot, index) => createStandingRow(slot, groupCode, index))
+    const rowsByPlayerId = new Map(rows.map(row => [playerKey(row.playerId), row]))
+    const headToHeadResults = new Map()
+
+    for (const result of confirmedGroupResults(results, groupCode)) {
+      applyResultToRows(result, rowsByPlayerId, headToHeadResults)
+    }
+
+    const manualOverride = manualOverrides && manualOverrides[groupCode]
+    if (manualOverride && Array.isArray(manualOverride.finalRows)) {
+      standings[groupCode] = {
+        groupCode,
+        rows: assignRanksAndPromotion(orderRowsByManualOverride(rows, manualOverride), groupCode),
+        manualTiebreakRequired: false,
+        manualOverride
+      }
+      continue
+    }
+
+    const ranked = rankRows(rows, headToHeadResults)
+    standings[groupCode] = {
+      groupCode,
+      rows: assignRanksAndPromotion(ranked.ordered, groupCode),
+      manualTiebreakRequired: ranked.manualTiebreakRequired
+    }
+  }
+
+  return standings
+}
+
 module.exports = {
   GROUP_CODES,
   GROUP_KNOCKOUT_PHASES,
@@ -261,6 +493,7 @@ module.exports = {
   generateKnockoutMatches,
   groupBracketDocId,
   knockoutBracketDocId,
+  calculateGroupStandings,
   normalizeTournamentId,
   clone,
   regToPlayer
