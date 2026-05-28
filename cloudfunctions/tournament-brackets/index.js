@@ -1114,7 +1114,7 @@ async function handleResetGroups({ tournamentId }) {
 
   const expectedGroupMatchesById = expectedGroupMatchesByIdFromBrackets(ctx.brackets)
   const activeGroupResults = ctx.results.filter(result => isGroupResult(result, expectedGroupMatchesById))
-  const confirmedGroupResults = activeGroupResults.filter(result => result.resultStatus === 'confirmed')
+  const confirmedGroupResults = ctx.results.filter(result => confirmedGroupResult(result, expectedGroupMatchesById))
   if (confirmedGroupResults.length) {
     return {
       success: false,
@@ -1192,7 +1192,27 @@ async function handleResetKnockoutSeeds({ tournamentId }) {
   }
 
   const resultCollection = db.collection('match_results')
-  const removedBrackets = await removeDocsByQuery(collection, { tournamentId, stage: 'knockout' })
+  const deterministicKnockoutDocIds = deterministicKnockoutDocIdsFor(tournamentId)
+  const deterministicIdSet = new Set(deterministicKnockoutDocIds)
+  const knockoutBracketIdsToRemove = new Set(deterministicKnockoutDocIds)
+  for (const bracket of ctx.brackets) {
+    if (!bracket || !bracket._id) continue
+    if (bracket.stage === 'knockout' && !deterministicIdSet.has(bracket._id)) {
+      knockoutBracketIdsToRemove.add(bracket._id)
+    }
+  }
+  let removedBrackets = 0
+  for (const docId of knockoutBracketIdsToRemove) {
+    const knownDoc = ctx.brackets.find(bracket => bracket && bracket._id === docId)
+    const result = await collection.doc(docId).remove().catch(() => null)
+    if (result && typeof result.removed === 'number') {
+      removedBrackets += result.removed
+    } else if (result && result.stats && typeof result.stats.removed === 'number') {
+      removedBrackets += result.stats.removed
+    } else if (knownDoc) {
+      removedBrackets += 1
+    }
+  }
   const removedStageRows = await removeDocsByQuery(resultCollection, { tournamentId, stage: 'knockout' })
   const removedLegacyRows = await removeDocsById(
     resultCollection,

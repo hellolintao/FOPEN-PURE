@@ -1050,6 +1050,34 @@ test('resetGroups rejects confirmed legacy group rows matched by existing bracke
   })
 })
 
+test('resetGroups rejects confirmed legacy group rows by groupCode even with unrelated source match id', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_published' })
+  const groups = buildGroups()
+  const groupBracketId = seedGroupBracket(tournament._id, 'A', groups[0])
+  const confirmedResultId = seedGroupResult(tournament._id, 'A', groups[0].slots[0], groups[0].slots[1], 4, 1, {
+    _id: 'legacy_confirmed_group_result_unrelated_source',
+    sourceMatchId: 'legacy-unrelated-source-match',
+    stage: undefined,
+    matchKind: undefined,
+  })
+  const bracket = mockClone(mockState.collections.tournament_brackets.get(groupBracketId))
+  const resultRow = mockClone(mockState.collections.match_results.get(confirmedResultId))
+
+  const result = await main({ action: 'resetGroups', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({
+    code: 'GROUP_ALREADY_STARTED',
+    resultIds: [confirmedResultId],
+  })
+  expect(mockState.collections.tournament_brackets.get(groupBracketId)).toEqual(bracket)
+  expect(mockState.collections.match_results.get(confirmedResultId)).toEqual(resultRow)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_published',
+    updateTime: 'OLD_TIME',
+  })
+})
+
 test('resetGroups clears group brackets and rewinds phase to group_draft', async () => {
   const tournament = seedTournament({
     groupKnockoutPhase: 'group_published',
@@ -1143,6 +1171,42 @@ test('resetKnockoutSeeds rejects confirmed legacy knockout scores matched by exi
   })
   expect(mockState.collections.tournament_brackets.has(knockoutBracketId)).toBe(true)
   expect(mockState.collections.match_results.has(confirmedResultId)).toBe(true)
+})
+
+test('resetKnockoutSeeds removes stale deterministic knockout docs even without stage', async () => {
+  const tournament = seedTournament({
+    groupKnockoutPhase: 'knockout_published',
+    groupRankSnapshot: { groups: { A: [] } },
+    knockoutSeedSnapshot: { seeds: {}, version: 1 },
+  })
+  const groupBracketId = seedGroupBracket(tournament._id, 'A')
+  const deterministicKnockoutBracketId = seedKnockoutBracket(tournament._id, 2, {
+    stage: undefined,
+    matches: [{ matchId: 'stale-round-2', round: 2, position: 1 }],
+  })
+  const extraKnockoutBracketId = 'custom_knockout_bracket'
+  mockState.collections.tournament_brackets.set(extraKnockoutBracketId, {
+    _id: extraKnockoutBracketId,
+    tournamentId: tournament._id,
+    format: 'group_knockout',
+    stage: 'knockout',
+    round: 9,
+    type: 'singles',
+    matches: [{ matchId: 'custom-ko', round: 9, position: 1 }],
+  })
+
+  const result = await main({ action: 'resetKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result).toEqual({ success: true, data: { removedBrackets: 2, removedRows: 0 } })
+  expect(mockState.collections.tournament_brackets.has(groupBracketId)).toBe(true)
+  expect(mockState.collections.tournament_brackets.has(deterministicKnockoutBracketId)).toBe(false)
+  expect(mockState.collections.tournament_brackets.has(extraKnockoutBracketId)).toBe(false)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_completed',
+    knockoutSeedSnapshot: null,
+    groupRankSnapshot: null,
+    updateTime: 'SERVER_DATE',
+  })
 })
 
 test('resetKnockoutSeeds archives old snapshot to tournament_snapshots', async () => {
