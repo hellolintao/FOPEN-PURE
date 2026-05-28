@@ -95,6 +95,11 @@ function mockCollection(name) {
       const map = getMap()
       const doc = mockClone(data)
       const id = doc._id || `${name}_${map.size + 1}`
+      if (map.has(id)) {
+        const err = new Error(`Duplicate _id ${id}`)
+        err.code = 'DUPLICATE_KEY'
+        throw err
+      }
       map.set(id, { ...doc, _id: id })
       return { _id: id }
     },
@@ -185,6 +190,36 @@ async function saveGroupsForTournament(tournamentId, groups = buildGroups()) {
   return main({ action: 'saveGroups', tournamentId, groups })
 }
 
+function seedSavedGroups(tournamentId, groups = buildGroups()) {
+  for (const group of groups) {
+    mockState.collections.tournament_groups.set(`group_${tournamentId}_${group.groupCode}`, {
+      _id: `group_${tournamentId}_${group.groupCode}`,
+      tournamentId,
+      groupCode: group.groupCode,
+      slots: group.slots,
+      createTime: 'OLD_TIME',
+      updateTime: 'OLD_TIME',
+    })
+  }
+}
+
+function seedGroupBracket(tournamentId, groupCode = 'A') {
+  const id = groupBracketDocId(tournamentId, groupCode)
+  mockState.collections.tournament_brackets.set(id, {
+    _id: id,
+    tournamentId,
+    format: 'group_knockout',
+    stage: 'group',
+    groupCode,
+    round: 1,
+    type: 'singles',
+    matches: [{ matchId: `old-${groupCode}`, groupCode }],
+    createTime: 'OLD_TIME',
+    updateTime: 'OLD_TIME',
+  })
+  return id
+}
+
 beforeEach(() => {
   mockState = {
     openid: 'admin-openid',
@@ -196,8 +231,8 @@ beforeEach(() => {
 
 test('saveGroups validates and persists four groups for a draft group knockout tournament without advancing phase', async () => {
   const tournament = seedTournament()
-  mockState.collections.tournament_groups.set('old-group', {
-    _id: 'old-group',
+  mockState.collections.tournament_groups.set(`group_${tournament._id}_A`, {
+    _id: `group_${tournament._id}_A`,
     tournamentId: tournament._id,
     groupCode: 'A',
     slots: [],
@@ -206,7 +241,6 @@ test('saveGroups validates and persists four groups for a draft group knockout t
   const result = await saveGroupsForTournament(tournament._id)
 
   expect(result).toEqual({ success: true, data: { count: 4 } })
-  expect(mockState.collections.tournament_groups.has('old-group')).toBe(false)
   expect(Array.from(mockState.collections.tournament_groups.keys()).sort()).toEqual([
     'group_tournament_gk_1_A',
     'group_tournament_gk_1_B',
@@ -228,6 +262,40 @@ test('saveGroups validates and persists four groups for a draft group knockout t
   })
 })
 
+test('saveGroups treats a missing phase as group_draft', async () => {
+  const tournament = seedTournament()
+  delete tournament.groupKnockoutPhase
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result).toEqual({ success: true, data: { count: 4 } })
+  expect(mockState.collections.tournament_groups.size).toBe(4)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    scheduleStatus: 'none',
+    updateTime: 'SERVER_DATE',
+  })
+  expect(mockState.collections.tournaments.get(tournament._id).groupKnockoutPhase).toBeUndefined()
+})
+
+test.each([
+  ['null', null],
+  ['empty string', ''],
+  ['false', false],
+])('saveGroups rejects explicit %s phase as locked', async (_label, phase) => {
+  const tournament = seedTournament({ groupKnockoutPhase: phase })
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase })
+  expect(mockState.collections.tournament_groups.size).toBe(0)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: phase,
+    scheduleStatus: 'none',
+    updateTime: 'OLD_TIME',
+  })
+})
+
 test.each([
   'group_published',
   'group_completed',
@@ -239,19 +307,14 @@ test.each([
   const result = await saveGroupsForTournament(tournament._id)
 
   expect(result.success).toBe(false)
-  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED' })
+  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase })
   expect(mockState.collections.tournament_groups.size).toBe(0)
 })
 
 test('generateGroupMatches reads saved groups, writes group bracket docs, and publishes the group phase', async () => {
   const tournament = seedTournament()
   await saveGroupsForTournament(tournament._id)
-  mockState.collections.tournament_brackets.set('old-group-bracket', {
-    _id: 'old-group-bracket',
-    tournamentId: tournament._id,
-    stage: 'group',
-    matches: [],
-  })
+  const oldGroupBracketId = seedGroupBracket(tournament._id, 'A')
   mockState.collections.tournament_brackets.set('knockout-bracket', {
     _id: 'knockout-bracket',
     tournamentId: tournament._id,
@@ -262,7 +325,6 @@ test('generateGroupMatches reads saved groups, writes group bracket docs, and pu
   const result = await main({ action: 'generateGroupMatches', tournamentId: tournament._id })
 
   expect(result).toEqual({ success: true, data: { count: 12 } })
-  expect(mockState.collections.tournament_brackets.has('old-group-bracket')).toBe(false)
   expect(mockState.collections.tournament_brackets.has('knockout-bracket')).toBe(true)
 
   const groupBrackets = GROUP_CODES.map(groupCode => mockState.collections.tournament_brackets.get(groupBracketDocId(tournament._id, groupCode)))
@@ -291,10 +353,61 @@ test('generateGroupMatches reads saved groups, writes group bracket docs, and pu
     status: 'pending',
     resultStatus: 'pending',
   })
+  expect(mockState.collections.tournament_brackets.get(oldGroupBracketId)).toMatchObject({
+    _id: oldGroupBracketId,
+    groupCode: 'A',
+    createTime: 'SERVER_DATE',
+    updateTime: 'SERVER_DATE',
+  })
+  expect(mockState.collections.tournament_brackets.get(oldGroupBracketId).matches).not.toEqual([
+    { matchId: 'old-A', groupCode: 'A' },
+  ])
   expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
     groupKnockoutPhase: 'group_published',
     scheduleStatus: 'none',
     updateTime: 'SERVER_DATE',
+  })
+})
+
+test('generateGroupMatches treats a missing phase as group_draft', async () => {
+  const tournament = seedTournament()
+  delete tournament.groupKnockoutPhase
+  seedSavedGroups(tournament._id)
+
+  const result = await main({ action: 'generateGroupMatches', tournamentId: tournament._id })
+
+  expect(result).toEqual({ success: true, data: { count: 12 } })
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_published',
+    scheduleStatus: 'none',
+    updateTime: 'SERVER_DATE',
+  })
+})
+
+test.each([
+  ['group_published', 'group_published'],
+  ['group_completed', 'group_completed'],
+  ['knockout_published', 'knockout_published'],
+  ['completed', 'completed'],
+  ['null', null],
+  ['empty string', ''],
+  ['false', false],
+])('generateGroupMatches rejects locked phase %s without deleting brackets or rewriting tournament', async (_label, phase) => {
+  const tournament = seedTournament({ groupKnockoutPhase: phase })
+  seedSavedGroups(tournament._id)
+  const existingBracketId = seedGroupBracket(tournament._id, 'A')
+  const existingBracket = mockClone(mockState.collections.tournament_brackets.get(existingBracketId))
+
+  const result = await main({ action: 'generateGroupMatches', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase })
+  expect(mockState.collections.tournament_brackets.get(existingBracketId)).toEqual(existingBracket)
+  expect(Array.from(mockState.collections.tournament_brackets.keys())).toEqual([existingBracketId])
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: phase,
+    scheduleStatus: 'none',
+    updateTime: 'OLD_TIME',
   })
 })
 

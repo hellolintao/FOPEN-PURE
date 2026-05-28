@@ -88,6 +88,17 @@ function fail(code, message) {
   return { success: false, error: { code, message } }
 }
 
+function phaseLocked(currentPhase) {
+  return {
+    success: false,
+    error: {
+      code: 'PHASE_LOCKED',
+      message: '当前阶段不允许调整小组签表',
+      currentPhase
+    }
+  }
+}
+
 function isAdminMember(member) {
   return !!(member && (member.admin === true || member.isAdmin === true))
 }
@@ -553,13 +564,19 @@ function orderGroups(groups) {
   })
 }
 
+function currentGroupKnockoutPhase(tournament) {
+  return Object.prototype.hasOwnProperty.call(tournament, 'groupKnockoutPhase')
+    ? tournament.groupKnockoutPhase
+    : 'group_draft'
+}
+
 async function handleSaveGroups({ tournamentId, groups }) {
   const loaded = await loadGroupKnockoutTournament(tournamentId)
   if (loaded.error) return loaded.error
 
-  const phase = loaded.tournament.groupKnockoutPhase || 'group_draft'
+  const phase = currentGroupKnockoutPhase(loaded.tournament)
   if (phase !== 'group_draft') {
-    return fail('PHASE_LOCKED', '当前阶段不允许调整小组签表')
+    return phaseLocked(phase)
   }
 
   const errors = validateGroupAssignments({
@@ -602,6 +619,11 @@ async function handleSaveGroups({ tournamentId, groups }) {
 async function handleGenerateGroupMatches({ tournamentId }) {
   const loaded = await loadGroupKnockoutTournament(tournamentId)
   if (loaded.error) return loaded.error
+
+  const phase = currentGroupKnockoutPhase(loaded.tournament)
+  if (phase !== 'group_draft') {
+    return phaseLocked(phase)
+  }
 
   const groupCollection = db.collection('tournament_groups')
   const groupRes = await groupCollection.where({ tournamentId }).get().catch(() => ({ data: [] }))
