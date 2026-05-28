@@ -972,6 +972,34 @@ test('confirmKnockoutSeeds blocks confirmed knockout match results without mutat
   })
 })
 
+test('confirmKnockoutSeeds blocks submitted knockout match results without mutation', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  const knockoutBracketId = seedKnockoutBracket(tournament._id, 1)
+  const submittedResultId = seedKnockoutResult(tournament._id, 'submitted_knockout_result', 'submitted', {
+    score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+  })
+  const existingBracket = mockClone(mockState.collections.tournament_brackets.get(knockoutBracketId))
+  const existingTournament = mockClone(mockState.collections.tournaments.get(tournament._id))
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({
+    code: 'KNOCKOUT_ALREADY_STARTED',
+    resultIds: [submittedResultId],
+  })
+  expect(mockState.collections.tournament_brackets.get(knockoutBracketId)).toEqual(existingBracket)
+  expect(mockState.collections.match_results.get(submittedResultId)).toMatchObject({
+    resultStatus: 'submitted',
+    score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+  })
+  expect(mockState.collections.tournaments.get(tournament._id)).toEqual(existingTournament)
+})
+
 test('confirmKnockoutSeeds blocks confirmed knockout result without stage when it matches an existing knockout match id', async () => {
   const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
   const groups = buildGroups()

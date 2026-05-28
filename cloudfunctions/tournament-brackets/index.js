@@ -1021,12 +1021,19 @@ function buildMatchResultSkeleton({ tournament, match, now }) {
 }
 
 function shouldPreserveExistingResult(row) {
+  return isStartedResult(row)
+}
+
+function isStartedResult(row) {
   return !!(
     row &&
     (
       row.resultStatus === 'confirmed' ||
       row.resultStatus === 'submitted' ||
-      row.score
+      row.score ||
+      row.scoreDetail ||
+      row.winner ||
+      row.winnerId
     )
   )
 }
@@ -1074,14 +1081,14 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   const expectedGroupSourceMatchIds = new Set(expectedGroupMatchesByIdFromBrackets(ctx.brackets).keys())
   const knockoutSourceMatchIds = knockoutSourceMatchIdsFromBrackets(ctx.brackets, tournamentId)
   const activeKnockoutResults = ctx.results.filter(result => isKnockoutResult(result, expectedGroupSourceMatchIds, knockoutSourceMatchIds))
-  const confirmedKnockoutResults = activeKnockoutResults.filter(result => result.resultStatus === 'confirmed')
-  if (confirmedKnockoutResults.length) {
+  const startedKnockoutResults = activeKnockoutResults.filter(isStartedResult)
+  if (startedKnockoutResults.length) {
     return {
       success: false,
       error: {
         code: 'KNOCKOUT_ALREADY_STARTED',
-        message: '淘汰赛已有确认成绩，不能重新确认 8 强',
-        resultIds: confirmedKnockoutResults.map(result => result._id || resultSourceMatchId(result))
+        message: '淘汰赛已有成绩，不能重新确认 8 强',
+        resultIds: startedKnockoutResults.map(result => result._id || resultSourceMatchId(result))
       }
     }
   }
@@ -1121,7 +1128,7 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   }
 
   const resultCollection = db.collection('match_results')
-  for (const result of activeKnockoutResults.filter(row => row.resultStatus !== 'confirmed')) {
+  for (const result of activeKnockoutResults.filter(row => !isStartedResult(row))) {
     if (result && result._id) {
       await resultCollection.doc(result._id).remove().catch(() => null)
     }

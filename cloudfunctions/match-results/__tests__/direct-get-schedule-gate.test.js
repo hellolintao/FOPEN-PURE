@@ -216,6 +216,37 @@ describe('direct get schedule visibility gate', () => {
     expect(res).toEqual({ data: mockState.rows.r1 })
   })
 
+  test('allows non-admin direct get for group knockout group-published tournament when scheduleStatus is none', async () => {
+    setState({ scheduleStatus: 'none' })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none',
+    }
+
+    const res = await main({ action: 'get', id: 'r1' })
+
+    expect(res).toEqual({ data: mockState.rows.r1 })
+  })
+
+  test('blocks non-admin direct get for group knockout draft tournament when scheduleStatus is none', async () => {
+    setState({ scheduleStatus: 'none' })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_draft',
+      scheduleStatus: 'none',
+    }
+
+    const res = await main({ action: 'getById', id: 'r1' })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'FORBIDDEN', message: '赛程发布后才能录入成绩' },
+    })
+  })
+
   test('blocks non-admin getByTournament when scheduleStatus is draft', async () => {
     setState({ scheduleStatus: 'draft' })
 
@@ -516,6 +547,46 @@ describe('direct legacy score writes schedule gate', () => {
 
     expect(res).toEqual({ updated: 1 })
     expect(mockState.rows.r1.score).toBe('4-2')
+  })
+
+  test('allows updateScore for group knockout group-published tournament when scheduleStatus is none', async () => {
+    setState({ scheduleStatus: 'none' })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none',
+    }
+
+    const res = await main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' },
+    })
+
+    expect(res).toEqual({ updated: 1 })
+    expect(mockState.rows.r1.score).toBe('4-2')
+  })
+
+  test('blocks updateScore for group knockout draft tournament when scheduleStatus is none', async () => {
+    setState({ scheduleStatus: 'none' })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_draft',
+      scheduleStatus: 'none',
+    }
+
+    const res = await main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' },
+    })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' },
+    })
   })
 
   test('blocks non-admin bulkUpsertScheduledMatches', async () => {

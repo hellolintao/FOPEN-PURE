@@ -1,6 +1,7 @@
 // v2.1 batch handlers — batchConfirm + batchSubmit
 
 const { isActiveScoreRow } = require('../active-row')
+const { canExposeScoreRows } = require('./query')
 
 const STALE_MESSAGE = '该比分已被其他管理员处理（数据已更新）'
 const SCHEDULE_NOT_PUBLISHED = {
@@ -517,11 +518,7 @@ function normalizeOrder(value) {
 }
 
 function isScheduleBlocked(tournament) {
-  return !!(
-    tournament &&
-    Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
-    tournament.scheduleStatus !== 'published'
-  )
+  return !!(tournament && !canExposeScoreRows(tournament))
 }
 
 module.exports = { batchConfirm, batchSubmit, batchAdminSave, applyScheduleImpact }

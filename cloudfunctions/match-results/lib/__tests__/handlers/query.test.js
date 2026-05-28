@@ -36,6 +36,19 @@ test('canExposeScoreRows: published is exposed', () => {
 })
 
 test.each([
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed',
+])('canExposeScoreRows: group knockout phase %s is exposed when scheduleStatus is none', (groupKnockoutPhase) => {
+  expect(canExposeScoreRows({
+    format: 'group_knockout',
+    groupKnockoutPhase,
+    scheduleStatus: 'none'
+  })).toBe(true)
+})
+
+test.each([
   ['none'],
   ['draft'],
   [null],
@@ -47,11 +60,60 @@ test.each([
   expect(canExposeScoreRows({ scheduleStatus })).toBe(false)
 })
 
+test.each([
+  ['missing', undefined],
+  ['group_draft', 'group_draft'],
+  ['null', null],
+  ['empty string', ''],
+  ['false', false],
+])('canExposeScoreRows: group knockout phase %s is hidden when scheduleStatus is none', (_label, groupKnockoutPhase) => {
+  const tournament = {
+    format: 'group_knockout',
+    scheduleStatus: 'none',
+  }
+  if (typeof groupKnockoutPhase !== 'undefined') tournament.groupKnockoutPhase = groupKnockoutPhase
+  expect(canExposeScoreRows(tournament)).toBe(false)
+})
+
 test('listByTournament returns empty rows when scheduleStatus is draft', async () => {
   const ctx = makeQueryCtx({
     isAdmin: false,
     tournament: { _id: 't1', scheduleStatus: 'draft' },
     rows: [{ _id: 'r1', tournamentId: 't1' }]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  expect(res).toEqual({ results: [] })
+})
+
+test('listByTournament exposes group knockout rows after group bracket publish even when scheduleStatus is none', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: false,
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none',
+    },
+    rows: [{ _id: 'r1', tournamentId: 't1', resultStatus: 'pending' }]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  expect(res.results.map(row => row._id)).toEqual(['r1'])
+})
+
+test('listByTournament hides group knockout draft rows when scheduleStatus is none', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: false,
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      groupKnockoutPhase: 'group_draft',
+      scheduleStatus: 'none',
+    },
+    rows: [{ _id: 'r1', tournamentId: 't1', resultStatus: 'pending' }]
   })
 
   const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })

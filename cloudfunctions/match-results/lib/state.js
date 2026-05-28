@@ -1,6 +1,12 @@
 const { isActiveScoreRow } = require('./active-row')
 const { bracketDocId } = require('./group-knockout-id')
 const VOID_MARKERS_COLLECTION = 'match_result_voids'
+const GROUP_KNOCKOUT_SCORE_VISIBLE_PHASES = new Set([
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed',
+])
 
 function createMatchStateService({ db, awardLib, scoreRule }) {
   const SCHEDULE_NOT_PUBLISHED_MESSAGE = '赛程发布后才能录入成绩'
@@ -655,7 +661,14 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
   }
 
   function assertSchedulePublished(tournament) {
-    if (!tournament || !Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return
+    if (!tournament) return
+    if (tournament.format === 'group_knockout') {
+      if (GROUP_KNOCKOUT_SCORE_VISIBLE_PHASES.has(tournament.groupKnockoutPhase)) return
+      const err = new Error(SCHEDULE_NOT_PUBLISHED_MESSAGE)
+      err.code = 'SCHEDULE_NOT_PUBLISHED'
+      throw err
+    }
+    if (!Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return
     if (tournament.scheduleStatus === 'published') return
     const err = new Error(SCHEDULE_NOT_PUBLISHED_MESSAGE)
     err.code = 'SCHEDULE_NOT_PUBLISHED'

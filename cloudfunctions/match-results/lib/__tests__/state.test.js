@@ -248,6 +248,46 @@ test('match-results group knockout bracket ids stay in sync with tournament-brac
   expect(knockoutBracketDocId('T1', 3)).toBe(tournamentKnockoutBracketDocId('T1', 3))
 })
 
+describe('schedule gate · group knockout phases', () => {
+  test('assertSchedulePublishedForMatch allows group-published tournament when scheduleStatus is none', async () => {
+    const seed = seedGroupKnockoutGroupsOnly()
+    seed.tournaments[0].scheduleStatus = 'none'
+    seed.tournaments[0].groupKnockoutPhase = 'group_published'
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.assertSchedulePublishedForMatch('group_a_1')).resolves.toBeUndefined()
+  })
+
+  test('assertSchedulePublishedForMatch rejects group-draft tournament when scheduleStatus is none', async () => {
+    const seed = seedGroupKnockoutGroupsOnly()
+    seed.tournaments[0].scheduleStatus = 'none'
+    seed.tournaments[0].groupKnockoutPhase = 'group_draft'
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.assertSchedulePublishedForMatch('group_a_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  })
+
+  test.each([
+    ['missing', undefined],
+    ['empty string', ''],
+    ['null', null],
+    ['false', false],
+  ])('assertSchedulePublishedForMatch rejects group knockout %s phase when scheduleStatus is none', async (_label, groupKnockoutPhase) => {
+    const seed = seedGroupKnockoutGroupsOnly()
+    seed.tournaments[0].scheduleStatus = 'none'
+    if (typeof groupKnockoutPhase === 'undefined') delete seed.tournaments[0].groupKnockoutPhase
+    else seed.tournaments[0].groupKnockoutPhase = groupKnockoutPhase
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.assertSchedulePublishedForMatch('group_a_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  })
+})
+
 describe('submitResult', () => {
   test('pending → admin submit → confirmed + award', async () => {
     const db = makeDb(seed4Knockout())

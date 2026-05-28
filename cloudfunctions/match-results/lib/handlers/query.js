@@ -1,5 +1,12 @@
 // query handlers: submittedQueue / listByTournament / listByPlayer / pendingReviewItems
 const { isActiveScoreRow } = require('../active-row')
+
+const GROUP_KNOCKOUT_SCORE_VISIBLE_PHASES = new Set([
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed',
+])
 async function submittedQueue(ctx, event) {
   if (!ctx.isAdmin) {
     const err = new Error('需要管理员权限')
@@ -25,6 +32,9 @@ async function submittedQueue(ctx, event) {
 
 function canExposeScoreRows(tournament) {
   if (!tournament) return false
+  if (tournament.format === 'group_knockout') {
+    return GROUP_KNOCKOUT_SCORE_VISIBLE_PHASES.has(tournament.groupKnockoutPhase)
+  }
   if (tournament.scheduleStatus === 'published') return true
   if (!Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus')) return true
   return false

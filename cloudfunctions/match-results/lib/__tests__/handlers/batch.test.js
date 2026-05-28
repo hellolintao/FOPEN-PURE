@@ -381,6 +381,55 @@ test('batchSubmit accepts legacy tournament without scheduleStatus', async () =>
   expect(ctx._state.matchesById.mr_legacy.resultStatus).toBe('submitted')
 })
 
+test('batchSubmit accepts group knockout group-published tournament when scheduleStatus is none', async () => {
+  const ctx = makeSubmitCtx({
+    tournaments: {
+      t1: {
+        _id: 't1',
+        format: 'group_knockout',
+        groupKnockoutPhase: 'group_published',
+        scheduleStatus: 'none',
+      }
+    },
+    matches: [{ _id: 'mr_group', tournamentId: 't1', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_group', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_submit_group_published_none',
+  })
+
+  expect(result.successIds).toEqual(['mr_group'])
+  expect(result.failures).toEqual([])
+  expect(ctx._state.matchesById.mr_group.resultStatus).toBe('submitted')
+})
+
+test('batchSubmit rejects group knockout draft tournament when scheduleStatus is none', async () => {
+  const ctx = makeSubmitCtx({
+    tournaments: {
+      t1: {
+        _id: 't1',
+        format: 'group_knockout',
+        groupKnockoutPhase: 'group_draft',
+        scheduleStatus: 'none',
+      }
+    },
+    matches: [{ _id: 'mr_group_draft', tournamentId: 't1', resultStatus: 'pending', playerIds: ['mA', 'mB'] }],
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_group_draft', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_submit_group_draft_none',
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({
+    matchId: 'mr_group_draft',
+    code: 'SCHEDULE_NOT_PUBLISHED',
+  })
+  expect(ctx._state.matchesById.mr_group_draft.resultStatus).toBe('pending')
+})
+
 test('batchAdminSave confirms pending matches with supplied scores', async () => {
   const ctx = makeCtx({
     matches: [

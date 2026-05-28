@@ -139,11 +139,7 @@ async function filterScoreRowsVisibleToSubmitter(result) {
 }
 
 function isScheduleWriteBlocked(tournament) {
-  return !!(
-    tournament &&
-    Object.prototype.hasOwnProperty.call(tournament, 'scheduleStatus') &&
-    tournament.scheduleStatus !== 'published'
-  )
+  return !!(tournament && !canExposeScoreRows(tournament))
 }
 
 function filterActiveScoreRowsResult(result) {
