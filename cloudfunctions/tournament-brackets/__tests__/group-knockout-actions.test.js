@@ -309,7 +309,7 @@ function seedKnockoutBracket(tournamentId, round = 1, overrides = {}) {
   return id
 }
 
-function seedKnockoutResult(tournamentId, id, resultStatus = 'pending') {
+function seedKnockoutResult(tournamentId, id, resultStatus = 'pending', overrides = {}) {
   mockState.collections.match_results.set(id, {
     _id: id,
     tournamentId,
@@ -317,6 +317,7 @@ function seedKnockoutResult(tournamentId, id, resultStatus = 'pending') {
     stage: 'knockout',
     matchKind: 'bracket',
     resultStatus,
+    ...overrides,
   })
   return id
 }
@@ -646,6 +647,53 @@ test('confirmKnockoutSeeds rejects confirmed result players that do not match th
   expect(mockState.collections.tournaments.get(tournament._id).groupKnockoutPhase).toBe('group_completed')
 })
 
+test('confirmKnockoutSeeds rejects confirmed result rows with incomplete players', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  const row = mockState.collections.match_results.get(`result_${tournament._id}_A_1_3`)
+  mockState.collections.match_results.set(row._id, {
+    ...row,
+    player2: null,
+  })
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({
+    code: 'GROUPS_NOT_READY',
+    details: {
+      playerMismatchSourceMatchIds: ['match_A_1_3'],
+    },
+  })
+  expect(mockState.collections.tournaments.get(tournament._id).groupKnockoutPhase).toBe('group_completed')
+})
+
+test('confirmKnockoutSeeds accepts expected group rows before stage and groupCode are persisted', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  const row = mockState.collections.match_results.get(`result_${tournament._id}_A_1_3`)
+  mockState.collections.match_results.set(row._id, {
+    ...row,
+    stage: undefined,
+    groupCode: undefined,
+    matchKind: 'group',
+  })
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(true)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'knockout_published',
+    updateTime: 'SERVER_DATE',
+  })
+})
+
 test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots', async () => {
   const groups = buildGroups()
   const manualOverrides = {
@@ -712,16 +760,24 @@ test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots'
     scheduleStatus: 'none',
     updateTime: 'SERVER_DATE',
     groupRankSnapshot: {
-      confirmedBy: 'admin-openid',
-      confirmedAt: 'SERVER_DATE',
+      metadata: {
+        confirmedBy: 'admin-openid',
+        confirmedAt: 'SERVER_DATE',
+      },
       version: 1,
     },
     knockoutSeedSnapshot: {
-      confirmedBy: 'admin-openid',
-      confirmedAt: 'SERVER_DATE',
+      metadata: {
+        confirmedBy: 'admin-openid',
+        confirmedAt: 'SERVER_DATE',
+      },
       version: 1,
     },
   })
+  expect(updatedTournament.groupRankSnapshot.confirmedBy).toBeUndefined()
+  expect(updatedTournament.groupRankSnapshot.confirmedAt).toBeUndefined()
+  expect(updatedTournament.knockoutSeedSnapshot.confirmedBy).toBeUndefined()
+  expect(updatedTournament.knockoutSeedSnapshot.confirmedAt).toBeUndefined()
   expect(updatedTournament.groupRankSnapshot.seeds).toBeUndefined()
   expect(updatedTournament.groupRankSnapshot.groups.A).toMatchObject({ groupCode: 'A' })
   expect(updatedTournament.groupRankSnapshot.manualOverrides).toEqual(manualOverrides)
@@ -779,6 +835,27 @@ test('confirmKnockoutSeeds removes pending knockout match results when reconfirm
   expect(mockState.collections.match_results.has(pendingResultId)).toBe(false)
 })
 
+test('confirmKnockoutSeeds removes pending knockout result without stage when it matches an existing knockout match id', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  seedKnockoutBracket(tournament._id, 1, {
+    matches: [{ matchId: 'existing-ko-r1-m1', round: 1, position: 1 }],
+  })
+  const pendingResultId = seedKnockoutResult(tournament._id, 'pending_knockout_without_stage', 'pending', {
+    sourceMatchId: 'existing-ko-r1-m1',
+    stage: undefined,
+    matchKind: undefined,
+  })
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(true)
+  expect(mockState.collections.match_results.has(pendingResultId)).toBe(false)
+})
+
 test('confirmKnockoutSeeds blocks confirmed knockout match results without mutation', async () => {
   const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
   const groups = buildGroups()
@@ -787,6 +864,37 @@ test('confirmKnockoutSeeds blocks confirmed knockout match results without mutat
   seedClearConfirmedGroupResults(tournament._id, groups)
   const knockoutBracketId = seedKnockoutBracket(tournament._id, 1)
   const confirmedResultId = seedKnockoutResult(tournament._id, 'confirmed_knockout_result', 'confirmed')
+  const existingBracket = mockClone(mockState.collections.tournament_brackets.get(knockoutBracketId))
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({
+    code: 'KNOCKOUT_ALREADY_STARTED',
+    resultIds: [confirmedResultId],
+  })
+  expect(mockState.collections.tournament_brackets.get(knockoutBracketId)).toEqual(existingBracket)
+  expect(mockState.collections.match_results.has(confirmedResultId)).toBe(true)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_completed',
+    updateTime: 'OLD_TIME',
+  })
+})
+
+test('confirmKnockoutSeeds blocks confirmed knockout result without stage when it matches an existing knockout match id', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: 'group_completed' })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+  const knockoutBracketId = seedKnockoutBracket(tournament._id, 1, {
+    matches: [{ matchId: 'existing-ko-r1-m1', round: 1, position: 1 }],
+  })
+  const confirmedResultId = seedKnockoutResult(tournament._id, 'confirmed_knockout_without_stage', 'confirmed', {
+    sourceMatchId: 'existing-ko-r1-m1',
+    stage: undefined,
+    matchKind: undefined,
+  })
   const existingBracket = mockClone(mockState.collections.tournament_brackets.get(knockoutBracketId))
 
   const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })

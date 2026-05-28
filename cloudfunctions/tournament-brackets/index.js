@@ -576,9 +576,10 @@ async function loadGroupKnockoutContext(tournamentId) {
   const groups = orderGroups(groupRes && groupRes.data ? groupRes.data : [])
   const brackets = bracketRes && bracketRes.data ? bracketRes.data : []
   const results = resultRes && resultRes.data ? resultRes.data : []
+  const standingsResults = enrichGroupResultsForStandings(results, brackets)
   const standings = calculateGroupStandings({
     groups,
-    results,
+    results: standingsResults,
     manualOverrides: manualOverridesFromTournament(tournament),
   })
 
@@ -670,6 +671,45 @@ function resultSourceMatchId(result) {
   return result && (result.sourceMatchId || result.matchId || '')
 }
 
+function expectedGroupMatchesByIdFromBrackets(brackets) {
+  const expectedMatchesById = new Map()
+  for (const bracket of (brackets || []).filter(item => item && item.stage === 'group')) {
+    const matches = Array.isArray(bracket.matches) ? bracket.matches : []
+    for (const match of matches) {
+      const matchId = match && match.matchId
+      if (!matchId || expectedMatchesById.has(matchId)) continue
+      expectedMatchesById.set(matchId, {
+        matchId,
+        groupCode: bracket.groupCode || match.groupCode,
+        playerIds: [playerIdOf(match.player1), playerIdOf(match.player2)].filter(Boolean)
+      })
+    }
+  }
+  return expectedMatchesById
+}
+
+function couldBeGroupResultForExpectedMatch(result) {
+  return !!(
+    result &&
+    result.stage !== 'knockout' &&
+    result.matchKind !== 'bracket'
+  )
+}
+
+function enrichGroupResultsForStandings(results, brackets) {
+  const expectedMatchesById = expectedGroupMatchesByIdFromBrackets(brackets)
+  return (Array.isArray(results) ? results : []).map(result => {
+    const expected = expectedMatchesById.get(resultSourceMatchId(result))
+    if (!expected || !couldBeGroupResultForExpectedMatch(result)) return result
+    return {
+      ...result,
+      stage: result.stage || 'group',
+      matchKind: result.matchKind || 'group',
+      groupCode: result.groupCode || expected.groupCode
+    }
+  })
+}
+
 function playerIdOf(player) {
   return player && (player.id || player.playerId || player._id)
 }
@@ -680,18 +720,21 @@ function resultParticipantId(result, side) {
 }
 
 function samePlayerPair(expectedIds, actualIds) {
-  if (expectedIds.length !== 2 || actualIds.length !== 2) return true
+  if (expectedIds.length !== 2 || actualIds.length !== 2) return false
   return expectedIds.slice().sort().join('::') === actualIds.slice().sort().join('::')
 }
 
-function confirmedGroupResult(result) {
+function confirmedGroupResult(result, expectedMatchesById) {
+  const sourceMatchId = resultSourceMatchId(result)
+  const expected = expectedMatchesById && expectedMatchesById.get(sourceMatchId)
   return !!(
     result &&
     isActiveScoreRow(result) &&
     result.resultStatus === 'confirmed' &&
-    result.stage === 'group' &&
-    result.matchKind === 'group' &&
-    GROUP_CODES.includes(result.groupCode)
+    (
+      (expected && couldBeGroupResultForExpectedMatch(result)) ||
+      (result.stage === 'group' && result.matchKind === 'group' && GROUP_CODES.includes(result.groupCode))
+    )
   )
 }
 
@@ -765,10 +808,11 @@ function validateConfirmReady(ctx) {
   const resultsByMatchId = new Map()
   const unrelatedResultIds = []
   const playerMismatchSourceMatchIds = []
-  for (const result of ctx.results.filter(confirmedGroupResult)) {
+  for (const result of ctx.results.filter(row => confirmedGroupResult(row, expectedMatchesById))) {
     const sourceMatchId = resultSourceMatchId(result)
     const expected = expectedMatchesById.get(sourceMatchId)
-    if (!expected || result.groupCode !== expected.groupCode) {
+    const effectiveGroupCode = result.groupCode || (expected && expected.groupCode)
+    if (!expected || effectiveGroupCode !== expected.groupCode) {
       unrelatedResultIds.push(result._id || sourceMatchId)
       continue
     }
@@ -859,6 +903,33 @@ function buildSeedSources(standings, sourceResultIdsByGroupCode) {
   return seedSources
 }
 
+function deterministicKnockoutDocIdsFor(tournamentId) {
+  return [1, 2, 3].map(round => knockoutBracketDocId(tournamentId, round))
+}
+
+function knockoutSourceMatchIdsFromBrackets(brackets, tournamentId) {
+  const deterministicIdSet = new Set(deterministicKnockoutDocIdsFor(tournamentId))
+  const sourceMatchIds = new Set()
+  for (const bracket of (brackets || [])) {
+    if (!bracket || (bracket.stage !== 'knockout' && !deterministicIdSet.has(bracket._id))) continue
+    const matches = Array.isArray(bracket.matches) ? bracket.matches : []
+    for (const match of matches) {
+      if (match && match.matchId) sourceMatchIds.add(match.matchId)
+    }
+  }
+  return sourceMatchIds
+}
+
+function isKnockoutResult(result, expectedGroupSourceMatchIds, knockoutSourceMatchIds) {
+  if (!isActiveScoreRow(result)) return false
+  const sourceMatchId = resultSourceMatchId(result)
+  return !!(
+    result.stage === 'knockout' ||
+    (sourceMatchId && knockoutSourceMatchIds.has(sourceMatchId)) ||
+    (result.matchKind === 'bracket' && !expectedGroupSourceMatchIds.has(sourceMatchId))
+  )
+}
+
 function getOpenidSafe() {
   try {
     const wxContext = cloud.getWXContext()
@@ -886,7 +957,9 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
     return phaseLocked(phase)
   }
 
-  const activeKnockoutResults = ctx.results.filter(result => isActiveScoreRow(result) && result.stage === 'knockout')
+  const expectedGroupSourceMatchIds = new Set(expectedGroupMatchesByIdFromBrackets(ctx.brackets).keys())
+  const knockoutSourceMatchIds = knockoutSourceMatchIdsFromBrackets(ctx.brackets, tournamentId)
+  const activeKnockoutResults = ctx.results.filter(result => isKnockoutResult(result, expectedGroupSourceMatchIds, knockoutSourceMatchIds))
   const confirmedKnockoutResults = activeKnockoutResults.filter(result => result.resultStatus === 'confirmed')
   if (confirmedKnockoutResults.length) {
     return {
@@ -922,7 +995,7 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   }
 
   const now = db.serverDate()
-  const deterministicKnockoutDocIds = [1, 2, 3].map(round => knockoutBracketDocId(tournamentId, round))
+  const deterministicKnockoutDocIds = deterministicKnockoutDocIdsFor(tournamentId)
   const deterministicIdSet = new Set(deterministicKnockoutDocIds)
   for (const docId of deterministicKnockoutDocIds) {
     await collection.doc(docId).remove().catch(() => null)
@@ -957,8 +1030,10 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
     groups: ctx.standings,
     manualOverrides,
     sourceResultIds: ready.sourceResultIds,
-    confirmedBy,
-    confirmedAt: now,
+    metadata: {
+      confirmedBy,
+      confirmedAt: now
+    },
     version: 1
   }
   const knockoutSeedSnapshot = {
@@ -966,8 +1041,10 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
     bracket: knockoutDocs,
     bracketDocIds: knockoutDocs.map(doc => doc._id),
     seedSources: buildSeedSources(ctx.standings, ready.sourceResultIdsByGroupCode),
-    confirmedBy,
-    confirmedAt: now,
+    metadata: {
+      confirmedBy,
+      confirmedAt: now
+    },
     version: 1
   }
   await db.collection('tournaments').doc(tournamentId).update({
