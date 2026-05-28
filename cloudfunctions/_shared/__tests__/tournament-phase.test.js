@@ -97,6 +97,18 @@ describe('registration guards', () => {
     }, { now: '2026-05-21T12:00:00+08:00', confirmedCount: 8 })).toEqual({ ok: false, code: 'CAPACITY_FULL' })
   })
 
+  test('group knockout self registration respects bracketSize capacity', () => {
+    const tournament = {
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 16,
+      registrationPublishedAt: '2026-05-01T00:00:00.000Z',
+      registrationDeadlineAt: '2026-06-01T00:00:00.000Z'
+    }
+    expect(canRegister(tournament, { now: new Date('2026-05-02T00:00:00.000Z'), confirmedCount: 16 })).toEqual({ ok: false, code: 'CAPACITY_FULL' })
+    expect(canRegister(tournament, { now: new Date('2026-05-02T00:00:00.000Z'), confirmedCount: 15 })).toEqual({ ok: true })
+  })
+
   test('knockout doubles self-registration is unsupported', () => {
     expect(canRegister({
       format: 'knockout',

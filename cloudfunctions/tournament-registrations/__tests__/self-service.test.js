@@ -411,6 +411,30 @@ test('selfRegister blocks when active rows exceed stale confirmedCount cap', asy
   expect(tx.updateTournament).not.toHaveBeenCalled()
 })
 
+test('selfRegister maps group knockout active-row bracketSize cap to CAPACITY_FULL', async () => {
+  const fullTournament = tournament({
+    format: 'group_knockout',
+    type: 'singles',
+    bracketSize: 16,
+    confirmedCount: 15
+  })
+  const activeRows = Array.from({ length: 16 }, (_, index) => registration({
+    _id: buildRegistrationId(TID, index + 1),
+    playerId: `member-${index + 1}`,
+    playerName: `Player ${index + 1}`
+  }))
+  const { ctx, tx } = makeCtx({
+    tournament: fullTournament,
+    registrations: activeRows
+  })
+
+  const res = await selfRegister(ctx, { tournamentId: TID })
+
+  expect(res).toMatchObject({ success: false, error: { code: 'CAPACITY_FULL' } })
+  expect(tx.upsertRegistration).not.toHaveBeenCalled()
+  expect(tx.updateTournament).not.toHaveBeenCalled()
+})
+
 test('selfRegister repairs stale low confirmedCount on successful registration', async () => {
   const { ctx, state } = makeCtx({
     tournament: tournament({ confirmedCount: 1 }),

@@ -78,6 +78,11 @@ function canRegister(tournament = {}, options = {}) {
     const confirmed = Number(options.confirmedCount === undefined ? tournament.confirmedCount : options.confirmedCount)
     if (max > 0 && confirmed >= max) return { ok: false, code: 'CAPACITY_FULL' }
   }
+  if (tournament.format === 'group_knockout') {
+    const max = Number(tournament.bracketSize || tournament.maxPlayers || 0)
+    const confirmed = Number(options.confirmedCount === undefined ? tournament.confirmedCount : options.confirmedCount)
+    if (max > 0 && confirmed >= max) return { ok: false, code: 'CAPACITY_FULL' }
+  }
   if (tournament.format === 'knockout' && tournament.type === 'doubles') {
     return { ok: false, code: 'SELF_REGISTRATION_UNSUPPORTED' }
   }
