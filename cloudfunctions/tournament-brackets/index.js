@@ -7,8 +7,11 @@ const collection = db.collection('tournament_brackets')
 const { advanceWinner, finalRoundOf } = require('./lib/generator')
 const {
   GROUP_CODES,
+  expectedGroupSize,
   validateGroupAssignments,
   generateGroupMatches: buildGroupMatches,
+  calculateGroupStandings,
+  generateKnockoutMatches,
   groupBracketDocId,
 } = require('./lib/group-knockout')
 
@@ -385,6 +388,16 @@ exports.main = async (event, context) => {
         return await handleGenerateGroupMatches(event)
       }
 
+      case 'getGroupKnockoutBracket': {
+        return await handleGetGroupKnockoutBracket(event)
+      }
+
+      case 'confirmKnockoutSeeds': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+        return await handleConfirmKnockoutSeeds(event)
+      }
+
       case 'regenerateDraft': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
@@ -544,6 +557,33 @@ async function loadGroupKnockoutTournament(tournamentId) {
   return { tournament }
 }
 
+function manualOverridesFromTournament(tournament) {
+  const snapshot = tournament && tournament.groupRankSnapshot
+  if (!snapshot || typeof snapshot !== 'object') return null
+  return snapshot.manualOverrides || null
+}
+
+async function loadGroupKnockoutContext(tournamentId) {
+  const [tournamentRes, groupRes, bracketRes, resultRes] = await Promise.all([
+    db.collection('tournaments').doc(tournamentId).get().catch(() => null),
+    db.collection('tournament_groups').where({ tournamentId }).get().catch(() => ({ data: [] })),
+    collection.where({ tournamentId }).get().catch(() => ({ data: [] })),
+    db.collection('match_results').where({ tournamentId }).get().catch(() => ({ data: [] })),
+  ])
+
+  const tournament = tournamentRes && tournamentRes.data
+  const groups = orderGroups(groupRes && groupRes.data ? groupRes.data : [])
+  const brackets = bracketRes && bracketRes.data ? bracketRes.data : []
+  const results = resultRes && resultRes.data ? resultRes.data : []
+  const standings = calculateGroupStandings({
+    groups,
+    results,
+    manualOverrides: manualOverridesFromTournament(tournament),
+  })
+
+  return { tournament, groups, brackets, results, standings }
+}
+
 async function removeDocsByQuery(targetCollection, query) {
   const oldDocs = await targetCollection.where(query).get().catch(() => ({ data: [] }))
   for (const doc of (oldDocs.data || [])) {
@@ -568,6 +608,207 @@ function currentGroupKnockoutPhase(tournament) {
   return Object.prototype.hasOwnProperty.call(tournament, 'groupKnockoutPhase')
     ? tournament.groupKnockoutPhase
     : 'group_draft'
+}
+
+function sortGroupBrackets(brackets) {
+  return (brackets || []).slice().sort((a, b) => {
+    const groupDiff = GROUP_CODES.indexOf(a.groupCode) - GROUP_CODES.indexOf(b.groupCode)
+    if (groupDiff) return groupDiff
+    return (a.round || 0) - (b.round || 0)
+  })
+}
+
+function sortRoundBrackets(brackets) {
+  return (brackets || []).slice().sort((a, b) => (a.round || 0) - (b.round || 0))
+}
+
+async function handleGetGroupKnockoutBracket({ tournamentId }) {
+  if (!tournamentId) {
+    return fail('INVALID_ARG', 'tournamentId 必填')
+  }
+
+  const ctx = await loadGroupKnockoutContext(tournamentId)
+  if (!ctx.tournament) {
+    return fail('NOT_FOUND', tournamentId)
+  }
+  if (ctx.tournament.format !== 'group_knockout') {
+    return fail('INVALID_FORMAT', '赛事不是小组赛+淘汰赛赛制')
+  }
+
+  const groupBrackets = ctx.brackets.filter(bracket => bracket.stage === 'group')
+  const knockoutBrackets = ctx.brackets.filter(bracket => bracket.stage === 'knockout')
+
+  return {
+    success: true,
+    data: {
+      tournament: ctx.tournament,
+      groups: ctx.groups,
+      standings: ctx.standings,
+      groupBrackets: sortGroupBrackets(groupBrackets),
+      knockoutBrackets: sortRoundBrackets(knockoutBrackets)
+    }
+  }
+}
+
+function groupMatchCountForBracketSize(bracketSize) {
+  const size = expectedGroupSize(bracketSize)
+  return size > 1 ? (size * (size - 1)) / 2 : 0
+}
+
+function strictConfirmedGroupResult(result, groupCode) {
+  return !!(
+    result &&
+    result.resultStatus === 'confirmed' &&
+    result.stage === 'group' &&
+    result.matchKind === 'group' &&
+    result.groupCode === groupCode
+  )
+}
+
+function groupNotReady(message, groupCodes, details) {
+  return {
+    success: false,
+    error: {
+      code: 'GROUPS_NOT_READY',
+      message,
+      groupCodes,
+      details
+    }
+  }
+}
+
+function validateConfirmReady(ctx) {
+  const assignmentErrors = validateGroupAssignments({
+    bracketSize: ctx.tournament.bracketSize,
+    groups: ctx.groups,
+  })
+  if (assignmentErrors.length) {
+    return groupNotReady('小组分组未就绪', GROUP_CODES, assignmentErrors)
+  }
+
+  const groupBrackets = ctx.brackets.filter(bracket => bracket.stage === 'group')
+  const groupBracketCodes = new Set(groupBrackets.map(bracket => bracket.groupCode))
+  if (groupBrackets.length !== GROUP_CODES.length || !GROUP_CODES.every(groupCode => groupBracketCodes.has(groupCode))) {
+    return groupNotReady('小组赛签表未全部生成', GROUP_CODES.filter(groupCode => !groupBracketCodes.has(groupCode)))
+  }
+
+  const expectedCount = groupMatchCountForBracketSize(ctx.tournament.bracketSize)
+  if (!expectedCount) {
+    return groupNotReady('签位规模必须是 12 或 16', GROUP_CODES)
+  }
+
+  const missingResultGroupCodes = GROUP_CODES.filter(groupCode => (
+    ctx.results.filter(result => strictConfirmedGroupResult(result, groupCode)).length !== expectedCount
+  ))
+  if (missingResultGroupCodes.length) {
+    return groupNotReady('小组赛成绩未全部确认', missingResultGroupCodes)
+  }
+
+  return null
+}
+
+function standingRowToPlayer(row) {
+  return {
+    id: row.playerId,
+    name: row.playerName,
+    registrationId: row.registrationId || null
+  }
+}
+
+function buildKnockoutSeeds(standings) {
+  const seeds = {}
+  for (const groupCode of GROUP_CODES) {
+    const rows = standings[groupCode] && standings[groupCode].rows
+    if (!Array.isArray(rows) || rows.length < 2) return null
+    seeds[`${groupCode}1`] = standingRowToPlayer(rows[0])
+    seeds[`${groupCode}2`] = standingRowToPlayer(rows[1])
+  }
+  return seeds
+}
+
+function getOpenidSafe() {
+  try {
+    const wxContext = cloud.getWXContext()
+    return (wxContext && wxContext.OPENID) || ''
+  } catch (e) {
+    return ''
+  }
+}
+
+async function handleConfirmKnockoutSeeds({ tournamentId }) {
+  if (!tournamentId) {
+    return fail('INVALID_ARG', 'tournamentId 必填')
+  }
+
+  const ctx = await loadGroupKnockoutContext(tournamentId)
+  if (!ctx.tournament) {
+    return fail('NOT_FOUND', tournamentId)
+  }
+  if (ctx.tournament.format !== 'group_knockout') {
+    return fail('INVALID_FORMAT', '赛事不是小组赛+淘汰赛赛制')
+  }
+
+  const phase = currentGroupKnockoutPhase(ctx.tournament)
+  if (phase !== 'group_completed') {
+    return phaseLocked(phase)
+  }
+
+  const notReady = validateConfirmReady(ctx)
+  if (notReady) return notReady
+
+  const manualTiebreakGroupCodes = GROUP_CODES.filter(groupCode => (
+    ctx.standings[groupCode] && ctx.standings[groupCode].manualTiebreakRequired
+  ))
+  if (manualTiebreakGroupCodes.length) {
+    return {
+      success: false,
+      error: {
+        code: 'MANUAL_TIEBREAK_REQUIRED',
+        message: '存在需要手动排序的小组',
+        groupCodes: manualTiebreakGroupCodes
+      }
+    }
+  }
+
+  const seeds = buildKnockoutSeeds(ctx.standings)
+  if (!seeds) {
+    return groupNotReady('小组排名不足', GROUP_CODES)
+  }
+
+  const now = db.serverDate()
+  for (const bracket of ctx.brackets.filter(item => item.stage === 'knockout')) {
+    if (bracket && bracket._id) {
+      await collection.doc(bracket._id).remove().catch(() => null)
+    }
+  }
+
+  const knockoutDocs = generateKnockoutMatches({ tournamentId, seeds })
+  for (const doc of knockoutDocs) {
+    await collection.add({
+      data: {
+        ...doc,
+        createTime: now,
+        updateTime: now
+      }
+    })
+  }
+
+  const snapshot = {
+    seeds,
+    standings: ctx.standings,
+    confirmedBy: getOpenidSafe(),
+    confirmedAt: now
+  }
+  await db.collection('tournaments').doc(tournamentId).update({
+    data: {
+      groupRankSnapshot: snapshot,
+      knockoutSeedSnapshot: snapshot,
+      groupKnockoutPhase: 'knockout_published',
+      updateTime: now
+    }
+  })
+
+  return { success: true, data: { seeds, knockoutRounds: knockoutDocs.length } }
 }
 
 async function handleSaveGroups({ tournamentId, groups }) {
