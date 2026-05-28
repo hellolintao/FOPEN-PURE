@@ -170,6 +170,46 @@ function seedGroupKnockoutFinal(overrides = {}) {
   }
 }
 
+function seedGroupKnockoutGroupsOnly() {
+  return {
+    tournaments: [{
+      _id: 'tournament_1',
+      format: 'group_knockout',
+      type: 'singles',
+      seasonId: 'season_2026',
+      scheduleStatus: 'published',
+      pointsRules: { winLoss: { win: 20, loss: 10, walkover: 0 } },
+      groupKnockoutPhase: 'group_published',
+      status: 'ongoing'
+    }],
+    tournament_brackets: [{
+      _id: 'bracket_1_group_A',
+      tournamentId: 'tournament_1',
+      stage: 'group',
+      groupCode: 'A',
+      matches: [{ matchId: 'group_a_1', stage: 'group', groupCode: 'A', position: 1, player1: { id: 'a1' }, player2: { id: 'a2' } }]
+    }],
+    match_results: [{
+      _id: 'result_1_group_a_1',
+      tournamentId: 'tournament_1',
+      sourceMatchId: 'group_a_1',
+      matchKind: 'group',
+      stage: 'group',
+      groupCode: 'A',
+      position: 1,
+      player1: { id: 'a1' },
+      player2: { id: 'a2' },
+      playerIds: ['a1', 'a2'],
+      resultStatus: 'pending',
+      tournamentType: 'singles',
+      seasonId: 'season_2026',
+      pointsAwarded: null
+    }],
+    tournament_registrations: ['a1', 'a2'].map(id => ({ _id: `reg_${id}`, tournamentId: 'tournament_1', playerId: id, registrationStatus: 'confirmed' })),
+    tournament_points: []
+  }
+}
+
 test('match-results group knockout bracket ids stay in sync with tournament-brackets', () => {
   expect(knockoutBracketDocId('tournament_1', 2)).toBe(tournamentKnockoutBracketDocId('tournament_1', 2))
   expect(knockoutBracketDocId('T1', 3)).toBe(tournamentKnockoutBracketDocId('T1', 3))
@@ -632,6 +672,33 @@ describe('submitResult', () => {
     } finally {
       consoleSpy.mockRestore()
     }
+  })
+
+  test('group knockout with only confirmed group rows stays ongoing and does not trigger points recompute', async () => {
+    const db = makeDb(seedGroupKnockoutGroupsOnly())
+    db.__testPointsEngine = jest.fn().mockResolvedValue({ success: true })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'group_a_1', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].status).toBe('ongoing')
+    expect(db.__all().tournaments[0].completedAt).toBeFalsy()
+    expect(db.__testPointsEngine).not.toHaveBeenCalled()
+  })
+
+  test('group knockout final settlement is not triggered again after points engine marks phase completed', async () => {
+    const db = makeDb(seedGroupKnockoutFinal())
+    db.__testPointsEngine = jest.fn(async payload => {
+      db.__all().tournaments[0].groupKnockoutPhase = 'completed'
+      return { success: true, data: payload }
+    })
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await svc.submitResult({ matchId: 'final', score: { sets: [{ a: 4, b: 1 }] }, submitter: { _id: 'admin', isAdmin: true } })
+    await svc.reconfirmMatch({ matchId: 'final', newScore: { sets: [{ a: 4, b: 1 }] }, admin: { _id: 'admin', isAdmin: true } })
+
+    expect(db.__all().tournaments[0].groupKnockoutPhase).toBe('completed')
+    expect(db.__testPointsEngine).toHaveBeenCalledTimes(1)
   })
 })
 

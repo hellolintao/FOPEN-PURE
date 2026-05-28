@@ -388,6 +388,12 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
     const rows = await applyVoidMarkers(tournamentId, rawRows)
     const playable = rows.filter(hasPlayableSides)
     if (playable.length === 0) return { skipped: true, reason: 'no_playable_matches' }
+    const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
+    const tournament = await getTournament(tournamentId)
+    if (tournament && tournament.format === 'group_knockout' && !hasConfirmedGroupKnockoutFinal(rows)) {
+      if (hasStarted) await markTournamentOngoing(tournamentId)
+      return { skipped: true, reason: 'group_knockout_final_not_confirmed' }
+    }
     const allTerminal = playable.every(r => r.resultStatus === 'confirmed' || isNoScoreResult(r))
     if (allTerminal) {
       const now = new Date()
@@ -395,9 +401,17 @@ function createMatchStateService({ db, awardLib, scoreRule }) {
       await maybeTriggerGroupKnockoutSettlement(tournamentId)
       return { skipped: false, status: 'completed' }
     }
-    const hasStarted = playable.some(r => r.resultStatus === 'submitted' || r.resultStatus === 'confirmed' || isNoScoreResult(r))
     if (hasStarted) await markTournamentOngoing(tournamentId)
     return { skipped: true, reason: 'not_all_confirmed' }
+  }
+
+  function hasConfirmedGroupKnockoutFinal(rows) {
+    return (rows || []).some(row => (
+      isActiveScoreRow(row)
+      && row.stage === 'knockout'
+      && row.round === 3
+      && row.resultStatus === 'confirmed'
+    ))
   }
 
   async function maybeTriggerGroupKnockoutSettlement(tournamentId) {
