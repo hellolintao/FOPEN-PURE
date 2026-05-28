@@ -13,6 +13,7 @@ const {
   calculateGroupStandings,
   generateKnockoutMatches,
   groupBracketDocId,
+  knockoutBracketDocId,
 } = require('./lib/group-knockout')
 
 // 生成对位表ID
@@ -655,13 +656,42 @@ function groupMatchCountForBracketSize(bracketSize) {
   return size > 1 ? (size * (size - 1)) / 2 : 0
 }
 
-function strictConfirmedGroupResult(result, groupCode) {
+function isActiveScoreRow(row) {
+  return !!(
+    row &&
+    row.resultStatus !== 'invalidated' &&
+    row.matchKind !== 'history' &&
+    row.matchKind !== 'audit' &&
+    !row.archivedFrom
+  )
+}
+
+function resultSourceMatchId(result) {
+  return result && (result.sourceMatchId || result.matchId || '')
+}
+
+function playerIdOf(player) {
+  return player && (player.id || player.playerId || player._id)
+}
+
+function resultParticipantId(result, side) {
+  const player = result && result[side]
+  return playerIdOf(player) || (result && (result[`${side}Id`] || result[`${side}PlayerId`]))
+}
+
+function samePlayerPair(expectedIds, actualIds) {
+  if (expectedIds.length !== 2 || actualIds.length !== 2) return true
+  return expectedIds.slice().sort().join('::') === actualIds.slice().sort().join('::')
+}
+
+function confirmedGroupResult(result) {
   return !!(
     result &&
+    isActiveScoreRow(result) &&
     result.resultStatus === 'confirmed' &&
     result.stage === 'group' &&
     result.matchKind === 'group' &&
-    result.groupCode === groupCode
+    GROUP_CODES.includes(result.groupCode)
   )
 }
 
@@ -683,28 +713,112 @@ function validateConfirmReady(ctx) {
     groups: ctx.groups,
   })
   if (assignmentErrors.length) {
-    return groupNotReady('小组分组未就绪', GROUP_CODES, assignmentErrors)
+    return { error: groupNotReady('小组分组未就绪', GROUP_CODES, assignmentErrors) }
   }
 
-  const groupBrackets = ctx.brackets.filter(bracket => bracket.stage === 'group')
+  const groupBrackets = sortGroupBrackets(ctx.brackets.filter(bracket => bracket.stage === 'group'))
   const groupBracketCodes = new Set(groupBrackets.map(bracket => bracket.groupCode))
   if (groupBrackets.length !== GROUP_CODES.length || !GROUP_CODES.every(groupCode => groupBracketCodes.has(groupCode))) {
-    return groupNotReady('小组赛签表未全部生成', GROUP_CODES.filter(groupCode => !groupBracketCodes.has(groupCode)))
+    return { error: groupNotReady('小组赛签表未全部生成', GROUP_CODES.filter(groupCode => !groupBracketCodes.has(groupCode))) }
   }
 
   const expectedCount = groupMatchCountForBracketSize(ctx.tournament.bracketSize)
   if (!expectedCount) {
-    return groupNotReady('签位规模必须是 12 或 16', GROUP_CODES)
+    return { error: groupNotReady('签位规模必须是 12 或 16', GROUP_CODES) }
   }
 
-  const missingResultGroupCodes = GROUP_CODES.filter(groupCode => (
-    ctx.results.filter(result => strictConfirmedGroupResult(result, groupCode)).length !== expectedCount
-  ))
-  if (missingResultGroupCodes.length) {
-    return groupNotReady('小组赛成绩未全部确认', missingResultGroupCodes)
+  const expectedMatches = []
+  const expectedMatchesById = new Map()
+  const bracketShapeErrors = []
+  const duplicateExpectedMatchIds = []
+  for (const groupCode of GROUP_CODES) {
+    const bracket = groupBrackets.find(item => item.groupCode === groupCode)
+    const matches = Array.isArray(bracket && bracket.matches) ? bracket.matches : []
+    if (matches.length !== expectedCount) {
+      bracketShapeErrors.push(`${groupCode}组小组赛签表应有 ${expectedCount} 场`)
+    }
+    for (const match of matches) {
+      const matchId = match && match.matchId
+      if (!matchId) {
+        bracketShapeErrors.push(`${groupCode}组小组赛签表存在缺少 matchId 的比赛`)
+        continue
+      }
+      if (expectedMatchesById.has(matchId)) duplicateExpectedMatchIds.push(matchId)
+      const expected = {
+        matchId,
+        groupCode,
+        playerIds: [playerIdOf(match.player1), playerIdOf(match.player2)].filter(Boolean)
+      }
+      expectedMatches.push(expected)
+      expectedMatchesById.set(matchId, expected)
+    }
+  }
+  if (bracketShapeErrors.length || duplicateExpectedMatchIds.length) {
+    return {
+      error: groupNotReady('小组赛签表未就绪', GROUP_CODES, {
+        bracketShapeErrors,
+        duplicateExpectedMatchIds
+      })
+    }
   }
 
-  return null
+  const resultsByMatchId = new Map()
+  const unrelatedResultIds = []
+  const playerMismatchSourceMatchIds = []
+  for (const result of ctx.results.filter(confirmedGroupResult)) {
+    const sourceMatchId = resultSourceMatchId(result)
+    const expected = expectedMatchesById.get(sourceMatchId)
+    if (!expected || result.groupCode !== expected.groupCode) {
+      unrelatedResultIds.push(result._id || sourceMatchId)
+      continue
+    }
+
+    const actualPlayerIds = [resultParticipantId(result, 'player1'), resultParticipantId(result, 'player2')].filter(Boolean)
+    if (!samePlayerPair(expected.playerIds, actualPlayerIds)) {
+      playerMismatchSourceMatchIds.push(sourceMatchId)
+    }
+
+    if (!resultsByMatchId.has(sourceMatchId)) resultsByMatchId.set(sourceMatchId, [])
+    resultsByMatchId.get(sourceMatchId).push(result)
+  }
+
+  const missingSourceMatchIds = []
+  const duplicateSourceMatchIds = []
+  for (const expected of expectedMatches) {
+    const matchedRows = resultsByMatchId.get(expected.matchId) || []
+    if (matchedRows.length === 0) missingSourceMatchIds.push(expected.matchId)
+    if (matchedRows.length > 1) duplicateSourceMatchIds.push(expected.matchId)
+  }
+
+  if (
+    missingSourceMatchIds.length ||
+    duplicateSourceMatchIds.length ||
+    unrelatedResultIds.length ||
+    playerMismatchSourceMatchIds.length
+  ) {
+    return {
+      error: groupNotReady('小组赛成绩未全部确认', GROUP_CODES, {
+        missingSourceMatchIds,
+        duplicateSourceMatchIds,
+        unrelatedResultIds,
+        playerMismatchSourceMatchIds
+      })
+    }
+  }
+
+  const sourceResultIdsByGroupCode = GROUP_CODES.reduce((acc, groupCode) => {
+    acc[groupCode] = []
+    return acc
+  }, {})
+  const sourceResultIds = []
+  for (const expected of expectedMatches) {
+    const result = resultsByMatchId.get(expected.matchId)[0]
+    const resultId = result._id || resultSourceMatchId(result)
+    sourceResultIds.push(resultId)
+    sourceResultIdsByGroupCode[expected.groupCode].push(resultId)
+  }
+
+  return { sourceResultIds, sourceResultIdsByGroupCode }
 }
 
 function standingRowToPlayer(row) {
@@ -724,6 +838,25 @@ function buildKnockoutSeeds(standings) {
     seeds[`${groupCode}2`] = standingRowToPlayer(rows[1])
   }
   return seeds
+}
+
+function buildSeedSources(standings, sourceResultIdsByGroupCode) {
+  const seedSources = {}
+  for (const groupCode of GROUP_CODES) {
+    const rows = standings[groupCode] && standings[groupCode].rows
+    if (!Array.isArray(rows)) continue
+    rows.slice(0, 2).forEach((row, index) => {
+      const rank = index + 1
+      seedSources[`${groupCode}${rank}`] = {
+        groupCode,
+        rank,
+        playerId: row.playerId,
+        registrationId: row.registrationId || null,
+        sourceResultIds: (sourceResultIdsByGroupCode && sourceResultIdsByGroupCode[groupCode]) || []
+      }
+    })
+  }
+  return seedSources
 }
 
 function getOpenidSafe() {
@@ -753,8 +886,21 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
     return phaseLocked(phase)
   }
 
-  const notReady = validateConfirmReady(ctx)
-  if (notReady) return notReady
+  const activeKnockoutResults = ctx.results.filter(result => isActiveScoreRow(result) && result.stage === 'knockout')
+  const confirmedKnockoutResults = activeKnockoutResults.filter(result => result.resultStatus === 'confirmed')
+  if (confirmedKnockoutResults.length) {
+    return {
+      success: false,
+      error: {
+        code: 'KNOCKOUT_ALREADY_STARTED',
+        message: '淘汰赛已有确认成绩，不能重新确认 8 强',
+        resultIds: confirmedKnockoutResults.map(result => result._id || resultSourceMatchId(result))
+      }
+    }
+  }
+
+  const ready = validateConfirmReady(ctx)
+  if (ready.error) return ready.error
 
   const manualTiebreakGroupCodes = GROUP_CODES.filter(groupCode => (
     ctx.standings[groupCode] && ctx.standings[groupCode].manualTiebreakRequired
@@ -776,33 +922,58 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   }
 
   const now = db.serverDate()
+  const deterministicKnockoutDocIds = [1, 2, 3].map(round => knockoutBracketDocId(tournamentId, round))
+  const deterministicIdSet = new Set(deterministicKnockoutDocIds)
+  for (const docId of deterministicKnockoutDocIds) {
+    await collection.doc(docId).remove().catch(() => null)
+  }
   for (const bracket of ctx.brackets.filter(item => item.stage === 'knockout')) {
-    if (bracket && bracket._id) {
+    if (bracket && bracket._id && !deterministicIdSet.has(bracket._id)) {
       await collection.doc(bracket._id).remove().catch(() => null)
     }
   }
 
-  const knockoutDocs = generateKnockoutMatches({ tournamentId, seeds })
+  const resultCollection = db.collection('match_results')
+  for (const result of activeKnockoutResults.filter(row => row.resultStatus !== 'confirmed')) {
+    if (result && result._id) {
+      await resultCollection.doc(result._id).remove().catch(() => null)
+    }
+  }
+
+  const knockoutDocs = generateKnockoutMatches({ tournamentId, seeds }).map(doc => ({
+    ...doc,
+    createTime: now,
+    updateTime: now
+  }))
   for (const doc of knockoutDocs) {
     await collection.add({
-      data: {
-        ...doc,
-        createTime: now,
-        updateTime: now
-      }
+      data: doc
     })
   }
 
-  const snapshot = {
+  const confirmedBy = getOpenidSafe()
+  const manualOverrides = manualOverridesFromTournament(ctx.tournament)
+  const groupRankSnapshot = {
+    groups: ctx.standings,
+    manualOverrides,
+    sourceResultIds: ready.sourceResultIds,
+    confirmedBy,
+    confirmedAt: now,
+    version: 1
+  }
+  const knockoutSeedSnapshot = {
     seeds,
-    standings: ctx.standings,
-    confirmedBy: getOpenidSafe(),
-    confirmedAt: now
+    bracket: knockoutDocs,
+    bracketDocIds: knockoutDocs.map(doc => doc._id),
+    seedSources: buildSeedSources(ctx.standings, ready.sourceResultIdsByGroupCode),
+    confirmedBy,
+    confirmedAt: now,
+    version: 1
   }
   await db.collection('tournaments').doc(tournamentId).update({
     data: {
-      groupRankSnapshot: snapshot,
-      knockoutSeedSnapshot: snapshot,
+      groupRankSnapshot,
+      knockoutSeedSnapshot,
       groupKnockoutPhase: 'knockout_published',
       updateTime: now
     }
