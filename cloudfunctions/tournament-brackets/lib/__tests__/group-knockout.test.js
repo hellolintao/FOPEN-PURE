@@ -146,7 +146,7 @@ describe('group knockout rules', () => {
   })
 })
 
-function row(id, groupCode, player1, player2, a, b) {
+function row(id, groupCode, player1, player2, a, b, overrides = {}) {
   const winner = a > b ? player1 : player2
   return {
     _id: `result_${id}`,
@@ -158,8 +158,17 @@ function row(id, groupCode, player1, player2, a, b) {
     player2: { id: player2, name: player2.toUpperCase() },
     score: { sets: [{ a, b }], tiebreak: null },
     resultStatus: 'confirmed',
-    winner: { id: winner, name: winner.toUpperCase() }
+    winner: { id: winner, name: winner.toUpperCase() },
+    ...overrides
   }
+}
+
+function unresolvedTieRows() {
+  return [
+    row('m1', 'A', 'a', 'b', 4, 2),
+    row('m2', 'A', 'a', 'c', 2, 4),
+    row('m3', 'A', 'b', 'c', 4, 2)
+  ]
 }
 
 describe('calculateGroupStandings', () => {
@@ -214,13 +223,73 @@ describe('calculateGroupStandings', () => {
       groupCode: 'A',
       slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
     }]
-    const rows = [
-      row('m1', 'A', 'a', 'b', 4, 2),
-      row('m2', 'A', 'a', 'c', 2, 4),
-      row('m3', 'A', 'b', 'c', 4, 2)
-    ]
+    const rows = unresolvedTieRows()
     const standings = calculateGroupStandings({ groups, results: rows })
     expect(standings.A.manualTiebreakRequired).toBe(true)
+  })
+
+  test('counts tied set games and derives winner from tiebreak', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('tb1', 'A', 'a', 'b', 3, 3, {
+        score: { sets: [{ a: 3, b: 3 }], tiebreak: { a: 7, b: 5 } },
+        winner: null
+      })
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.map(r => ({ id: r.playerId, wins: r.wins, losses: r.losses, totalGamesWon: r.totalGamesWon, gameDiff: r.gameDiff }))).toEqual([
+      { id: 'a', wins: 1, losses: 0, totalGamesWon: 3, gameDiff: 0 },
+      { id: 'b', wins: 0, losses: 1, totalGamesWon: 3, gameDiff: 0 }
+    ])
+  })
+
+  test('uses explicit winner fields for tied set winners', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c', 'd'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('w1', 'A', 'a', 'b', 3, 3, {
+        score: { sets: [{ a: 3, b: 3 }], tiebreak: null },
+        winner: { id: 'a', name: 'A' }
+      }),
+      row('w2', 'A', 'c', 'd', 3, 3, {
+        score: { sets: [{ a: 3, b: 3 }], tiebreak: null },
+        winner: null,
+        winnerId: 'c'
+      })
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    expect(standings.A.rows.find(r => r.playerId === 'a').wins).toBe(1)
+    expect(standings.A.rows.find(r => r.playerId === 'c').wins).toBe(1)
+    expect(standings.A.rows.find(r => r.playerId === 'b').losses).toBe(1)
+    expect(standings.A.rows.find(r => r.playerId === 'd').losses).toBe(1)
+  })
+
+  test('ignores pending knockout and bracket rows while accepting rows without explicit stage markers', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const rows = [
+      row('valid-missing-markers', 'A', 'a', 'b', 4, 1, { stage: undefined, matchKind: undefined }),
+      row('pending', 'A', 'c', 'a', 4, 0, { resultStatus: 'pending' }),
+      row('knockout', 'A', 'b', 'a', 4, 0, { stage: 'knockout' }),
+      row('bracket', 'A', 'b', 'c', 4, 0, { matchKind: 'bracket' })
+    ]
+    const standings = calculateGroupStandings({ groups, results: rows })
+    const statsByPlayer = Object.fromEntries(standings.A.rows.map(r => [
+      r.playerId,
+      { wins: r.wins, losses: r.losses, totalGamesWon: r.totalGamesWon }
+    ]))
+    expect(statsByPlayer).toEqual({
+      a: { wins: 1, losses: 0, totalGamesWon: 4 },
+      b: { wins: 0, losses: 1, totalGamesWon: 1 },
+      c: { wins: 0, losses: 0, totalGamesWon: 0 }
+    })
   })
 
   test('manual override freezes requested ordering', () => {
@@ -237,5 +306,31 @@ describe('calculateGroupStandings', () => {
     ])
     expect(standings.A.manualOverride).toBe(override)
     expect(standings.A.manualTiebreakRequired).toBe(false)
+  })
+
+  test('partial manual override does not clear unresolved tie', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const override = { finalRows: [{ playerId: 'c' }, { playerId: 'a' }], overrideBy: 'admin1' }
+    const standings = calculateGroupStandings({ groups, results: unresolvedTieRows(), manualOverrides: { A: override } })
+    expect(standings.A.rows.map(r => r.playerId)).toEqual(['a', 'b', 'c'])
+    expect(standings.A.manualTiebreakRequired).toBe(true)
+    expect(standings.A.manualOverride).toBeUndefined()
+    expect(standings.A.overrideError).toEqual(expect.any(String))
+  })
+
+  test('duplicate and unknown manual override does not clear unresolved tie', () => {
+    const groups = [{
+      groupCode: 'A',
+      slots: ['a', 'b', 'c'].map((id, index) => ({ slotNo: index + 1, playerId: id, playerName: id.toUpperCase() }))
+    }]
+    const override = { finalRows: [{ playerId: 'c' }, { playerId: 'c' }, { playerId: 'x' }], overrideBy: 'admin1' }
+    const standings = calculateGroupStandings({ groups, results: unresolvedTieRows(), manualOverrides: { A: override } })
+    expect(standings.A.rows.map(r => r.playerId)).toEqual(['a', 'b', 'c'])
+    expect(standings.A.manualTiebreakRequired).toBe(true)
+    expect(standings.A.manualOverride).toBeUndefined()
+    expect(standings.A.overrideError).toEqual(expect.any(String))
   })
 })

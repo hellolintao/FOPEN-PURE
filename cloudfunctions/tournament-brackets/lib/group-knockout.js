@@ -290,7 +290,7 @@ function firstSetScore(result) {
 
   const a = Number(firstSet.a)
   const b = Number(firstSet.b)
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null
   return { a, b }
 }
 
@@ -298,13 +298,41 @@ function confirmedGroupResults(results, groupCode) {
   return (Array.isArray(results) ? results : []).filter(result => (
     result &&
     result.resultStatus === 'confirmed' &&
-    (result.stage === 'group' || result.matchKind === 'group') &&
+    (result.stage == null || result.stage === 'group') &&
+    (result.matchKind == null || result.matchKind === 'group') &&
     result.groupCode === groupCode
   ))
 }
 
 function headToHeadKey(playerId1, playerId2) {
   return [playerKey(playerId1), playerKey(playerId2)].sort().join('::')
+}
+
+function explicitWinnerId(result) {
+  const winner = result && result.winner
+  return (winner && (winner.id || winner.playerId || winner._id)) ||
+    (result && (result.winnerId || result.winnerPlayerId))
+}
+
+function tiebreakWinnerRow(result, player1Row, player2Row) {
+  const tiebreak = result && result.score && result.score.tiebreak
+  if (!tiebreak) return null
+
+  const a = Number(tiebreak.a)
+  const b = Number(tiebreak.b)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null
+  return a > b ? player1Row : player2Row
+}
+
+function winnerRowForResult(result, player1Row, player2Row, score) {
+  if (score.a > score.b) return player1Row
+  if (score.b > score.a) return player2Row
+
+  const winnerId = explicitWinnerId(result)
+  if (playerKey(winnerId) === playerKey(player1Row.playerId)) return player1Row
+  if (playerKey(winnerId) === playerKey(player2Row.playerId)) return player2Row
+
+  return tiebreakWinnerRow(result, player1Row, player2Row)
 }
 
 function applyResultToRows(result, rowsByPlayerId, headToHeadResults) {
@@ -315,14 +343,15 @@ function applyResultToRows(result, rowsByPlayerId, headToHeadResults) {
   const score = firstSetScore(result)
 
   if (!player1Row || !player2Row || !score) return
+  const winnerRow = winnerRowForResult(result, player1Row, player2Row, score)
+  if (!winnerRow) return
 
   player1Row.totalGamesWon += score.a
   player2Row.totalGamesWon += score.b
   player1Row.gameDiff += score.a - score.b
   player2Row.gameDiff += score.b - score.a
 
-  const winnerRow = score.a > score.b ? player1Row : player2Row
-  const loserRow = score.a > score.b ? player2Row : player1Row
+  const loserRow = winnerRow === player1Row ? player2Row : player1Row
   winnerRow.wins += 1
   loserRow.losses += 1
 
@@ -444,6 +473,33 @@ function orderRowsByManualOverride(rows, manualOverride) {
   return ordered
 }
 
+function validateManualOverride(rows, manualOverride) {
+  if (!manualOverride || !Array.isArray(manualOverride.finalRows)) {
+    return { valid: false, error: 'manualOverride.finalRows must be a complete duplicate-free permutation of group playerIds' }
+  }
+
+  const expectedIds = new Set(rows.map(row => playerKey(row.playerId)))
+  const seenIds = new Set()
+
+  if (manualOverride.finalRows.length !== rows.length) {
+    return { valid: false, error: 'manualOverride.finalRows must include every group player exactly once' }
+  }
+
+  for (const overrideRow of manualOverride.finalRows) {
+    const overridePlayerId = overrideRow && (overrideRow.playerId || overrideRow.id)
+    const key = playerKey(overridePlayerId)
+    if (!expectedIds.has(key)) {
+      return { valid: false, error: `manualOverride.finalRows contains unknown playerId ${overridePlayerId || ''}` }
+    }
+    if (seenIds.has(key)) {
+      return { valid: false, error: `manualOverride.finalRows contains duplicate playerId ${overridePlayerId}` }
+    }
+    seenIds.add(key)
+  }
+
+  return { valid: true, error: '' }
+}
+
 function calculateGroupStandings({ groups, results, manualOverrides } = {}) {
   const standings = {}
 
@@ -461,7 +517,20 @@ function calculateGroupStandings({ groups, results, manualOverrides } = {}) {
     }
 
     const manualOverride = manualOverrides && manualOverrides[groupCode]
-    if (manualOverride && Array.isArray(manualOverride.finalRows)) {
+    const ranked = rankRows(rows, headToHeadResults)
+
+    if (manualOverride) {
+      const overrideValidation = validateManualOverride(rows, manualOverride)
+      if (!overrideValidation.valid) {
+        standings[groupCode] = {
+          groupCode,
+          rows: assignRanksAndPromotion(ranked.ordered, groupCode),
+          manualTiebreakRequired: ranked.manualTiebreakRequired,
+          overrideError: overrideValidation.error
+        }
+        continue
+      }
+
       standings[groupCode] = {
         groupCode,
         rows: assignRanksAndPromotion(orderRowsByManualOverride(rows, manualOverride), groupCode),
@@ -471,7 +540,6 @@ function calculateGroupStandings({ groups, results, manualOverrides } = {}) {
       continue
     }
 
-    const ranked = rankRows(rows, headToHeadResults)
     standings[groupCode] = {
       groupCode,
       rows: assignRanksAndPromotion(ranked.ordered, groupCode),
