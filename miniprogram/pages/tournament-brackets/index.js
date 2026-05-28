@@ -12,9 +12,11 @@ Page({
     decoratedCourts: [],  // schedulePlan.courts each annotated with [r1 matches that map to it] + [freePlays that map to it]
     tabs: [{ key: 'group', label: '小组赛' }, { key: 'knockout', label: '淘汰赛' }],
     activeTab: 'group',
-    groupKnockout: null,
+    groupKnockout: emptyGroupKnockoutPayload(),
     arrangeGroups: [],
-    arrangeErrors: []
+    arrangeErrors: [],
+    registrationCandidates: [],
+    arrangePicker: emptyArrangePicker()
   },
 
   onLoad({ id, mode } = {}) {
@@ -23,8 +25,9 @@ Page({
     if (mode === 'arrange') patch.activeTab = 'group'
     if (Object.keys(patch).length) this.setData(patch)
     if (id) {
-      this.refresh()
+      return this.refresh()
     }
+    return undefined
   },
 
   onShow() {
@@ -99,17 +102,26 @@ Page({
   },
 
   async refreshGroupKnockout(tournament) {
-    const res = await wx.cloud.callFunction({
-      name: 'tournament-brackets',
-      data: { action: 'getGroupKnockoutBracket', tournamentId: this.data.tournamentId }
-    })
+    const [res, regRes] = await Promise.all([
+      wx.cloud.callFunction({
+        name: 'tournament-brackets',
+        data: { action: 'getGroupKnockoutBracket', tournamentId: this.data.tournamentId }
+      }),
+      wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: { action: 'list', tournamentId: this.data.tournamentId, pageSize: 200 }
+      }).catch(() => ({ result: { success: false, data: [] } }))
+    ])
     const payload = (res.result && res.result.success && res.result.data) || emptyGroupKnockoutPayload()
+    const registrationCandidates = buildRegistrationCandidates(regRes.result && regRes.result.data)
     this.setData({
       tournament,
       schedulePlan: null,
       groupKnockout: decorateGroupKnockout(payload),
       arrangeGroups: buildArrangeGroups(payload.groups, tournament.bracketSize),
       arrangeErrors: [],
+      registrationCandidates,
+      arrangePicker: emptyArrangePicker(),
       r1Matches: [],
       laterRounds: [],
       freePlays: [],
@@ -122,6 +134,93 @@ Page({
   onTabTap(e) {
     const key = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.key
     if (key) this.setData({ activeTab: key })
+  },
+
+  onArrangeSlotTap(e) {
+    const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
+    const groupIndex = Number(dataset.groupIndex)
+    const slotIndex = Number(dataset.slotIndex)
+    const group = this.data.arrangeGroups[groupIndex]
+    const slot = group && group.slots && group.slots[slotIndex]
+    if (!group || !slot) return
+
+    const members = buildArrangePickerMembers(
+      this.data.registrationCandidates,
+      this.data.arrangeGroups,
+      slot.playerId
+    )
+    this.setData({
+      arrangePicker: {
+        show: true,
+        title: `${group.groupCode}${slot.slotNo} 选择球员`,
+        members,
+        selectedId: slot.playerId || '',
+        ctx: { groupIndex, slotIndex }
+      }
+    })
+  },
+
+  onArrangePickerSelect(e) {
+    const id = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id
+    if (!id) return
+    const picker = this.data.arrangePicker || emptyArrangePicker()
+    this.setData({
+      arrangePicker: {
+        ...picker,
+        selectedId: id,
+        members: markSelected(picker.members, id)
+      }
+    })
+  },
+
+  onArrangePickerConfirm() {
+    const picker = this.data.arrangePicker || emptyArrangePicker()
+    const ctx = picker.ctx
+    if (!ctx || !picker.selectedId) {
+      wx.showToast({ title: '请选择球员', icon: 'none' })
+      return
+    }
+    const picked = this.data.registrationCandidates.find(candidate => candidate._id === picker.selectedId)
+    if (!picked) {
+      wx.showToast({ title: '球员信息缺失', icon: 'none' })
+      return
+    }
+
+    const arrangeGroups = cloneArrangeGroups(this.data.arrangeGroups)
+    const group = arrangeGroups[ctx.groupIndex]
+    const slot = group && group.slots && group.slots[ctx.slotIndex]
+    if (!slot) return
+    group.slots[ctx.slotIndex] = {
+      ...slot,
+      playerId: picked._id,
+      playerName: picked.name,
+      registrationId: picked.registrationId || ''
+    }
+    this.setData({
+      arrangeGroups,
+      arrangeErrors: [],
+      arrangePicker: emptyArrangePicker()
+    })
+  },
+
+  onArrangePickerCancel() {
+    this.setData({ arrangePicker: emptyArrangePicker() })
+  },
+
+  onArrangePickerSheetTap() {
+    // Prevent mask taps from closing the sheet when tapping inside it.
+  },
+
+  onClearArrangeSlot(e) {
+    const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
+    const groupIndex = Number(dataset.groupIndex)
+    const slotIndex = Number(dataset.slotIndex)
+    const arrangeGroups = cloneArrangeGroups(this.data.arrangeGroups)
+    const group = arrangeGroups[groupIndex]
+    const slot = group && group.slots && group.slots[slotIndex]
+    if (!slot) return
+    group.slots[slotIndex] = { slotNo: slot.slotNo, playerId: '', playerName: '' }
+    this.setData({ arrangeGroups, arrangeErrors: [] })
   },
 
   async onGenerateGroupMatches() {
@@ -187,6 +286,10 @@ function emptyGroupKnockoutPayload() {
   return { groups: [], groupBrackets: [], knockoutBrackets: [], standings: {} }
 }
 
+function emptyArrangePicker() {
+  return { show: false, title: '选择分组球员', members: [], selectedId: '', ctx: null }
+}
+
 function buildArrangeGroups(groups, bracketSize) {
   const slotCount = Number(bracketSize) === 12 ? 3 : 4
   const byCode = {}
@@ -237,4 +340,53 @@ function resultErrors(result, fallback) {
   if (error && error.message) return [error.message]
   if (result && result.message) return [result.message]
   return [fallback]
+}
+
+function buildRegistrationCandidates(registrations) {
+  const seen = new Set()
+  const rows = []
+  ;(registrations || []).forEach(reg => {
+    if (!isActiveRegistration(reg) || !reg.playerId || seen.has(reg.playerId)) return
+    seen.add(reg.playerId)
+    rows.push({
+      _id: reg.playerId,
+      name: reg.playerName || reg.name || reg.playerId,
+      initial: firstChar(reg.playerName || reg.name || reg.playerId),
+      avatarUrl: reg.avatarUrl || '',
+      registrationId: reg._id || reg.registrationId || ''
+    })
+  })
+  return rows
+}
+
+function isActiveRegistration(registration) {
+  const status = registration && (registration.registrationStatus || registration.status || 'confirmed')
+  return status !== 'withdrew' && status !== 'cancelled'
+}
+
+function buildArrangePickerMembers(candidates, arrangeGroups, currentPlayerId) {
+  const assigned = new Set()
+  ;(arrangeGroups || []).forEach(group => {
+    ;(group.slots || []).forEach(slot => {
+      if (slot.playerId && slot.playerId !== currentPlayerId) assigned.add(slot.playerId)
+    })
+  })
+  return (candidates || [])
+    .filter(candidate => !assigned.has(candidate._id))
+    .map(candidate => ({ ...candidate, selected: candidate._id === currentPlayerId }))
+}
+
+function markSelected(members, selectedId) {
+  return (members || []).map(member => ({ ...member, selected: member._id === selectedId }))
+}
+
+function cloneArrangeGroups(groups) {
+  return (groups || []).map(group => ({
+    ...group,
+    slots: (group.slots || []).map(slot => ({ ...slot }))
+  }))
+}
+
+function firstChar(value) {
+  return String(value || '').trim().slice(0, 1) || '球'
 }

@@ -44,6 +44,7 @@
             <view
               wx:for="{{arrangeGroups}}"
               wx:for-item="group"
+              wx:for-index="groupIndex"
               wx:key="groupCode"
               class="gk-group-card">
               <view class="gk-group-head">
@@ -53,10 +54,20 @@
               <view
                 wx:for="{{group.slots}}"
                 wx:for-item="slot"
+                wx:for-index="slotIndex"
                 wx:key="slotNo"
-                class="gk-slot">
+                data-group-index="{{groupIndex}}"
+                data-slot-index="{{slotIndex}}"
+                class="gk-slot"
+                bindtap="onArrangeSlotTap">
                 <text class="slot-no num">{{slot.slotNo}}</text>
                 <text class="slot-player">{{slot.playerName || '选择选手'}}</text>
+                <text
+                  wx:if="{{slot.playerId}}"
+                  class="slot-clear"
+                  data-group-index="{{groupIndex}}"
+                  data-slot-index="{{slotIndex}}"
+                  catchtap="onClearArrangeSlot">移除</text>
               </view>
             </view>
           </view>
@@ -118,12 +129,12 @@
               wx:key="matchId"
               class="gk-match {{match.bye ? 'is-bye' : ''}}">
               <view class="gk-player-wrap">
-                <text wx:if="{{match.player1Source}}" class="gk-source">{{match.player1Source}}</text>
+                <text wx:if="{{round.round === 1 && match.player1Source}}" class="gk-source">{{match.player1Source}}</text>
                 <text class="gk-player">{{match.__player1Name}}</text>
               </view>
               <text class="gk-vs num">VS</text>
               <view class="gk-player-wrap right">
-                <text wx:if="{{match.player2Source}}" class="gk-source">{{match.player2Source}}</text>
+                <text wx:if="{{round.round === 1 && match.player2Source}}" class="gk-source">{{match.player2Source}}</text>
                 <text class="gk-player right">{{match.__player2Name}}</text>
               </view>
             </view>
@@ -216,4 +227,28 @@
     </block>
 
   </block>
+
+  <view wx:if="{{arrangePicker.show}}" class="arrange-picker-mask" bindtap="onArrangePickerCancel">
+    <view class="arrange-picker-sheet" catchtap="onArrangePickerSheetTap">
+      <view class="arrange-picker-head">
+        <text class="arrange-picker-title">{{arrangePicker.title}}</text>
+        <text class="arrange-picker-cancel" bindtap="onArrangePickerCancel">取消</text>
+      </view>
+      <scroll-view scroll-y class="arrange-picker-list">
+        <view
+          wx:for="{{arrangePicker.members}}"
+          wx:for-item="member"
+          wx:key="_id"
+          data-id="{{member._id}}"
+          class="arrange-picker-row {{member.selected ? 'selected' : ''}}"
+          bindtap="onArrangePickerSelect">
+          <view class="arrange-picker-avatar">{{member.initial}}</view>
+          <text class="arrange-picker-name">{{member.name}}</text>
+          <text wx:if="{{member.selected}}" class="arrange-picker-tick">✓</text>
+        </view>
+        <view wx:if="{{arrangePicker.members.length === 0}}" class="arrange-picker-empty">暂无可选球员</view>
+      </scroll-view>
+      <view class="arrange-picker-confirm tap-scale" bindtap="onArrangePickerConfirm">确认选择</view>
+    </view>
+  </view>
 </view>
