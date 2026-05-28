@@ -162,7 +162,9 @@ function shouldValidateSchedulePlan(data) {
 }
 
 function validateGroupKnockout(data, errors) {
-  if (data.type && data.type !== 'singles') {
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(data, key);
+
+  if (hasOwn('type') && data.type !== 'singles') {
     errors.push('小组赛+淘汰赛只支持 singles 类型');
   }
 
@@ -172,7 +174,7 @@ function validateGroupKnockout(data, errors) {
     errors.push('小组赛+淘汰赛 bracketSize 必须是 12 或 16');
   }
 
-  if (hasValidBracketSize && data.maxPlayers !== undefined && data.maxPlayers !== null && Number(data.maxPlayers) !== bracketSize) {
+  if (hasValidBracketSize && hasOwn('maxPlayers') && Number(data.maxPlayers) !== bracketSize) {
     errors.push('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
   }
 

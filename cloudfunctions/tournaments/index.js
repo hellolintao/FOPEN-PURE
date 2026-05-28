@@ -31,9 +31,9 @@ function normalizeTournamentPayload(data = {}) {
   const hasOwn = (key) => Object.prototype.hasOwnProperty.call(payload, key)
   return {
     ...payload,
-    type: payload.type || 'singles',
+    type: hasOwn('type') ? payload.type : 'singles',
     bracketSize,
-    maxPlayers: payload.maxPlayers == null ? bracketSize : Number(payload.maxPlayers),
+    maxPlayers: hasOwn('maxPlayers') ? Number(payload.maxPlayers) : bracketSize,
     scheduleStatus: hasOwn('scheduleStatus') ? payload.scheduleStatus : 'none',
     groupDrawMode: hasOwn('groupDrawMode') ? payload.groupDrawMode : 'onsite',
     groupKnockoutPhase: hasOwn('groupKnockoutPhase') ? payload.groupKnockoutPhase : 'group_draft',

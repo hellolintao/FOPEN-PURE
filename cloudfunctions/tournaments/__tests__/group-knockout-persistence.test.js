@@ -62,7 +62,10 @@ describe('group_knockout persistence', () => {
 
   test.each([
     ['explicit non-singles type', { type: 'doubles' }, '小组赛+淘汰赛只支持 singles 类型'],
+    ['explicit empty type', { type: '' }, '小组赛+淘汰赛只支持 singles 类型'],
+    ['explicit null type', { type: null }, '小组赛+淘汰赛只支持 singles 类型'],
     ['explicit mismatched maxPlayers', { maxPlayers: 12 }, '小组赛+淘汰赛 maxPlayers 必须等于 bracketSize'],
+    ['explicit null maxPlayers', { maxPlayers: null }, '小组赛+淘汰赛 maxPlayers 必须等于 bracketSize'],
     ['explicit published scheduleStatus', { scheduleStatus: 'published' }, '小组赛+淘汰赛 scheduleStatus 必须是 none'],
   ])('create rejects %s before persistence normalization', async (_label, overrides, expectedError) => {
     const result = await main({
@@ -77,6 +80,21 @@ describe('group_knockout persistence', () => {
     expect(result.error.errors).toContain(expectedError)
     expect(mockAdd).not.toHaveBeenCalled()
     expect(mockTournaments.has('tournament_invalid_group')).toBe(false)
+  })
+
+  test('legacy add rejects explicit null maxPlayers before persistence normalization', async () => {
+    const result = await main({
+      action: 'add',
+      data: validGroupTournament({
+        _id: 'tournament_legacy_add_null_max',
+        maxPlayers: null,
+      }),
+    })
+
+    expect(result.errMsg).toBe('validation failed')
+    expect(result.errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize')
+    expect(mockAdd).not.toHaveBeenCalled()
+    expect(mockTournaments.has('tournament_legacy_add_null_max')).toBe(false)
   })
 
   test('create defaults missing group knockout fields after validation', async () => {
@@ -149,6 +167,24 @@ describe('group_knockout persistence', () => {
     }))
   })
 
+  test('legacy update rejects explicit null maxPlayers without persisting it', async () => {
+    mockTournaments.set('tournament_legacy_update_null', currentGroupTournament({
+      _id: 'tournament_legacy_update_null',
+      maxPlayers: 16,
+    }))
+
+    const result = await main({
+      action: 'update',
+      id: 'tournament_legacy_update_null',
+      data: validGroupTournament({ maxPlayers: null }),
+    })
+
+    expect(result.errMsg).toBe('validation failed')
+    expect(result.errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize')
+    expect(mockUpdates).toEqual([])
+    expect(mockTournaments.get('tournament_legacy_update_null').maxPlayers).toBe(16)
+  })
+
   test('updateNew rejects bad maxPlayers patch against current bracketSize', async () => {
     mockTournaments.set('tournament_update_new', currentGroupTournament({
       bracketSize: 16,
@@ -164,6 +200,25 @@ describe('group_knockout persistence', () => {
     expect(result.success).toBe(false)
     expect(result.error.errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize')
     expect(mockUpdates).toEqual([])
+  })
+
+  test('updateNew rejects explicit null maxPlayers patch without persisting it', async () => {
+    mockTournaments.set('tournament_update_new_null', currentGroupTournament({
+      _id: 'tournament_update_new_null',
+      bracketSize: 16,
+      maxPlayers: 16,
+    }))
+
+    const result = await main({
+      action: 'updateNew',
+      id: 'tournament_update_new_null',
+      data: { maxPlayers: null },
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error.errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize')
+    expect(mockUpdates).toEqual([])
+    expect(mockTournaments.get('tournament_update_new_null').maxPlayers).toBe(16)
   })
 
   test('updateNew derives maxPlayers when bracketSize changes', async () => {

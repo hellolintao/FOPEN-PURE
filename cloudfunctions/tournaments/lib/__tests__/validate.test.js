@@ -269,6 +269,16 @@ describe('group_knockout validation', () => {
     expect(errors).toContain('小组赛+淘汰赛只支持 singles 类型');
   });
 
+  test.each(['', null])('rejects explicit falsy group knockout type %p', (type) => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type,
+      bracketSize: 16,
+      maxPlayers: 16
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛只支持 singles 类型');
+  });
+
   test('requires bracketSize 12 or 16', () => {
     const errors = validateTournament(validTournament({
       format: 'group_knockout',
@@ -285,6 +295,16 @@ describe('group_knockout validation', () => {
       type: 'singles',
       bracketSize: 12,
       maxPlayers: 16
+    }), { isDraft: false });
+    expect(errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
+  });
+
+  test('rejects explicit null maxPlayers', () => {
+    const errors = validateTournament(validTournament({
+      format: 'group_knockout',
+      type: 'singles',
+      bracketSize: 12,
+      maxPlayers: null
     }), { isDraft: false });
     expect(errors).toContain('小组赛+淘汰赛 maxPlayers 必须等于 bracketSize');
   });
