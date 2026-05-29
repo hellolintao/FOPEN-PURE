@@ -165,12 +165,13 @@ async function loadDetail(options = {}) {
 }
 
 describe('tournament-detail score permissions', () => {
-  test('group knockout draft shows arrange bracket footer action', async () => {
+  test('group knockout draft shows edit and arrange bracket footer actions', async () => {
     const ctx = await loadDetail({
       tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'group_draft', status: 'upcoming', scheduleStatus: 'none' },
       isAdmin: true
     })
-    expect(ctx.data.footerActions.map(a => a.key)).toContain('arrangeGroupBracket')
+    expect(ctx.data.footerActions.map(a => a.key)).toEqual(['share', 'edit', 'arrangeGroupBracket'])
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排签表'])
   })
 
   test('group knockout published shows score action', async () => {

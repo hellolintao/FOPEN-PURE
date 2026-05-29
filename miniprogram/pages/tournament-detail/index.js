@@ -679,6 +679,7 @@ function buildGroupKnockoutDetailPhaseState({
   const needsResettle = !!(isAdmin && phase === 'knockout_published' && tournament.status === 'completed')
 
   if (isAdmin && phase === 'group_draft') {
+    footerActions.push(footerAction('edit', '编辑', 'cta-secondary'))
     footerActions.push(footerAction('arrangeGroupBracket', '安排签表', 'cta-lime flex-1'))
   } else if (isAdmin && phase === 'group_completed') {
     footerActions.push(footerAction('confirmKnockoutSeeds', '确认8强', 'cta-lime flex-1'))
