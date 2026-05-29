@@ -17,6 +17,7 @@ function loadPageDef() {
 async function loadPage({
   tournament = { _id: 't1', format: 'knockout', scheduleStatus: 'published' },
   groupKnockoutBracket = { groups: [], groupBrackets: [], knockoutBrackets: [], standings: {} },
+  matchResults = [],
   registrations = [],
   cloudCalls = [],
   mode,
@@ -33,6 +34,9 @@ async function loadPage({
     }
     if (call.name === 'tournament-brackets' && action === 'getGroupKnockoutBracket') {
       return { result: { success: true, data: groupKnockoutBracket } }
+    }
+    if (call.name === 'match-results' && action === 'listByTournament') {
+      return { result: { success: true, data: { results: matchResults } } }
     }
     if (call.name === 'tournament-registrations' && action === 'list') {
       return { result: { success: true, data: registrations } }
@@ -104,6 +108,114 @@ test('arrange mode saves groups then generates group matches', async () => {
   expect(calls.map(call => call.data.action)).toEqual(['saveGroups', 'generateGroupMatches'])
 })
 
+test('group knockout published bracket page shows bottom score entry', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_published', bracketSize: 12 }
+  })
+
+  expect(ctx.data.showGroupScoreEntry).toBe(true)
+  expect(ctx.data.groupScoreActionLabel).toBe('录入小组赛赛果')
+
+  ctx.onEnterScore()
+  expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/tournament-score/index?tournamentId=t1' })
+})
+
+test('group knockout bracket page merges score results into group matches', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_published', bracketSize: 12 },
+    groupKnockoutBracket: {
+      groups: [],
+      standings: {},
+      groupBrackets: [{
+        _id: 'bracket_A',
+        groupCode: 'A',
+        stage: 'group',
+        matches: [{
+          matchId: 'match_A_1_2',
+          player1: { id: 'p1', name: 'Ella' },
+          player2: { id: 'p2', name: '老板' },
+          resultStatus: 'pending'
+        }]
+      }],
+      knockoutBrackets: []
+    },
+    matchResults: [{
+      _id: 'result_A_1_2',
+      sourceMatchId: 'match_A_1_2',
+      resultStatus: 'confirmed',
+      score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+      winner: { id: 'p1', name: 'Ella' }
+    }]
+  })
+
+  expect(ctx.data.groupKnockout.groupBrackets[0].matches[0]).toMatchObject({
+    resultStatus: 'confirmed',
+    score: { sets: [{ a: 4, b: 2 }], tiebreak: null },
+    __scoreLabel: '4:2',
+    __statusLabel: '已确认',
+    __player1Winner: true,
+    __player2Winner: false
+  })
+})
+
+test('group knockout bracket page decorates knockout tree with score results', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'knockout_published', bracketSize: 12 },
+    groupKnockoutBracket: {
+      groups: [],
+      standings: {},
+      groupBrackets: [],
+      knockoutBrackets: [{
+        _id: 'ko1',
+        round: 1,
+        stage: 'knockout',
+        matches: [{
+          matchId: 'qf1',
+          round: 1,
+          position: 1,
+          player1Source: 'A1',
+          player2Source: 'C2',
+          player1: { id: 'p1', name: 'Ella' },
+          player2: { id: 'p8', name: '林大' },
+          resultStatus: 'pending'
+        }]
+      }]
+    },
+    matchResults: [{
+      _id: 'result_qf1',
+      sourceMatchId: 'qf1',
+      resultStatus: 'confirmed',
+      score: { sets: [{ a: 3, b: 3 }], tiebreak: '7-5' },
+      winner: { id: 'p8', name: '林大' }
+    }]
+  })
+
+  expect(ctx.data.groupKnockout.knockoutBrackets[0].matches[0]).toMatchObject({
+    __scoreLabel: '3:3 (7-5)',
+    __player1Winner: false,
+    __player2Winner: true
+  })
+})
+
+test('group knockout match node opens score page anchored to that match', () => {
+  const def = loadPageDef()
+  const ctx = makeCtx(def, { tournamentId: 't1' })
+
+  ctx.onMatchScoreTap({ currentTarget: { dataset: { matchId: 'match_A_1_2' } } })
+
+  expect(wx.navigateTo).toHaveBeenCalledWith({
+    url: '/pages/tournament-score/index?tournamentId=t1&matchId=match_A_1_2'
+  })
+})
+
+test('group knockout draft bracket page does not show bottom score entry', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_draft', bracketSize: 12 }
+  })
+
+  expect(ctx.data.showGroupScoreEntry).toBe(false)
+})
+
 test('group knockout arrange slots pick registered players and exclude assigned players', async () => {
   const ctx = await loadPage({
     tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_draft', bracketSize: 12 },
@@ -132,8 +244,112 @@ test('group knockout arrange slots pick registered players and exclude assigned 
   expect(ctx.data.arrangePicker.members.map(p => p._id)).toEqual(['p2'])
 })
 
+test('group knockout arrange group picker selects a full group at once', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_draft', bracketSize: 12 },
+    registrations: [
+      { _id: 'reg1', playerId: 'p1', playerName: 'Alpha', registrationStatus: 'confirmed' },
+      { _id: 'reg2', playerId: 'p2', playerName: 'Beta', registrationStatus: 'confirmed' },
+      { _id: 'reg3', playerId: 'p3', playerName: 'Gamma', registrationStatus: 'confirmed' },
+      { _id: 'reg4', playerId: 'p4', playerName: 'Delta', registrationStatus: 'confirmed' }
+    ]
+  })
+
+  ctx.onArrangeGroupTap({ currentTarget: { dataset: { groupIndex: 0 } } })
+  expect(ctx.data.arrangePicker).toMatchObject({
+    show: true,
+    title: 'A组 选择3位球员',
+    maxSelect: 3,
+    selectedIds: []
+  })
+
+  ctx.onArrangePickerSelect({ currentTarget: { dataset: { id: 'p1' } } })
+  ctx.onArrangePickerSelect({ currentTarget: { dataset: { id: 'p2' } } })
+  ctx.onArrangePickerSelect({ currentTarget: { dataset: { id: 'p3' } } })
+  ctx.onArrangePickerSelect({ currentTarget: { dataset: { id: 'p4' } } })
+  expect(ctx.data.arrangePicker.selectedIds).toEqual(['p1', 'p2', 'p3'])
+  expect(wx.showToast).toHaveBeenCalledWith({ title: '本组最多 3 位', icon: 'none' })
+
+  ctx.onArrangePickerConfirm()
+  expect(ctx.data.arrangeGroups[0].slots).toEqual([
+    { slotNo: 1, playerId: 'p1', playerName: 'Alpha', registrationId: 'reg1' },
+    { slotNo: 2, playerId: 'p2', playerName: 'Beta', registrationId: 'reg2' },
+    { slotNo: 3, playerId: 'p3', playerName: 'Gamma', registrationId: 'reg3' }
+  ])
+
+  ctx.onArrangeGroupTap({ currentTarget: { dataset: { groupIndex: 1 } } })
+  expect(ctx.data.arrangePicker.members.map(p => p._id)).toEqual(['p4'])
+})
+
 test('knockout source labels are gated to first round in markup', () => {
   const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
   expect(wxml).toContain('round.round === 1 && match.player1Source')
   expect(wxml).toContain('round.round === 1 && match.player2Source')
+})
+
+test('knockout tab renders bracket tree instead of schedule-style rows', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+  expect(wxml).toContain('class="ko-tree-scroll"')
+  expect(wxml).toContain('class="ko-match-card')
+  expect(wxml).toContain('{{match.__scoreLabel ||')
+})
+
+test('winner names render as lime tags in group and knockout brackets', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')
+
+  expect(wxml).toContain('gk-player {{match.__player1Winner ?')
+  expect(wxml).toContain('ko-side {{match.__player1Winner ?')
+  expect(wxss).toMatch(/\.gk-player\.winner\s*\{[^}]*background:\s*var\(--color-lime\)/)
+  expect(wxss).toMatch(/\.ko-side\.winner \.ko-player\s*\{[^}]*background:\s*var\(--color-lime\)/)
+})
+
+test('group knockout bracket page decorates semantic round labels and progress', async () => {
+  const ctx = await loadPage({
+    tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'knockout_published', bracketSize: 12 },
+    groupKnockoutBracket: {
+      groups: [],
+      standings: {},
+      groupBrackets: [{
+        _id: 'bracket_A',
+        groupCode: 'A',
+        stage: 'group',
+        matches: [
+          { matchId: 'g1', player1: { id: 'a1' }, player2: { id: 'a2' }, resultStatus: 'pending' },
+          { matchId: 'g2', player1: { id: 'a1' }, player2: { id: 'a3' }, resultStatus: 'pending' }
+        ]
+      }],
+      knockoutBrackets: [{
+        _id: 'ko1',
+        round: 1,
+        stage: 'knockout',
+        matches: [
+          { matchId: 'qf1', round: 1, position: 1, player1: { id: 'a1' }, player2: { id: 'c2' }, resultStatus: 'pending' },
+          { matchId: 'qf2', round: 1, position: 2, player1: { id: 'b1' }, player2: { id: 'd2' }, resultStatus: 'pending' }
+        ]
+      }, {
+        _id: 'ko2',
+        round: 2,
+        stage: 'knockout',
+        matches: [{ matchId: 'sf1', round: 2, position: 1, player1: null, player2: null, resultStatus: 'pending' }]
+      }, {
+        _id: 'ko3',
+        round: 3,
+        stage: 'knockout',
+        matches: [{ matchId: 'final', round: 3, position: 1, player1: null, player2: null, resultStatus: 'pending' }]
+      }]
+    },
+    matchResults: [
+      { _id: 'result_g1', sourceMatchId: 'g1', resultStatus: 'confirmed', score: { sets: [{ a: 4, b: 2 }] } },
+      { _id: 'result_qf1', sourceMatchId: 'qf1', resultStatus: 'confirmed', score: { sets: [{ a: 4, b: 1 }] } }
+    ]
+  })
+
+  expect(ctx.data.groupKnockout.groupBrackets[0]).toMatchObject({
+    __title: 'A组',
+    __kicker: 'GROUP A',
+    __scoreProgressText: '1/2 已确认'
+  })
+  expect(ctx.data.groupKnockout.knockoutBrackets.map(round => round.__roundLabel)).toEqual(['8强', '半决赛', '决赛'])
+  expect(ctx.data.groupKnockout.knockoutBrackets[0].__scoreProgressText).toBe('1/2 已确认')
 })

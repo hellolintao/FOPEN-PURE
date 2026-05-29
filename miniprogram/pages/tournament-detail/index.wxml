@@ -231,7 +231,7 @@
         </view>
       </view>
       <view class="result-groups">
-        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="round">
+        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="key">
           <text class="result-group-label">{{group.label}}</text>
           <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
             <view class="result-match-main">

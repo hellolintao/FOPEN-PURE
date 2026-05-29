@@ -47,9 +47,16 @@
               wx:for-index="groupIndex"
               wx:key="groupCode"
               class="gk-group-card">
-              <view class="gk-group-head">
-                <text class="gk-group-title">{{group.groupCode}}组</text>
-                <text class="gk-group-meta">{{group.slots.length}} 位</text>
+              <view class="gk-group-head bracket-book-head">
+                <view class="gk-group-title-block">
+                  <text class="bracket-kicker">GROUP {{group.groupCode}}</text>
+                  <text class="gk-group-title">{{group.groupCode}}组</text>
+                  <text class="gk-group-meta">{{group.slots.length}} 位</text>
+                </view>
+                <view
+                  class="gk-group-select tap-scale"
+                  data-group-index="{{groupIndex}}"
+                  bindtap="onArrangeGroupTap">选择本组</view>
               </view>
               <view
                 wx:for="{{group.slots}}"
@@ -58,8 +65,7 @@
                 wx:key="slotNo"
                 data-group-index="{{groupIndex}}"
                 data-slot-index="{{slotIndex}}"
-                class="gk-slot"
-                bindtap="onArrangeSlotTap">
+                class="gk-slot">
                 <text class="slot-no num">{{slot.slotNo}}</text>
                 <text class="slot-player">{{slot.playerName || '选择选手'}}</text>
                 <text
@@ -89,18 +95,29 @@
               wx:for-item="bracket"
               wx:key="_id"
               class="gk-group-card">
-              <view class="gk-group-head">
-                <text class="gk-group-title">{{bracket.groupCode}}组</text>
-                <text class="gk-group-meta">{{bracket.matches.length}} 场</text>
+              <view class="gk-group-head bracket-book-head">
+                <view class="gk-group-title-block">
+                  <text class="bracket-kicker">{{bracket.__kicker}}</text>
+                  <text class="gk-group-title">{{bracket.__title}}</text>
+                </view>
+                <view class="bracket-progress">
+                  <text class="progress-count num">{{bracket.__scoreProgressText}}</text>
+                  <text class="gk-group-meta">{{bracket.matches.length}} 场</text>
+                </view>
               </view>
               <view
                 wx:for="{{bracket.matches}}"
                 wx:for-item="match"
                 wx:key="matchId"
+                data-match-id="{{match.matchId}}"
+                bindtap="onMatchScoreTap"
                 class="gk-match {{match.bye ? 'is-bye' : ''}}">
-                <text class="gk-player">{{match.__player1Name}}</text>
-                <text class="gk-vs num">VS</text>
-                <text class="gk-player right">{{match.__player2Name}}</text>
+                <text class="gk-player {{match.__player1Winner ? 'winner' : ''}}">{{match.__player1Name}}</text>
+                <view class="gk-score-cell {{match.__scoreLabel ? 'scored' : ''}}">
+                  <text class="{{match.__scoreLabel ? 'gk-score num' : 'gk-vs num'}}">{{match.__scoreLabel || 'VS'}}</text>
+                  <text wx:if="{{match.__scoreLabel}}" class="gk-status-mini">{{match.__statusLabel}}</text>
+                </view>
+                <text class="gk-player right {{match.__player2Winner ? 'winner' : ''}}">{{match.__player2Name}}</text>
               </view>
             </view>
           </block>
@@ -113,33 +130,50 @@
           <text class="bracket-empty-hint">待小组赛结束并确认 8 强</text>
         </view>
 
-        <block wx:else>
-          <view
-            wx:for="{{groupKnockout.knockoutBrackets}}"
-            wx:for-item="round"
-            wx:key="_id"
-            class="gk-round">
-            <view class="round-banner">
-              <text class="tape tape-ghost">ROUND {{fmt.pad2(round.round)}}</text>
-              <text class="round-banner-sub">{{fmt.roundLabel(round.round, groupKnockout.knockoutBrackets[groupKnockout.knockoutBrackets.length-1].round)}}</text>
+        <scroll-view wx:else scroll-x class="ko-tree-scroll" enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="ko-board-head">
+            <view class="ko-board-copy">
+              <text class="bracket-kicker">8 PLAYER BRACKET</text>
+              <text class="ko-board-title">晋级签表</text>
             </view>
+            <text class="ko-board-meta">A1-C2 · B1-D2 · C1-A2 · D1-B2</text>
+          </view>
+          <view class="ko-tree">
             <view
-              wx:for="{{round.matches}}"
-              wx:for-item="match"
-              wx:key="matchId"
-              class="gk-match {{match.bye ? 'is-bye' : ''}}">
-              <view class="gk-player-wrap">
-                <text wx:if="{{round.round === 1 && match.player1Source}}" class="gk-source">{{match.player1Source}}</text>
-                <text class="gk-player">{{match.__player1Name}}</text>
+              wx:for="{{groupKnockout.knockoutBrackets}}"
+              wx:for-item="round"
+              wx:key="_id"
+              class="ko-round-col">
+              <view class="ko-round-head">
+                <text class="tape tape-ghost">{{round.__roundKicker}}</text>
+                <view class="ko-round-title-row">
+                  <text class="ko-round-label">{{round.__roundLabel}}</text>
+                  <text class="ko-round-progress num">{{round.__scoreProgressText}}</text>
+                </view>
               </view>
-              <text class="gk-vs num">VS</text>
-              <view class="gk-player-wrap right">
-                <text wx:if="{{round.round === 1 && match.player2Source}}" class="gk-source">{{match.player2Source}}</text>
-                <text class="gk-player right">{{match.__player2Name}}</text>
+              <view
+                wx:for="{{round.matches}}"
+                wx:for-item="match"
+                wx:key="matchId"
+                data-match-id="{{match.matchId}}"
+                bindtap="onMatchScoreTap"
+                class="ko-match-card {{match.bye ? 'is-bye' : ''}} status-{{match.resultStatus || 'pending'}}">
+                <view class="ko-side {{match.__player1Winner ? 'winner' : ''}}">
+                  <text wx:if="{{round.round === 1 && match.player1Source}}" class="gk-source">{{match.player1Source}}</text>
+                  <text class="ko-player">{{match.__player1Name}}</text>
+                </view>
+                <view class="ko-score-line {{match.__scoreLabel ? 'scored' : ''}}">
+                  <text class="ko-score num">{{match.__scoreLabel || 'VS'}}</text>
+                  <text class="ko-status">{{match.__statusLabel}}</text>
+                </view>
+                <view class="ko-side {{match.__player2Winner ? 'winner' : ''}}">
+                  <text wx:if="{{round.round === 1 && match.player2Source}}" class="gk-source">{{match.player2Source}}</text>
+                  <text class="ko-player">{{match.__player2Name}}</text>
+                </view>
               </view>
             </view>
           </view>
-        </block>
+        </scroll-view>
       </view>
     </block>
 
@@ -248,7 +282,14 @@
         </view>
         <view wx:if="{{arrangePicker.members.length === 0}}" class="arrange-picker-empty">暂无可选球员</view>
       </scroll-view>
-      <view class="arrange-picker-confirm tap-scale" bindtap="onArrangePickerConfirm">确认选择</view>
+      <view class="arrange-picker-confirm tap-scale" bindtap="onArrangePickerConfirm">
+        <text wx:if="{{arrangePicker.maxSelect}}">确认选择 {{arrangePicker.selectedIds.length}} / {{arrangePicker.maxSelect}}</text>
+        <text wx:else>确认选择</text>
+      </view>
     </view>
+  </view>
+
+  <view wx:if="{{showGroupScoreEntry}}" class="bracket-footer">
+    <view class="bracket-footer-cta tap-scale" bindtap="onEnterScore">{{groupScoreActionLabel}}</view>
   </view>
 </view>

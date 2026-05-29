@@ -122,6 +122,10 @@ const mockDb = {
     gt: jest.fn(value => ({ $gt: value })),
     set: jest.fn(value => value),
   },
+  createCollection: jest.fn(async name => {
+    if (!mockState.collections[name]) mockState.collections[name] = new Map()
+    return { errMsg: 'collection.create:ok' }
+  }),
   serverDate: jest.fn(() => 'SERVER_DATE'),
   collection: jest.fn(name => mockCollection(name)),
 }
@@ -364,6 +368,17 @@ test('saveGroups validates and persists four groups for a draft group knockout t
     scheduleStatus: 'none',
     updateTime: 'SERVER_DATE',
   })
+})
+
+test('saveGroups creates tournament_groups collection in a fresh cloud environment', async () => {
+  const tournament = seedTournament()
+  delete mockState.collections.tournament_groups
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result).toEqual({ success: true, data: { count: 4 } })
+  expect(mockDb.createCollection).toHaveBeenCalledWith('tournament_groups')
+  expect(mockState.collections.tournament_groups.size).toBe(4)
 })
 
 test('saveGroups treats a missing phase as group_draft', async () => {
@@ -739,6 +754,33 @@ test('confirmKnockoutSeeds accepts expected group rows before stage and groupCod
     groupKnockoutPhase: 'knockout_published',
     updateTime: 'SERVER_DATE',
   })
+})
+
+test('confirmKnockoutSeeds replaces null snapshot fields with command set', async () => {
+  const tournament = seedTournament({
+    groupKnockoutPhase: 'group_completed',
+    groupRankSnapshot: null,
+    knockoutSeedSnapshot: null,
+  })
+  const groups = buildGroups()
+  seedSavedGroups(tournament._id, groups)
+  seedAllGroupBrackets(tournament._id, groups)
+  seedClearConfirmedGroupResults(tournament._id, groups)
+
+  const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
+
+  expect(result.success).toBe(true)
+  expect(mockDb.command.set).toHaveBeenCalledWith(expect.objectContaining({
+    groups: expect.any(Object),
+    version: 1,
+  }))
+  expect(mockDb.command.set).toHaveBeenCalledWith(expect.objectContaining({
+    seeds: result.data.seeds,
+    version: 1,
+  }))
+  const updatedTournament = mockState.collections.tournaments.get(tournament._id)
+  expect(updatedTournament.groupRankSnapshot.groups.A).toMatchObject({ groupCode: 'A' })
+  expect(updatedTournament.knockoutSeedSnapshot.seeds).toEqual(result.data.seeds)
 })
 
 test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots', async () => {

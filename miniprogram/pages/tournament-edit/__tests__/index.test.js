@@ -530,6 +530,13 @@ describe('tournament-edit registration publishing flow', () => {
     expect(wxml).toContain('bindtap="onNext">下一步排程')
   })
 
+  test('group knockout step 2 footer sends admins back to detail for bracket arranging', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('wx:if="{{form.format !== \'group_knockout\'}}" class="next secondary tap-scale" bindtap="onNext">下一步排程')
+    expect(wxml).toContain('wx:else class="next secondary tap-scale" bindtap="onNext">进入详情')
+  })
+
   test('step 2 next still enters schedule directly', async () => {
     const def = loadPage()
     const ctx = makeCtx(def, {
@@ -542,6 +549,25 @@ describe('tournament-edit registration publishing flow', () => {
     await ctx.commitStep2()
 
     expect(ctx.data.step).toBe(3)
+  })
+
+  test('group knockout step 2 next saves setup and opens detail for bracket arranging', async () => {
+    const def = loadPage()
+    const ctx = makeCtx(def, {
+      tournamentId: 't1',
+      step: 2,
+      form: { ...def.data.form, format: 'group_knockout', type: 'singles', bracketSize: 12, maxPlayers: 12 },
+      selectedPlayers: makePlayers(12),
+      schedulePlanCourts: [{ courtId: 'c1', slots: ['2026-06-30T21:00'] }]
+    })
+    wx.cloud.callFunction.mockResolvedValue({ result: { success: true, data: [] } })
+
+    await expect(ctx.commitStep2()).resolves.toBeUndefined()
+
+    expect(ctx.data.step).toBe(2)
+    expect(ctx.data.matches).toEqual([])
+    expect(ctx.data.queues).toEqual([])
+    expect(wx.redirectTo).toHaveBeenCalledWith({ url: '/pages/tournament-detail/index?id=t1' })
   })
 
   test('hydrateDraft reads registration publishing state from existing tournament', async () => {

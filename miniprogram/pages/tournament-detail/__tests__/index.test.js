@@ -193,6 +193,29 @@ describe('tournament-detail score permissions', () => {
     ]))
   })
 
+  test('group knockout knockout phase uses score label even when registration deadline is still open', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        bracketSize: 12,
+        groupKnockoutPhase: 'knockout_published',
+        status: 'upcoming',
+        startDate: '2026-05-29',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-31T23:59:00+08:00',
+        scheduleStatus: 'none'
+      },
+      isAdmin: true
+    })
+
+    expect(ctx.data.tournamentDisplay.statusLabel).toBe('淘汰赛进行中')
+    expect(ctx.data.scoreActionLabel).toBe('录入赛果')
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '查看签表', '录入赛果'])
+    expect(ctx.data.footerActions.map(a => a.key)).toEqual(['share', 'viewBracket', 'enterScore'])
+  })
+
   test('registration open member sees registration phase and register CTA', async () => {
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: { _id: 'm2' }, isAdmin: false } },
@@ -359,6 +382,36 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.isCreator).toBe(false)
     expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '我要报名', '安排对局'])
     expect(ctx.data.primaryActionLabel).toBe('安排对局')
+  })
+
+  test('registration open non-creator admin does not see self-register CTA when capacity is full', async () => {
+    const registrations = Array.from({ length: 12 }, (_, index) => ({
+      _id: `reg${index + 1}`,
+      playerId: `m${index + 1}`,
+      playerName: `P${index + 1}`,
+      registrationStatus: 'confirmed'
+    }))
+    const { pageDef } = loadPage({
+      app: { globalData: { currentMember: { _id: 'admin2', openid: 'openid-admin2', admin: true }, isAdmin: true } },
+      tournament: {
+        _id: 't1',
+        createdBy: 'admin1',
+        type: 'singles',
+        format: 'knockout',
+        maxPlayers: 12,
+        startDate: '2026-05-25',
+        registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+        registrationDeadlineAt: '2026-05-24T18:00:00+08:00',
+        scheduleStatus: 'none'
+      },
+      registrations
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', now: '2026-05-21T12:00:00+08:00' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享', '编辑', '安排对局'])
+    expect(ctx.data.footerActions.map(a => a.key)).not.toContain('registerSelf')
   })
 
   test('registration open creator admin keeps management actions without self-register CTA', async () => {
@@ -964,6 +1017,94 @@ describe('tournament-detail score permissions', () => {
     expect(row.p2Label).toBe('C / D')
     expect(row.scoreText).toBe('3:3 (7-5)')
     expect(row.pointsText).toBe('')
+  })
+
+  test('groups group knockout result display by group and knockout stages', async () => {
+    const { pageDef } = loadPage({
+      tournament: { _id: 't1', name: 'Group Cup', type: 'singles', format: 'group_knockout', bracketSize: 12, groupKnockoutPhase: 'completed', status: 'completed' },
+      matchResults: [
+        {
+          _id: 'g-a1',
+          stage: 'group',
+          matchKind: 'group',
+          groupCode: 'A',
+          round: 1,
+          position: 1,
+          player1: { id: 'A1', name: 'Ella' },
+          player2: { id: 'A2', name: '老板' },
+          score: { sets: [{ a: 4, b: 2 }] },
+          winner: { id: 'A1', name: 'Ella' },
+          resultStatus: 'confirmed'
+        },
+        {
+          _id: 'g-b1',
+          stage: 'group',
+          matchKind: 'group',
+          groupCode: 'B',
+          round: 1,
+          position: 1,
+          player1: { id: 'B1', name: '抖抖' },
+          player2: { id: 'B2', name: '乐乐' },
+          score: { sets: [{ a: 3, b: 3 }], tiebreak: '7-5' },
+          winner: { id: 'B1', name: '抖抖' },
+          resultStatus: 'confirmed'
+        },
+        {
+          _id: 'qf1',
+          stage: 'knockout',
+          matchKind: 'bracket',
+          round: 1,
+          position: 1,
+          player1: { id: 'A1', name: 'Ella' },
+          player2: { id: 'C2', name: '林大' },
+          score: { sets: [{ a: 4, b: 1 }] },
+          winner: { id: 'A1', name: 'Ella' },
+          resultStatus: 'confirmed'
+        },
+        {
+          _id: 'sf1',
+          stage: 'knockout',
+          matchKind: 'bracket',
+          round: 2,
+          position: 1,
+          player1: { id: 'A1', name: 'Ella' },
+          player2: { id: 'B1', name: '抖抖' },
+          score: { sets: [{ a: 2, b: 4 }] },
+          winner: { id: 'B1', name: '抖抖' },
+          resultStatus: 'confirmed'
+        },
+        {
+          _id: 'final',
+          stage: 'knockout',
+          matchKind: 'bracket',
+          round: 3,
+          position: 1,
+          player1: { id: 'B1', name: '抖抖' },
+          player2: { id: 'D1', name: '杜导' },
+          score: { sets: [{ a: 4, b: 2 }] },
+          winner: { id: 'B1', name: '抖抖' },
+          resultStatus: 'confirmed'
+        }
+      ]
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.resultDisplay.groups.map(group => group.label)).toEqual([
+      '小组赛 A组',
+      '小组赛 B组',
+      '淘汰赛 8强',
+      '淘汰赛 半决赛',
+      '淘汰赛 决赛'
+    ])
+    expect(ctx.data.resultDisplay.groups.map(group => group.key)).toEqual([
+      'group-A',
+      'group-B',
+      'knockout-1',
+      'knockout-2',
+      'knockout-3'
+    ])
   })
 
   test('builds unique fallback match ids when persisted result ids are missing', async () => {

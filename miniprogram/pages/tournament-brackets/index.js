@@ -16,7 +16,9 @@ Page({
     arrangeGroups: [],
     arrangeErrors: [],
     registrationCandidates: [],
-    arrangePicker: emptyArrangePicker()
+    arrangePicker: emptyArrangePicker(),
+    showGroupScoreEntry: false,
+    groupScoreActionLabel: '录入小组赛赛果'
   },
 
   onLoad({ id, mode } = {}) {
@@ -50,7 +52,8 @@ Page({
           freePlays: [],
           decoratedCourts: [],
           scheduleGateBlocked: true,
-          scheduleGateMessage: '赛程发布后才能查看对阵'
+          scheduleGateMessage: '赛程发布后才能查看对阵',
+          showGroupScoreEntry: false
         })
         return
       }
@@ -91,7 +94,8 @@ Page({
         r1Matches,
         laterRounds,
         freePlays,
-        decoratedCourts
+        decoratedCourts,
+        showGroupScoreEntry: false
       })
     } catch (e) {
       console.error('tournament-brackets refresh', e)
@@ -102,7 +106,7 @@ Page({
   },
 
   async refreshGroupKnockout(tournament) {
-    const [res, regRes] = await Promise.all([
+    const [res, regRes, resultRes] = await Promise.all([
       wx.cloud.callFunction({
         name: 'tournament-brackets',
         data: { action: 'getGroupKnockoutBracket', tournamentId: this.data.tournamentId }
@@ -110,14 +114,19 @@ Page({
       wx.cloud.callFunction({
         name: 'tournament-registrations',
         data: { action: 'list', tournamentId: this.data.tournamentId, pageSize: 200 }
-      }).catch(() => ({ result: { success: false, data: [] } }))
+      }).catch(() => ({ result: { success: false, data: [] } })),
+      wx.cloud.callFunction({
+        name: 'match-results',
+        data: { action: 'listByTournament', tournamentId: this.data.tournamentId }
+      }).catch(() => ({ result: { success: false, data: { results: [] } } }))
     ])
     const payload = (res.result && res.result.success && res.result.data) || emptyGroupKnockoutPayload()
     const registrationCandidates = buildRegistrationCandidates(regRes.result && regRes.result.data)
+    const matchResults = extractMatchResults(resultRes)
     this.setData({
       tournament,
       schedulePlan: null,
-      groupKnockout: decorateGroupKnockout(payload),
+      groupKnockout: decorateGroupKnockout(payload, matchResults),
       arrangeGroups: buildArrangeGroups(payload.groups, tournament.bracketSize),
       arrangeErrors: [],
       registrationCandidates,
@@ -127,13 +136,41 @@ Page({
       freePlays: [],
       decoratedCourts: [],
       scheduleGateBlocked: false,
-      scheduleGateMessage: ''
+      scheduleGateMessage: '',
+      showGroupScoreEntry: shouldShowGroupScoreEntry(tournament),
+      groupScoreActionLabel: groupScoreActionLabel(tournament)
     })
   },
 
   onTabTap(e) {
     const key = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.key
     if (key) this.setData({ activeTab: key })
+  },
+
+  onArrangeGroupTap(e) {
+    const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
+    const groupIndex = Number(dataset.groupIndex)
+    const group = this.data.arrangeGroups[groupIndex]
+    if (!group || !Array.isArray(group.slots)) return
+
+    const selectedIds = group.slots.map(slot => slot.playerId).filter(Boolean)
+    const members = buildArrangePickerMembers(
+      this.data.registrationCandidates,
+      this.data.arrangeGroups,
+      selectedIds
+    )
+    const maxSelect = group.slots.length
+    this.setData({
+      arrangePicker: {
+        show: true,
+        title: `${group.groupCode}组 选择${maxSelect}位球员`,
+        members,
+        selectedId: '',
+        selectedIds,
+        maxSelect,
+        ctx: { mode: 'group', groupIndex }
+      }
+    })
   },
 
   onArrangeSlotTap(e) {
@@ -164,6 +201,29 @@ Page({
     const id = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id
     if (!id) return
     const picker = this.data.arrangePicker || emptyArrangePicker()
+    if (picker.maxSelect) {
+      const selectedIds = picker.selectedIds || []
+      const isSelected = selectedIds.includes(id)
+      let nextSelectedIds
+      if (isSelected) {
+        nextSelectedIds = selectedIds.filter(selectedId => selectedId !== id)
+      } else {
+        if (selectedIds.length >= picker.maxSelect) {
+          wx.showToast({ title: `本组最多 ${picker.maxSelect} 位`, icon: 'none' })
+          return
+        }
+        nextSelectedIds = selectedIds.concat(id)
+      }
+      this.setData({
+        arrangePicker: {
+          ...picker,
+          selectedIds: nextSelectedIds,
+          members: markMultiSelected(picker.members, nextSelectedIds)
+        }
+      })
+      return
+    }
+
     this.setData({
       arrangePicker: {
         ...picker,
@@ -176,6 +236,36 @@ Page({
   onArrangePickerConfirm() {
     const picker = this.data.arrangePicker || emptyArrangePicker()
     const ctx = picker.ctx
+    if (ctx && ctx.mode === 'group') {
+      const selectedIds = picker.selectedIds || []
+      const maxSelect = picker.maxSelect || selectedIds.length
+      if (selectedIds.length !== maxSelect) {
+        wx.showToast({ title: `请选择 ${maxSelect} 位球员`, icon: 'none' })
+        return
+      }
+      const picked = selectedIds.map(id => this.data.registrationCandidates.find(candidate => candidate._id === id))
+      if (picked.some(candidate => !candidate)) {
+        wx.showToast({ title: '球员信息缺失', icon: 'none' })
+        return
+      }
+
+      const arrangeGroups = cloneArrangeGroups(this.data.arrangeGroups)
+      const group = arrangeGroups[ctx.groupIndex]
+      if (!group || !Array.isArray(group.slots)) return
+      group.slots = group.slots.map((slot, index) => ({
+        ...slot,
+        playerId: picked[index]._id,
+        playerName: picked[index].name,
+        registrationId: picked[index].registrationId || ''
+      }))
+      this.setData({
+        arrangeGroups,
+        arrangeErrors: [],
+        arrangePicker: emptyArrangePicker()
+      })
+      return
+    }
+
     if (!ctx || !picker.selectedId) {
       wx.showToast({ title: '请选择球员', icon: 'none' })
       return
@@ -263,6 +353,16 @@ Page({
 
   onEditSchedule() {
     wx.navigateTo({ url: `/pages/tournament-edit/index?id=${this.data.tournamentId}&step=3&mode=edit-schedule` })
+  },
+
+  onEnterScore() {
+    wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
+  },
+
+  onMatchScoreTap(e) {
+    const matchId = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.matchId
+    if (!matchId) return
+    wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}&matchId=${matchId}` })
   }
 })
 
@@ -282,12 +382,23 @@ function isScheduleBlocked(tournament) {
   )
 }
 
+function shouldShowGroupScoreEntry(tournament) {
+  if (!tournament || tournament.format !== 'group_knockout') return false
+  return ['group_published', 'knockout_published', 'completed'].includes(tournament.groupKnockoutPhase)
+}
+
+function groupScoreActionLabel(tournament) {
+  if (tournament && tournament.groupKnockoutPhase === 'completed') return '查看赛果'
+  if (tournament && tournament.groupKnockoutPhase === 'knockout_published') return '录入赛果'
+  return '录入小组赛赛果'
+}
+
 function emptyGroupKnockoutPayload() {
   return { groups: [], groupBrackets: [], knockoutBrackets: [], standings: {} }
 }
 
 function emptyArrangePicker() {
-  return { show: false, title: '选择分组球员', members: [], selectedId: '', ctx: null }
+  return { show: false, title: '选择分组球员', members: [], selectedId: '', selectedIds: [], maxSelect: 0, ctx: null }
 }
 
 function buildArrangeGroups(groups, bracketSize) {
@@ -309,29 +420,169 @@ function buildArrangeGroups(groups, bracketSize) {
   })
 }
 
-function decorateGroupKnockout(payload) {
+function decorateGroupKnockout(payload, matchResults) {
   const safe = payload || emptyGroupKnockoutPayload()
+  const resultByMatchId = buildResultByMatchId(matchResults)
   return {
     ...safe,
     groups: safe.groups || [],
     standings: safe.standings || {},
-    groupBrackets: (safe.groupBrackets || []).map(bracket => ({
-      ...bracket,
-      matches: decorateMatches(bracket.matches)
-    })),
-    knockoutBrackets: (safe.knockoutBrackets || []).map(bracket => ({
-      ...bracket,
-      matches: decorateMatches(bracket.matches)
-    }))
+    groupBrackets: (safe.groupBrackets || []).map(bracket => decorateGroupBracket(bracket, resultByMatchId)),
+    knockoutBrackets: (safe.knockoutBrackets || []).map(bracket => decorateKnockoutBracket(bracket, resultByMatchId))
   }
 }
 
-function decorateMatches(matches) {
-  return (matches || []).map(match => ({
+function decorateGroupBracket(bracket, resultByMatchId) {
+  const groupCode = String((bracket && bracket.groupCode) || '').trim().toUpperCase()
+  const matches = decorateMatches(bracket && bracket.matches, resultByMatchId)
+  return {
+    ...bracket,
+    matches,
+    __title: groupCode ? `${groupCode}组` : '小组',
+    __kicker: groupCode ? `GROUP ${groupCode}` : 'GROUP',
+    __scoreProgressText: scoreProgressText(matches)
+  }
+}
+
+function decorateKnockoutBracket(bracket, resultByMatchId) {
+  const round = Number((bracket && bracket.round) || 1)
+  const matches = decorateMatches(bracket && bracket.matches, resultByMatchId)
+  return {
+    ...bracket,
+    matches,
+    __roundLabel: knockoutRoundLabel(round),
+    __roundKicker: `KNOCKOUT ${round < 10 ? '0' : ''}${round}`,
+    __scoreProgressText: scoreProgressText(matches)
+  }
+}
+
+function decorateMatches(matches, resultByMatchId) {
+  return (matches || []).map(match => decorateMatch(match, resultByMatchId))
+}
+
+function scoreProgressText(matches) {
+  const playable = (matches || []).filter(match => match && !match.bye && match.player1 && match.player2)
+  const confirmed = playable.filter(match => match.resultStatus === 'confirmed').length
+  return `${confirmed}/${playable.length} 已确认`
+}
+
+function knockoutRoundLabel(round) {
+  const normalized = Number(round || 1)
+  if (normalized === 1) return '8强'
+  if (normalized === 2) return '半决赛'
+  if (normalized === 3) return '决赛'
+  return `第${normalized}轮`
+}
+
+function decorateMatch(match, resultByMatchId) {
+  const result = (resultByMatchId && resultByMatchId.get(match && match.matchId)) || null
+  const merged = result ? mergeResultIntoMatch(match, result) : { ...match }
+  const winnerId = playerIdOf(merged.winner) || merged.winnerId || merged.winnerPlayerId || ''
+  return {
+    ...merged,
+    __player1Name: playerLabel(merged.player1),
+    __player2Name: playerLabel(merged.player2),
+    __scoreLabel: formatScore(merged.score),
+    __statusLabel: scoreStatusLabel(merged.resultStatus, merged.bye),
+    __player1Winner: isWinnerSide(merged.player1, winnerId),
+    __player2Winner: isWinnerSide(merged.player2, winnerId)
+  }
+}
+
+function mergeResultIntoMatch(match, result) {
+  return {
     ...match,
-    __player1Name: playerLabel(match.player1),
-    __player2Name: playerLabel(match.player2)
-  }))
+    player1: result.player1 || match.player1,
+    player2: result.player2 || match.player2,
+    score: result.score || null,
+    winner: result.winner || match.winner || null,
+    winnerId: result.winnerId || match.winnerId || '',
+    resultStatus: result.resultStatus || match.resultStatus || 'pending',
+    status: result.status || match.status || 'pending',
+    __resultId: result._id || ''
+  }
+}
+
+function extractMatchResults(res) {
+  const data = res && res.result && res.result.data
+  if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.results)) return data.results
+  if (data && Array.isArray(data.items)) return data.items
+  return []
+}
+
+function buildResultByMatchId(results) {
+  const map = new Map()
+  ;(results || []).forEach(result => {
+    if (!isActiveResult(result)) return
+    const key = result.sourceMatchId || result.matchId || ''
+    if (!key) return
+    map.set(key, result)
+  })
+  return map
+}
+
+function isActiveResult(result) {
+  return !!(
+    result &&
+    result.resultStatus !== 'invalidated' &&
+    result.matchKind !== 'history' &&
+    result.matchKind !== 'audit' &&
+    !result.archivedFrom
+  )
+}
+
+function formatScore(score) {
+  if (!score) return ''
+  if (typeof score === 'string') return score
+  const sets = Array.isArray(score.sets) ? score.sets : []
+  const parts = sets
+    .map(set => {
+      const a = Number(set && set.a)
+      const b = Number(set && set.b)
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return ''
+      return `${a}:${b}`
+    })
+    .filter(Boolean)
+  if (score.tiebreak) parts.push(`(${formatTiebreak(score.tiebreak)})`)
+  return parts.join(' ')
+}
+
+function formatTiebreak(tiebreak) {
+  if (typeof tiebreak === 'string') return tiebreak
+  if (!tiebreak || typeof tiebreak !== 'object') return ''
+  const a = Number(tiebreak.a)
+  const b = Number(tiebreak.b)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return ''
+  return `${a}-${b}`
+}
+
+function scoreStatusLabel(status, bye) {
+  if (bye) return '轮空'
+  if (status === 'confirmed') return '已确认'
+  if (status === 'submitted') return '待确认'
+  if (status === 'voided') return '未赛'
+  return '待录入'
+}
+
+function isWinnerSide(player, winnerId) {
+  if (!winnerId) return false
+  return sidePlayerIds(player).includes(String(winnerId))
+}
+
+function sidePlayerIds(player) {
+  if (!player) return []
+  return [
+    player.id,
+    player.playerId,
+    player._id,
+    player.partnerId,
+    player.partnerPlayerId
+  ].filter(Boolean).map(id => String(id))
+}
+
+function playerIdOf(player) {
+  return player && (player.id || player.playerId || player._id || '')
 }
 
 function resultErrors(result, fallback) {
@@ -365,19 +616,25 @@ function isActiveRegistration(registration) {
 }
 
 function buildArrangePickerMembers(candidates, arrangeGroups, currentPlayerId) {
+  const currentIds = new Set(Array.isArray(currentPlayerId) ? currentPlayerId.filter(Boolean) : [currentPlayerId].filter(Boolean))
   const assigned = new Set()
   ;(arrangeGroups || []).forEach(group => {
     ;(group.slots || []).forEach(slot => {
-      if (slot.playerId && slot.playerId !== currentPlayerId) assigned.add(slot.playerId)
+      if (slot.playerId && !currentIds.has(slot.playerId)) assigned.add(slot.playerId)
     })
   })
   return (candidates || [])
     .filter(candidate => !assigned.has(candidate._id))
-    .map(candidate => ({ ...candidate, selected: candidate._id === currentPlayerId }))
+    .map(candidate => ({ ...candidate, selected: currentIds.has(candidate._id) }))
 }
 
 function markSelected(members, selectedId) {
   return (members || []).map(member => ({ ...member, selected: member._id === selectedId }))
+}
+
+function markMultiSelected(members, selectedIds) {
+  const selected = new Set(selectedIds || [])
+  return (members || []).map(member => ({ ...member, selected: selected.has(member._id) }))
 }
 
 function cloneArrangeGroups(groups) {

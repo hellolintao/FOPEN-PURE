@@ -203,6 +203,24 @@ describe('tournament status helpers', () => {
     })
   })
 
+  test('uses group knockout phase instead of registration timing after bracket advances', () => {
+    expect(getTournamentStatusMeta({
+      format: 'group_knockout',
+      type: 'singles',
+      groupKnockoutPhase: 'knockout_published',
+      status: 'upcoming',
+      startDate: '2026-05-29',
+      registrationPublishedAt: '2026-05-20T12:00:00+08:00',
+      registrationDeadlineAt: '2026-05-31T23:59:00+08:00',
+      scheduleStatus: 'none'
+    }, { now: '2026-05-29T12:19:00+08:00' })).toMatchObject({
+      kind: 'ongoing',
+      label: '淘汰赛进行中',
+      hint: '淘汰赛进行中',
+      scoreActionLabel: '录入赛果'
+    })
+  })
+
   test('keeps legacy date-window behavior when new phase fields are absent', () => {
     expect(getTournamentStatusMeta({
       status: 'upcoming',

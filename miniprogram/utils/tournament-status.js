@@ -97,14 +97,53 @@ const PHASE_META = {
   }
 }
 
+const GROUP_KNOCKOUT_PHASE_META = {
+  group_draft: {
+    kind: 'pendingSchedule',
+    label: '待安排签表',
+    hint: '待安排小组签表',
+    scoreActionLabel: '安排签表',
+    canShare: true
+  },
+  group_published: {
+    kind: 'ongoing',
+    label: '小组赛进行中',
+    hint: '小组赛进行中',
+    scoreActionLabel: '录入小组赛赛果',
+    canShare: true
+  },
+  group_completed: {
+    kind: 'pendingSchedule',
+    label: '待确认8强',
+    hint: '小组赛已完成',
+    scoreActionLabel: '确认8强',
+    canShare: true
+  },
+  knockout_published: {
+    kind: 'ongoing',
+    label: '淘汰赛进行中',
+    hint: '淘汰赛进行中',
+    scoreActionLabel: '录入赛果',
+    canShare: true
+  },
+  completed: {
+    kind: 'settled',
+    label: '已结算',
+    hint: '比分已确认并结算',
+    scoreActionLabel: '查看成绩',
+    canShare: true
+  }
+}
+
 function getTournamentStatusMeta(input, options = {}) {
   const tournament = normalizeTournamentInput(input)
   const raw = tournament.status || 'upcoming'
   const phase = derivePhase(tournament, options)
   const phaseMeta = phase !== PHASE.LEGACY ? PHASE_META[phase] : null
   const fixedMeta = fixedLifecycleMeta(raw)
+  const groupKnockoutMeta = fixedMeta ? null : groupKnockoutPhaseMeta(tournament)
   const resultMeta = resultLifecycleMeta(tournament.resultSummary || options.resultSummary)
-  const meta = phaseMeta || fixedMeta || resultMeta || STATUS_META[deriveDateKind(tournament, options.now)] || STATUS_META[raw] || {
+  const meta = groupKnockoutMeta || phaseMeta || fixedMeta || resultMeta || STATUS_META[deriveDateKind(tournament, options.now)] || STATUS_META[raw] || {
     kind: 'unknown',
     label: String(raw || '未知'),
     hint: '状态未识别',
@@ -154,6 +193,12 @@ function fixedLifecycleMeta(raw) {
     return STATUS_META[raw]
   }
   return null
+}
+
+function groupKnockoutPhaseMeta(tournament) {
+  if (!tournament || tournament.format !== 'group_knockout') return null
+  const phase = tournament.groupKnockoutPhase || 'group_draft'
+  return GROUP_KNOCKOUT_PHASE_META[phase] || null
 }
 
 function resultLifecycleMeta(summary) {

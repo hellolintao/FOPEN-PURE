@@ -203,6 +203,11 @@ Page({
     const persisted = await this.persistStep2Inputs()
     if (!persisted) return
 
+    if (this.data.form.format === 'group_knockout') {
+      wx.redirectTo({ url: `/pages/tournament-detail/index?id=${this.data.tournamentId}` })
+      return
+    }
+
     if (this.data.matches.length === 0 || this.regularScheduleNeedsBuild()) {
       this.applyDefaultSchedule()
     }
@@ -730,6 +735,11 @@ Page({
   },
 
   applyDefaultSchedule() {
+    if (this.data.form.format === 'group_knockout') {
+      this.setData({ matches: [], queues: [], freePlays: [] })
+      return
+    }
+
     if (this.data.form.format === 'regular') {
       const { matches, queues, freePlays } = buildRegularSchedule({
         registrations: this.data.selectedPlayers,

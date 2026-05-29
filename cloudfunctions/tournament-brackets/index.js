@@ -621,6 +621,15 @@ async function removeDocsById(targetCollection, docs) {
   return removed
 }
 
+async function ensureCollection(name) {
+  if (!name || !db || typeof db.createCollection !== 'function') return
+  try {
+    await db.createCollection(name)
+  } catch (e) {
+    // Existing collections and permission edge cases should be surfaced by the real read/write.
+  }
+}
+
 function orderGroups(groups) {
   return (groups || []).slice().sort((a, b) => {
     const aIndex = GROUP_CODES.indexOf(a && a.groupCode)
@@ -1175,8 +1184,8 @@ async function handleConfirmKnockoutSeeds({ tournamentId }) {
   }
   await db.collection('tournaments').doc(tournamentId).update({
     data: {
-      groupRankSnapshot,
-      knockoutSeedSnapshot,
+      groupRankSnapshot: _.set(groupRankSnapshot),
+      knockoutSeedSnapshot: _.set(knockoutSeedSnapshot),
       groupKnockoutPhase: 'knockout_published',
       updateTime: now
     }
@@ -1345,6 +1354,7 @@ async function handleSaveGroups({ tournamentId, groups }) {
   }
 
   const now = db.serverDate()
+  await ensureCollection('tournament_groups')
   const groupCollection = db.collection('tournament_groups')
   await removeDocsByQuery(groupCollection, { tournamentId })
 
@@ -1379,6 +1389,7 @@ async function handleGenerateGroupMatches({ tournamentId }) {
     return phaseLocked(phase)
   }
 
+  await ensureCollection('tournament_groups')
   const groupCollection = db.collection('tournament_groups')
   const groupRes = await groupCollection.where({ tournamentId }).get().catch(() => ({ data: [] }))
   const groups = orderGroups(groupRes.data || [])

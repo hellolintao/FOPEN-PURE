@@ -167,16 +167,19 @@
   </view>
   <view wx:elif="{{step === 2 && !registrationPublished && !scheduleStarted}}" class="footer footer-three">
     <view class="back tap-scale" bindtap="onBack">上一步</view>
-    <view class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:if="{{form.format !== 'group_knockout'}}" class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:else class="next secondary tap-scale" bindtap="onNext">进入详情</view>
     <view class="next tap-scale" bindtap="onPublishRegistration">发布并分享到微信</view>
   </view>
   <view wx:elif="{{step === 2 && !registrationPublished && scheduleStarted}}" class="footer">
     <view class="back tap-scale" bindtap="onBack">上一步</view>
-    <view class="next tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:if="{{form.format !== 'group_knockout'}}" class="next tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:else class="next tap-scale" bindtap="onNext">进入详情</view>
   </view>
   <view wx:elif="{{step === 2 && registrationPublished}}" class="footer footer-three">
     <view class="back tap-scale" bindtap="onSaveStep2Changes">保存修改</view>
-    <view class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:if="{{form.format !== 'group_knockout'}}" class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
+    <view wx:else class="next secondary tap-scale" bindtap="onNext">进入详情</view>
     <button open-type="share" class="next tap-scale">分享到微信</button>
   </view>
   <view wx:elif="{{step === 3}}" class="footer">

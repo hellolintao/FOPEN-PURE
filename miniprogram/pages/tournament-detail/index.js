@@ -9,6 +9,7 @@ const {
   derivePhase,
   getWithdrawDeadline,
   canWithdraw,
+  canRegister,
   isActiveRegistration
 } = require('../../utils/tournament-phase')
 const { getNextRegistrationShareImage } = require('../../utils/share-images')
@@ -615,6 +616,11 @@ function buildDetailPhaseState({
   }
 
   const selfRegistrationSupported = !(tournament.format === 'knockout' && tournament.type === 'doubles')
+  const registrationAvailability = canRegister(tournament, {
+    now,
+    confirmedCount: activeRegs.length
+  })
+  const canSelfRegister = selfRegistrationSupported && registrationAvailability.ok
   const canMemberWithdraw = !!(
     isParticipant &&
     canWithdraw(tournament, { now }) &&
@@ -634,6 +640,7 @@ function buildDetailPhaseState({
     isParticipant,
     canMemberWithdraw,
     selfRegistrationSupported,
+    canSelfRegister,
     canOpenScore,
     scoreActionLabel
   })
@@ -750,6 +757,7 @@ function buildFooterActions({
   isParticipant,
   canMemberWithdraw,
   selfRegistrationSupported,
+  canSelfRegister,
   canOpenScore,
   scoreActionLabel
 }) {
@@ -779,7 +787,7 @@ function buildFooterActions({
       if (!isCreator) {
         if (isParticipant && canMemberWithdraw) {
           actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
-        } else if (!isParticipant && selfRegistrationSupported) {
+        } else if (!isParticipant && canSelfRegister) {
           actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
         }
       }
@@ -793,7 +801,7 @@ function buildFooterActions({
   if (phase === PHASE.REGISTRATION_OPEN) {
     if (isParticipant && canMemberWithdraw) {
       actions.push(footerAction('withdrawSelf', '退出报名', 'cta-lime flex-1'))
-    } else if (!isParticipant && selfRegistrationSupported) {
+    } else if (!isParticipant && canSelfRegister) {
       actions.push(footerAction('registerSelf', '我要报名', 'cta-lime flex-1'))
     }
     return actions
@@ -1083,6 +1091,20 @@ function buildResultDisplay(rows, tournament, registrations) {
     if ((a.position || 0) !== (b.position || 0)) return (a.position || 0) - (b.position || 0)
     return (a.queueOrder || 0) - (b.queueOrder || 0)
   })
+
+  const groups = tournament && tournament.format === 'group_knockout'
+    ? buildGroupKnockoutResultGroups(sorted)
+    : buildRoundResultGroups(sorted)
+
+  return {
+    visible: true,
+    completedText: `已完成 ${playable.length} / ${playable.length} 场`,
+    standings: buildResultStandings(sorted, tournament || {}, registrations || []),
+    groups
+  }
+}
+
+function buildRoundResultGroups(sorted) {
   const groupsMap = new Map()
   sorted.forEach(row => {
     const round = row.round || 1
@@ -1090,16 +1112,101 @@ function buildResultDisplay(rows, tournament, registrations) {
     groupsMap.get(round).push(buildResultMatchRow(row))
   })
 
-  return {
-    visible: true,
-    completedText: `已完成 ${playable.length} / ${playable.length} 场`,
-    standings: buildResultStandings(sorted, tournament || {}, registrations || []),
-    groups: [...groupsMap.entries()].map(([round, matches]) => ({
-      round,
-      label: `ROUND ${round < 10 ? '0' : ''}${round}`,
-      matches
-    }))
+  return [...groupsMap.entries()].map(([round, matches]) => ({
+    key: `round-${round}`,
+    round,
+    label: `ROUND ${round < 10 ? '0' : ''}${round}`,
+    matches
+  }))
+}
+
+function buildGroupKnockoutResultGroups(sorted) {
+  const groupRows = new Map()
+  const knockoutRows = new Map()
+  const fallbackRows = []
+
+  sorted.forEach(row => {
+    if (isGroupStageResult(row)) {
+      const groupCode = normalizeGroupCode(row.groupCode)
+      if (!groupRows.has(groupCode)) groupRows.set(groupCode, [])
+      groupRows.get(groupCode).push(row)
+      return
+    }
+
+    if (isKnockoutStageResult(row)) {
+      const round = Number(row.round || 1)
+      if (!knockoutRows.has(round)) knockoutRows.set(round, [])
+      knockoutRows.get(round).push(row)
+      return
+    }
+
+    fallbackRows.push(row)
+  })
+
+  const groups = []
+  ;['A', 'B', 'C', 'D'].forEach(groupCode => {
+    if (!groupRows.has(groupCode)) return
+    groups.push({
+      key: `group-${groupCode}`,
+      round: `group-${groupCode}`,
+      label: `小组赛 ${groupCode}组`,
+      matches: groupRows.get(groupCode).map(buildResultMatchRow)
+    })
+  })
+
+  ;[...groupRows.keys()]
+    .filter(groupCode => !['A', 'B', 'C', 'D'].includes(groupCode))
+    .sort()
+    .forEach(groupCode => {
+      groups.push({
+        key: `group-${groupCode}`,
+        round: `group-${groupCode}`,
+        label: `小组赛 ${groupCode}组`,
+        matches: groupRows.get(groupCode).map(buildResultMatchRow)
+      })
+    })
+
+  ;[...knockoutRows.keys()].sort((a, b) => a - b).forEach(round => {
+    groups.push({
+      key: `knockout-${round}`,
+      round: `knockout-${round}`,
+      label: `淘汰赛 ${groupKnockoutRoundLabel(round)}`,
+      matches: knockoutRows.get(round).map(buildResultMatchRow)
+    })
+  })
+
+  if (fallbackRows.length) {
+    groups.push(...buildRoundResultGroups(fallbackRows))
   }
+
+  return groups
+}
+
+function isGroupStageResult(row) {
+  return !!(
+    row &&
+    (row.stage === 'group' || row.matchKind === 'group' || row.groupCode)
+  )
+}
+
+function isKnockoutStageResult(row) {
+  return !!(
+    row &&
+    (row.stage === 'knockout' || row.matchKind === 'bracket' || row.matchKind === 'knockout')
+  )
+}
+
+function normalizeGroupCode(groupCode) {
+  const value = String(groupCode || '').trim().toUpperCase()
+  return value || '其他'
+}
+
+function groupKnockoutRoundLabel(round) {
+  const normalized = Number(round || 1)
+  if (normalized === 1) return '8强'
+  if (normalized === 2) return '半决赛'
+  if (normalized === 3) return '决赛'
+  return `第${normalized}轮`
 }
 
 function buildResultMatchRow(row) {
