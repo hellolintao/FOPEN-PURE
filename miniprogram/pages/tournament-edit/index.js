@@ -1,6 +1,7 @@
 const app = getApp()
 const { generateFirstRound } = require('../../utils/bracket-generator')
 const { assignToCourts, buildRegularSchedule } = require('../../utils/scheduler-mirror')
+const { getNextRegistrationShareImage } = require('../../utils/share-images')
 
 const defaultStartDate = todayISODate()
 const defaultRegistrationDeadlineAt = defaultRegistrationDeadlineFromStartDate(defaultStartDate)
@@ -342,21 +343,23 @@ Page({
 
   onShareAppMessage() {
     if (!this.data.registrationPublished || !this.data.sharePath) {
-      return { title: '赛事报名', path: '/pages/tournament-detail/index' }
+      return { title: '赛事报名', path: '/pages/tournament-detail/index', imageUrl: getNextRegistrationShareImage() }
     }
     return {
       title: this.data.form.name || '赛事报名',
-      path: this.data.sharePath
+      path: this.data.sharePath,
+      imageUrl: getNextRegistrationShareImage()
     }
   },
 
   onShareTimeline() {
     if (!this.data.registrationPublished || !this.data.tournamentId) {
-      return { title: '赛事报名', query: '' }
+      return { title: '赛事报名', query: '', imageUrl: getNextRegistrationShareImage() }
     }
     return {
       title: this.data.form.name || '赛事报名',
-      query: `id=${encodeURIComponent(this.data.tournamentId)}&entry=register`
+      query: `id=${encodeURIComponent(this.data.tournamentId)}&entry=register`,
+      imageUrl: getNextRegistrationShareImage()
     }
   },
 

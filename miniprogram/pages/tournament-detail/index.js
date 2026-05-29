@@ -11,6 +11,7 @@ const {
   canWithdraw,
   isActiveRegistration
 } = require('../../utils/tournament-phase')
+const { getNextRegistrationShareImage } = require('../../utils/share-images')
 
 Page({
   data: {
@@ -536,7 +537,8 @@ Page({
     const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
-      path: tournamentId ? `/pages/tournament-detail/index?id=${encodeURIComponent(tournamentId)}${entry}` : '/pages/match/index'
+      path: tournamentId ? `/pages/tournament-detail/index?id=${encodeURIComponent(tournamentId)}${entry}` : '/pages/match/index',
+      imageUrl: getNextRegistrationShareImage()
     }
   },
 
@@ -547,7 +549,8 @@ Page({
     const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
-      query: tournamentId ? `id=${encodeURIComponent(tournamentId)}${entry}` : ''
+      query: tournamentId ? `id=${encodeURIComponent(tournamentId)}${entry}` : '',
+      imageUrl: getNextRegistrationShareImage()
     }
   },
 

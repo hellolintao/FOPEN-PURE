@@ -455,7 +455,8 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(ctx.onShareAppMessage()).toEqual({
       title: '5月周末赛',
-      path: '/pages/tournament-detail/index?id=t1&entry=register'
+      path: '/pages/tournament-detail/index?id=t1&entry=register',
+      imageUrl: '/images/share-registration/registration-share-01.jpg'
     })
   })
 
@@ -470,7 +471,8 @@ describe('tournament-edit registration publishing flow', () => {
 
     expect(ctx.onShareTimeline()).toEqual({
       title: '5月周末赛',
-      query: 'id=t%201&entry=register'
+      query: 'id=t%201&entry=register',
+      imageUrl: '/images/share-registration/registration-share-01.jpg'
     })
   })
 
