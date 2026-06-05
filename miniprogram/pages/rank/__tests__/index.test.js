@@ -46,9 +46,25 @@ test('loadRank maps decimal win rate to percent label', async () => {
   expect(callFunction).toHaveBeenCalledWith({
     name: 'points-engine',
     data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+    config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75, winRatePct: '75%' }])
   expect(ctx.data.loading).toBe(false)
+})
+
+test('loadRank uses an extended cloud timeout for cold rank cache rebuilds', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({ result: { data: { rankList: [] } } })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(callFunction).toHaveBeenCalledWith({
+    name: 'points-engine',
+    data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+    config: { timeout: 20000 },
+  })
 })
 
 test('loadRank caches populated rank rows for 2 hours', async () => {
@@ -81,6 +97,56 @@ test('loadHero caches weekly star data for 2 hours', async () => {
   const cacheEntry = wx.setStorageSync.mock.calls[0][1]
   expect(cacheEntry.expiresAt).toBe(2000 + 2 * 60 * 60 * 1000)
   nowSpy.mockRestore()
+})
+
+test('loadHero renders cached weekly star but still refreshes from cloud', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  wx.getStorageSync.mockReturnValue({
+    value: {
+      starHero: { mode: 'current', star: { memberId: 'OLD' }, subtitle: '旧缓存' }
+    },
+    updatedAt: 1000,
+    expiresAt: Date.now() + 60 * 1000
+  })
+  callFunction.mockResolvedValue({
+    result: { data: { mode: 'empty', weekStart: '2026-05-25', weekEnd: '2026-05-31', star: null, subtitle: null } }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadHero()
+
+  expect(callFunction).toHaveBeenCalledWith({
+    name: 'weekly-star',
+    data: { action: 'current', seasonId: 'season_2026', type: 'singles' }
+  })
+  expect(ctx.data.starHero).toEqual({
+    mode: 'empty',
+    weekStart: '2026-05-25',
+    weekEnd: '2026-05-31',
+    star: null,
+    subtitle: null
+  })
+})
+
+test('weekly star hero copy uses previous-week language', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('上周之星')
+  expect(wxml).not.toContain('等本周首场')
+})
+
+test('rank page passes the June-only Pride skin flag to weekly star and personal highlight', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain("{{isPrideMonthSkinActive ? 'theme-pride-month' : ''}}")
+  expect(wxml).toContain('star-pride-waves pride-s-curve')
+  expect(wxml).toContain('pride-wave-green')
+  expect(wxml).toContain('pride-highlight="{{isPrideMonthSkinActive && currentMember && item._id === currentMember._id}}"')
 })
 
 test('loadRank shows 0% for played matches and dash only for no matches', async () => {
@@ -154,6 +220,7 @@ test('loadRank renders fresh 2-hour page cache before refreshing cloud profile d
   expect(callFunction).toHaveBeenCalledWith({
     name: 'points-engine',
     data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+    config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([
     { _id: 'A', name: '新头像用户', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
@@ -184,6 +251,7 @@ test('loadRank ignores fresh empty page cache and fetches cloud data', async () 
   expect(callFunction).toHaveBeenCalledWith({
     name: 'points-engine',
     data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
+    config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([
     { _id: 'A', winCount: 2, lossCount: 0, winRate: 1, winRatePct: '100%' }

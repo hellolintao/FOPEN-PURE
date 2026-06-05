@@ -6,17 +6,37 @@ const REGISTRATION_SHARE_IMAGES = [
   '/images/share-registration/registration-share-05.jpg'
 ]
 
+const JUNE_2026_REGISTRATION_SHARE_IMAGES = [
+  '/images/share-registration/june-2026-registration-share-01.jpg',
+  '/images/share-registration/june-2026-registration-share-02.jpg',
+  '/images/share-registration/june-2026-registration-share-03.jpg',
+  '/images/share-registration/june-2026-registration-share-04.jpg'
+]
+
 const REGISTRATION_SHARE_IMAGE_INDEX_KEY = 'fopen.registrationShareImageIndex'
 
 let fallbackRegistrationShareImageIndex = 0
 
-function getNextRegistrationShareImage() {
-  const count = REGISTRATION_SHARE_IMAGES.length
+function getNextRegistrationShareImage(options = {}) {
+  const images = getRegistrationShareImageSet(options)
+  const count = images.length
   const index = readRegistrationShareImageIndex()
   const normalizedIndex = normalizeIndex(index, count)
   const nextIndex = normalizeIndex(normalizedIndex + 1, count)
   writeRegistrationShareImageIndex(nextIndex)
-  return REGISTRATION_SHARE_IMAGES[normalizedIndex]
+  return images[normalizedIndex]
+}
+
+function getRegistrationShareImageSet(options = {}) {
+  const now = options.now || new Date()
+  if (isJune2026(now)) return JUNE_2026_REGISTRATION_SHARE_IMAGES
+  return REGISTRATION_SHARE_IMAGES
+}
+
+function isJune2026(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  return date.getFullYear() === 2026 && date.getMonth() === 5
 }
 
 function readRegistrationShareImageIndex() {
@@ -49,5 +69,7 @@ function normalizeIndex(index, count) {
 
 module.exports = {
   REGISTRATION_SHARE_IMAGES,
+  JUNE_2026_REGISTRATION_SHARE_IMAGES,
+  getRegistrationShareImageSet,
   getNextRegistrationShareImage
 }

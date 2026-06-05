@@ -6,6 +6,13 @@ const EXPECTED_REGISTRATION_SHARE_IMAGES = [
   '/images/share-registration/registration-share-05.jpg'
 ]
 
+const EXPECTED_JUNE_2026_SHARE_IMAGES = [
+  '/images/share-registration/june-2026-registration-share-01.jpg',
+  '/images/share-registration/june-2026-registration-share-02.jpg',
+  '/images/share-registration/june-2026-registration-share-03.jpg',
+  '/images/share-registration/june-2026-registration-share-04.jpg'
+]
+
 describe('registration share images', () => {
   beforeEach(() => {
     jest.resetModules()
@@ -25,10 +32,24 @@ describe('registration share images', () => {
     } = require('../share-images')
 
     expect(REGISTRATION_SHARE_IMAGES).toEqual(EXPECTED_REGISTRATION_SHARE_IMAGES)
-    expect(Array.from({ length: 6 }, () => getNextRegistrationShareImage())).toEqual([
+    expect(Array.from({ length: 6 }, () => getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') }))).toEqual([
       ...EXPECTED_REGISTRATION_SHARE_IMAGES,
       EXPECTED_REGISTRATION_SHARE_IMAGES[0]
     ])
+  })
+
+  test('uses the temporary June 2026 share image set only during June 2026', () => {
+    const {
+      JUNE_2026_REGISTRATION_SHARE_IMAGES,
+      getRegistrationShareImageSet,
+      getNextRegistrationShareImage
+    } = require('../share-images')
+
+    expect(JUNE_2026_REGISTRATION_SHARE_IMAGES).toEqual(EXPECTED_JUNE_2026_SHARE_IMAGES)
+    expect(getRegistrationShareImageSet({ now: new Date('2026-06-01T00:00:00+08:00') })).toEqual(EXPECTED_JUNE_2026_SHARE_IMAGES)
+    expect(getRegistrationShareImageSet({ now: new Date('2026-06-30T23:59:59+08:00') })).toEqual(EXPECTED_JUNE_2026_SHARE_IMAGES)
+    expect(getRegistrationShareImageSet({ now: new Date('2026-07-01T00:00:00+08:00') })).toEqual(EXPECTED_REGISTRATION_SHARE_IMAGES)
+    expect(getNextRegistrationShareImage({ now: new Date('2026-06-05T15:30:00+08:00') })).toBe(EXPECTED_JUNE_2026_SHARE_IMAGES[0])
   })
 
   test('falls back to in-memory rotation when storage is unavailable', () => {
@@ -42,7 +63,7 @@ describe('registration share images', () => {
     }
     const { getNextRegistrationShareImage } = require('../share-images')
 
-    expect(getNextRegistrationShareImage()).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[0])
-    expect(getNextRegistrationShareImage()).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[1])
+    expect(getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[0])
+    expect(getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[1])
   })
 })

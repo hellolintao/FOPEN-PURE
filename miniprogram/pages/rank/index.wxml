@@ -1,4 +1,4 @@
-<view class="rank-page">
+<view class="rank-page {{isPrideMonthSkinActive ? 'theme-pride-month' : ''}}">
 
   <!-- HEAD -->
   <view class="page-head anim-stage-rise">
@@ -23,9 +23,16 @@
 
   <!-- WEEKLY STAR HERO -->
   <view wx:if="{{starHero && starHero.mode !== 'empty'}}" class="star-card anim-stage-rise anim-delay-2" bindtap="onStarTap">
+    <view wx:if="{{isPrideMonthSkinActive}}" class="star-pride-waves pride-s-curve">
+      <view class="pride-wave pride-wave-red"></view>
+      <view class="pride-wave pride-wave-orange"></view>
+      <view class="pride-wave pride-wave-yellow"></view>
+      <view class="pride-wave pride-wave-green"></view>
+      <view class="pride-wave pride-wave-blue"></view>
+      <view class="pride-wave pride-wave-violet"></view>
+    </view>
     <view class="star-tape-wrap">
-      <text wx:if="{{starHero.mode === 'current'}}" class="tape tape-lime">★ WEEKLY STAR</text>
-      <text wx:else class="tape">PREV WEEK · 上周冠军</text>
+      <text class="tape tape-lime">★ WEEKLY STAR · 上周之星</text>
       <text class="star-range">{{starHero.weekStart}} – {{starHero.weekEnd}}</text>
     </view>
     <view class="star-body">
@@ -61,6 +68,7 @@
       trend-delta="{{item.trendDelta}}"
       player-id="{{item._id}}"
       highlight="{{currentMember && item._id === currentMember._id}}"
+      pride-highlight="{{isPrideMonthSkinActive && currentMember && item._id === currentMember._id}}"
       bind:tap="onPlayerTap"
     />
   </view>

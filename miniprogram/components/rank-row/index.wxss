@@ -28,6 +28,28 @@
   background: transparent;
 }
 
+.rank-row.highlight-pride {
+  margin: 8rpx 0;
+  padding-top: 18rpx;
+  padding-bottom: 18rpx;
+  border-left: 0;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    100deg,
+    #F51F3E 0%,
+    #FF8126 19%,
+    #F6D84A 39%,
+    #52B95E 58%,
+    #2D82D9 76%,
+    #8F20CE 100%
+  );
+  color: #FFF8F0;
+}
+
+.rank-row.highlight-pride::before {
+  background: transparent;
+}
+
 .rank-num-cell {
   display: flex;
   align-items: baseline;
@@ -107,4 +129,18 @@
   color: var(--color-muted-2);
   font-size: 26rpx;
   font-weight: 600;
+}
+
+.rank-row.highlight-pride .rank-num,
+.rank-row.highlight-pride .name,
+.rank-row.highlight-pride .winrate,
+.rank-row.highlight-pride .pts,
+.rank-row.highlight-pride .trend-arrow,
+.rank-row.highlight-pride .trend-flat {
+  color: #FFF8F0;
+}
+
+.rank-row.highlight-pride .avatar {
+  border: 4rpx solid #FFF8F0;
+  box-shadow: 0 0 0 3rpx var(--color-lime);
 }

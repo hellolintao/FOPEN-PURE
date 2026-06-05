@@ -1,4 +1,4 @@
-<view class="rank-row {{highlight ? 'highlight' : ''}}" bindtap="onTap">
+<view class="rank-row {{highlight ? 'highlight' : ''}} {{prideHighlight ? 'highlight-pride' : ''}}" bindtap="onTap">
   <view class="rank-num-cell">
     <text class="rank-num num">{{rank < 10 ? '0' + rank : rank}}</text>
   </view>

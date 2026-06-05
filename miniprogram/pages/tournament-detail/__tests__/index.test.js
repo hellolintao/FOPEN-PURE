@@ -1323,36 +1323,46 @@ describe('tournament-detail score permissions', () => {
   })
 
   test('shares tournament detail to WeChat with status in title', () => {
-    const { pageDef } = loadPage()
-    const ctx = makeCtx(pageDef, {
-      tournamentId: 't1',
-      tournament: { _id: 't1', name: '五月排位赛', status: 'ongoing' }
-    })
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-05T15:30:00+08:00'))
+    try {
+      const { pageDef } = loadPage()
+      const ctx = makeCtx(pageDef, {
+        tournamentId: 't1',
+        tournament: { _id: 't1', name: '五月排位赛', status: 'ongoing' }
+      })
 
-    expect(ctx.onShareAppMessage()).toEqual({
-      title: '五月排位赛 · 进行中',
-      path: '/pages/tournament-detail/index?id=t1',
-      imageUrl: '/images/share-registration/registration-share-01.jpg'
-    })
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '五月排位赛 · 进行中',
+        path: '/pages/tournament-detail/index?id=t1',
+        imageUrl: '/images/share-registration/june-2026-registration-share-01.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('shares registration-open detail with registration entry path', () => {
-    const { pageDef } = loadPage()
-    const ctx = makeCtx(pageDef, {
-      tournamentId: 't1',
-      showRegistrationModule: true,
-      tournament: { _id: 't1', name: '五月排位赛', status: 'upcoming' }
-    })
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-05T15:30:00+08:00'))
+    try {
+      const { pageDef } = loadPage()
+      const ctx = makeCtx(pageDef, {
+        tournamentId: 't1',
+        showRegistrationModule: true,
+        tournament: { _id: 't1', name: '五月排位赛', status: 'upcoming' }
+      })
 
-    expect(ctx.onShareAppMessage()).toEqual({
-      title: '五月排位赛 · 待开始',
-      path: '/pages/tournament-detail/index?id=t1&entry=register',
-      imageUrl: '/images/share-registration/registration-share-01.jpg'
-    })
-    expect(ctx.onShareTimeline()).toEqual({
-      title: '五月排位赛 · 待开始',
-      query: 'id=t1&entry=register',
-      imageUrl: '/images/share-registration/registration-share-02.jpg'
-    })
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '五月排位赛 · 待开始',
+        path: '/pages/tournament-detail/index?id=t1&entry=register',
+        imageUrl: '/images/share-registration/june-2026-registration-share-01.jpg'
+      })
+      expect(ctx.onShareTimeline()).toEqual({
+        title: '五月排位赛 · 待开始',
+        query: 'id=t1&entry=register',
+        imageUrl: '/images/share-registration/june-2026-registration-share-02.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })

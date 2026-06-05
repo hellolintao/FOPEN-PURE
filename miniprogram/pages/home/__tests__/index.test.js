@@ -88,4 +88,37 @@ describe('home stats', () => {
     expect(callFunction).not.toHaveBeenCalled()
     expect(ctx.data.myStats.singles.totalPoints).toBe(30)
   })
+
+  test('home page exposes a June-only Pride skin class and label', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+    expect(wxml).toContain("{{isPrideMonthSkinActive ? 'theme-pride-month' : ''}}")
+    expect(wxml).toContain('hero-pride-waves pride-s-curve')
+    expect(wxml).toContain('pride-wave-orange')
+    expect(wxml).toContain('hero-bg-num-blur')
+    expect(wxml).toContain('PRIDE MONTH')
+  })
+
+  test('home Pride wave uses violet as a compact trailing band', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxss = fs.readFileSync(path.join(__dirname, '..', 'index.wxss'), 'utf8')
+
+    expect(wxss).toContain('.hero-pride-waves .pride-wave-violet')
+    expect(wxss).toContain('top: 342rpx;')
+    expect(wxss).toContain('height: 104rpx;')
+  })
+
+  test('home Pride wave gives red orange and yellow more visual weight', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxss = fs.readFileSync(path.join(__dirname, '..', 'index.wxss'), 'utf8')
+
+    expect(wxss).toContain('.hero-pride-waves .pride-wave-red')
+    expect(wxss).toContain('height: 154rpx;')
+    expect(wxss).toContain('height: 168rpx;')
+    expect(wxss).toContain('height: 164rpx;')
+  })
 })

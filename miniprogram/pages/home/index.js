@@ -1,6 +1,7 @@
 const { callFunction } = require('../../utils/cloud');
 const { syncTabBar } = require('../../utils/tab-bar');
 const { getCacheEntry, isFresh, setCache } = require('../../utils/page-cache');
+const { isPrideMonthSkinActive } = require('../../utils/seasonal-theme');
 
 const HOME_STATS_CACHE_TTL_MS = 2 * 60 * 1000;
 
@@ -17,12 +18,21 @@ Page({
     myStats: defaultHomeStats(),
     isAdmin: false,
     loadingStats: false,
-    seasonYear: new Date().getFullYear()
+    seasonYear: new Date().getFullYear(),
+    isPrideMonthSkinActive: false
   },
 
   async onShow() {
     syncTabBar(this, '/pages/home/index');
+    this.refreshSeasonalTheme();
     await this.loadHome();
+  },
+
+  refreshSeasonalTheme(now = new Date()) {
+    const active = isPrideMonthSkinActive(now);
+    if (this.data.isPrideMonthSkinActive !== active) {
+      this.setData({ isPrideMonthSkinActive: active });
+    }
   },
 
   async loadHome() {

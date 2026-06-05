@@ -1,9 +1,11 @@
 const { callFunction } = require('../../utils/cloud')
 const { syncTabBar } = require('../../utils/tab-bar')
-const { getCacheEntry, isFresh, removeCache, setCache } = require('../../utils/page-cache')
+const { getCacheEntry, removeCache, setCache } = require('../../utils/page-cache')
+const { isPrideMonthSkinActive } = require('../../utils/seasonal-theme')
 
 const RANK_CACHE_VERSION = 'v3'
 const RANK_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000
+const RANK_CLOUD_TIMEOUT_MS = 20 * 1000
 
 Page({
   data: {
@@ -13,6 +15,7 @@ Page({
     starHero: null,
     loading: false,
     seasonYear: new Date().getFullYear(),
+    isPrideMonthSkinActive: false,
     rankTabOptions: [
       { label: 'SINGLES', value: 'singles' },
       { label: 'DOUBLES', value: 'doubles' }
@@ -21,8 +24,16 @@ Page({
 
   async onShow() {
     syncTabBar(this, '/pages/rank/index')
+    this.refreshSeasonalTheme()
     this.setData({ currentMember: getApp().globalData.currentMember })
     await Promise.all([this.loadRank(), this.loadHero()])
+  },
+
+  refreshSeasonalTheme(now = new Date()) {
+    const active = isPrideMonthSkinActive(now)
+    if (this.data.isPrideMonthSkinActive !== active) {
+      this.setData({ isPrideMonthSkinActive: active })
+    }
   },
 
   async loadRank() {
@@ -45,7 +56,8 @@ Page({
           action: 'rankList',
           type: this.data.activeTab,
           currentSeasonId: this._getCurrentSeasonId()
-        }
+        },
+        config: { timeout: RANK_CLOUD_TIMEOUT_MS }
       })
       if (res && res.result && res.result.success === false) {
         throw new Error((res.result.error && res.result.error.message) || 'rankList failed')
@@ -63,7 +75,12 @@ Page({
         removeCache(cacheKey)
       }
     } catch (err) {
-      console.error('[rank] loadRank error', err)
+      console.error('[rank] loadRank error', {
+        activeTab: this.data.activeTab,
+        seasonId: this._getCurrentSeasonId(),
+        message: err && (err.errMsg || err.message),
+        error: err
+      })
       wx.showToast({ title: '加载失败', icon: 'none', duration: 2000 })
     } finally {
       this.setData({ loading: false })
@@ -76,7 +93,6 @@ Page({
     const hasHero = cached && cached.value && Object.prototype.hasOwnProperty.call(cached.value, 'starHero')
     if (hasHero) {
       this.setData({ starHero: cached.value.starHero })
-      if (isFresh(cached)) return
     }
 
     try {

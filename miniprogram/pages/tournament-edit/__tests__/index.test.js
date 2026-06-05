@@ -446,34 +446,44 @@ describe('tournament-edit registration publishing flow', () => {
   })
 
   test('share message uses registration share path after publishing', () => {
-    const def = loadPage()
-    const ctx = makeCtx(def, {
-      registrationPublished: true,
-      sharePath: '/pages/tournament-detail/index?id=t1&entry=register',
-      form: { ...def.data.form, name: '5月周末赛' }
-    })
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-05T15:30:00+08:00'))
+    try {
+      const def = loadPage()
+      const ctx = makeCtx(def, {
+        registrationPublished: true,
+        sharePath: '/pages/tournament-detail/index?id=t1&entry=register',
+        form: { ...def.data.form, name: '5月周末赛' }
+      })
 
-    expect(ctx.onShareAppMessage()).toEqual({
-      title: '5月周末赛',
-      path: '/pages/tournament-detail/index?id=t1&entry=register',
-      imageUrl: '/images/share-registration/registration-share-01.jpg'
-    })
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '5月周末赛',
+        path: '/pages/tournament-detail/index?id=t1&entry=register',
+        imageUrl: '/images/share-registration/june-2026-registration-share-01.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('timeline share uses encoded registration query after publishing', () => {
-    const def = loadPage()
-    const ctx = makeCtx(def, {
-      tournamentId: 't 1',
-      registrationPublished: true,
-      sharePath: '/pages/tournament-detail/index?id=t%201&entry=register',
-      form: { ...def.data.form, name: '5月周末赛' }
-    })
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-05T15:30:00+08:00'))
+    try {
+      const def = loadPage()
+      const ctx = makeCtx(def, {
+        tournamentId: 't 1',
+        registrationPublished: true,
+        sharePath: '/pages/tournament-detail/index?id=t%201&entry=register',
+        form: { ...def.data.form, name: '5月周末赛' }
+      })
 
-    expect(ctx.onShareTimeline()).toEqual({
-      title: '5月周末赛',
-      query: 'id=t%201&entry=register',
-      imageUrl: '/images/share-registration/registration-share-01.jpg'
-    })
+      expect(ctx.onShareTimeline()).toEqual({
+        title: '5月周末赛',
+        query: 'id=t%201&entry=register',
+        imageUrl: '/images/share-registration/june-2026-registration-share-01.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('manage registration scrolls to the registration management section', () => {

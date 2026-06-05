@@ -7,6 +7,7 @@ Component({
     totalPoints: { type: Number, value: 0 },
     trendDelta: { type: null, value: null },
     highlight: Boolean,
+    prideHighlight: Boolean,
     playerId: String
   },
   methods: {
