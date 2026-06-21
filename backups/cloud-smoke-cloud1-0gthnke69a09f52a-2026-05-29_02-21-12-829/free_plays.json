@@ -1,0 +1,137 @@
+[
+  {
+    "_id": "fp_court_1779092172664_079_20260519T0740_1779122647173_0",
+    "tournamentId": "tournament_2026_620630_783",
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-18T16:44:13.826Z"
+  },
+  {
+    "_id": "fp_court_1779092168308_508_20260519T0740_1779122647173_1",
+    "tournamentId": "tournament_2026_620630_783",
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-18T16:44:13.858Z"
+  },
+  {
+    "_id": "fp_court_1779092168308_508_1779122649910",
+    "tournamentId": "tournament_2026_620630_783",
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 1,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-18T16:44:13.900Z"
+  },
+  {
+    "_id": "fp_court_1779269321907_112_20260524T1940_1779269476606_0",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.258Z"
+  },
+  {
+    "_id": "fp_court_1779269321907_112_20260524T2040_1779269476606_1",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.300Z"
+  },
+  {
+    "_id": "fp_court_1779269341417_713_20260524T1940_1779269476606_2",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.339Z"
+  },
+  {
+    "_id": "fp_court_1779269341417_713_20260524T2040_1779269476606_3",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.380Z"
+  },
+  {
+    "_id": "fp_court_1779269354985_762_20260524T1940_1779269476606_4",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.420Z"
+  },
+  {
+    "_id": "fp_court_1779269354985_762_20260524T2040_1779269476606_5",
+    "tournamentId": "tournament_2026_005759_926",
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-20T09:31:24.463Z"
+  },
+  {
+    "_id": "fp_court_1779269321907_112_20260524T1940_1779611152445_0",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.735Z"
+  },
+  {
+    "_id": "fp_court_1779269321907_112_20260524T2040_1779611152445_1",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.798Z"
+  },
+  {
+    "_id": "fp_court_1779269341417_713_20260524T1940_1779611152445_2",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.847Z"
+  },
+  {
+    "_id": "fp_court_1779269341417_713_20260524T2040_1779611152445_3",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.892Z"
+  },
+  {
+    "_id": "fp_court_1779269354985_762_20260524T1940_1779611152445_4",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 2,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.950Z"
+  },
+  {
+    "_id": "fp_court_1779269354985_762_20260524T2040_1779611152445_5",
+    "tournamentId": "tournament_2026_895734_277",
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 5,
+    "playerIds": [],
+    "createdBy": null,
+    "createTime": "2026-05-24T10:27:15.982Z"
+  }
+]

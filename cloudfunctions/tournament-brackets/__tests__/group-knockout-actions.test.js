@@ -826,16 +826,16 @@ test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots'
   expect(knockoutBrackets.every(Boolean)).toBe(true)
   expect(knockoutBrackets.map(bracket => bracket.stage)).toEqual(['knockout', 'knockout', 'knockout'])
   expect(knockoutBrackets[0].matches.map(match => [match.player1Source, match.player2Source])).toEqual([
-    ['A1', 'C2'],
-    ['B1', 'D2'],
-    ['C1', 'A2'],
-    ['D1', 'B2'],
+    ['A1', 'B2'],
+    ['B1', 'A2'],
+    ['C1', 'D2'],
+    ['D1', 'C2'],
   ])
   expect(knockoutBrackets[0].matches.map(match => [match.player1.id, match.player2.id])).toEqual([
-    ['p1', 'p8'],
-    ['p4', 'p11'],
-    ['p7', 'p2'],
-    ['p10', 'p5'],
+    ['p1', 'p5'],
+    ['p4', 'p2'],
+    ['p7', 'p11'],
+    ['p10', 'p8'],
   ])
   for (const bracket of knockoutBrackets.slice(1)) {
     expect(bracket.matches.every(match => match.player1 === null && match.player2 === null)).toBe(true)
@@ -860,8 +860,8 @@ test('confirmKnockoutSeeds creates knockout brackets and freezes rank snapshots'
     round: 1,
     position: 1,
     player1: { id: 'p1' },
-    player2: { id: 'p8' },
-    playerIds: ['p1', 'p8'],
+    player2: { id: 'p5' },
+    playerIds: ['p1', 'p5'],
     resultStatus: 'pending',
     score: null,
     winner: null,

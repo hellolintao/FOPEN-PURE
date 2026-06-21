@@ -14,8 +14,30 @@ function withWeeklyFields(row, points, trend) {
  * @returns {{ success: boolean, data?: object, error?: { code: string, message: string } }}
  */
 function main(event = {}) {
-  if (event.action !== 'latest') {
+  if (event.action !== 'latest' && event.action !== 'current') {
     return { success: false, error: { code: 'UNKNOWN_ACTION', message: event.action || '' } }
+  }
+
+  if (event.action === 'current') {
+    const type = event.type === 'doubles' ? 'doubles' : 'singles'
+    const row = type === 'doubles' ? rankRows('doubles')[0] : rankRows('singles')[1]
+    return {
+      success: true,
+      data: {
+        mode: 'current',
+        weekStart: '2026-05-25',
+        weekEnd: '2026-05-31',
+        star: {
+          memberId: row._id,
+          name: row.name,
+          avatarUrl: row.avatarUrl,
+          pointsDelta: type === 'doubles' ? 94 : 86,
+          wins: 3,
+          losses: 1
+        },
+        subtitle: `上周积分 +${type === 'doubles' ? 94 : 86} · W-L 3-1`
+      }
+    }
   }
 
   return {

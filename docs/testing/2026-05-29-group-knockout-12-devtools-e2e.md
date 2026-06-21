@@ -21,7 +21,7 @@ This flow covers:
 - Save 4 groups with 3 players each, simulating onsite draw/manual group entry.
 - Generate and finish 12 group matches.
 - Confirm the top 2 from each group into the 8-player knockout bracket.
-- Verify quarterfinal pairings: `A1-C2`, `B1-D2`, `C1-A2`, `D1-B2`.
+- Verify quarterfinal pairings: `A1-B2`, `B1-A2`, `C1-D2`, `D1-C2`.
 - Verify source labels appear only at the quarterfinal positions.
 - Finish quarterfinals, semifinals, and final.
 - Verify the final detail page, bracket page, points, and completion state.
@@ -36,7 +36,7 @@ This flow covers:
 | TC-GK12-04 | Generate group matches | Generate group-stage matches after groups are saved. | 12 group `match_results` rows are created, 3 per group. |
 | TC-GK12-05 | Finish group stage | Save deterministic group scores so slot 1 beats slot 2 and slot 3, and slot 2 beats slot 3. | All group rows are confirmed and tournament phase becomes `group_completed`. |
 | TC-GK12-06 | Confirm knockout seeds | Confirm top 2 in each group. | Seeds A1/A2/B1/B2/C1/C2/D1/D2 are produced and 7 knockout rows are created. |
-| TC-GK12-07 | Verify quarterfinal bracket | Open bracket data and bracket page. | Quarterfinal source labels are exactly `A1-C2`, `B1-D2`, `C1-A2`, `D1-B2`. Semifinal/final rows do not show source labels. |
+| TC-GK12-07 | Verify quarterfinal bracket | Open bracket data and bracket page. | Quarterfinal source labels are exactly `A1-B2`, `B1-A2`, `C1-D2`, `D1-C2`. Semifinal/final rows do not show source labels. |
 | TC-GK12-08 | Finish knockout | Save QF, SF, and final scores. | Winners propagate through the knockout bracket and final winner is recorded. |
 | TC-GK12-09 | Verify completion | Reload tournament detail and result rows. | Tournament has `status: completed`, `groupKnockoutPhase: completed`, and 19/19 confirmed results. |
 | TC-GK12-10 | Verify points | Read awarded points from confirmed rows and detail result board. | 12-sign points match rules: champion 250, runner-up 150, semifinalists 100, quarterfinalists 65, group exits 20 in this deterministic all-0-2 slot-3 setup. |

@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-05-29T07:01:26.884Z",
+  "candidateTournaments": [],
+  "perTournament": {
+    "tournament_2026_490988_298": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_2026_490988_298"
+      },
+      "brackets": 0,
+      "groups": 0
+    },
+    "tournament_gk12_20260529033944": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_gk12_20260529033944"
+      },
+      "brackets": 0,
+      "groups": 0
+    },
+    "tournament_gk12_20260529034120": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_gk12_20260529034120"
+      },
+      "brackets": 0,
+      "groups": 0
+    },
+    "tournament_gk12_20260529034347": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_gk12_20260529034347"
+      },
+      "brackets": 0,
+      "groups": 0
+    },
+    "tournament_gk12_20260529034758": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_gk12_20260529034758"
+      },
+      "brackets": 0,
+      "groups": 0
+    },
+    "tournament_gk12_20260529035017": {
+      "registrations": 0,
+      "scores": 0,
+      "gkSuccess": false,
+      "gkError": {
+        "code": "NOT_FOUND",
+        "message": "tournament_gk12_20260529035017"
+      },
+      "brackets": 0,
+      "groups": 0
+    }
+  },
+  "tempActionResult": {
+    "errMsg": "invalid action"
+  }
+}

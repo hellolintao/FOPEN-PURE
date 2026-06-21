@@ -294,6 +294,12 @@ test('knockout tab renders bracket tree instead of schedule-style rows', () => {
   expect(wxml).toContain('{{match.__scoreLabel ||')
 })
 
+test('knockout tab describes the current quarterfinal source pairings', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+  expect(wxml).toContain('A1-B2 · B1-A2 · C1-D2 · D1-C2')
+  expect(wxml).not.toContain('A1-C2 · B1-D2 · C1-A2 · D1-B2')
+})
+
 test('winner names render as lime tags in group and knockout brackets', () => {
   const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')

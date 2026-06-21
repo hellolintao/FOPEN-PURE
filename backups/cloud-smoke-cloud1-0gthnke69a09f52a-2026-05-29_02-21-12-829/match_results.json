@@ -1,0 +1,2089 @@
+[
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122043784",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122043784",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella",
+      "partnerId": "unclaimed_小叶",
+      "partnerName": "小叶"
+    },
+    "player2": {
+      "id": "unclaimed_海伦",
+      "name": "海伦",
+      "partnerId": "unclaimed_抖抖",
+      "partnerName": "抖抖"
+    },
+    "playerIds": [
+      "2e5b265c6a0adda500b2ddda2d54d493",
+      "unclaimed_小叶",
+      "unclaimed_海伦",
+      "unclaimed_抖抖"
+    ],
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 0,
+    "resultStatus": "confirmed",
+    "winnerId": "2e5b265c6a0adda500b2ddda2d54d493",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:51.293Z",
+    "updateTime": "2026-05-18T16:36:44.685Z",
+    "createTime": "2026-05-18T16:36:44.685Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_海伦",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "unclaimed_抖抖",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 0
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella",
+      "partnerId": "unclaimed_小叶",
+      "partnerName": "小叶"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122062123",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122062123",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋",
+      "partnerId": "0667d90f6a0a85a300adf8290b430da6",
+      "partnerName": "David Wu"
+    },
+    "player2": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "playerIds": [
+      "unclaimed_剑锋",
+      "0667d90f6a0a85a300adf8290b430da6",
+      "43e58c886a0a843600a8e0f87e657c25",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 0,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_剑锋",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:51.577Z",
+    "updateTime": "2026-05-18T16:36:44.772Z",
+    "createTime": "2026-05-18T16:36:44.772Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋",
+      "partnerId": "0667d90f6a0a85a300adf8290b430da6",
+      "partnerName": "David Wu"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122083458",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122083458",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu",
+      "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+      "partnerName": "栗子"
+    },
+    "player2": {
+      "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+      "name": "王宜帆",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    },
+    "playerIds": [
+      "0667d90f6a0a85a300adf8290b430da6",
+      "43e58c886a0a843600a8e0f87e657c25",
+      "a7ff0e996a0d71c601000e8a66f0abdd",
+      "unclaimed_剑锋"
+    ],
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 1,
+    "resultStatus": "confirmed",
+    "winnerId": "0667d90f6a0a85a300adf8290b430da6",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:51.836Z",
+    "updateTime": "2026-05-20T08:40:57.000Z",
+    "createTime": "2026-05-18T16:36:44.874Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu",
+      "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+      "partnerName": "栗子"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122101635",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122101635",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+      "partnerName": "王宜帆"
+    },
+    "player2": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "playerIds": [
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a0d71c601000e8a66f0abdd",
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_小童"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 1,
+    "resultStatus": "confirmed",
+    "winnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:52.125Z",
+    "updateTime": "2026-05-20T08:40:57.000Z",
+    "createTime": "2026-05-18T16:36:44.972Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小童",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "3bef321d69cc96880273781a4fd6358b",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 1,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122132282",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122132282",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_海伦",
+      "name": "海伦",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "player2": {
+      "id": "unclaimed_小童",
+      "name": "小童",
+      "partnerId": "2e5b265c6a0adda500b2ddda2d54d493",
+      "partnerName": "Ella"
+    },
+    "playerIds": [
+      "unclaimed_海伦",
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "unclaimed_小童",
+      "2e5b265c6a0adda500b2ddda2d54d493"
+    ],
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 2,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_海伦",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:52.377Z",
+    "updateTime": "2026-05-18T16:36:45.072Z",
+    "createTime": "2026-05-18T16:36:45.072Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_海伦",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小童",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 1
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_海伦",
+      "name": "海伦",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122156232",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122156232",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_老板",
+      "name": "老板",
+      "partnerId": "unclaimed_海伦",
+      "partnerName": "海伦"
+    },
+    "player2": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu",
+      "partnerId": "3bef321d69cc96880273781a4fd6358b",
+      "partnerName": "乐乐"
+    },
+    "playerIds": [
+      "unclaimed_老板",
+      "unclaimed_海伦",
+      "0667d90f6a0a85a300adf8290b430da6",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 2,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_老板",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:52.600Z",
+    "updateTime": "2026-05-18T16:36:45.168Z",
+    "createTime": "2026-05-18T16:36:45.168Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_老板",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_海伦",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "3bef321d69cc96880273781a4fd6358b",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_老板",
+      "name": "老板",
+      "partnerId": "unclaimed_海伦",
+      "partnerName": "海伦"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122174499",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122174499",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_老板",
+      "name": "老板",
+      "partnerId": "unclaimed_抖抖",
+      "partnerName": "抖抖"
+    },
+    "player2": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+      "partnerName": "王宜帆"
+    },
+    "playerIds": [
+      "unclaimed_老板",
+      "unclaimed_抖抖",
+      "43e58c886a0a843600a8e0f87e657c25",
+      "a7ff0e996a0d71c601000e8a66f0abdd"
+    ],
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 3,
+    "resultStatus": "confirmed",
+    "winnerId": "43e58c886a0a843600a8e0f87e657c25",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:52.868Z",
+    "updateTime": "2026-05-20T08:40:57.000Z",
+    "createTime": "2026-05-18T16:36:45.258Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_老板",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "unclaimed_抖抖",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 0,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+      "partnerName": "王宜帆"
+    }
+  },
+  {
+    "_id": "result_2026_119928_882_match_extra_1779122194829",
+    "tournamentId": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779122194829",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_抖抖",
+      "name": "抖抖",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    },
+    "player2": {
+      "id": "unclaimed_小童",
+      "name": "小童",
+      "partnerId": "unclaimed_小叶",
+      "partnerName": "小叶"
+    },
+    "playerIds": [
+      "unclaimed_抖抖",
+      "unclaimed_剑锋",
+      "unclaimed_小童",
+      "unclaimed_小叶"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 3,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_抖抖",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-18T16:38:53.138Z",
+    "updateTime": "2026-05-18T16:36:45.361Z",
+    "createTime": "2026-05-18T16:36:45.361Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_抖抖",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小童",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_抖抖",
+      "name": "抖抖",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    }
+  },
+  {
+    "_id": "result_2026_620630_783_match_regular_p1_1779122647173_0",
+    "tournamentId": "tournament_2026_620630_783",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p1_1779122647173_0",
+    "round": 1,
+    "position": 1,
+    "player1": {
+      "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+      "name": "杜导"
+    },
+    "player2": {
+      "id": "unclaimed_小野马",
+      "name": "小野马"
+    },
+    "playerIds": [
+      "b25ba3026a0ade0c00b38fb7747c3c74",
+      "unclaimed_小野马"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-18T16:44:12.269Z",
+    "createTime": "2026-05-18T16:44:12.269Z"
+  },
+  {
+    "_id": "result_2026_620630_783_match_regular_p2_1779122647173_1",
+    "tournamentId": "tournament_2026_620630_783",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p2_1779122647173_1",
+    "round": 1,
+    "position": 2,
+    "player1": {
+      "id": "unclaimed_抖抖",
+      "name": "抖抖",
+      "partnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+      "partnerName": "杜导"
+    },
+    "player2": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella",
+      "partnerId": "unclaimed_小野马",
+      "partnerName": "小野马"
+    },
+    "playerIds": [
+      "unclaimed_抖抖",
+      "b25ba3026a0ade0c00b38fb7747c3c74",
+      "2e5b265c6a0adda500b2ddda2d54d493",
+      "unclaimed_小野马"
+    ],
+    "courtId": "court_1779092172664_079",
+    "queueOrder": 1,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-18T16:44:12.358Z",
+    "createTime": "2026-05-18T16:44:12.358Z"
+  },
+  {
+    "_id": "result_2026_620630_783_match_regular_p3_1779122647173_2",
+    "tournamentId": "tournament_2026_620630_783",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p3_1779122647173_2",
+    "round": 1,
+    "position": 3,
+    "player1": {
+      "id": "unclaimed_抖抖",
+      "name": "抖抖"
+    },
+    "player2": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella"
+    },
+    "playerIds": [
+      "unclaimed_抖抖",
+      "2e5b265c6a0adda500b2ddda2d54d493"
+    ],
+    "courtId": "court_1779092168308_508",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-18T16:44:12.428Z",
+    "createTime": "2026-05-18T16:44:12.428Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p1_1779269476606_0",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p1_1779269476606_0",
+    "round": 1,
+    "position": 1,
+    "player1": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    },
+    "player2": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "playerIds": [
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:20.913Z",
+    "createTime": "2026-05-20T09:31:20.913Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p2_1779269476606_1",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p2_1779269476606_1",
+    "round": 1,
+    "position": 2,
+    "player1": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "player2": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "playerIds": [
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_小童"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 1,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:20.991Z",
+    "createTime": "2026-05-20T09:31:20.991Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p3_1779269476606_2",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p3_1779269476606_2",
+    "round": 1,
+    "position": 3,
+    "player1": {
+      "id": "unclaimed_小童",
+      "name": "小童"
+    },
+    "player2": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "playerIds": [
+      "unclaimed_小童",
+      "a7ff0e996a0a841700aceb5a29f5aaba"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.090Z",
+    "createTime": "2026-05-20T09:31:21.090Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p4_1779269476606_3",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p4_1779269476606_3",
+    "round": 1,
+    "position": 4,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "3bef321d69cc96880273781a4fd6358b",
+      "partnerName": "乐乐"
+    },
+    "player2": {
+      "id": "unclaimed_小童",
+      "name": "小童",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "3bef321d69cc96880273781a4fd6358b",
+      "unclaimed_小童",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 4,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.192Z",
+    "createTime": "2026-05-20T09:31:21.192Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p5_1779269476606_4",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p5_1779269476606_4",
+    "round": 1,
+    "position": 5,
+    "player1": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    },
+    "player2": {
+      "id": "unclaimed_小童",
+      "name": "小童"
+    },
+    "playerIds": [
+      "3bef321d69cc96880273781a4fd6358b",
+      "unclaimed_小童"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.275Z",
+    "createTime": "2026-05-20T09:31:21.275Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p6_1779269476606_5",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p6_1779269476606_5",
+    "round": 1,
+    "position": 6,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "partnerName": "小飞"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "unclaimed_小童",
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a0a841700aceb5a29f5aaba"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 1,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.371Z",
+    "createTime": "2026-05-20T09:31:21.371Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p7_1779269476606_6",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p7_1779269476606_6",
+    "round": 1,
+    "position": 7,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "player2": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.455Z",
+    "createTime": "2026-05-20T09:31:21.455Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p8_1779269476606_7",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p8_1779269476606_7",
+    "round": 1,
+    "position": 8,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_小童",
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 4,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.532Z",
+    "createTime": "2026-05-20T09:31:21.532Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p9_1779269476606_8",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p9_1779269476606_8",
+    "round": 1,
+    "position": 9,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "unclaimed_小童",
+      "name": "小童"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "unclaimed_小童"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:21.628Z",
+    "createTime": "2026-05-20T09:31:21.628Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p10_1779269476606_9",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p10_1779269476606_9",
+    "round": 1,
+    "position": 10,
+    "player1": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "player2": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大",
+      "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "partnerName": "小飞"
+    },
+    "playerIds": [
+      "3bef321d69cc96880273781a4fd6358b",
+      "unclaimed_小童",
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "a7ff0e996a0a841700aceb5a29f5aaba"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 1,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:22.026Z",
+    "createTime": "2026-05-20T09:31:22.026Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p11_1779269476606_10",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p11_1779269476606_10",
+    "round": 1,
+    "position": 11,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:22.113Z",
+    "createTime": "2026-05-20T09:31:22.113Z"
+  },
+  {
+    "_id": "result_2026_005759_926_match_regular_p12_1779269476606_11",
+    "tournamentId": "tournament_2026_005759_926",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p12_1779269476606_11",
+    "round": 1,
+    "position": 12,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_小童",
+      "partnerName": "小童"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_小童",
+      "3bef321d69cc96880273781a4fd6358b",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 4,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-20T09:31:22.200Z",
+    "createTime": "2026-05-20T09:31:22.200Z"
+  },
+  {
+    "_id": "result_2026_895734_277_match_regular_p5_1779611152445_4",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p5_1779611152445_4",
+    "round": 1,
+    "position": 5,
+    "player1": {
+      "id": "unclaimed_小童",
+      "name": "小童"
+    },
+    "player2": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋"
+    },
+    "playerIds": [
+      "unclaimed_小童",
+      "unclaimed_剑锋"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 0,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_剑锋",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T11:34:02.485Z",
+    "updateTime": "2026-05-24T10:27:12.463Z",
+    "createTime": "2026-05-24T10:27:12.463Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小童",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 0,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779611243657",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779611243657",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_小童",
+      "name": "小童",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    },
+    "player2": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella",
+      "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+      "partnerName": "栗子"
+    },
+    "playerIds": [
+      "unclaimed_小童",
+      "unclaimed_剑锋",
+      "2e5b265c6a0adda500b2ddda2d54d493",
+      "43e58c886a0a843600a8e0f87e657c25"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 1,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_小童",
+    "loserId": null,
+    "confirmedBy": "2e5b265c6a0adda500b2ddda2d54d493",
+    "confirmedAt": "2026-05-24T12:25:47.549Z",
+    "updateTime": "2026-05-24T10:27:12.576Z",
+    "createTime": "2026-05-24T10:27:12.576Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_小童",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 3,
+          "b": 3
+        }
+      ],
+      "tiebreak": "7-6"
+    },
+    "winner": {
+      "id": "unclaimed_小童",
+      "name": "小童",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779611285627",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779611285627",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "2e5b265c6a0adda500b2ddda2d54d493"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 0,
+    "resultStatus": "confirmed",
+    "winnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T11:39:15.759Z",
+    "updateTime": "2026-05-24T10:27:12.684Z",
+    "createTime": "2026-05-24T10:27:12.684Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779611451340",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779611451340",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "0667d90f6a0a85a300adf8290b430da6",
+      "partnerName": "David Wu"
+    },
+    "player2": {
+      "id": "unclaimed_小叶",
+      "name": "小叶",
+      "partnerId": "3bef321d69cc96880273781a4fd6358b",
+      "partnerName": "乐乐"
+    },
+    "playerIds": [
+      "43e58c886a0a843600a8e0f87e657c25",
+      "0667d90f6a0a85a300adf8290b430da6",
+      "unclaimed_小叶",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 0,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_小叶",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T11:47:53.100Z",
+    "updateTime": "2026-05-24T10:27:12.793Z",
+    "createTime": "2026-05-24T10:27:12.793Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "3bef321d69cc96880273781a4fd6358b",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 3,
+          "b": 3
+        }
+      ],
+      "tiebreak": "6-7"
+    },
+    "winner": {
+      "id": "unclaimed_小叶",
+      "name": "小叶",
+      "partnerId": "3bef321d69cc96880273781a4fd6358b",
+      "partnerName": "乐乐"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616548784",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616548784",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "player2": {
+      "id": "unclaimed_小叶",
+      "name": "小叶"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_小叶"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 3,
+    "resultStatus": "confirmed",
+    "winnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T12:31:50.346Z",
+    "updateTime": "2026-05-24T10:27:12.910Z",
+    "createTime": "2026-05-24T10:27:12.910Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616623644",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616623644",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    },
+    "playerIds": [
+      "0667d90f6a0a85a300adf8290b430da6",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 1,
+    "resultStatus": "confirmed",
+    "winnerId": "0667d90f6a0a85a300adf8290b430da6",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-24T12:25:08.422Z",
+    "updateTime": "2026-05-24T10:27:13.005Z",
+    "createTime": "2026-05-24T10:27:13.005Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "3bef321d69cc96880273781a4fd6358b",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 1
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616651561",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616651561",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "unclaimed_小叶",
+      "name": "小叶"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "unclaimed_小叶"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 1,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_小叶",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T12:05:40.664Z",
+    "updateTime": "2026-05-24T10:27:13.117Z",
+    "createTime": "2026-05-24T10:27:13.117Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 1,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_小叶",
+      "name": "小叶"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616715802",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616715802",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋"
+    },
+    "player2": {
+      "id": "2e5b265c6a0adda500b2ddda2d54d493",
+      "name": "Ella"
+    },
+    "playerIds": [
+      "unclaimed_剑锋",
+      "2e5b265c6a0adda500b2ddda2d54d493"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 3,
+    "resultStatus": "confirmed",
+    "winnerId": "unclaimed_剑锋",
+    "loserId": null,
+    "confirmedBy": "2e5b265c6a0adda500b2ddda2d54d493",
+    "confirmedAt": "2026-05-24T12:43:18.012Z",
+    "updateTime": "2026-05-24T10:27:13.201Z",
+    "createTime": "2026-05-24T10:27:13.201Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 0
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "unclaimed_剑锋",
+      "name": "剑锋"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616799092",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616799092",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    },
+    "player2": {
+      "id": "unclaimed_小叶",
+      "name": "小叶",
+      "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+      "partnerName": "栗子"
+    },
+    "playerIds": [
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "unclaimed_剑锋",
+      "unclaimed_小叶",
+      "43e58c886a0a843600a8e0f87e657c25"
+    ],
+    "courtId": "court_1779269341417_713",
+    "queueOrder": 4,
+    "resultStatus": "confirmed",
+    "winnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-24T13:10:14.684Z",
+    "updateTime": "2026-05-24T10:27:13.295Z",
+    "createTime": "2026-05-24T10:27:13.295Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_剑锋",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小叶",
+          "points": 10,
+          "role": "loser"
+        },
+        {
+          "memberId": "43e58c886a0a843600a8e0f87e657c25",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 4,
+          "b": 2
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞",
+      "partnerId": "unclaimed_剑锋",
+      "partnerName": "剑锋"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616845980",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616845980",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "player2": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu",
+      "partnerId": "3bef321d69cc96880273781a4fd6358b",
+      "partnerName": "乐乐"
+    },
+    "playerIds": [
+      "43e58c886a0a843600a8e0f87e657c25",
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "0667d90f6a0a85a300adf8290b430da6",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-24T10:27:13.395Z",
+    "createTime": "2026-05-24T10:27:13.395Z"
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779616945369",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779616945369",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "3bef321d69cc96880273781a4fd6358b"
+    ],
+    "courtId": "court_1779269321907_112",
+    "queueOrder": 4,
+    "resultStatus": "confirmed",
+    "winnerId": "3bef321d69cc96880273781a4fd6358b",
+    "loserId": null,
+    "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+    "confirmedAt": "2026-05-24T13:10:05.148Z",
+    "updateTime": "2026-05-24T10:27:13.497Z",
+    "createTime": "2026-05-24T10:27:13.497Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "3bef321d69cc96880273781a4fd6358b",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 1,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "3bef321d69cc96880273781a4fd6358b",
+      "name": "乐乐"
+    }
+  },
+  {
+    "_id": "result_2026_895734_277_match_extra_1779617031181",
+    "tournamentId": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "extra",
+    "sourceMatchId": "match_extra_1779617031181",
+    "round": 1,
+    "position": 999,
+    "player1": {
+      "id": "unclaimed_小童",
+      "name": "小童"
+    },
+    "player2": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu"
+    },
+    "playerIds": [
+      "unclaimed_小童",
+      "0667d90f6a0a85a300adf8290b430da6"
+    ],
+    "courtId": "court_1779269354985_762",
+    "queueOrder": 4,
+    "resultStatus": "confirmed",
+    "winnerId": "0667d90f6a0a85a300adf8290b430da6",
+    "loserId": null,
+    "confirmedBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "confirmedAt": "2026-05-24T12:40:12.341Z",
+    "updateTime": "2026-05-24T10:27:13.593Z",
+    "createTime": "2026-05-24T10:27:13.593Z",
+    "pointsAwarded": {
+      "entries": [
+        {
+          "memberId": "0667d90f6a0a85a300adf8290b430da6",
+          "points": 20,
+          "role": "winner"
+        },
+        {
+          "memberId": "unclaimed_小童",
+          "points": 10,
+          "role": "loser"
+        }
+      ],
+      "source": "match"
+    },
+    "score": {
+      "sets": [
+        {
+          "a": 0,
+          "b": 4
+        }
+      ],
+      "tiebreak": null
+    },
+    "winner": {
+      "id": "0667d90f6a0a85a300adf8290b430da6",
+      "name": "David Wu"
+    }
+  },
+  {
+    "_id": "result_2026_412986_166_match_regular_p1_1779702125729_0",
+    "tournamentId": "tournament_2026_412986_166",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p1_1779702125729_0",
+    "round": 1,
+    "position": 1,
+    "player1": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子"
+    },
+    "player2": {
+      "id": "69d4baf669cab59402406d3c03f53a9e",
+      "name": "我是大姐"
+    },
+    "playerIds": [
+      "43e58c886a0a843600a8e0f87e657c25",
+      "69d4baf669cab59402406d3c03f53a9e"
+    ],
+    "courtId": "court_1779268782612_794",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-25T09:55:46.512Z",
+    "createTime": "2026-05-25T09:55:46.512Z"
+  },
+  {
+    "_id": "result_2026_412986_166_match_regular_p3_1779702125729_2",
+    "tournamentId": "tournament_2026_412986_166",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p3_1779702125729_2",
+    "round": 1,
+    "position": 3,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "a7ff0e996a0a841700aceb5a29f5aaba"
+    ],
+    "courtId": "court_1779268782612_794",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-25T09:55:46.602Z",
+    "createTime": "2026-05-25T09:55:46.602Z"
+  },
+  {
+    "_id": "result_2026_412986_166_match_regular_p4_1779702125729_3",
+    "tournamentId": "tournament_2026_412986_166",
+    "seasonId": "season_2026",
+    "tournamentType": "doubles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p4_1779702125729_3",
+    "round": 1,
+    "position": 4,
+    "player1": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子",
+      "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "partnerName": "小飞"
+    },
+    "player2": {
+      "id": "69d4baf669cab59402406d3c03f53a9e",
+      "name": "我是大姐",
+      "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+      "partnerName": "林大"
+    },
+    "playerIds": [
+      "43e58c886a0a843600a8e0f87e657c25",
+      "a7ff0e996a0a841700aceb5a29f5aaba",
+      "69d4baf669cab59402406d3c03f53a9e",
+      "a7ff0e996a09d361009c6c6e780f87d4"
+    ],
+    "courtId": "court_1779268782612_794",
+    "queueOrder": 4,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-25T09:55:46.717Z",
+    "createTime": "2026-05-25T09:55:46.717Z"
+  },
+  {
+    "_id": "result_2026_412986_166_match_regular_p5_1779702125729_4",
+    "tournamentId": "tournament_2026_412986_166",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p5_1779702125729_4",
+    "round": 1,
+    "position": 5,
+    "player1": {
+      "id": "69d4baf669cab59402406d3c03f53a9e",
+      "name": "我是大姐"
+    },
+    "player2": {
+      "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+      "name": "小飞"
+    },
+    "playerIds": [
+      "69d4baf669cab59402406d3c03f53a9e",
+      "a7ff0e996a0a841700aceb5a29f5aaba"
+    ],
+    "courtId": "court_1779268953512_810",
+    "queueOrder": 0,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-25T09:55:46.843Z",
+    "createTime": "2026-05-25T09:55:46.843Z"
+  },
+  {
+    "_id": "result_2026_412986_166_match_regular_p7_1779702125729_6",
+    "tournamentId": "tournament_2026_412986_166",
+    "seasonId": "season_2026",
+    "tournamentType": "singles",
+    "matchKind": "regularRound",
+    "sourceMatchId": "match_regular_p7_1779702125729_6",
+    "round": 1,
+    "position": 7,
+    "player1": {
+      "id": "a7ff0e996a09d361009c6c6e780f87d4",
+      "name": "林大"
+    },
+    "player2": {
+      "id": "43e58c886a0a843600a8e0f87e657c25",
+      "name": "栗子"
+    },
+    "playerIds": [
+      "a7ff0e996a09d361009c6c6e780f87d4",
+      "43e58c886a0a843600a8e0f87e657c25"
+    ],
+    "courtId": "court_1779268953512_810",
+    "queueOrder": 3,
+    "score": null,
+    "resultStatus": "pending",
+    "winner": null,
+    "winnerId": null,
+    "loserId": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "pointsAwarded": null,
+    "updateTime": "2026-05-25T09:55:46.952Z",
+    "createTime": "2026-05-25T09:55:46.952Z"
+  }
+]

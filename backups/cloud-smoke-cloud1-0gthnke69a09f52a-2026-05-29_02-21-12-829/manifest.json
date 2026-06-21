@@ -1,0 +1,54 @@
+{
+  "env": "cloud1-0gthnke69a09f52a",
+  "createdAt": "2026-05-29T02:21:12.834Z",
+  "collections": {
+    "tournaments": {
+      "exists": true,
+      "cloudCount": 3,
+      "backupCount": 3,
+      "file": "tournaments.json"
+    },
+    "tournament_brackets": {
+      "exists": true,
+      "cloudCount": 10,
+      "backupCount": 10,
+      "file": "tournament_brackets.json"
+    },
+    "tournament_registrations": {
+      "exists": true,
+      "cloudCount": 65,
+      "backupCount": 65,
+      "file": "tournament_registrations.json"
+    },
+    "match_results": {
+      "exists": true,
+      "cloudCount": 40,
+      "backupCount": 40,
+      "file": "match_results.json"
+    },
+    "tournament_points": {
+      "exists": true,
+      "cloudCount": 0,
+      "backupCount": 0,
+      "file": "tournament_points.json"
+    },
+    "free_plays": {
+      "exists": true,
+      "cloudCount": 15,
+      "backupCount": 15,
+      "file": "free_plays.json"
+    },
+    "rank_snapshots": {
+      "exists": true,
+      "cloudCount": 0,
+      "backupCount": 0,
+      "file": "rank_snapshots.json"
+    },
+    "weekly_stars": {
+      "exists": true,
+      "cloudCount": 0,
+      "backupCount": 0,
+      "file": "weekly_stars.json"
+    }
+  }
+}

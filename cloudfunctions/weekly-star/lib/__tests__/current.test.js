@@ -62,8 +62,8 @@ function applyOrder(data, orders) {
   })
 }
 
-describe("weekly-star.current - mode='current'", () => {
-  test('returns top scorer when this week has confirmed matches', async () => {
+describe("weekly-star.current - previous natural week display", () => {
+  test('returns top scorer for the supplied complete natural week', async () => {
     const week = { weekStart: '2026-05-11', weekEnd: '2026-05-17' }
     const db = makeFakeDb({
       members: [
@@ -85,12 +85,12 @@ describe("weekly-star.current - mode='current'", () => {
     expect(out.star.pointsDelta).toBe(50)
     expect(out.star.wins).toBe(1)
     expect(out.star.losses).toBe(0)
-    expect(out.subtitle).toBe('本周积分 +50 · W-L 1-0')
+    expect(out.subtitle).toBe('上周积分 +50 · W-L 1-0')
   })
 })
 
-describe('weekly-star.current fallback and empty modes', () => {
-  test("mode='fallback' when this week is empty but historical weekly_stars exist", async () => {
+describe('weekly-star.current empty mode', () => {
+  test("mode='empty' when the supplied complete natural week is empty, even if historical weekly_stars exist", async () => {
     const week = { weekStart: '2026-05-11', weekEnd: '2026-05-17' }
     const db = makeFakeDb({
       members: [{ _id: 'X', name: '王浩', avatarUrl: 'x.png' }],
@@ -101,12 +101,12 @@ describe('weekly-star.current fallback and empty modes', () => {
       ]
     })
     const out = await resolveCurrentWeeklyStar({ db, seasonId: 's2026', type: 'singles', week })
-    expect(out.mode).toBe('fallback')
-    expect(out.star.memberId).toBe('X')
-    expect(out.subtitle).toBe('等本周首场')
+    expect(out.mode).toBe('empty')
+    expect(out.star).toBeNull()
+    expect(out.subtitle).toBeNull()
   })
 
-  test("mode='empty' when this week and history are both empty", async () => {
+  test("mode='empty' when the supplied complete natural week and history are both empty", async () => {
     const week = { weekStart: '2026-05-11', weekEnd: '2026-05-17' }
     const db = makeFakeDb({ members: [], matches: [], stars: [] })
     const out = await resolveCurrentWeeklyStar({ db, seasonId: 's2026', type: 'singles', week })

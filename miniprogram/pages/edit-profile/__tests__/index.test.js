@@ -65,6 +65,30 @@ function acceptAgreement(ctx) {
   ctx.data.agreementAccepted = true
 }
 
+describe('edit-profile privacy-facing copy', () => {
+  test('profile form uses nickname text input and does not collect phone', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('昵称')
+    expect(wxml).toContain('placeholder="请输入昵称"')
+    expect(wxml).toContain('type="text"')
+    expect(wxml).not.toContain('type="nickname"')
+    expect(wxml).not.toContain('手机号')
+  })
+
+  test('legal copy does not declare phone collection', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const privacy = fs.readFileSync(path.join(__dirname, '../../privacy-policy/index.wxml'), 'utf8')
+    const agreement = fs.readFileSync(path.join(__dirname, '../../user-agreement/index.wxml'), 'utf8')
+
+    expect(privacy).not.toContain('手机号')
+    expect(agreement).not.toContain('手机号')
+  })
+})
+
 describe('edit-profile mode handling', () => {
   test('mode=register sets register title and does not load member', () => {
     const { pageDef } = loadPage()
@@ -184,6 +208,29 @@ describe('edit-profile validation and save', () => {
 
     expect(callFunction).toHaveBeenCalledTimes(1)
     expect(callFunction.mock.calls[0][0].data.action).toBe('update')
+  })
+
+  test('saving profile does not send phone in members payload', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { stats: { updated: 1 } } })
+    const ctx = makeCtx(pageDef, { isRegister: false })
+    ctx.data.formData = {
+      name: '小张',
+      phone: '13800000000',
+      avatarUrl: '',
+      playStyle: null
+    }
+
+    await ctx.onSave()
+
+    expect(callFunction).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'update',
+        data: expect.not.objectContaining({ phone: expect.anything() })
+      })
+    }))
   })
 
   test('edit mode treats zero updated rows as save failure', async () => {

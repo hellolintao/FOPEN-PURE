@@ -19,10 +19,10 @@ const GROUP_SLOT_PAIRS = {
 }
 
 const KNOCKOUT_PAIRINGS = [
-  ['A1', 'C2'],
-  ['B1', 'D2'],
-  ['C1', 'A2'],
-  ['D1', 'B2']
+  ['A1', 'B2'],
+  ['B1', 'A2'],
+  ['C1', 'D2'],
+  ['D1', 'C2']
 ]
 
 const KNOCKOUT_ROUNDS = [

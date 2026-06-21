@@ -113,7 +113,7 @@
   let bracketData = await readBracket()
   const qf = (bracketData.knockoutBrackets || []).find(bracket => bracket.round === 1)
   const qfSources = (qf && qf.matches || []).map(match => `${match.player1Source}-${match.player2Source}`)
-  assert(JSON.stringify(qfSources) === JSON.stringify(['A1-C2', 'B1-D2', 'C1-A2', 'D1-B2']), `bad qf sources ${JSON.stringify(qfSources)}`)
+  assert(JSON.stringify(qfSources) === JSON.stringify(['A1-B2', 'B1-A2', 'C1-D2', 'D1-C2']), `bad qf sources ${JSON.stringify(qfSources)}`)
   const laterSourceLeak = (bracketData.knockoutBrackets || [])
     .filter(bracket => bracket.round > 1)
     .some(bracket => (bracket.matches || []).some(match => match.player1Source || match.player2Source))

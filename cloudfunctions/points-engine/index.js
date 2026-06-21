@@ -337,7 +337,7 @@ async function fetchRankCache({ seasonId, type }) {
     if (!row || !Array.isArray(row.rankList)) return null
     return row
   } catch (err) {
-    if (isMissingCollectionError(err)) return null
+    if (isMissingCollectionError(err) || isMissingDocumentError(err)) return null
     throw err
   }
 }
@@ -347,6 +347,12 @@ function isMissingCollectionError(e) {
   const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
   return /\bcollection\s+(?:not\s+exists|does\s+not\s+exist)\b/i.test(text) ||
     /\b(?:Db or Table|table)\s+not\s+exist\b/i.test(text)
+}
+
+function isMissingDocumentError(e) {
+  const text = `${(e && (e.errMsg || e.message || e.code)) || ''}`
+  return /document\.get:fail\b.*\bdoes not exist\b/i.test(text) ||
+    /\bdocument with _id\b.*\bdoes not exist\b/i.test(text)
 }
 
 async function upsertRankCache(row) {

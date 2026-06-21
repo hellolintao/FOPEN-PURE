@@ -1,0 +1,1358 @@
+{
+  "deletedAt": "2026-05-29T06:56:51.392Z",
+  "summary": {
+    "match_results": {
+      "attempted": 38,
+      "ok": 38,
+      "failed": 0,
+      "failures": []
+    },
+    "tournament_brackets": {
+      "attempted": 14,
+      "ok": 14,
+      "failed": 0,
+      "failures": []
+    },
+    "tournament_groups": {
+      "attempted": 8,
+      "ok": 0,
+      "failed": 8,
+      "failures": [
+        {
+          "id": "group_tournament_gk12_20260529034758_A",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_A, please make sure that the document exists and you have the corresponding Write permission"
+        },
+        {
+          "id": "group_tournament_gk12_20260529034758_B",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_B, please make sure that the document exists and you have the corresponding Write permission"
+        },
+        {
+          "id": "group_tournament_gk12_20260529034758_C",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_C, please make sure that the document exists and you have the corresponding Write permission"
+        },
+        {
+          "id": "group_tournament_gk12_20260529034758_D",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_D, please make sure that the document exists and you have the corresponding Write permission"
+        },
+        {
+          "id": "group_tournament_gk12_20260529035017_A",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529035017_A, please make sure that the document exists and you have the corresponding Write permission"
+        }
+      ]
+    },
+    "tournament_registrations": {
+      "attempted": 60,
+      "ok": 60,
+      "failed": 0,
+      "failures": []
+    },
+    "tournament_points": {
+      "attempted": 0,
+      "ok": 0,
+      "failed": 0,
+      "failures": []
+    },
+    "free_plays": {
+      "attempted": 0,
+      "ok": 0,
+      "failed": 0,
+      "failures": []
+    },
+    "rank_snapshots": {
+      "attempted": 0,
+      "ok": 0,
+      "failed": 0,
+      "failures": []
+    },
+    "weekly_stars": {
+      "attempted": 0,
+      "ok": 0,
+      "failed": 0,
+      "failures": []
+    },
+    "tournament_snapshots": {
+      "attempted": 6,
+      "ok": 0,
+      "failed": 6,
+      "failures": [
+        {
+          "tournamentId": "tournament_2026_490988_298",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529033944",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034120",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034347",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034758",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        }
+      ]
+    },
+    "match_result_history": {
+      "attempted": 6,
+      "ok": 0,
+      "failed": 6,
+      "failures": [
+        {
+          "tournamentId": "tournament_2026_490988_298",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529033944",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034120",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034347",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        },
+        {
+          "tournamentId": "tournament_gk12_20260529034758",
+          "ok": false,
+          "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+        }
+      ]
+    },
+    "rank_cache": {
+      "attempted": 2,
+      "ok": 0,
+      "failed": 2,
+      "failures": [
+        {
+          "id": "rank_cache_season_2026_singles",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id rank_cache_season_2026_singles, please make sure that the document exists and you have the corresponding Write permission"
+        },
+        {
+          "id": "rank_cache_season_2026_doubles",
+          "ok": false,
+          "error": "document.remove:fail cannot remove document with _id rank_cache_season_2026_doubles, please make sure that the document exists and you have the corresponding Write permission"
+        }
+      ]
+    },
+    "tournaments": {
+      "attempted": 6,
+      "ok": 6,
+      "failed": 0,
+      "failures": []
+    }
+  },
+  "deleted": {
+    "match_results": [
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p1_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p1_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p2_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p3_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p4_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p4_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p7_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p10_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r2_p1_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p2_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r2_p2_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p5_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p8_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p11_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r3_p1_1780026499176",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p3_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p6_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p9_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p12_1780026484927",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p1_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p1_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p2_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p3_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p4_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p4_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p7_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p10_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r2_p1_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p2_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r2_p2_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p5_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p8_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p11_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r3_p1_1780026637172",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p3_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p6_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p9_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p12_1780026623772",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      }
+    ],
+    "tournament_brackets": [
+      {
+        "id": "bracket_gk12_20260529034758_group_A",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_group_B",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_group_C",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_group_D",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_knockout_round_1",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_knockout_round_2",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529034758_knockout_round_3",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_group_A",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_group_B",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_group_C",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_group_D",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_knockout_round_1",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_knockout_round_2",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "bracket_gk12_20260529035017_knockout_round_3",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      }
+    ],
+    "tournament_groups": [
+      {
+        "id": "group_tournament_gk12_20260529034758_A",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_A, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529034758_B",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_B, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529034758_C",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_C, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529034758_D",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529034758_D, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529035017_A",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529035017_A, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529035017_B",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529035017_B, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529035017_C",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529035017_C, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "group_tournament_gk12_20260529035017_D",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id group_tournament_gk12_20260529035017_D, please make sure that the document exists and you have the corresponding Write permission"
+      }
+    ],
+    "tournament_registrations": [
+      {
+        "id": "reg_2026_490988_298_000",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_000"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_001",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_001"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_002",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_002"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_003",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_003"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_004",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_004"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_005",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_005"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_006",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_006"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_007",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_007"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_008",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_008"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_009",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_009"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_010",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_010"
+        }
+      },
+      {
+        "id": "reg_2026_490988_298_011",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_2026_490988_298_011"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_000",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_000"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_001",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_001"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_002",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_002"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_003",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_003"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_004",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_004"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_005",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_005"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_006",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_006"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_007",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_007"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_008",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_008"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_009",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_009"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_010",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_010"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034120_011",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034120_011"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_000",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_000"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_001",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_001"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_002",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_002"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_003",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_003"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_004",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_004"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_005",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_005"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_006",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_006"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_007",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_007"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_008",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_008"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_009",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_009"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_010",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_010"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034347_011",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034347_011"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_000",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_000"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_001",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_001"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_002",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_002"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_003",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_003"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_004",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_004"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_005",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_005"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_006",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_006"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_007",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_007"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_008",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_008"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_009",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_009"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_010",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_010"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529034758_011",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529034758_011"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_000",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_000"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_001",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_001"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_002",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_002"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_003",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_003"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_004",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_004"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_005",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_005"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_006",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_006"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_007",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_007"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_008",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_008"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_009",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_009"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_010",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_010"
+        }
+      },
+      {
+        "id": "reg_gk12_20260529035017_011",
+        "ok": true,
+        "result": {
+          "success": true,
+          "_id": "reg_gk12_20260529035017_011"
+        }
+      }
+    ],
+    "tournament_points": [],
+    "free_plays": [],
+    "rank_snapshots": [],
+    "weekly_stars": [],
+    "tournament_snapshots": [
+      {
+        "tournamentId": "tournament_2026_490988_298",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529033944",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034120",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034347",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034758",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529035017",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: tournament_snapshots. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      }
+    ],
+    "match_result_history": [
+      {
+        "tournamentId": "tournament_2026_490988_298",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529033944",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034120",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034347",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529034758",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      },
+      {
+        "tournamentId": "tournament_gk12_20260529035017",
+        "ok": false,
+        "error": "[ResourceNotFound] Db or Table not exist: match_result_history. Please check your request, but if the problem cannot be solved, contact us. 更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/DATABASE_COLLECTION_NOT_EXIST"
+      }
+    ],
+    "rank_cache": [
+      {
+        "id": "rank_cache_season_2026_singles",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id rank_cache_season_2026_singles, please make sure that the document exists and you have the corresponding Write permission"
+      },
+      {
+        "id": "rank_cache_season_2026_doubles",
+        "ok": false,
+        "error": "document.remove:fail cannot remove document with _id rank_cache_season_2026_doubles, please make sure that the document exists and you have the corresponding Write permission"
+      }
+    ],
+    "tournaments": [
+      {
+        "id": "tournament_2026_490988_298",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "tournament_gk12_20260529033944",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "tournament_gk12_20260529034120",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "tournament_gk12_20260529034347",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "tournament_gk12_20260529034758",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "id": "tournament_gk12_20260529035017",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      }
+    ]
+  }
+}

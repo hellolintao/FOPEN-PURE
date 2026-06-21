@@ -32,12 +32,12 @@
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">02</text>
-        <text class="field-text">姓名 <text class="required">*</text></text>
+        <text class="field-text">昵称 <text class="required">*</text></text>
       </view>
       <input
         class="form-input"
-        type="nickname"
-        placeholder="请输入姓名"
+        type="text"
+        placeholder="请输入昵称"
         placeholder-class="form-placeholder"
         value="{{formData.name}}"
         bindinput="onNameInput"
@@ -50,24 +50,6 @@
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">03</text>
-        <text class="field-text">手机号 <text class="optional">(选填)</text></text>
-      </view>
-      <input
-        class="form-input num"
-        type="number"
-        placeholder="请输入手机号"
-        placeholder-class="form-placeholder"
-        value="{{formData.phone}}"
-        bindinput="onPhoneInput"
-        maxlength="11"
-        confirm-type="done"
-        cursor-spacing="24"
-      />
-    </view>
-
-    <view class="form-item">
-      <view class="field-label">
-        <text class="num field-num">04</text>
         <text class="field-text">打法 <text wx:if="{{isRegister}}" class="required">*</text><text wx:else class="optional">(选填)</text></text>
       </view>
       <radio-group class="play-style-group" bindchange="onPlayStyleChange">

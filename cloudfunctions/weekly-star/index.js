@@ -3,7 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { getPreviousNaturalWeek, getCurrentNaturalWeek, getWeekId, toDateKey } = require('./lib/week-window')
+const { getPreviousNaturalWeek, getWeekId, toDateKey } = require('./lib/week-window')
 const { resolveCurrentWeeklyStar } = require('./lib/current')
 const { computeWeeklyStarsFromRows } = require('./lib/weekly-star')
 const { buildSnapshotRows } = require('./lib/snapshot-writer')
@@ -36,7 +36,7 @@ async function current({ seasonId = `season_${new Date().getFullYear()}`, type =
   if (type !== 'singles' && type !== 'doubles') {
     return { success: false, error: { code: 'INVALID_PAYLOAD', message: 'type must be singles|doubles' } }
   }
-  const week = getCurrentNaturalWeek(now ? new Date(now) : new Date())
+  const week = getPreviousNaturalWeek(now ? new Date(now) : new Date())
   const data = await resolveCurrentWeeklyStar({ db, seasonId, type, week })
   return { success: true, data }
 }

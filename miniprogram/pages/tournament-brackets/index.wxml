@@ -136,7 +136,7 @@
               <text class="bracket-kicker">8 PLAYER BRACKET</text>
               <text class="ko-board-title">晋级签表</text>
             </view>
-            <text class="ko-board-meta">A1-C2 · B1-D2 · C1-A2 · D1-B2</text>
+            <text class="ko-board-meta">A1-B2 · B1-A2 · C1-D2 · D1-C2</text>
           </view>
           <view class="ko-tree">
             <view

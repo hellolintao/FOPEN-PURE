@@ -1,0 +1,117 @@
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529034758_A",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529034758_B",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529034758_C",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529034758_D",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529035017_A",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529035017_B",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529035017_C",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "tournament_groups",
+        "id": "group_tournament_gk12_20260529035017_D",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "rank_cache",
+        "id": "rank_cache_season_2026_singles",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      },
+      {
+        "collection": "rank_cache",
+        "id": "rank_cache_season_2026_doubles",
+        "ok": true,
+        "result": {
+          "stats": {
+            "removed": 1
+          },
+          "errMsg": "document.remove:ok"
+        }
+      }
+    ]
+  }
+}

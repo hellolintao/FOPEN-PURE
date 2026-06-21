@@ -115,10 +115,10 @@ describe('group knockout rules', () => {
       matchKind: 'bracket',
       stage: 'knockout',
       player1: { id: 'a1', name: 'A1' },
-      player2: { id: 'c2', name: 'C2' }
+      player2: { id: 'b2', name: 'B2' }
     })
     expect(brackets[0].matches.map(m => [m.player1Source, m.player2Source])).toEqual([
-      ['A1', 'C2'], ['B1', 'D2'], ['C1', 'A2'], ['D1', 'B2']
+      ['A1', 'B2'], ['B1', 'A2'], ['C1', 'D2'], ['D1', 'C2']
     ])
     expect(brackets[1].matches[0]).toMatchObject({
       matchKind: 'bracket',
@@ -139,7 +139,7 @@ describe('group knockout rules', () => {
     })
     expect(brackets[0].matches[0]).toMatchObject({
       player1Source: 'A1',
-      player2Source: 'C2',
+      player2Source: 'B2',
       player1: { id: 'a1', name: 'A1' },
       player2: null
     })

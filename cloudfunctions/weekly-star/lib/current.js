@@ -33,9 +33,7 @@ async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
     if (!((e && e.errCode === -502005) || /not exist/i.test(msg))) throw e
   }
 
-  if (matches.length === 0 && placements.length === 0) {
-    return await fallbackOrEmpty({ db, seasonId, type, week })
-  }
+  if (matches.length === 0 && placements.length === 0) return emptyWeeklyStar(week)
 
   const agg = new Map()
   for (const m of matches) {
@@ -54,7 +52,7 @@ async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
     agg.set(p.memberId, cur)
   }
 
-  if (agg.size === 0) return await fallbackOrEmpty({ db, seasonId, type, week })
+  if (agg.size === 0) return emptyWeeklyStar(week)
 
   const ranked = [...agg.entries()].map(([memberId, v]) => ({ memberId, ...v }))
     .sort((a, b) => {
@@ -78,38 +76,11 @@ async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
       wins: top.wins,
       losses: top.losses
     },
-    subtitle: `本周积分 +${top.points} · W-L ${top.wins}-${top.losses}`
+    subtitle: `上周积分 +${top.points} · W-L ${top.wins}-${top.losses}`
   }
 }
 
-async function fallbackOrEmpty({ db, seasonId, type, week }) {
-  const starsRes = await db.collection('weekly_stars')
-    .where({ seasonId })
-    .orderBy('weekStart', 'desc')
-    .limit(5)
-    .get()
-  const stars = (starsRes && starsRes.data) || []
-  const key = type === 'singles' ? 'singlesStar' : 'doublesStar'
-  for (const s of stars) {
-    if (s[key] && s[key].memberId) {
-      const memberId = s[key].memberId
-      const member = await fetchMember(db, memberId)
-      return {
-        mode: 'fallback',
-        weekStart: week.weekStart,
-        weekEnd: week.weekEnd,
-        star: {
-          memberId,
-          name: member.name || memberId,
-          avatarUrl: member.avatarUrl || '',
-          pointsDelta: s[key].points || 0,
-          wins: s[key].wins || 0,
-          losses: s[key].losses || 0
-        },
-        subtitle: '等本周首场'
-      }
-    }
-  }
+function emptyWeeklyStar(week) {
   return { mode: 'empty', weekStart: week.weekStart, weekEnd: week.weekEnd, star: null, subtitle: null }
 }
 

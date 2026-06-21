@@ -1,0 +1,1361 @@
+[
+  {
+    "_id": "bracket_2026_119928_882_round_1",
+    "tournamentId": "tournament_2026_119928_882",
+    "round": 1,
+    "type": "doubles",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_extra_1779122043784",
+        "matchKind": "extra",
+        "player1": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "partnerId": "unclaimed_小叶",
+          "partnerName": "小叶"
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "partnerId": "unclaimed_抖抖",
+          "partnerName": "抖抖"
+        },
+        "position": 999,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_extra_1779122062123",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋",
+          "partnerId": "0667d90f6a0a85a300adf8290b430da6",
+          "partnerName": "David Wu"
+        },
+        "player2": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "position": 999,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_extra_1779122083458",
+        "matchKind": "extra",
+        "player1": {
+          "id": "0667d90f6a0a85a300adf8290b430da6",
+          "name": "David Wu",
+          "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+          "partnerName": "栗子"
+        },
+        "player2": {
+          "id": "unclaimed_小宜",
+          "name": "小宜",
+          "partnerId": "unclaimed_剑锋",
+          "partnerName": "剑锋"
+        },
+        "position": 999,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_extra_1779122101635",
+        "matchKind": "extra",
+        "player1": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "unclaimed_小宜",
+          "partnerName": "小宜"
+        },
+        "player2": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "position": 999,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_extra_1779122132282",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_小童",
+          "name": "小童",
+          "partnerId": "2e5b265c6a0adda500b2ddda2d54d493",
+          "partnerName": "Ella"
+        },
+        "position": 999,
+        "queueOrder": 2,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_extra_1779122156232",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "partnerId": "unclaimed_海伦",
+          "partnerName": "海伦"
+        },
+        "player2": {
+          "id": "0667d90f6a0a85a300adf8290b430da6",
+          "name": "David Wu",
+          "partnerId": "3bef321d69cc96880273781a4fd6358b",
+          "partnerName": "乐乐"
+        },
+        "position": 999,
+        "queueOrder": 2,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_extra_1779122174499",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "partnerId": "unclaimed_抖抖",
+          "partnerName": "抖抖"
+        },
+        "player2": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子",
+          "partnerId": "unclaimed_小宜",
+          "partnerName": "小宜"
+        },
+        "position": 999,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_extra_1779122194829",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "partnerId": "unclaimed_剑锋",
+          "partnerName": "剑锋"
+        },
+        "player2": {
+          "id": "unclaimed_小童",
+          "name": "小童",
+          "partnerId": "unclaimed_小叶",
+          "partnerName": "小叶"
+        },
+        "position": 999,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-18T16:36:42.687Z",
+    "updateTime": "2026-05-18T16:36:43.112Z"
+  },
+  {
+    "_id": "bracket_2026_620630_783_round_1",
+    "tournamentId": "tournament_2026_620630_783",
+    "round": 1,
+    "type": "mixed",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_regular_p1_1779122647173_0",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导"
+        },
+        "player2": {
+          "id": "unclaimed_小野马",
+          "name": "小野马"
+        },
+        "position": 1,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092172664_079",
+        "matchId": "match_regular_p2_1779122647173_1",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "partnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "partnerName": "杜导"
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "partnerId": "unclaimed_小野马",
+          "partnerName": "小野马"
+        },
+        "position": 2,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_regular_p3_1779122647173_2",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖"
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        },
+        "position": 3,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-18T16:44:11.352Z",
+    "updateTime": "2026-05-18T16:44:11.706Z"
+  },
+  {
+    "_id": "bracket_2026_005759_926_round_1",
+    "tournamentId": "tournament_2026_005759_926",
+    "round": 1,
+    "type": "mixed",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_regular_p1_1779269476606_0",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐"
+        },
+        "player2": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "position": 1,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_regular_p2_1779269476606_1",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "player2": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "position": 2,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_regular_p3_1779269476606_2",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "unclaimed_小童",
+          "name": "小童"
+        },
+        "player2": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "position": 3,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_regular_p4_1779269476606_3",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "3bef321d69cc96880273781a4fd6358b",
+          "partnerName": "乐乐"
+        },
+        "player2": {
+          "id": "unclaimed_小童",
+          "name": "小童",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "position": 4,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_regular_p5_1779269476606_4",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐"
+        },
+        "player2": {
+          "id": "unclaimed_小童",
+          "name": "小童"
+        },
+        "position": 5,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_regular_p6_1779269476606_5",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "partnerName": "小飞"
+        },
+        "position": 6,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_regular_p7_1779269476606_6",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "player2": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "position": 7,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_regular_p8_1779269476606_7",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "position": 8,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_regular_p9_1779269476606_8",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_小童",
+          "name": "小童"
+        },
+        "position": 9,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_regular_p10_1779269476606_9",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "player2": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大",
+          "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "partnerName": "小飞"
+        },
+        "position": 10,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_regular_p11_1779269476606_10",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐"
+        },
+        "position": 11,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_regular_p12_1779269476606_11",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "unclaimed_小童",
+          "partnerName": "小童"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "position": 12,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-20T09:31:18.584Z",
+    "updateTime": "2026-05-20T09:31:19.020Z"
+  },
+  {
+    "_id": "bracket_2026_515946_131_round_1",
+    "tournamentId": "tournament_2026_515946_131",
+    "round": 1,
+    "type": "mixed",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p1_1779445331802_0",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "unclaimed_老板",
+          "name": "老板"
+        },
+        "player2": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "position": 1,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p3_1779445331802_2",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板"
+        },
+        "position": 3,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p5_1779445331802_4",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板"
+        },
+        "position": 5,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p7_1779445331802_6",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板"
+        },
+        "position": 7,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-22T10:22:12.936Z",
+    "updateTime": "2026-05-22T10:22:45.726Z"
+  },
+  {
+    "_id": "bracket_2026_895734_277_round_1",
+    "tournamentId": "tournament_2026_895734_277",
+    "round": 1,
+    "type": "mixed",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_regular_p5_1779611152445_4",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "unclaimed_小童",
+          "name": "小童"
+        },
+        "player2": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋"
+        },
+        "position": 5,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_extra_1779611243657",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_小童",
+          "name": "小童",
+          "partnerId": "unclaimed_剑锋",
+          "partnerName": "剑锋"
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+          "partnerName": "栗子"
+        },
+        "position": 999,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_extra_1779611285627",
+        "matchKind": "extra",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        },
+        "position": 999,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_extra_1779611451340",
+        "matchKind": "extra",
+        "player1": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子",
+          "partnerId": "0667d90f6a0a85a300adf8290b430da6",
+          "partnerName": "David Wu"
+        },
+        "player2": {
+          "id": "unclaimed_小叶",
+          "name": "小叶",
+          "partnerId": "3bef321d69cc96880273781a4fd6358b",
+          "partnerName": "乐乐"
+        },
+        "position": 999,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_extra_1779616548784",
+        "matchKind": "extra",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "player2": {
+          "id": "unclaimed_小叶",
+          "name": "小叶"
+        },
+        "position": 999,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_extra_1779616623644",
+        "matchKind": "extra",
+        "player1": {
+          "id": "0667d90f6a0a85a300adf8290b430da6",
+          "name": "David Wu"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐"
+        },
+        "position": 999,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_extra_1779616651561",
+        "matchKind": "extra",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "unclaimed_小叶",
+          "name": "小叶"
+        },
+        "position": 999,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_extra_1779616715802",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋"
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        },
+        "position": 999,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269341417_713",
+        "matchId": "match_extra_1779616799092",
+        "matchKind": "extra",
+        "player1": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞",
+          "partnerId": "unclaimed_剑锋",
+          "partnerName": "剑锋"
+        },
+        "player2": {
+          "id": "unclaimed_小叶",
+          "name": "小叶",
+          "partnerId": "43e58c886a0a843600a8e0f87e657c25",
+          "partnerName": "栗子"
+        },
+        "position": 999,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_extra_1779616845980",
+        "matchKind": "extra",
+        "player1": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "player2": {
+          "id": "0667d90f6a0a85a300adf8290b430da6",
+          "name": "David Wu",
+          "partnerId": "3bef321d69cc96880273781a4fd6358b",
+          "partnerName": "乐乐"
+        },
+        "position": 999,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269321907_112",
+        "matchId": "match_extra_1779616945369",
+        "matchKind": "extra",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "3bef321d69cc96880273781a4fd6358b",
+          "name": "乐乐"
+        },
+        "position": 999,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779269354985_762",
+        "matchId": "match_extra_1779617031181",
+        "matchKind": "extra",
+        "player1": {
+          "id": "unclaimed_小童",
+          "name": "小童"
+        },
+        "player2": {
+          "id": "0667d90f6a0a85a300adf8290b430da6",
+          "name": "David Wu"
+        },
+        "position": 999,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-24T10:27:18.668Z",
+    "updateTime": "2026-05-24T10:27:19.135Z"
+  },
+  {
+    "_id": "bracket_2026_412986_166_round_1",
+    "tournamentId": "tournament_2026_412986_166",
+    "round": 1,
+    "type": "mixed",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779268782612_794",
+        "matchId": "match_regular_p1_1779702125729_0",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子"
+        },
+        "player2": {
+          "id": "69d4baf669cab59402406d3c03f53a9e",
+          "name": "我是大姐"
+        },
+        "position": 1,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268782612_794",
+        "matchId": "match_regular_p3_1779702125729_2",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "position": 3,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268782612_794",
+        "matchId": "match_regular_p4_1779702125729_3",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子",
+          "partnerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "partnerName": "小飞"
+        },
+        "player2": {
+          "id": "69d4baf669cab59402406d3c03f53a9e",
+          "name": "我是大姐",
+          "partnerId": "a7ff0e996a09d361009c6c6e780f87d4",
+          "partnerName": "林大"
+        },
+        "position": 4,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "doubles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p5_1779702125729_4",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "69d4baf669cab59402406d3c03f53a9e",
+          "name": "我是大姐"
+        },
+        "player2": {
+          "id": "a7ff0e996a0a841700aceb5a29f5aaba",
+          "name": "小飞"
+        },
+        "position": 5,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779268953512_810",
+        "matchId": "match_regular_p7_1779702125729_6",
+        "matchKind": "regularRound",
+        "player1": {
+          "id": "a7ff0e996a09d361009c6c6e780f87d4",
+          "name": "林大"
+        },
+        "player2": {
+          "id": "43e58c886a0a843600a8e0f87e657c25",
+          "name": "栗子"
+        },
+        "position": 7,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "type": "singles",
+        "winner": null
+      }
+    ],
+    "createTime": "2026-05-25T09:55:45.224Z",
+    "updateTime": "2026-05-25T09:55:45.714Z"
+  },
+  {
+    "_id": "bracket_2026_545924_940_round_1",
+    "tournamentId": "tournament_2026_545924_940",
+    "round": 1,
+    "type": "singles",
+    "matches": [
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p1_1779854592399_0",
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身"
+        },
+        "player2": {
+          "id": "unclaimed_小雯",
+          "name": "小雯"
+        },
+        "position": 1,
+        "queueOrder": 0,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p2_1779854592399_1",
+        "player1": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷"
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板"
+        },
+        "position": 2,
+        "queueOrder": 1,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p3_1779854592399_2",
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆"
+        },
+        "player2": {
+          "id": "unclaimed_许尧",
+          "name": "许尧"
+        },
+        "position": 3,
+        "queueOrder": 2,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p4_1779854592399_3",
+        "player1": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋"
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦"
+        },
+        "position": 4,
+        "queueOrder": 3,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p5_1779854592399_4",
+        "player1": {
+          "id": "b25ba3026a0d3dd900f5555605410e2f",
+          "name": "标子"
+        },
+        "player2": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导"
+        },
+        "position": 5,
+        "queueOrder": 4,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": false,
+        "courtId": "court_1779092168308_508",
+        "matchId": "match_r1_p6_1779854592399_5",
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马"
+        },
+        "player2": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖"
+        },
+        "position": 6,
+        "queueOrder": 5,
+        "resultStatus": "pending",
+        "round": 1,
+        "status": "pending",
+        "winner": null
+      },
+      {
+        "bye": true,
+        "courtId": null,
+        "matchId": "match_r1_p7_1779854592399_6",
+        "player1": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        },
+        "player2": {
+          "id": "BYE",
+          "name": "BYE"
+        },
+        "position": 7,
+        "queueOrder": null,
+        "resultStatus": "confirmed",
+        "round": 1,
+        "status": "walkover",
+        "winner": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        }
+      },
+      {
+        "bye": true,
+        "courtId": null,
+        "matchId": "match_r1_p8_1779854592399_7",
+        "player1": {
+          "id": "unclaimed_大壮",
+          "name": "大壮"
+        },
+        "player2": {
+          "id": "BYE",
+          "name": "BYE"
+        },
+        "position": 8,
+        "queueOrder": null,
+        "resultStatus": "confirmed",
+        "round": 1,
+        "status": "walkover",
+        "winner": {
+          "id": "unclaimed_大壮",
+          "name": "大壮"
+        }
+      }
+    ],
+    "createTime": "2026-05-27T04:03:31.150Z",
+    "updateTime": "2026-05-27T04:03:32.650Z"
+  },
+  {
+    "_id": "bracket_2026_545924_940_round_2",
+    "tournamentId": "tournament_2026_545924_940",
+    "round": 2,
+    "type": "singles",
+    "matches": [
+      {
+        "matchId": "match_r2_p1_1779854611162_0",
+        "round": 2,
+        "position": 1,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      },
+      {
+        "matchId": "match_r2_p2_1779854611162_1",
+        "round": 2,
+        "position": 2,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      },
+      {
+        "matchId": "match_r2_p3_1779854611162_2",
+        "round": 2,
+        "position": 3,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      },
+      {
+        "matchId": "match_r2_p4_1779854611162_3",
+        "round": 2,
+        "position": 4,
+        "player1": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella"
+        },
+        "player2": {
+          "id": "unclaimed_大壮",
+          "name": "大壮"
+        },
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      }
+    ],
+    "createTime": "2026-05-27T04:03:31.209Z",
+    "updateTime": "2026-05-27T04:03:31.491Z"
+  },
+  {
+    "_id": "bracket_2026_545924_940_round_3",
+    "tournamentId": "tournament_2026_545924_940",
+    "round": 3,
+    "type": "singles",
+    "matches": [
+      {
+        "matchId": "match_r3_p1_1779854611213_0",
+        "round": 3,
+        "position": 1,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      },
+      {
+        "matchId": "match_r3_p2_1779854611213_1",
+        "round": 3,
+        "position": 2,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      }
+    ],
+    "createTime": "2026-05-27T04:03:31.261Z",
+    "updateTime": "2026-05-27T04:03:31.261Z"
+  },
+  {
+    "_id": "bracket_2026_545924_940_round_4",
+    "tournamentId": "tournament_2026_545924_940",
+    "round": 4,
+    "type": "singles",
+    "matches": [
+      {
+        "matchId": "match_r4_p1_1779854611264_0",
+        "round": 4,
+        "position": 1,
+        "player1": null,
+        "player2": null,
+        "bye": false,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "courtId": null,
+        "queueOrder": null
+      }
+    ],
+    "createTime": "2026-05-27T04:03:31.311Z",
+    "updateTime": "2026-05-27T04:03:31.311Z"
+  }
+]

@@ -1,0 +1,5656 @@
+{
+  "backedUpViaCloudFunctionsAt": "2026-05-29T06:54:27.873Z",
+  "candidateTournamentIds": [
+    "tournament_2026_490988_298",
+    "tournament_gk12_20260529033944",
+    "tournament_gk12_20260529034120",
+    "tournament_gk12_20260529034347",
+    "tournament_gk12_20260529034758",
+    "tournament_gk12_20260529035017"
+  ],
+  "counts": {
+    "tournaments": 6,
+    "tournament_registrations": 60,
+    "tournament_groups": 8,
+    "tournament_brackets": 14,
+    "match_results": 38
+  },
+  "collections": {
+    "tournaments": [
+      {
+        "_id": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "name": "测试0529",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "",
+        "location": "海峡奥体网球场",
+        "status": "draft",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "location": "",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00",
+                "2026-06-30T21:20",
+                "2026-06-30T21:40",
+                "2026-06-30T22:00",
+                "2026-06-30T22:20",
+                "2026-06-30T22:40",
+                "2026-06-30T23:00",
+                "2026-06-30T23:20",
+                "2026-06-30T23:40"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "location": "",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00",
+                "2026-06-30T21:20",
+                "2026-06-30T21:40",
+                "2026-06-30T22:00",
+                "2026-06-30T22:20",
+                "2026-06-30T22:40",
+                "2026-06-30T23:00",
+                "2026-06-30T23:20",
+                "2026-06-30T23:40"
+              ]
+            }
+          ],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "group_draft",
+        "groupRankSnapshot": null,
+        "knockoutSeedSnapshot": null,
+        "pointsRules": {
+          "placement": {
+            "champion": 100,
+            "participation": 5,
+            "quarterfinal": 10,
+            "runnerUp": 60,
+            "semifinal": 30
+          },
+          "winLoss": {
+            "loss": 10,
+            "walkover": 0,
+            "win": 20
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:14:51.051Z",
+        "updateTime": "2026-05-29T03:16:00.378Z",
+        "registrationDeadlineAt": "2026-06-29T23:59:59+08:00"
+      },
+      {
+        "_id": "tournament_gk12_20260529033944",
+        "seasonId": "season_2026",
+        "name": "GK12_E2E_20260529033944",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "2026-06-30",
+        "location": "海峡奥体网球场",
+        "status": "upcoming",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268782612_794",
+              "name": "室内3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268953512_810",
+              "name": "比赛2",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            }
+          ],
+          "freePlays": [],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "group_draft",
+        "groupRankSnapshot": null,
+        "knockoutSeedSnapshot": null,
+        "pointsRules": {
+          "groupKnockout": {
+            "12": {
+              "group": {
+                "loss": 10,
+                "win": 20
+              },
+              "placement": {
+                "champion": 250,
+                "quarterfinal": 65,
+                "runnerUp": 150,
+                "semifinal": 100
+              }
+            }
+          },
+          "placement": {
+            "champion": 250,
+            "participation": 0,
+            "quarterfinal": 65,
+            "runnerUp": 150,
+            "semifinal": 100
+          },
+          "winLoss": {
+            "loss": 0,
+            "walkover": 0,
+            "win": 0
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:39:50.247Z",
+        "updateTime": "2026-05-29T03:39:50.247Z"
+      },
+      {
+        "_id": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "name": "GK12_E2E_20260529034120",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "2026-06-30",
+        "location": "海峡奥体网球场",
+        "status": "upcoming",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268782612_794",
+              "name": "室内3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268953512_810",
+              "name": "比赛2",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            }
+          ],
+          "freePlays": [],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "group_draft",
+        "groupRankSnapshot": null,
+        "knockoutSeedSnapshot": null,
+        "pointsRules": {
+          "groupKnockout": {
+            "12": {
+              "group": {
+                "loss": 10,
+                "win": 20
+              },
+              "placement": {
+                "champion": 250,
+                "quarterfinal": 65,
+                "runnerUp": 150,
+                "semifinal": 100
+              }
+            }
+          },
+          "placement": {
+            "champion": 250,
+            "participation": 0,
+            "quarterfinal": 65,
+            "runnerUp": 150,
+            "semifinal": 100
+          },
+          "winLoss": {
+            "loss": 0,
+            "walkover": 0,
+            "win": 0
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:41:23.458Z",
+        "updateTime": "2026-05-29T03:41:23.458Z"
+      },
+      {
+        "_id": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "name": "GK12_E2E_20260529034347",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "2026-06-30",
+        "location": "海峡奥体网球场",
+        "status": "upcoming",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268782612_794",
+              "name": "室内3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268953512_810",
+              "name": "比赛2",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            }
+          ],
+          "freePlays": [],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "group_draft",
+        "groupRankSnapshot": null,
+        "knockoutSeedSnapshot": null,
+        "pointsRules": {
+          "groupKnockout": {
+            "12": {
+              "group": {
+                "loss": 10,
+                "win": 20
+              },
+              "placement": {
+                "champion": 250,
+                "quarterfinal": 65,
+                "runnerUp": 150,
+                "semifinal": 100
+              }
+            }
+          },
+          "placement": {
+            "champion": 250,
+            "participation": 0,
+            "quarterfinal": 65,
+            "runnerUp": 150,
+            "semifinal": 100
+          },
+          "winLoss": {
+            "loss": 0,
+            "walkover": 0,
+            "win": 0
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:43:50.365Z",
+        "updateTime": "2026-05-29T03:43:50.365Z"
+      },
+      {
+        "_id": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "name": "GK12_E2E_20260529034758",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "2026-06-30",
+        "location": "海峡奥体网球场",
+        "status": "ongoing",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268782612_794",
+              "name": "室内3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268953512_810",
+              "name": "比赛2",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            }
+          ],
+          "freePlays": [],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "group_completed",
+        "groupRankSnapshot": null,
+        "knockoutSeedSnapshot": null,
+        "pointsRules": {
+          "groupKnockout": {
+            "12": {
+              "group": {
+                "loss": 10,
+                "win": 20
+              },
+              "placement": {
+                "champion": 250,
+                "quarterfinal": 65,
+                "runnerUp": 150,
+                "semifinal": 100
+              }
+            }
+          },
+          "placement": {
+            "champion": 250,
+            "participation": 0,
+            "quarterfinal": 65,
+            "runnerUp": 150,
+            "semifinal": 100
+          },
+          "winLoss": {
+            "loss": 0,
+            "walkover": 0,
+            "win": 0
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:48:02.024Z",
+        "updateTime": "2026-05-29T03:48:17.256Z",
+        "completedAt": null
+      },
+      {
+        "_id": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "name": "GK12_E2E_20260529035017",
+        "type": "singles",
+        "format": "group_knockout",
+        "startDate": "2026-06-30",
+        "endDate": "2026-06-30",
+        "location": "海峡奥体网球场",
+        "status": "completed",
+        "description": "",
+        "scheduleStatus": "none",
+        "schedulePlan": {
+          "courts": [
+            {
+              "courtId": "court_1779092168308_508",
+              "name": "比赛3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779092172664_079",
+              "name": "比赛4",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268782612_794",
+              "name": "室内3",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            },
+            {
+              "courtId": "court_1779268953512_810",
+              "name": "比赛2",
+              "slots": [
+                "2026-06-30T21:00:00+08:00",
+                "2026-06-30T22:00:00+08:00",
+                "2026-06-30T23:00:00+08:00"
+              ]
+            }
+          ],
+          "freePlays": [],
+          "queues": [],
+          "slotMinutes": 20
+        },
+        "maxPlayers": 12,
+        "bracketSize": 12,
+        "groupDrawMode": "onsite",
+        "groupKnockoutPhase": "completed",
+        "groupRankSnapshot": {
+          "groups": {
+            "A": {
+              "groupCode": "A",
+              "rows": [
+                {
+                  "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+                  "playerName": "王宜帆",
+                  "registrationId": null,
+                  "groupCode": "A",
+                  "wins": 2,
+                  "losses": 0,
+                  "gameDiff": 7,
+                  "totalGamesWon": 8,
+                  "headToHead": "",
+                  "rank": 1,
+                  "source": "A1",
+                  "promoted": true
+                },
+                {
+                  "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+                  "playerName": "沈雅婷",
+                  "registrationId": null,
+                  "groupCode": "A",
+                  "wins": 1,
+                  "losses": 1,
+                  "gameDiff": 1,
+                  "totalGamesWon": 5,
+                  "headToHead": "",
+                  "rank": 2,
+                  "source": "A2",
+                  "promoted": true
+                },
+                {
+                  "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+                  "playerName": "标子",
+                  "registrationId": null,
+                  "groupCode": "A",
+                  "wins": 0,
+                  "losses": 2,
+                  "gameDiff": -8,
+                  "totalGamesWon": 0,
+                  "headToHead": "",
+                  "rank": 3,
+                  "source": "",
+                  "promoted": false
+                }
+              ],
+              "manualTiebreakRequired": false
+            },
+            "B": {
+              "groupCode": "B",
+              "rows": [
+                {
+                  "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+                  "playerName": "杜导",
+                  "registrationId": null,
+                  "groupCode": "B",
+                  "wins": 2,
+                  "losses": 0,
+                  "gameDiff": 7,
+                  "totalGamesWon": 8,
+                  "headToHead": "",
+                  "rank": 1,
+                  "source": "B1",
+                  "promoted": true
+                },
+                {
+                  "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+                  "playerName": "Ella",
+                  "registrationId": null,
+                  "groupCode": "B",
+                  "wins": 1,
+                  "losses": 1,
+                  "gameDiff": 1,
+                  "totalGamesWon": 5,
+                  "headToHead": "",
+                  "rank": 2,
+                  "source": "B2",
+                  "promoted": true
+                },
+                {
+                  "playerId": "unclaimed_抖抖",
+                  "playerName": "抖抖",
+                  "registrationId": null,
+                  "groupCode": "B",
+                  "wins": 0,
+                  "losses": 2,
+                  "gameDiff": -8,
+                  "totalGamesWon": 0,
+                  "headToHead": "",
+                  "rank": 3,
+                  "source": "",
+                  "promoted": false
+                }
+              ],
+              "manualTiebreakRequired": false
+            },
+            "C": {
+              "groupCode": "C",
+              "rows": [
+                {
+                  "playerId": "unclaimed_小野马",
+                  "playerName": "小野马",
+                  "registrationId": null,
+                  "groupCode": "C",
+                  "wins": 2,
+                  "losses": 0,
+                  "gameDiff": 7,
+                  "totalGamesWon": 8,
+                  "headToHead": "",
+                  "rank": 1,
+                  "source": "C1",
+                  "promoted": true
+                },
+                {
+                  "playerId": "unclaimed_老板",
+                  "playerName": "老板",
+                  "registrationId": null,
+                  "groupCode": "C",
+                  "wins": 1,
+                  "losses": 1,
+                  "gameDiff": 1,
+                  "totalGamesWon": 5,
+                  "headToHead": "",
+                  "rank": 2,
+                  "source": "C2",
+                  "promoted": true
+                },
+                {
+                  "playerId": "unclaimed_剑锋",
+                  "playerName": "剑锋",
+                  "registrationId": null,
+                  "groupCode": "C",
+                  "wins": 0,
+                  "losses": 2,
+                  "gameDiff": -8,
+                  "totalGamesWon": 0,
+                  "headToHead": "",
+                  "rank": 3,
+                  "source": "",
+                  "promoted": false
+                }
+              ],
+              "manualTiebreakRequired": false
+            },
+            "D": {
+              "groupCode": "D",
+              "rows": [
+                {
+                  "playerId": "unclaimed_哲身",
+                  "playerName": "哲身",
+                  "registrationId": null,
+                  "groupCode": "D",
+                  "wins": 2,
+                  "losses": 0,
+                  "gameDiff": 7,
+                  "totalGamesWon": 8,
+                  "headToHead": "",
+                  "rank": 1,
+                  "source": "D1",
+                  "promoted": true
+                },
+                {
+                  "playerId": "unclaimed_海伦",
+                  "playerName": "海伦",
+                  "registrationId": null,
+                  "groupCode": "D",
+                  "wins": 1,
+                  "losses": 1,
+                  "gameDiff": 1,
+                  "totalGamesWon": 5,
+                  "headToHead": "",
+                  "rank": 2,
+                  "source": "D2",
+                  "promoted": true
+                },
+                {
+                  "playerId": "unclaimed_许尧",
+                  "playerName": "许尧",
+                  "registrationId": null,
+                  "groupCode": "D",
+                  "wins": 0,
+                  "losses": 2,
+                  "gameDiff": -8,
+                  "totalGamesWon": 0,
+                  "headToHead": "",
+                  "rank": 3,
+                  "source": "",
+                  "promoted": false
+                }
+              ],
+              "manualTiebreakRequired": false
+            }
+          },
+          "manualOverrides": null,
+          "sourceResultIds": [
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p1_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p2_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p3_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p4_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p5_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p6_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p7_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p8_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p9_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p10_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p11_1780026623772",
+            "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p12_1780026623772"
+          ],
+          "metadata": {
+            "confirmedBy": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+            "confirmedAt": {
+              "offset": 0
+            }
+          },
+          "version": 1
+        },
+        "knockoutSeedSnapshot": {
+          "seeds": {
+            "A1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "A2": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "B1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "B2": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "C1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "C2": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "D1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "D2": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            }
+          },
+          "bracket": [
+            {
+              "_id": "bracket_gk12_20260529035017_knockout_round_1",
+              "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+              "tournamentId": "tournament_gk12_20260529035017",
+              "format": "group_knockout",
+              "type": "singles",
+              "stage": "knockout",
+              "round": 1,
+              "roundName": "quarterfinal",
+              "matches": [
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r1_p1_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 1,
+                  "position": 1,
+                  "type": "singles",
+                  "player1": {
+                    "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+                    "name": "王宜帆",
+                    "registrationId": null
+                  },
+                  "player2": {
+                    "id": "unclaimed_老板",
+                    "name": "老板",
+                    "registrationId": null
+                  },
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null,
+                  "player1Source": "A1",
+                  "player2Source": "C2"
+                },
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r1_p2_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 1,
+                  "position": 2,
+                  "type": "singles",
+                  "player1": {
+                    "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+                    "name": "杜导",
+                    "registrationId": null
+                  },
+                  "player2": {
+                    "id": "unclaimed_海伦",
+                    "name": "海伦",
+                    "registrationId": null
+                  },
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null,
+                  "player1Source": "B1",
+                  "player2Source": "D2"
+                },
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r1_p3_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 1,
+                  "position": 3,
+                  "type": "singles",
+                  "player1": {
+                    "id": "unclaimed_小野马",
+                    "name": "小野马",
+                    "registrationId": null
+                  },
+                  "player2": {
+                    "id": "65308aa16a0d4d8600f689db47c93a2b",
+                    "name": "沈雅婷",
+                    "registrationId": null
+                  },
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null,
+                  "player1Source": "C1",
+                  "player2Source": "A2"
+                },
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r1_p4_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 1,
+                  "position": 4,
+                  "type": "singles",
+                  "player1": {
+                    "id": "unclaimed_哲身",
+                    "name": "哲身",
+                    "registrationId": null
+                  },
+                  "player2": {
+                    "id": "2e5b265c6a0adda500b2ddda2d54d493",
+                    "name": "Ella",
+                    "registrationId": null
+                  },
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null,
+                  "player1Source": "D1",
+                  "player2Source": "B2"
+                }
+              ],
+              "createTime": {
+                "offset": 0
+              },
+              "updateTime": {
+                "offset": 0
+              }
+            },
+            {
+              "_id": "bracket_gk12_20260529035017_knockout_round_2",
+              "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+              "tournamentId": "tournament_gk12_20260529035017",
+              "format": "group_knockout",
+              "type": "singles",
+              "stage": "knockout",
+              "round": 2,
+              "roundName": "semifinal",
+              "matches": [
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r2_p1_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 2,
+                  "position": 1,
+                  "type": "singles",
+                  "player1": null,
+                  "player2": null,
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null
+                },
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r2_p2_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 2,
+                  "position": 2,
+                  "type": "singles",
+                  "player1": null,
+                  "player2": null,
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null
+                }
+              ],
+              "createTime": {
+                "offset": 0
+              },
+              "updateTime": {
+                "offset": 0
+              }
+            },
+            {
+              "_id": "bracket_gk12_20260529035017_knockout_round_3",
+              "bracketId": "bracket_gk12_20260529035017_knockout_round_3",
+              "tournamentId": "tournament_gk12_20260529035017",
+              "format": "group_knockout",
+              "type": "singles",
+              "stage": "knockout",
+              "round": 3,
+              "roundName": "final",
+              "matches": [
+                {
+                  "matchId": "gk_gk12_20260529035017_ko_r3_p1_1780026637172",
+                  "tournamentId": "tournament_gk12_20260529035017",
+                  "bracketId": "bracket_gk12_20260529035017_knockout_round_3",
+                  "matchKind": "bracket",
+                  "stage": "knockout",
+                  "round": 3,
+                  "position": 1,
+                  "type": "singles",
+                  "player1": null,
+                  "player2": null,
+                  "bye": false,
+                  "status": "pending",
+                  "resultStatus": "pending",
+                  "winner": null,
+                  "courtId": null,
+                  "queueOrder": null
+                }
+              ],
+              "createTime": {
+                "offset": 0
+              },
+              "updateTime": {
+                "offset": 0
+              }
+            }
+          ],
+          "bracketDocIds": [
+            "bracket_gk12_20260529035017_knockout_round_1",
+            "bracket_gk12_20260529035017_knockout_round_2",
+            "bracket_gk12_20260529035017_knockout_round_3"
+          ],
+          "seedSources": {
+            "A1": {
+              "groupCode": "A",
+              "rank": 1,
+              "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p1_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p2_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p3_1780026623772"
+              ]
+            },
+            "A2": {
+              "groupCode": "A",
+              "rank": 2,
+              "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p1_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p2_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p3_1780026623772"
+              ]
+            },
+            "B1": {
+              "groupCode": "B",
+              "rank": 1,
+              "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p4_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p5_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p6_1780026623772"
+              ]
+            },
+            "B2": {
+              "groupCode": "B",
+              "rank": 2,
+              "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p4_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p5_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p6_1780026623772"
+              ]
+            },
+            "C1": {
+              "groupCode": "C",
+              "rank": 1,
+              "playerId": "unclaimed_小野马",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p7_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p8_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p9_1780026623772"
+              ]
+            },
+            "C2": {
+              "groupCode": "C",
+              "rank": 2,
+              "playerId": "unclaimed_老板",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p7_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p8_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p9_1780026623772"
+              ]
+            },
+            "D1": {
+              "groupCode": "D",
+              "rank": 1,
+              "playerId": "unclaimed_哲身",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p10_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p11_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p12_1780026623772"
+              ]
+            },
+            "D2": {
+              "groupCode": "D",
+              "rank": 2,
+              "playerId": "unclaimed_海伦",
+              "registrationId": null,
+              "sourceResultIds": [
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p10_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p11_1780026623772",
+                "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p12_1780026623772"
+              ]
+            }
+          },
+          "metadata": {
+            "confirmedBy": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+            "confirmedAt": {
+              "offset": 0
+            }
+          },
+          "version": 1
+        },
+        "pointsRules": {
+          "groupKnockout": {
+            "12": {
+              "group": {
+                "loss": 10,
+                "win": 20
+              },
+              "placement": {
+                "champion": 250,
+                "quarterfinal": 65,
+                "runnerUp": 150,
+                "semifinal": 100
+              }
+            }
+          },
+          "placement": {
+            "champion": 250,
+            "participation": 0,
+            "quarterfinal": 65,
+            "runnerUp": 150,
+            "semifinal": 100
+          },
+          "winLoss": {
+            "loss": 0,
+            "walkover": 0,
+            "win": 0
+          }
+        },
+        "courtTimeGrid": null,
+        "createdBy": "3bef321d69cc96880273781a4fd6358b",
+        "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+        "createTime": "2026-05-29T03:50:19.569Z",
+        "updateTime": "2026-05-29T03:50:52.147Z",
+        "completedAt": "2026-05-29T03:50:48.631Z"
+      }
+    ],
+    "tournament_registrations": [
+      {
+        "_id": "reg_2026_490988_298_000",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "playerName": "杜导",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 1,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.421Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_001",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+        "playerName": "标子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 2,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.416Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_002",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "playerName": "沈雅婷",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 3,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.409Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_003",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "playerName": "王宜帆",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 4,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.407Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_004",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "playerName": "Ella",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 5,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.415Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_005",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_抖抖",
+        "playerName": "抖抖",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 6,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.414Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_006",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_小野马",
+        "playerName": "小野马",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 7,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.418Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_007",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_老板",
+        "playerName": "老板",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 8,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.423Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_008",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "3bef321d69cc96880273781a4fd6358b",
+        "playerName": "乐乐",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 9,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.414Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_009",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0a841700aceb5a29f5aaba",
+        "playerName": "小飞",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 10,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.421Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_010",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a09d361009c6c6e780f87d4",
+        "playerName": "林大",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 11,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.418Z"
+      },
+      {
+        "_id": "reg_2026_490988_298_011",
+        "tournamentId": "tournament_2026_490988_298",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "43e58c886a0a843600a8e0f87e657c25",
+        "playerName": "栗子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 12,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:16:01.414Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_000",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "playerName": "王宜帆",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 1,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.752Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_001",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "playerName": "沈雅婷",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 2,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.756Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_002",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+        "playerName": "标子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 3,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.767Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_003",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "playerName": "杜导",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 4,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.763Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_004",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "playerName": "Ella",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 5,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.766Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_005",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_抖抖",
+        "playerName": "抖抖",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 6,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.749Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_006",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_小野马",
+        "playerName": "小野马",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 7,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.756Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_007",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_老板",
+        "playerName": "老板",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 8,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.766Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_008",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_剑锋",
+        "playerName": "剑锋",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 9,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.758Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_009",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_哲身",
+        "playerName": "哲身",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 10,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.767Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_010",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_海伦",
+        "playerName": "海伦",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 11,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.766Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034120_011",
+        "tournamentId": "tournament_gk12_20260529034120",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_许尧",
+        "playerName": "许尧",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 12,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:41:25.766Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_000",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "playerName": "王宜帆",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 1,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.237Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_001",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "playerName": "沈雅婷",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 2,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.249Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_002",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+        "playerName": "标子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 3,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.248Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_003",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "playerName": "杜导",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 4,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.245Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_004",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "playerName": "Ella",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 5,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.235Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_005",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_抖抖",
+        "playerName": "抖抖",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 6,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.244Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_006",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_小野马",
+        "playerName": "小野马",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 7,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.232Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_007",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_老板",
+        "playerName": "老板",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 8,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.240Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_008",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_剑锋",
+        "playerName": "剑锋",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 9,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.245Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_009",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_哲身",
+        "playerName": "哲身",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 10,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.241Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_010",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_海伦",
+        "playerName": "海伦",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 11,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.245Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034347_011",
+        "tournamentId": "tournament_gk12_20260529034347",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_许尧",
+        "playerName": "许尧",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 12,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:43:52.246Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_000",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "playerName": "王宜帆",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 1,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.052Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_001",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "playerName": "沈雅婷",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 2,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.045Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_002",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+        "playerName": "标子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 3,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.049Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_003",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "playerName": "杜导",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 4,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.054Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_004",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "playerName": "Ella",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 5,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.060Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_005",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_抖抖",
+        "playerName": "抖抖",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 6,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.059Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_006",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_小野马",
+        "playerName": "小野马",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 7,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.070Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_007",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_老板",
+        "playerName": "老板",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 8,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.051Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_008",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_剑锋",
+        "playerName": "剑锋",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 9,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.060Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_009",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_哲身",
+        "playerName": "哲身",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 10,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.063Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_010",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_海伦",
+        "playerName": "海伦",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 11,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.060Z"
+      },
+      {
+        "_id": "reg_gk12_20260529034758_011",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_许尧",
+        "playerName": "许尧",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 12,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:48:03.070Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_000",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "playerName": "王宜帆",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 1,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.592Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_001",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "playerName": "沈雅婷",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 2,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.604Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_002",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+        "playerName": "标子",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 3,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.598Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_003",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "playerName": "杜导",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 4,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.612Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_004",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "playerName": "Ella",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 5,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.601Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_005",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_抖抖",
+        "playerName": "抖抖",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 6,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.600Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_006",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_小野马",
+        "playerName": "小野马",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 7,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.678Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_007",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_老板",
+        "playerName": "老板",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 8,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.686Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_008",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_剑锋",
+        "playerName": "剑锋",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 9,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.687Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_009",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_哲身",
+        "playerName": "哲身",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 10,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.690Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_010",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_海伦",
+        "playerName": "海伦",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 11,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.688Z"
+      },
+      {
+        "_id": "reg_gk12_20260529035017_011",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "type": "singles",
+        "playerId": "unclaimed_许尧",
+        "playerName": "许尧",
+        "partnerId": null,
+        "partnerName": null,
+        "teamName": null,
+        "seed": 12,
+        "registrationStatus": "confirmed",
+        "createTime": "2026-05-29T03:50:21.689Z"
+      }
+    ],
+    "tournament_groups": [
+      {
+        "_id": "group_tournament_gk12_20260529034758_A",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "groupCode": "A",
+        "slots": [
+          {
+            "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+            "playerName": "王宜帆",
+            "slotNo": 1
+          },
+          {
+            "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+            "playerName": "沈雅婷",
+            "slotNo": 2
+          },
+          {
+            "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+            "playerName": "标子",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:48:03.917Z",
+        "updateTime": "2026-05-29T03:48:03.917Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529034758_B",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "groupCode": "B",
+        "slots": [
+          {
+            "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+            "playerName": "杜导",
+            "slotNo": 1
+          },
+          {
+            "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+            "playerName": "Ella",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_抖抖",
+            "playerName": "抖抖",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:48:03.966Z",
+        "updateTime": "2026-05-29T03:48:03.966Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529034758_C",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "groupCode": "C",
+        "slots": [
+          {
+            "playerId": "unclaimed_小野马",
+            "playerName": "小野马",
+            "slotNo": 1
+          },
+          {
+            "playerId": "unclaimed_老板",
+            "playerName": "老板",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_剑锋",
+            "playerName": "剑锋",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:48:04.013Z",
+        "updateTime": "2026-05-29T03:48:04.013Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529034758_D",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "groupCode": "D",
+        "slots": [
+          {
+            "playerId": "unclaimed_哲身",
+            "playerName": "哲身",
+            "slotNo": 1
+          },
+          {
+            "playerId": "unclaimed_海伦",
+            "playerName": "海伦",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_许尧",
+            "playerName": "许尧",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:48:04.061Z",
+        "updateTime": "2026-05-29T03:48:04.061Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529035017_A",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "groupCode": "A",
+        "slots": [
+          {
+            "playerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+            "playerName": "王宜帆",
+            "slotNo": 1
+          },
+          {
+            "playerId": "65308aa16a0d4d8600f689db47c93a2b",
+            "playerName": "沈雅婷",
+            "slotNo": 2
+          },
+          {
+            "playerId": "b25ba3026a0d3dd900f5555605410e2f",
+            "playerName": "标子",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:50:22.674Z",
+        "updateTime": "2026-05-29T03:50:22.674Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529035017_B",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "groupCode": "B",
+        "slots": [
+          {
+            "playerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+            "playerName": "杜导",
+            "slotNo": 1
+          },
+          {
+            "playerId": "2e5b265c6a0adda500b2ddda2d54d493",
+            "playerName": "Ella",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_抖抖",
+            "playerName": "抖抖",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:50:22.715Z",
+        "updateTime": "2026-05-29T03:50:22.715Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529035017_C",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "groupCode": "C",
+        "slots": [
+          {
+            "playerId": "unclaimed_小野马",
+            "playerName": "小野马",
+            "slotNo": 1
+          },
+          {
+            "playerId": "unclaimed_老板",
+            "playerName": "老板",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_剑锋",
+            "playerName": "剑锋",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:50:22.760Z",
+        "updateTime": "2026-05-29T03:50:22.760Z"
+      },
+      {
+        "_id": "group_tournament_gk12_20260529035017_D",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "groupCode": "D",
+        "slots": [
+          {
+            "playerId": "unclaimed_哲身",
+            "playerName": "哲身",
+            "slotNo": 1
+          },
+          {
+            "playerId": "unclaimed_海伦",
+            "playerName": "海伦",
+            "slotNo": 2
+          },
+          {
+            "playerId": "unclaimed_许尧",
+            "playerName": "许尧",
+            "slotNo": 3
+          }
+        ],
+        "createTime": "2026-05-29T03:50:22.796Z",
+        "updateTime": "2026-05-29T03:50:22.796Z"
+      }
+    ],
+    "tournament_brackets": [
+      {
+        "_id": "bracket_gk12_20260529034758_group_A",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_gA_p1_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gA_p2_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 2,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "b25ba3026a0d3dd900f5555605410e2f",
+              "name": "标子",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gA_p3_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 3,
+            "type": "singles",
+            "player1": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "b25ba3026a0d3dd900f5555605410e2f",
+              "name": "标子",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:04.982Z",
+        "updateTime": "2026-05-29T03:48:04.982Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_group_B",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_gB_p4_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 4,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gB_p5_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 5,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_抖抖",
+              "name": "抖抖",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gB_p6_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 6,
+            "type": "singles",
+            "player1": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_抖抖",
+              "name": "抖抖",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:05.028Z",
+        "updateTime": "2026-05-29T03:48:05.028Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_group_C",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_gC_p7_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 7,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gC_p8_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 8,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_剑锋",
+              "name": "剑锋",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gC_p9_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 9,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_剑锋",
+              "name": "剑锋",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:05.081Z",
+        "updateTime": "2026-05-29T03:48:05.081Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_group_D",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_gD_p10_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 10,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gD_p11_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 11,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_许尧",
+              "name": "许尧",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_gD_p12_1780026484927",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 12,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_许尧",
+              "name": "许尧",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:05.130Z",
+        "updateTime": "2026-05-29T03:48:05.130Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_knockout_round_1",
+        "bracketId": "bracket_gk12_20260529034758_knockout_round_1",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 1,
+        "roundName": "quarterfinal",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r1_p1_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "A1",
+            "player2Source": "C2"
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r1_p2_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 2,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "B1",
+            "player2Source": "D2"
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r1_p3_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 3,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "C1",
+            "player2Source": "A2"
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r1_p4_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 4,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "D1",
+            "player2Source": "B2"
+          }
+        ],
+        "createTime": "2026-05-29T03:48:19.222Z",
+        "updateTime": "2026-05-29T03:48:19.222Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_knockout_round_2",
+        "bracketId": "bracket_gk12_20260529034758_knockout_round_2",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 2,
+        "roundName": "semifinal",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r2_p1_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_2",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 2,
+            "position": 1,
+            "type": "singles",
+            "player1": null,
+            "player2": null,
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r2_p2_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_2",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 2,
+            "position": 2,
+            "type": "singles",
+            "player1": null,
+            "player2": null,
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:19.256Z",
+        "updateTime": "2026-05-29T03:48:19.256Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529034758_knockout_round_3",
+        "bracketId": "bracket_gk12_20260529034758_knockout_round_3",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 3,
+        "roundName": "final",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529034758_ko_r3_p1_1780026499176",
+            "tournamentId": "tournament_gk12_20260529034758",
+            "bracketId": "bracket_gk12_20260529034758_knockout_round_3",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 3,
+            "position": 1,
+            "type": "singles",
+            "player1": null,
+            "player2": null,
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:48:19.299Z",
+        "updateTime": "2026-05-29T03:48:19.299Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_group_A",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_gA_p1_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gA_p2_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 2,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "b25ba3026a0d3dd900f5555605410e2f",
+              "name": "标子",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gA_p3_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_A",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "A",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 3,
+            "type": "singles",
+            "player1": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "b25ba3026a0d3dd900f5555605410e2f",
+              "name": "标子",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:23.821Z",
+        "updateTime": "2026-05-29T03:50:23.821Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_group_B",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_gB_p4_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 4,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gB_p5_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 5,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_抖抖",
+              "name": "抖抖",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gB_p6_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_B",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "B",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 6,
+            "type": "singles",
+            "player1": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_抖抖",
+              "name": "抖抖",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:23.890Z",
+        "updateTime": "2026-05-29T03:50:23.890Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_group_C",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_gC_p7_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 7,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gC_p8_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 8,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_剑锋",
+              "name": "剑锋",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gC_p9_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_C",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "C",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 9,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_剑锋",
+              "name": "剑锋",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:23.928Z",
+        "updateTime": "2026-05-29T03:50:23.928Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_group_D",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "round": 1,
+        "type": "singles",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_gD_p10_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 1,
+            "groupSlot2": 2,
+            "round": 1,
+            "position": 10,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gD_p11_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 1,
+            "groupSlot2": 3,
+            "round": 2,
+            "position": 11,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_许尧",
+              "name": "许尧",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_gD_p12_1780026623772",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_group_D",
+            "matchKind": "group",
+            "stage": "group",
+            "groupCode": "D",
+            "groupSlot1": 2,
+            "groupSlot2": 3,
+            "round": 3,
+            "position": 12,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_许尧",
+              "name": "许尧",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "pending",
+            "resultStatus": "pending",
+            "winner": null,
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:23.973Z",
+        "updateTime": "2026-05-29T03:50:23.973Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_knockout_round_1",
+        "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 1,
+        "roundName": "quarterfinal",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r1_p1_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_老板",
+              "name": "老板",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "A1",
+            "player2Source": "C2"
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r1_p2_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 2,
+            "type": "singles",
+            "player1": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_海伦",
+              "name": "海伦",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "B1",
+            "player2Source": "D2"
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r1_p3_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 3,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "65308aa16a0d4d8600f689db47c93a2b",
+              "name": "沈雅婷",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "C1",
+            "player2Source": "A2"
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r1_p4_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_1",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 1,
+            "position": 4,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "2e5b265c6a0adda500b2ddda2d54d493",
+              "name": "Ella",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null,
+            "player1Source": "D1",
+            "player2Source": "B2"
+          }
+        ],
+        "createTime": "2026-05-29T03:50:37.204Z",
+        "updateTime": "2026-05-29T03:50:37.204Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_knockout_round_2",
+        "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 2,
+        "roundName": "semifinal",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r2_p1_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 2,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "name": "杜导",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null
+          },
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r2_p2_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_2",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 2,
+            "position": 2,
+            "type": "singles",
+            "player1": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_哲身",
+              "name": "哲身",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:37.242Z",
+        "updateTime": "2026-05-29T03:50:37.242Z"
+      },
+      {
+        "_id": "bracket_gk12_20260529035017_knockout_round_3",
+        "bracketId": "bracket_gk12_20260529035017_knockout_round_3",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "format": "group_knockout",
+        "type": "singles",
+        "stage": "knockout",
+        "round": 3,
+        "roundName": "final",
+        "matches": [
+          {
+            "matchId": "gk_gk12_20260529035017_ko_r3_p1_1780026637172",
+            "tournamentId": "tournament_gk12_20260529035017",
+            "bracketId": "bracket_gk12_20260529035017_knockout_round_3",
+            "matchKind": "bracket",
+            "stage": "knockout",
+            "round": 3,
+            "position": 1,
+            "type": "singles",
+            "player1": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "player2": {
+              "id": "unclaimed_小野马",
+              "name": "小野马",
+              "registrationId": null
+            },
+            "bye": false,
+            "status": "confirmed",
+            "resultStatus": "confirmed",
+            "winner": {
+              "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "name": "王宜帆",
+              "registrationId": null
+            },
+            "courtId": null,
+            "queueOrder": null
+          }
+        ],
+        "createTime": "2026-05-29T03:50:37.284Z",
+        "updateTime": "2026-05-29T03:50:37.284Z"
+      }
+    ],
+    "match_results": [
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p1_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gA_p1_1780026484927",
+        "round": 1,
+        "position": 1,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "65308aa16a0d4d8600f689db47c93a2b"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:48:05.254Z",
+        "updateTime": "2026-05-29T03:48:05.254Z",
+        "confirmedAt": "2026-05-29T03:48:11.414Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "65308aa16a0d4d8600f689db47c93a2b",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p1_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r1_p1_1780026499176",
+        "round": 1,
+        "position": 1,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "unclaimed_老板"
+        ],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.368Z",
+        "updateTime": "2026-05-29T03:48:19.368Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p2_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r1_p2_1780026499176",
+        "round": 1,
+        "position": 2,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "unclaimed_海伦"
+        ],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.447Z",
+        "updateTime": "2026-05-29T03:48:19.447Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p3_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r1_p3_1780026499176",
+        "round": 1,
+        "position": 3,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "65308aa16a0d4d8600f689db47c93a2b"
+        ],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.533Z",
+        "updateTime": "2026-05-29T03:48:19.533Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p4_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gB_p4_1780026484927",
+        "round": 1,
+        "position": 4,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "2e5b265c6a0adda500b2ddda2d54d493"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "createTime": "2026-05-29T03:48:05.527Z",
+        "updateTime": "2026-05-29T03:48:05.527Z",
+        "confirmedAt": "2026-05-29T03:48:12.974Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r1_p4_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r1_p4_1780026499176",
+        "round": 1,
+        "position": 4,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "2e5b265c6a0adda500b2ddda2d54d493"
+        ],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.607Z",
+        "updateTime": "2026-05-29T03:48:19.607Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p7_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gC_p7_1780026484927",
+        "round": 1,
+        "position": 7,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "unclaimed_老板"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:48:05.798Z",
+        "updateTime": "2026-05-29T03:48:05.798Z",
+        "confirmedAt": "2026-05-29T03:48:14.529Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_小野马",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_老板",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p10_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gD_p10_1780026484927",
+        "round": 1,
+        "position": 10,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "unclaimed_海伦"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_哲身",
+        "createTime": "2026-05-29T03:48:06.059Z",
+        "updateTime": "2026-05-29T03:48:06.059Z",
+        "confirmedAt": "2026-05-29T03:48:16.071Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_哲身",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_海伦",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r2_p1_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r2_p1_1780026499176",
+        "round": 2,
+        "position": 1,
+        "player1": null,
+        "player2": null,
+        "playerIds": [],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.683Z",
+        "updateTime": "2026-05-29T03:48:19.683Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p2_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gA_p2_1780026484927",
+        "round": 2,
+        "position": 2,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "b25ba3026a0d3dd900f5555605410e2f",
+          "name": "标子",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "b25ba3026a0d3dd900f5555605410e2f"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:48:05.332Z",
+        "updateTime": "2026-05-29T03:48:05.332Z",
+        "confirmedAt": "2026-05-29T03:48:11.990Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "b25ba3026a0d3dd900f5555605410e2f",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r2_p2_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r2_p2_1780026499176",
+        "round": 2,
+        "position": 2,
+        "player1": null,
+        "player2": null,
+        "playerIds": [],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.748Z",
+        "updateTime": "2026-05-29T03:48:19.748Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p5_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gB_p5_1780026484927",
+        "round": 2,
+        "position": 5,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "unclaimed_抖抖"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "createTime": "2026-05-29T03:48:05.601Z",
+        "updateTime": "2026-05-29T03:48:05.601Z",
+        "confirmedAt": "2026-05-29T03:48:13.501Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_抖抖",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p8_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gC_p8_1780026484927",
+        "round": 2,
+        "position": 8,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "unclaimed_剑锋"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:48:05.877Z",
+        "updateTime": "2026-05-29T03:48:05.877Z",
+        "confirmedAt": "2026-05-29T03:48:15.107Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_小野马",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_剑锋",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p11_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gD_p11_1780026484927",
+        "round": 2,
+        "position": 11,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_许尧",
+          "name": "许尧",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "unclaimed_许尧"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_哲身",
+        "createTime": "2026-05-29T03:48:06.159Z",
+        "updateTime": "2026-05-29T03:48:06.159Z",
+        "confirmedAt": "2026-05-29T03:48:16.559Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_哲身",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_许尧",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_ko_r3_p1_1780026499176",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529034758_ko_r3_p1_1780026499176",
+        "round": 3,
+        "position": 1,
+        "player1": null,
+        "player2": null,
+        "playerIds": [],
+        "score": null,
+        "status": "pending",
+        "resultStatus": "pending",
+        "winner": null,
+        "winnerId": null,
+        "pointsAwarded": null,
+        "createTime": "2026-05-29T03:48:19.829Z",
+        "updateTime": "2026-05-29T03:48:19.829Z"
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gA_p3_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gA_p3_1780026484927",
+        "round": 3,
+        "position": 3,
+        "player1": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "b25ba3026a0d3dd900f5555605410e2f",
+          "name": "标子",
+          "registrationId": null
+        },
+        "playerIds": [
+          "65308aa16a0d4d8600f689db47c93a2b",
+          "b25ba3026a0d3dd900f5555605410e2f"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "createTime": "2026-05-29T03:48:05.440Z",
+        "updateTime": "2026-05-29T03:48:05.440Z",
+        "confirmedAt": "2026-05-29T03:48:12.477Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "65308aa16a0d4d8600f689db47c93a2b",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "b25ba3026a0d3dd900f5555605410e2f",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gB_p6_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gB_p6_1780026484927",
+        "round": 3,
+        "position": 6,
+        "player1": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "registrationId": null
+        },
+        "playerIds": [
+          "2e5b265c6a0adda500b2ddda2d54d493",
+          "unclaimed_抖抖"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "createTime": "2026-05-29T03:48:05.702Z",
+        "updateTime": "2026-05-29T03:48:05.702Z",
+        "confirmedAt": "2026-05-29T03:48:13.990Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_抖抖",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gC_p9_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gC_p9_1780026484927",
+        "round": 3,
+        "position": 9,
+        "player1": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_老板",
+          "unclaimed_剑锋"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_老板",
+        "createTime": "2026-05-29T03:48:05.974Z",
+        "updateTime": "2026-05-29T03:48:05.974Z",
+        "confirmedAt": "2026-05-29T03:48:15.574Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_老板",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_剑锋",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529034758_gk_gk12_20260529034758_gD_p12_1780026484927",
+        "tournamentId": "tournament_gk12_20260529034758",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529034758_gD_p12_1780026484927",
+        "round": 3,
+        "position": 12,
+        "player1": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_许尧",
+          "name": "许尧",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_海伦",
+          "unclaimed_许尧"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_海伦",
+        "createTime": "2026-05-29T03:48:06.260Z",
+        "updateTime": "2026-05-29T03:48:06.260Z",
+        "confirmedAt": "2026-05-29T03:48:17.037Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_海伦",
+              "points": 0,
+              "role": "winner"
+            },
+            {
+              "memberId": "unclaimed_许尧",
+              "points": 0,
+              "role": "loser"
+            }
+          ],
+          "source": "match"
+        },
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p1_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gA_p1_1780026623772",
+        "round": 1,
+        "position": 1,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "65308aa16a0d4d8600f689db47c93a2b"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:50:24.063Z",
+        "updateTime": "2026-05-29T03:50:24.063Z",
+        "confirmedAt": "2026-05-29T03:50:28.227Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p1_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r1_p1_1780026637172",
+        "round": 1,
+        "position": 1,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "unclaimed_老板"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:50:37.363Z",
+        "updateTime": "2026-05-29T03:50:37.363Z",
+        "confirmedAt": "2026-05-29T03:50:39.877Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p2_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r1_p2_1780026637172",
+        "round": 1,
+        "position": 2,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "unclaimed_海伦"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "createTime": "2026-05-29T03:50:37.440Z",
+        "updateTime": "2026-05-29T03:50:37.440Z",
+        "confirmedAt": "2026-05-29T03:50:40.619Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p3_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r1_p3_1780026637172",
+        "round": 1,
+        "position": 3,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "65308aa16a0d4d8600f689db47c93a2b"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:50:37.516Z",
+        "updateTime": "2026-05-29T03:50:37.516Z",
+        "confirmedAt": "2026-05-29T03:50:41.330Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p4_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gB_p4_1780026623772",
+        "round": 1,
+        "position": 4,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "2e5b265c6a0adda500b2ddda2d54d493"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "createTime": "2026-05-29T03:50:24.311Z",
+        "updateTime": "2026-05-29T03:50:24.311Z",
+        "confirmedAt": "2026-05-29T03:50:29.732Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r1_p4_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r1_p4_1780026637172",
+        "round": 1,
+        "position": 4,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "2e5b265c6a0adda500b2ddda2d54d493"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_哲身",
+        "createTime": "2026-05-29T03:50:37.595Z",
+        "updateTime": "2026-05-29T03:50:37.595Z",
+        "confirmedAt": "2026-05-29T03:50:42.079Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p7_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gC_p7_1780026623772",
+        "round": 1,
+        "position": 7,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "unclaimed_老板"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:50:24.550Z",
+        "updateTime": "2026-05-29T03:50:24.550Z",
+        "confirmedAt": "2026-05-29T03:50:31.203Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p10_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 1,
+        "groupSlot2": 2,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gD_p10_1780026623772",
+        "round": 1,
+        "position": 10,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "unclaimed_海伦"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_哲身",
+        "createTime": "2026-05-29T03:50:24.819Z",
+        "updateTime": "2026-05-29T03:50:24.819Z",
+        "confirmedAt": "2026-05-29T03:50:32.663Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 1
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r2_p1_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r2_p1_1780026637172",
+        "round": 2,
+        "position": 1,
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "b25ba3026a0ade0c00b38fb7747c3c74"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:50:37.675Z",
+        "updateTime": "2026-05-29T03:50:37.675Z",
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "confirmedAt": "2026-05-29T03:50:44.881Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "b25ba3026a0ade0c00b38fb7747c3c74",
+              "points": 100,
+              "rank": "semifinal"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p2_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gA_p2_1780026623772",
+        "round": 2,
+        "position": 2,
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "b25ba3026a0d3dd900f5555605410e2f",
+          "name": "标子",
+          "registrationId": null
+        },
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "b25ba3026a0d3dd900f5555605410e2f"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:50:24.146Z",
+        "updateTime": "2026-05-29T03:50:24.146Z",
+        "confirmedAt": "2026-05-29T03:50:28.750Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r2_p2_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r2_p2_1780026637172",
+        "round": 2,
+        "position": 2,
+        "playerIds": [
+          "unclaimed_小野马",
+          "unclaimed_哲身"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:50:37.774Z",
+        "updateTime": "2026-05-29T03:50:37.774Z",
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "confirmedAt": "2026-05-29T03:50:45.595Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_哲身",
+              "points": 100,
+              "rank": "semifinal"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p5_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gB_p5_1780026623772",
+        "round": 2,
+        "position": 5,
+        "player1": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "registrationId": null
+        },
+        "playerIds": [
+          "b25ba3026a0ade0c00b38fb7747c3c74",
+          "unclaimed_抖抖"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "b25ba3026a0ade0c00b38fb7747c3c74",
+        "createTime": "2026-05-29T03:50:24.386Z",
+        "updateTime": "2026-05-29T03:50:24.386Z",
+        "confirmedAt": "2026-05-29T03:50:30.256Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "b25ba3026a0ade0c00b38fb7747c3c74",
+          "name": "杜导",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p8_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gC_p8_1780026623772",
+        "round": 2,
+        "position": 8,
+        "player1": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_小野马",
+          "unclaimed_剑锋"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_小野马",
+        "createTime": "2026-05-29T03:50:24.644Z",
+        "updateTime": "2026-05-29T03:50:24.644Z",
+        "confirmedAt": "2026-05-29T03:50:31.666Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p11_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 1,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gD_p11_1780026623772",
+        "round": 2,
+        "position": 11,
+        "player1": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_许尧",
+          "name": "许尧",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_哲身",
+          "unclaimed_许尧"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_哲身",
+        "createTime": "2026-05-29T03:50:24.914Z",
+        "updateTime": "2026-05-29T03:50:24.914Z",
+        "confirmedAt": "2026-05-29T03:50:33.095Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_哲身",
+          "name": "哲身",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_ko_r3_p1_1780026637172",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "knockout",
+        "matchKind": "bracket",
+        "sourceMatchId": "gk_gk12_20260529035017_ko_r3_p1_1780026637172",
+        "round": 3,
+        "position": 1,
+        "playerIds": [
+          "a7ff0e996a0d71c601000e8a66f0abdd",
+          "unclaimed_小野马"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "a7ff0e996a0d71c601000e8a66f0abdd",
+        "createTime": "2026-05-29T03:50:37.858Z",
+        "updateTime": "2026-05-29T03:50:37.858Z",
+        "player1": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_小野马",
+          "name": "小野马",
+          "registrationId": null
+        },
+        "confirmedAt": "2026-05-29T03:50:48.309Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 2
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "a7ff0e996a0d71c601000e8a66f0abdd",
+          "name": "王宜帆",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "a7ff0e996a0d71c601000e8a66f0abdd",
+              "points": 250,
+              "rank": "champion"
+            },
+            {
+              "memberId": "unclaimed_小野马",
+              "points": 150,
+              "rank": "runnerUp"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gA_p3_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "A",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gA_p3_1780026623772",
+        "round": 3,
+        "position": 3,
+        "player1": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "b25ba3026a0d3dd900f5555605410e2f",
+          "name": "标子",
+          "registrationId": null
+        },
+        "playerIds": [
+          "65308aa16a0d4d8600f689db47c93a2b",
+          "b25ba3026a0d3dd900f5555605410e2f"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "65308aa16a0d4d8600f689db47c93a2b",
+        "createTime": "2026-05-29T03:50:24.234Z",
+        "updateTime": "2026-05-29T03:50:24.234Z",
+        "confirmedAt": "2026-05-29T03:50:29.278Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "65308aa16a0d4d8600f689db47c93a2b",
+          "name": "沈雅婷",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "65308aa16a0d4d8600f689db47c93a2b",
+              "points": 65,
+              "rank": "quarterfinal"
+            },
+            {
+              "memberId": "b25ba3026a0d3dd900f5555605410e2f",
+              "points": 20,
+              "rank": "group"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gB_p6_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "B",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gB_p6_1780026623772",
+        "round": 3,
+        "position": 6,
+        "player1": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_抖抖",
+          "name": "抖抖",
+          "registrationId": null
+        },
+        "playerIds": [
+          "2e5b265c6a0adda500b2ddda2d54d493",
+          "unclaimed_抖抖"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "2e5b265c6a0adda500b2ddda2d54d493",
+        "createTime": "2026-05-29T03:50:24.477Z",
+        "updateTime": "2026-05-29T03:50:24.477Z",
+        "confirmedAt": "2026-05-29T03:50:30.726Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "2e5b265c6a0adda500b2ddda2d54d493",
+          "name": "Ella",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "2e5b265c6a0adda500b2ddda2d54d493",
+              "points": 65,
+              "rank": "quarterfinal"
+            },
+            {
+              "memberId": "unclaimed_抖抖",
+              "points": 20,
+              "rank": "group"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gC_p9_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "C",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gC_p9_1780026623772",
+        "round": 3,
+        "position": 9,
+        "player1": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_剑锋",
+          "name": "剑锋",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_老板",
+          "unclaimed_剑锋"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_老板",
+        "createTime": "2026-05-29T03:50:24.726Z",
+        "updateTime": "2026-05-29T03:50:24.726Z",
+        "confirmedAt": "2026-05-29T03:50:32.143Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_老板",
+          "name": "老板",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_老板",
+              "points": 65,
+              "rank": "quarterfinal"
+            },
+            {
+              "memberId": "unclaimed_剑锋",
+              "points": 20,
+              "rank": "group"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      },
+      {
+        "_id": "result_gk12_20260529035017_gk_gk12_20260529035017_gD_p12_1780026623772",
+        "tournamentId": "tournament_gk12_20260529035017",
+        "seasonId": "season_2026",
+        "tournamentType": "singles",
+        "type": "singles",
+        "format": "group_knockout",
+        "stage": "group",
+        "groupCode": "D",
+        "groupSlot1": 2,
+        "groupSlot2": 3,
+        "matchKind": "group",
+        "sourceMatchId": "gk_gk12_20260529035017_gD_p12_1780026623772",
+        "round": 3,
+        "position": 12,
+        "player1": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "player2": {
+          "id": "unclaimed_许尧",
+          "name": "许尧",
+          "registrationId": null
+        },
+        "playerIds": [
+          "unclaimed_海伦",
+          "unclaimed_许尧"
+        ],
+        "status": "completed",
+        "resultStatus": "confirmed",
+        "winnerId": "unclaimed_海伦",
+        "createTime": "2026-05-29T03:50:24.994Z",
+        "updateTime": "2026-05-29T03:50:24.994Z",
+        "confirmedAt": "2026-05-29T03:50:33.521Z",
+        "confirmedBy": "3bef321d69cc96880273781a4fd6358b",
+        "score": {
+          "sets": [
+            {
+              "a": 4,
+              "b": 0
+            }
+          ],
+          "tiebreak": null
+        },
+        "voidReason": null,
+        "voidedAt": null,
+        "voidedBy": null,
+        "winner": {
+          "id": "unclaimed_海伦",
+          "name": "海伦",
+          "registrationId": null
+        },
+        "pointsAwarded": {
+          "entries": [
+            {
+              "memberId": "unclaimed_海伦",
+              "points": 65,
+              "rank": "quarterfinal"
+            },
+            {
+              "memberId": "unclaimed_许尧",
+              "points": 20,
+              "rank": "group"
+            }
+          ],
+          "source": "group_knockout"
+        }
+      }
+    ]
+  }
+}

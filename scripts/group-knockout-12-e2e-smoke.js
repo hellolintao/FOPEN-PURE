@@ -102,10 +102,10 @@ async function main() {
       slots: group.slots.map(slot => `${slot.slotNo}.${slot.playerName}`)
     })),
     expectedQuarterfinals: [
-      'A1 vs C2',
-      'B1 vs D2',
-      'C1 vs A2',
-      'D1 vs B2',
+      'A1 vs B2',
+      'B1 vs A2',
+      'C1 vs D2',
+      'D1 vs C2',
     ],
     champion: verification.champion,
     points: verification.pointsByName,
@@ -478,7 +478,7 @@ async function verifyFinalState(db, tournamentId, context) {
   const round2 = brackets.find(bracket => bracket._id === knockoutBracketDocId(tournamentId, 2))
   const round3 = brackets.find(bracket => bracket._id === knockoutBracketDocId(tournamentId, 3))
   const sourcePairs = round1.matches.map(match => [match.player1Source, match.player2Source].join('-'))
-  assertDeepEqual(sourcePairs, ['A1-C2', 'B1-D2', 'C1-A2', 'D1-B2'], 'quarterfinal source labels')
+  assertDeepEqual(sourcePairs, ['A1-B2', 'B1-A2', 'C1-D2', 'D1-C2'], 'quarterfinal source labels')
   if (round2.matches.some(match => match.player1Source || match.player2Source) ||
       round3.matches.some(match => match.player1Source || match.player2Source)) {
     throw new Error('Source labels should only exist on quarterfinal matches')

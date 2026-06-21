@@ -38,7 +38,7 @@ function emptyResult(name, action) {
       }
     }
   }
-  if (name === 'weekly-star' && action === 'latest') {
+  if (name === 'weekly-star' && (action === 'latest' || action === 'current')) {
     return { success: true, data: null }
   }
   if (name === 'members' && action === 'get') {

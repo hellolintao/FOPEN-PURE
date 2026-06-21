@@ -160,6 +160,78 @@ describe('weekly-star.compute double-write', () => {
   })
 })
 
+describe('weekly-star.current natural-week display', () => {
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.tournament_points.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.weekly_stars.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+  })
+
+  test('current action displays the previous complete natural week until next Monday', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'A', name: '上周选手', avatarUrl: 'a.png' },
+      { _id: 'B', name: '本周选手', avatarUrl: 'b.png' }
+    )
+    cloud.__rows.match_results.push(
+      {
+        _id: 'prev',
+        seasonId: 's2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: d('2026-05-26'),
+        createTime: d('2026-05-26'),
+        pointsAwarded: { entries: [{ memberId: 'A', points: 80, role: 'winner' }] }
+      },
+      {
+        _id: 'this-week',
+        seasonId: 's2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: d('2026-06-02'),
+        createTime: d('2026-06-02'),
+        pointsAwarded: { entries: [{ memberId: 'B', points: 200, role: 'winner' }] }
+      }
+    )
+
+    const { main } = require('../index')
+    const res = await main({ action: 'current', seasonId: 's2026', type: 'singles', now: '2026-06-03T12:00:00+08:00' })
+
+    expect(res.success).toBe(true)
+    expect(res.data.weekStart).toBe('2026-05-25')
+    expect(res.data.weekEnd).toBe('2026-05-31')
+    expect(res.data.star.memberId).toBe('A')
+    expect(res.data.star.pointsDelta).toBe(80)
+  })
+
+  test('current action ignores stale weekly_stars when previous-week source rows are gone', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'T', name: '测试选手', avatarUrl: 't.png' })
+    cloud.__rows.weekly_stars.push({
+      _id: 's2026_ws_2026-05-25',
+      seasonId: 's2026',
+      weekStart: '2026-05-25',
+      weekEnd: '2026-05-31',
+      singlesStar: { memberId: 'T', points: 200, wins: 5, losses: 0 }
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'current', seasonId: 's2026', type: 'singles', now: '2026-06-03T12:00:00+08:00' })
+
+    expect(res.success).toBe(true)
+    expect(res.data).toEqual({
+      mode: 'empty',
+      weekStart: '2026-05-25',
+      weekEnd: '2026-05-31',
+      star: null,
+      subtitle: null
+    })
+  })
+})
+
 describe('weekly-star.recomputeRankSnapshots', () => {
   beforeEach(() => {
     const cloud = require('wx-server-sdk')

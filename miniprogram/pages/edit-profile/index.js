@@ -19,7 +19,6 @@ Page({
     privacyContractName: '用户隐私保护指引',
     formData: {
       name: '',
-      phone: '',
       avatarUrl: '',
       playStyle: null
     },
@@ -116,7 +115,6 @@ Page({
       avatarPreviewUrl: '',
       formData: {
         name: user.name || '',
-        phone: user.phone || '',
         avatarUrl: user.avatarUrl || '',
         playStyle: PLAY_STYLE_VALUES.includes(user.playStyle) ? user.playStyle : null
       }
@@ -258,12 +256,6 @@ Page({
     })
   },
 
-  onPhoneInput(e) {
-    this.setData({
-      'formData.phone': e.detail.value
-    })
-  },
-
   onPlayStyleChange(e) {
     const value = e.detail.value || null
     this.setData({
@@ -292,7 +284,7 @@ Page({
 
   async onSave() {
     const { isRegister } = this.data
-    const { name, phone, avatarUrl, playStyle } = this.data.formData
+    const { name, avatarUrl, playStyle } = this.data.formData
     const cleanName = (name || '').trim()
     const app = getApp()
     const currentMember = app && app.globalData ? app.globalData.currentMember : null
@@ -307,12 +299,7 @@ Page({
     const requiresPlayStyle = shouldCreateMember || shouldClaimExistingMember
 
     if (!cleanName) {
-      wx.showToast({ title: '请输入姓名', icon: 'none' })
-      return
-    }
-
-    if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
-      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      wx.showToast({ title: '请输入昵称', icon: 'none' })
       return
     }
 
@@ -336,7 +323,6 @@ Page({
     try {
       const payload = {
         name: cleanName,
-        phone: phone || '',
         avatarUrl: avatarUrl || DEFAULT_AVATAR_URL,
         playStyle: playStyle || ''
       }

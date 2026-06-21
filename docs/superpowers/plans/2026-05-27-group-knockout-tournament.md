@@ -2802,7 +2802,7 @@ Use a seeded 16-player test tournament:
 3. Enter A/B/C/D groups manually and generate group stage.
 4. Confirm the bracket page has only `小组赛` and `淘汰赛` tabs.
 5. Enter all group scores and confirm rankings update.
-6. Confirm 8 players and verify QF pairings are A1-C2, B1-D2, C1-A2, D1-B2.
+6. Confirm 8 players and verify QF pairings are A1-B2, B1-A2, C1-D2, D1-C2.
 7. Confirm source labels only show in QF.
 8. Enter knockout scores through final.
 9. Verify `points-engine` writes one points row per player.

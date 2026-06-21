@@ -12,7 +12,7 @@
 
   <view class="legal-section">
     <text class="legal-section-title">二、注册与账号</text>
-    <text class="legal-body">注册时，你需要提供姓名或昵称、打法信息，并可自愿提供头像和手机号。平台会使用微信 OpenID 识别当前账号，避免重复注册并保护你的参赛记录。请确保提交的信息真实、准确、合法。</text>
+    <text class="legal-body">注册时，你需要提供昵称、打法信息，并可自愿提供头像。平台会使用微信 OpenID 识别当前账号，避免重复注册并保护你的参赛记录。请确保提交的信息真实、准确、合法。</text>
   </view>
 
   <view class="legal-section">

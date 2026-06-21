@@ -10,10 +10,15 @@ jest.mock('wx-server-sdk', () => {
     eq: (v) => op('eq', v),
     remove: () => ({ __op: 'remove' })
   }
-  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [], rank_cache: [], __missingCollections: new Set() }
+  const rows = { match_results: [], tournament_points: [], members: [], rank_snapshots: [], tournaments: [], baseline_standings: [], rank_cache: [], __missingCollections: new Set(), __missingDocs: new Set() }
   function missingCollectionError(name) {
     const err = new Error(`collection ${name} not exists`)
     err.errCode = -502005
+    return err
+  }
+  function missingDocumentError(name, id) {
+    const err = new Error(`document.get:fail document with _id ${id} does not exist`)
+    err.errCode = -1
     return err
   }
   function rowMatches(row, f) {
@@ -72,6 +77,7 @@ jest.mock('wx-server-sdk', () => {
         return {
           get: async () => {
             if (rows.__missingCollections.has(name)) throw missingCollectionError(name)
+            if (rows.__missingDocs.has(`${name}/${id}`)) throw missingDocumentError(name, id)
             return { data: (rows[name] || []).find(r => r._id === id) || null }
           },
           update: async ({ data }) => {
@@ -116,6 +122,7 @@ describe('rankList enhancements', () => {
     cloud.__rows.baseline_standings.length = 0
     cloud.__rows.rank_cache.length = 0
     cloud.__rows.__missingCollections.clear()
+    cloud.__rows.__missingDocs.clear()
   })
 
   function seedMatchesForMember(memberId, wins, losses, points = 20) {
@@ -398,6 +405,30 @@ describe('rankList enhancements', () => {
   test('rankList recomputes live rows when rank_cache collection is missing', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.__missingCollections.add('rank_cache')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 4,
+      losses: 1,
+      createTime: '2026-05-01'
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.success).toBe(true)
+    expect(res.data.rankList).toEqual([
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+    ])
+  })
+
+  test('rankList recomputes live rows when rank_cache document is missing', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.__missingDocs.add('rank_cache/rank_cache_season_2026_singles')
     cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
     cloud.__rows.baseline_standings.push({
       _id: 'bs1',

@@ -7,7 +7,7 @@
 
   <view class="legal-section">
     <text class="legal-section-title">一、我们收集的信息</text>
-    <text class="legal-body">注册和使用过程中，我们会根据你主动填写或授权的内容收集姓名或昵称、头像、手机号、打法、报名记录、比赛成绩、积分排行，以及微信 OpenID 等账号识别信息。</text>
+    <text class="legal-body">注册和使用过程中，我们会根据你主动填写或授权的内容收集昵称、头像、打法、报名记录、比赛成绩、积分排行，以及微信 OpenID 等账号识别信息。</text>
   </view>
 
   <view class="legal-section">
@@ -27,12 +27,12 @@
 
   <view class="legal-section">
     <text class="legal-section-title">五、展示与共享</text>
-    <text class="legal-body">为了完成赛事组织和俱乐部排行，你的昵称、头像、打法、比赛成绩、积分和报名状态可能在小程序内向其他会员展示。手机号、OpenID 等敏感识别信息不会在公开页面展示。</text>
+    <text class="legal-body">为了完成赛事组织和俱乐部排行，你的昵称、头像、打法、比赛成绩、积分和报名状态可能在小程序内向其他会员展示。OpenID 等敏感识别信息不会在公开页面展示。</text>
   </view>
 
   <view class="legal-section">
     <text class="legal-section-title">六、你的权利</text>
-    <text class="legal-body">你可以在编辑资料页修改头像、姓名、手机号和打法。如需删除账号资料、撤回授权或处理个人信息相关问题，可联系俱乐部管理员协助处理。</text>
+    <text class="legal-body">你可以在编辑资料页修改头像、昵称和打法。如需删除账号资料、撤回授权或处理个人信息相关问题，可联系俱乐部管理员协助处理。</text>
   </view>
 
   <view class="legal-section">

@@ -1,0 +1,397 @@
+[
+  {
+    "_id": "tournament_2026_119928_882",
+    "seasonId": "season_2026",
+    "name": "5.17常规赛",
+    "type": "doubles",
+    "format": "regular",
+    "startDate": "2026-05-17",
+    "endDate": "",
+    "location": "海峡奥体网球场",
+    "status": "upcoming",
+    "description": "",
+    "schedulePlan": {
+      "courts": [
+        {
+          "courtId": "court_1779092168308_508",
+          "location": "",
+          "name": "比赛3",
+          "slots": [
+            "2026-05-17T19:00",
+            "2026-05-17T19:20",
+            "2026-05-17T19:40",
+            "2026-05-17T20:00",
+            "2026-05-17T20:20",
+            "2026-05-17T20:40"
+          ]
+        },
+        {
+          "courtId": "court_1779092172664_079",
+          "location": "",
+          "name": "比赛4",
+          "slots": [
+            "2026-05-17T19:00",
+            "2026-05-17T19:20",
+            "2026-05-17T19:40",
+            "2026-05-17T20:00",
+            "2026-05-17T20:20",
+            "2026-05-17T20:40"
+          ]
+        }
+      ],
+      "queues": [
+        {
+          "courtId": "court_1779092168308_508",
+          "items": [
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122043784",
+              "order": 0,
+              "sourceMatchId": "match_extra_1779122043784"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122083458",
+              "order": 1,
+              "sourceMatchId": "match_extra_1779122083458"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122132282",
+              "order": 2,
+              "sourceMatchId": "match_extra_1779122132282"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122174499",
+              "order": 3,
+              "sourceMatchId": "match_extra_1779122174499"
+            }
+          ]
+        },
+        {
+          "courtId": "court_1779092172664_079",
+          "items": [
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122062123",
+              "order": 0,
+              "sourceMatchId": "match_extra_1779122062123"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122101635",
+              "order": 1,
+              "sourceMatchId": "match_extra_1779122101635"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122156232",
+              "order": 2,
+              "sourceMatchId": "match_extra_1779122156232"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779122194829",
+              "order": 3,
+              "sourceMatchId": "match_extra_1779122194829"
+            }
+          ]
+        }
+      ],
+      "slotMinutes": 20
+    },
+    "maxPlayers": 8,
+    "pointsRules": {
+      "placement": {
+        "champion": 100,
+        "participation": 5,
+        "quarterfinal": 10,
+        "runnerUp": 60,
+        "semifinal": 30
+      },
+      "winLoss": {
+        "loss": 10,
+        "walkover": 0,
+        "win": 20
+      }
+    },
+    "courtTimeGrid": null,
+    "createdBy": "3bef321d69cc96880273781a4fd6358b",
+    "createdByOpenid": "oUCdS3f59_lLTAT8vMdD75wm9LDo",
+    "createTime": "2026-05-18T08:15:19.971Z",
+    "updateTime": "2026-05-18T16:36:48.969Z"
+  },
+  {
+    "_id": "tournament_2026_895734_277",
+    "seasonId": "season_2026",
+    "name": "5月练习赛",
+    "type": "mixed",
+    "format": "regular",
+    "startDate": "2026-05-24",
+    "endDate": "",
+    "location": "竞界网球场",
+    "status": "completed",
+    "description": "",
+    "schedulePlan": {
+      "courts": [
+        {
+          "courtId": "court_1779269321907_112",
+          "location": "",
+          "name": "室内T4-偏内",
+          "slots": [
+            "2026-05-24T19:00",
+            "2026-05-24T19:20",
+            "2026-05-24T19:40",
+            "2026-05-24T20:00",
+            "2026-05-24T20:20",
+            "2026-05-24T20:40"
+          ]
+        },
+        {
+          "courtId": "court_1779269341417_713",
+          "location": "",
+          "name": "室内T5-偏外",
+          "slots": [
+            "2026-05-24T19:00",
+            "2026-05-24T19:20",
+            "2026-05-24T19:40",
+            "2026-05-24T20:00",
+            "2026-05-24T20:20",
+            "2026-05-24T20:40"
+          ]
+        },
+        {
+          "courtId": "court_1779269354985_762",
+          "location": "",
+          "name": "室内T6-偏内",
+          "slots": [
+            "2026-05-24T19:00",
+            "2026-05-24T19:20",
+            "2026-05-24T19:40",
+            "2026-05-24T20:00",
+            "2026-05-24T20:20",
+            "2026-05-24T20:40"
+          ]
+        }
+      ],
+      "queues": [
+        {
+          "courtId": "court_1779269321907_112",
+          "items": [
+            {
+              "freePlayId": "fp_court_1779269321907_112_20260524T1940_1779611152445_0",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269321907_112_20260524T1940_1779611152445_0",
+              "order": 2
+            },
+            {
+              "freePlayId": "fp_court_1779269321907_112_20260524T2040_1779611152445_1",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269321907_112_20260524T2040_1779611152445_1",
+              "order": 5
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779611451340",
+              "order": 0,
+              "sourceMatchId": "match_extra_1779611451340"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616623644",
+              "order": 1,
+              "sourceMatchId": "match_extra_1779616623644"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616715802",
+              "order": 3,
+              "sourceMatchId": "match_extra_1779616715802"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616945369",
+              "order": 4,
+              "sourceMatchId": "match_extra_1779616945369"
+            }
+          ]
+        },
+        {
+          "courtId": "court_1779269341417_713",
+          "items": [
+            {
+              "kind": "match",
+              "matchId": "match_regular_p5_1779611152445_4",
+              "order": 0,
+              "sourceMatchId": "match_regular_p5_1779611152445_4"
+            },
+            {
+              "freePlayId": "fp_court_1779269341417_713_20260524T1940_1779611152445_2",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269341417_713_20260524T1940_1779611152445_2",
+              "order": 2
+            },
+            {
+              "freePlayId": "fp_court_1779269341417_713_20260524T2040_1779611152445_3",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269341417_713_20260524T2040_1779611152445_3",
+              "order": 5
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779611243657",
+              "order": 1,
+              "sourceMatchId": "match_extra_1779611243657"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616548784",
+              "order": 3,
+              "sourceMatchId": "match_extra_1779616548784"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616799092",
+              "order": 4,
+              "sourceMatchId": "match_extra_1779616799092"
+            }
+          ]
+        },
+        {
+          "courtId": "court_1779269354985_762",
+          "items": [
+            {
+              "freePlayId": "fp_court_1779269354985_762_20260524T1940_1779611152445_4",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269354985_762_20260524T1940_1779611152445_4",
+              "order": 2
+            },
+            {
+              "freePlayId": "fp_court_1779269354985_762_20260524T2040_1779611152445_5",
+              "kind": "freePlay",
+              "matchId": "fp_court_1779269354985_762_20260524T2040_1779611152445_5",
+              "order": 5
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779611285627",
+              "order": 0,
+              "sourceMatchId": "match_extra_1779611285627"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616651561",
+              "order": 1,
+              "sourceMatchId": "match_extra_1779616651561"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779616845980",
+              "order": 3,
+              "sourceMatchId": "match_extra_1779616845980"
+            },
+            {
+              "kind": "match",
+              "matchId": "match_extra_1779617031181",
+              "order": 4,
+              "sourceMatchId": "match_extra_1779617031181"
+            }
+          ]
+        }
+      ],
+      "slotMinutes": 20
+    },
+    "maxPlayers": 8,
+    "pointsRules": {
+      "placement": {
+        "champion": 100,
+        "participation": 5,
+        "quarterfinal": 10,
+        "runnerUp": 60,
+        "semifinal": 30
+      },
+      "winLoss": {
+        "loss": 10,
+        "walkover": 0,
+        "win": 20
+      }
+    },
+    "courtTimeGrid": null,
+    "createdBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "createdByOpenid": "oUCdS3f67jy9qcXxhhDHV_0EKjIM",
+    "createTime": "2026-05-24T08:21:35.783Z",
+    "updateTime": "2026-05-25T07:24:57.525Z",
+    "completedAt": "2026-05-25T07:24:57.525Z"
+  },
+  {
+    "_id": "tournament_2026_915898_780",
+    "seasonId": "season_2026",
+    "name": "5月练习赛",
+    "type": "mixed",
+    "format": "regular",
+    "startDate": "2026-05-31",
+    "endDate": "",
+    "location": "海峡奥体网球场",
+    "status": "draft",
+    "description": "",
+    "schedulePlan": {
+      "courts": [
+        {
+          "courtId": "court_1779092168308_508",
+          "location": "",
+          "name": "比赛3",
+          "slots": [
+            "2026-05-27T19:00",
+            "2026-05-27T19:20",
+            "2026-05-27T19:40",
+            "2026-05-27T20:00",
+            "2026-05-27T20:20",
+            "2026-05-27T20:40"
+          ]
+        },
+        {
+          "courtId": "court_1779092172664_079",
+          "location": "",
+          "name": "比赛4",
+          "slots": [
+            "2026-05-27T19:00",
+            "2026-05-27T19:20",
+            "2026-05-27T19:40",
+            "2026-05-27T20:00",
+            "2026-05-27T20:20",
+            "2026-05-27T20:40"
+          ]
+        }
+      ],
+      "queues": [],
+      "slotMinutes": 20
+    },
+    "maxPlayers": 8,
+    "pointsRules": {
+      "placement": {
+        "champion": 100,
+        "participation": 5,
+        "quarterfinal": 10,
+        "runnerUp": 60,
+        "semifinal": 30
+      },
+      "winLoss": {
+        "loss": 10,
+        "walkover": 0,
+        "win": 20
+      }
+    },
+    "courtTimeGrid": null,
+    "createdBy": "a7ff0e996a0a841700aceb5a29f5aaba",
+    "createdByOpenid": "oUCdS3f67jy9qcXxhhDHV_0EKjIM",
+    "createTime": "2026-05-27T11:38:35.966Z",
+    "updateTime": "2026-05-27T13:01:52.317Z",
+    "registrationDeadlineAt": "2026-05-30T23:59:59+08:00",
+    "confirmedCount": 9,
+    "registrationPublishedAt": "2026-05-27T11:40:03.834Z",
+    "scheduleNeedsRevision": false,
+    "schedulePublishedAt": null,
+    "scheduleStatus": "none"
+  }
+]
