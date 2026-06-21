@@ -164,6 +164,44 @@ describe('buildRegularSchedule · 常规赛填满日程', () => {
     ])
   })
 
+  test('随机常规赛在有可行选择时避免重复对阵和同一时段选手冲突', () => {
+    withMockedRandom(0, () => {
+      const courts = [
+        {
+          courtId: 'c1',
+          name: '1 号场',
+          slots: ['2026-05-25T08:00', '2026-05-25T08:20']
+        },
+        {
+          courtId: 'c2',
+          name: '2 号场',
+          slots: ['2026-05-25T08:00', '2026-05-25T08:20']
+        }
+      ]
+      const { matches, queues } = buildRegularSchedule({
+        registrations: reg(['p1', 'p2', 'p3', 'p4']),
+        courts,
+        type: 'singles',
+        now: 791
+      })
+
+      expect(matches).toHaveLength(4)
+      expect(new Set(matches.map(matchPairKey)).size).toBe(matches.length)
+
+      const matchesById = new Map(matches.map(match => [match.matchId, match]))
+      for (const slot of ['2026-05-25T08:00', '2026-05-25T08:20']) {
+        const ids = []
+        courts.forEach(court => {
+          const order = court.slots.indexOf(slot)
+          const queue = queues.find(q => q.courtId === court.courtId)
+          const item = queue.items.find(it => it.order === order)
+          ids.push(...matchPlayerIds(matchesById.get(item.matchId)))
+        })
+        expect(new Set(ids).size).toBe(ids.length)
+      }
+    })
+  })
+
   test('平衡配对让每位选手场次差不超过 1', () => {
     const matches = generateBalancedRegularMatches({
       registrations: reg(['p1', 'p2', 'p3', 'p4', 'p5']),
@@ -180,3 +218,28 @@ describe('buildRegularSchedule · 常规赛填满日程', () => {
     expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1)
   })
 })
+
+function withMockedRandom(value, fn) {
+  const spy = jest.spyOn(Math, 'random').mockReturnValue(value)
+  try {
+    fn()
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+function matchPairKey(match) {
+  return matchPlayerIds(match).sort().join('|')
+}
+
+function matchPlayerIds(match) {
+  const ids = []
+  const push = player => {
+    if (!player || !player.id || player.id === 'BYE') return
+    ids.push(player.id)
+    if (player.partnerId) ids.push(player.partnerId)
+  }
+  push(match && match.player1)
+  push(match && match.player2)
+  return ids
+}

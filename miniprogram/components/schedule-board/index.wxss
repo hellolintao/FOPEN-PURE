@@ -169,6 +169,17 @@
 .schedule-cell.cell-extra { background: var(--color-lime-wash); }
 .schedule-cell.cell-freePlay { background: var(--color-warn-wash); }
 
+.schedule-cell.cell-slot-conflict {
+  background: #FFEDD5;
+  box-shadow: inset 0 0 0 3rpx #F97316;
+}
+
+.schedule-cell.cell-slot-conflict .player {
+  background: var(--color-bg);
+  color: #C2410C;
+  border-color: #F97316;
+}
+
 .schedule-cell.cell-duplicate {
   background: #FEE2E2;
   box-shadow: inset 0 0 0 3rpx var(--color-danger);

@@ -30,7 +30,7 @@
           wx:for="{{row.cells}}"
           wx:for-item="cell"
           wx:key="courtId"
-          class="schedule-cell {{cell.available ? '' : 'unavailable'}} cell-{{cell.__rowKind}} {{cell.__duplicate ? 'cell-duplicate' : ''}}"
+          class="schedule-cell {{cell.available ? '' : 'unavailable'}} cell-{{cell.__rowKind}} {{cell.__slotConflict ? 'cell-slot-conflict' : ''}} {{cell.__duplicate ? 'cell-duplicate' : ''}}"
           bindlongpress="onTapItem"
           data-court-id="{{cell.courtId}}"
           data-match-id="{{cell.matchId}}"

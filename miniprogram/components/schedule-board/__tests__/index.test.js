@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 function loadComponent() {
   jest.resetModules()
   let def
@@ -163,5 +166,44 @@ describe('schedule-board add menu', () => {
       player1: { id: 'p1', partnerId: 'p2' },
       player2: { id: 'p3', partnerId: 'p4' }
     })
+  })
+})
+
+describe('schedule-board schedule warnings', () => {
+  test('marks matches orange when one player appears twice in the same slot', () => {
+    const def = loadComponent()
+    const schedulePlan = {
+      courts: [
+        { courtId: 'c1', slots: ['2026-05-25T08:00'] },
+        { courtId: 'c2', slots: ['2026-05-25T08:00'] }
+      ]
+    }
+    const queues = [
+      { courtId: 'c1', items: [{ kind: 'match', matchId: 'm1', order: 0 }] },
+      { courtId: 'c2', items: [{ kind: 'match', matchId: 'm2', order: 0 }] }
+    ]
+    const matches = [
+      { matchId: 'm1', player1: { id: 'p1', name: 'A' }, player2: { id: 'p2', name: 'B' } },
+      { matchId: 'm2', player1: { id: 'p1', name: 'A' }, player2: { id: 'p3', name: 'C' } }
+    ]
+    const ctx = makeCtx(def, { properties: { schedulePlan, queues, matches }, data: { queues, matches } })
+
+    const decoratedQueues = ctx._decorate(queues, matches, [])
+    const rows = ctx._buildRows(schedulePlan, decoratedQueues)
+
+    expect(rows[0].cells.map(cell => cell.__slotConflict)).toEqual([true, true])
+    expect(rows[0].cells.map(cell => cell.__duplicate)).toEqual([false, false])
+  })
+
+  test('keeps duplicate red styling higher priority than same-slot conflict orange styling', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+    const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')
+
+    expect(wxml.indexOf("cell.__slotConflict ? 'cell-slot-conflict' : ''")).toBeLessThan(
+      wxml.indexOf("cell.__duplicate ? 'cell-duplicate' : ''")
+    )
+    expect(wxss.indexOf('.schedule-cell.cell-slot-conflict')).toBeLessThan(
+      wxss.indexOf('.schedule-cell.cell-duplicate')
+    )
   })
 })

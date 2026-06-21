@@ -63,19 +63,15 @@ function buildRegularSchedule({ registrations, courts, type, now }) {
   const plan = buildRegularSlotPlan(courts || [], type)
   // 随机打乱报名顺序，避免 balanced pair 算法因稳定排序产生相同结果
   const shuffledRegs = shuffleArray(registrations || [])
-  const counts = new Map(shuffledRegs.map(p => [p.playerId, 0]))
-  const matches = plan.matchCells
-    .map((cell, index) => generateBalancedRegularMatch({
-      registrations: shuffledRegs,
-      counts,
-      index,
-      type: cell.matchType || type,
-      now: timestamp
-    }))
-    .filter(Boolean)
+  const matchesByCellIndex = generateRegularMatchesForCells({
+    registrations: shuffledRegs,
+    matchCells: plan.matchCells,
+    type,
+    now: timestamp
+  })
+  const matches = matchesByCellIndex.filter(Boolean)
   const freePlays = []
   const queues = (courts || []).map(court => ({ courtId: court.courtId, items: [] }))
-  let matchIndex = 0
   let freeIndex = 0
 
   plan.cells.forEach(cell => {
@@ -83,7 +79,7 @@ function buildRegularSchedule({ registrations, courts, type, now }) {
     if (!q) return
     const order = q.items.length
     if (cell.kind === 'match') {
-      const match = matches[matchIndex++]
+      const match = matchesByCellIndex[cell.matchIndex]
       if (!match) return
       q.items.push({ kind: 'match', matchId: match.matchId, sourceMatchId: match.matchId, order })
     } else {
@@ -109,13 +105,64 @@ function buildRegularSlotPlan(courts, type) {
           ? (index === 0 ? 'singles' : index === 1 ? 'doubles' : null)
           : (kind === 'match' ? type : null)
         const cell = { courtId: court.courtId, slot, kind, matchType }
+        if (kind === 'match') {
+          cell.matchIndex = matchCells.length
+          matchCells.push(cell)
+        }
         cells.push(cell)
-        if (kind === 'match') matchCells.push(cell)
       })
     })
   })
 
   return { cells, matchCells }
+}
+
+function generateRegularMatchesForCells({ registrations, matchCells, type, now }) {
+  const players = [...(registrations || [])]
+  const counts = new Map(players.map(p => [p.playerId, 0]))
+  const usedPairKeys = new Set()
+  const slotUsedIds = new Map()
+  const matchesByCellIndex = []
+  const groups = groupMatchCellsBySlot(matchCells)
+
+  groups.forEach(group => {
+    const usedIds = slotUsedIds.get(group.slotKey) || new Set()
+    group.cells.forEach(cell => {
+      const matchType = cell.matchType || type
+      const match = generateBalancedRegularMatch({
+        registrations: players,
+        counts,
+        index: cell.matchIndex,
+        type: matchType,
+        now,
+        usedPairKeys,
+        avoidIds: usedIds
+      })
+      if (!match) return
+      matchesByCellIndex[cell.matchIndex] = match
+      const ids = matchPlayerIds(match)
+      ids.forEach(id => usedIds.add(id))
+      const key = ids.slice().sort().join('|')
+      if (key) usedPairKeys.add(key)
+    })
+    slotUsedIds.set(group.slotKey, usedIds)
+  })
+
+  return matchesByCellIndex
+}
+
+function groupMatchCellsBySlot(matchCells) {
+  const order = []
+  const bySlot = new Map()
+  ;(matchCells || []).forEach((cell, index) => {
+    const slotKey = cell && cell.slot ? String(cell.slot) : `__match_${index}`
+    if (!bySlot.has(slotKey)) {
+      bySlot.set(slotKey, [])
+      order.push(slotKey)
+    }
+    bySlot.get(slotKey).push(cell)
+  })
+  return order.map(slotKey => ({ slotKey, cells: bySlot.get(slotKey) }))
 }
 
 function generateBalancedRegularMatches({ registrations, matchCount, type, now }) {
@@ -134,23 +181,35 @@ function generateBalancedRegularMatches({ registrations, matchCount, type, now }
   return matches
 }
 
-function generateBalancedRegularMatch({ registrations, counts, index, type, now }) {
+function generateBalancedRegularMatch({ registrations, counts, index, type, now, usedPairKeys, avoidIds }) {
   const players = [...(registrations || [])]
   const perMatch = type === 'doubles' ? 4 : 2
   if (players.length < perMatch) return null
-  const picked = pickBalancedNPlayers(players, counts, perMatch)
+  const picked = pickBalancedNPlayers(players, counts, perMatch, { usedPairKeys, avoidIds })
   picked.forEach(p => counts.set(p.playerId, (counts.get(p.playerId) || 0) + 1))
   return regularMatchFromGroup(picked, index, type, now)
 }
 
-function pickBalancedNPlayers(players, counts, N) {
-  const ranked = players.map(p => ({
-    p,
-    c: counts.get(p.playerId) || 0,
+function pickBalancedNPlayers(players, counts, N, options = {}) {
+  const groups = combinations(players, N)
+  const usedPairKeys = options.usedPairKeys || new Set()
+  const avoidIds = options.avoidIds || new Set()
+  const ranked = groups.map(group => ({
+    group,
+    slotConflictCount: group.filter(p => avoidIds.has(p.playerId)).length,
+    duplicateCount: usedPairKeys.has(playerGroupKey(group)) ? 1 : 0,
+    maxCount: Math.max(...group.map(p => counts.get(p.playerId) || 0)),
+    countSum: group.reduce((sum, p) => sum + (counts.get(p.playerId) || 0), 0),
     r: Math.random()
   }))
-  ranked.sort((a, b) => (a.c !== b.c ? a.c - b.c : a.r - b.r))
-  return ranked.slice(0, N).map(x => x.p)
+  ranked.sort((a, b) => {
+    if (a.slotConflictCount !== b.slotConflictCount) return a.slotConflictCount - b.slotConflictCount
+    if (a.duplicateCount !== b.duplicateCount) return a.duplicateCount - b.duplicateCount
+    if (a.maxCount !== b.maxCount) return a.maxCount - b.maxCount
+    if (a.countSum !== b.countSum) return a.countSum - b.countSum
+    return a.r - b.r
+  })
+  return ranked[0] ? ranked[0].group : []
 }
 
 function regularMatchFromGroup(group, index, type, now) {
@@ -206,6 +265,37 @@ function doublesTeam(a, b) {
     partnerId: b.playerId,
     partnerName: b.playerName
   }
+}
+
+function combinations(list, size) {
+  const result = []
+  const walk = (start, group) => {
+    if (group.length === size) {
+      result.push(group)
+      return
+    }
+    for (let i = start; i <= list.length - (size - group.length); i++) {
+      walk(i + 1, group.concat(list[i]))
+    }
+  }
+  walk(0, [])
+  return result
+}
+
+function playerGroupKey(group) {
+  return group.map(p => p && p.playerId).filter(Boolean).slice().sort().join('|')
+}
+
+function matchPlayerIds(match) {
+  const ids = []
+  const push = player => {
+    if (!player || !player.id || player.id === 'BYE') return
+    ids.push(player.id)
+    if (player.partnerId) ids.push(player.partnerId)
+  }
+  push(match && match.player1)
+  push(match && match.player2)
+  return ids
 }
 
 function groupSlotsByHour(slots) {

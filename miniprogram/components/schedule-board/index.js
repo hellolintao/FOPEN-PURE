@@ -67,7 +67,7 @@ Component({
                 return m ? m.name : pid
               })
               .join('/')
-            return { ...it, __rowKind: 'freePlay', __player1Label: '', __player2Label: '', __playersLabel: playersLabel, __duplicate: false }
+            return { ...it, __rowKind: 'freePlay', __player1Label: '', __player2Label: '', __playersLabel: playersLabel, __duplicate: false, __slotConflict: false, __playerIds: [] }
           }
           // kind === 'match'
           const match = asArray(matches).find(x => x.matchId === it.matchId)
@@ -84,6 +84,7 @@ Component({
           const singlesP2 = p2 && !isDoubles ? (p2.name + (p2.partnerName ? '/' + p2.partnerName : '')) : player2Label
           const key = match ? matchPairKey(match) : ''
           const duplicate = !!key && (keyCount.get(key) || 0) > 1
+          const playerIds = matchPlayerIds(match)
           return {
             ...it,
             __rowKind: rowKind,
@@ -95,7 +96,9 @@ Component({
             __doublesP2: player2Label,
             __doublesPartner2: partner2Label,
             __playersLabel: '',
-            __duplicate: duplicate
+            __duplicate: duplicate,
+            __slotConflict: false,
+            __playerIds: playerIds
           }
         })
         return { ...q, items }
@@ -131,11 +134,11 @@ Component({
       }, 0)
       for (let i = 0; i < maxOverflow; i++) slotKeys.push(`__overflow_${i}`)
 
-      return slotKeys.map(slotKey => ({
+      return markSlotConflicts(slotKeys.map(slotKey => ({
         slotKey,
         slotLabel: slotKey.indexOf('__overflow_') === 0 ? `加场 ${parseInt(slotKey.replace('__overflow_', ''), 10) + 1}` : formatSlotLabel(slotKey),
         cells: courts.map(court => this._cellFor(court, slotKey, asArray(decoratedQueues)))
-      }))
+      })))
     },
 
     _cellFor(court, slotKey, decoratedQueues) {
@@ -502,7 +505,13 @@ Component({
 })
 
 function matchPairKey(m) {
-  if (!m) return ''
+  const ids = matchPlayerIds(m)
+  if (ids.length < 2) return ''
+  return ids.slice().sort().join('|')
+}
+
+function matchPlayerIds(m) {
+  if (!m) return []
   const ids = []
   const push = obj => {
     if (!obj || !obj.id || obj.id === 'BYE') return
@@ -511,8 +520,26 @@ function matchPairKey(m) {
   }
   push(m.player1)
   push(m.player2)
-  if (ids.length < 2) return ''
-  return ids.slice().sort().join('|')
+  return ids
+}
+
+function markSlotConflicts(rows) {
+  return asArray(rows).map(row => {
+    if (!row || String(row.slotKey || '').indexOf('__overflow_') === 0) return row
+    const counts = new Map()
+    asArray(row.cells).forEach(cell => {
+      if (!cell || cell.kind !== 'match') return
+      asArray(cell.__playerIds).forEach(id => counts.set(id, (counts.get(id) || 0) + 1))
+    })
+    return {
+      ...row,
+      cells: asArray(row.cells).map(cell => {
+        if (!cell || cell.kind !== 'match') return cell
+        const slotConflict = asArray(cell.__playerIds).some(id => (counts.get(id) || 0) > 1)
+        return { ...cell, __slotConflict: slotConflict }
+      })
+    }
+  })
 }
 
 function formatSlotLabel(slot) {
