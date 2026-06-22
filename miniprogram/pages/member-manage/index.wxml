@@ -15,7 +15,7 @@
   <view class="search-bar anim-stage-rise anim-delay-1">
     <input
       class="search-input"
-      placeholder="搜索姓名或手机号"
+      placeholder="搜索会员昵称"
       placeholder-class="search-placeholder"
       value="{{searchKeyword}}"
       bindinput="onSearchInput"
@@ -51,7 +51,6 @@
           <text class="member-name">{{item.name || '未命名'}}</text>
           <text wx:if="{{item.claimLabel}}" class="claim-badge claim-{{item.claimClass}}">{{item.claimLabel}}</text>
         </view>
-        <text class="member-phone num">{{item.phone || '未填写手机号'}}</text>
         <text class="member-meta num">JOINED · {{item.formattedTime}}</text>
       </view>
       <text class="member-status status-{{item.status || 'inactive'}}">{{item.status === 'active' ? '活跃' : '不活跃'}}</text>

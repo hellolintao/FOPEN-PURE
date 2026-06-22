@@ -1,3 +1,5 @@
+const { stripUndefined } = require('./sanitize')
+
 function createScheduledMatchResultService({ db, command }) {
   const _ = command || (db && db.command) || {}
   const collection = db.collection('match_results')
@@ -124,9 +126,11 @@ function createScheduledMatchResultService({ db, command }) {
     const existingRes = await collection.doc(docId).get().catch(() => null)
     const existing = existingRes && existingRes.data
     if (existing) {
-      await collection.doc(docId).update({ data: mergeScheduledMatchDoc(existing, doc) })
+      const updateData = stripUndefined(mergeScheduledMatchDoc(existing, doc))
+      delete updateData._id
+      await collection.doc(docId).update({ data: updateData })
     } else {
-      await collection.add({ data: { ...doc, createTime: now } })
+      await collection.add({ data: stripUndefined({ ...doc, createTime: now }) })
     }
   }
 

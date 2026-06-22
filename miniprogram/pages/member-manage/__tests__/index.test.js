@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 function loadPage() {
   jest.resetModules()
   let pageDef
@@ -24,6 +27,14 @@ function makeCtx(def, data = {}) {
 }
 
 describe('member-manage member formatting', () => {
+  test('admin roster UI does not expose phone search or display fields', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('搜索会员昵称')
+    expect(wxml).not.toContain('手机号')
+    expect(wxml).not.toContain('phone')
+  })
+
   test('formatMember marks unclaimed members while keeping status label data', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
@@ -86,6 +97,7 @@ describe('member-manage list updates', () => {
       claimLabel: '待认领',
       claimClass: 'unclaimed'
     })
+    expect(ctx.data.memberList[0]).not.toHaveProperty('phone')
     expect(ctx.data.memberList[1].claimLabel).toBe('待认领')
   })
 
@@ -109,7 +121,6 @@ function ctxSeedMember(_id, overrides = {}) {
   return {
     _id,
     name: '会员',
-    phone: '',
     status: 'active',
     formattedTime: '2026-05-01',
     claimLabel: overrides.claimStatus === 'unclaimed' ? '待认领' : '',

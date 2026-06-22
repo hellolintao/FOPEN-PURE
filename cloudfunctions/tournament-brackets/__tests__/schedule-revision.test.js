@@ -27,6 +27,30 @@ test('saveSchedule writes schedulePlan but NEVER touches scheduleStatus (low-lev
   }
 })
 
+test('saveSchedule strips undefined fields before mirroring queues into schedulePlan', async () => {
+  const ctx = __test__.makeScheduleCtx({
+    tournament: { _id: 't1', schedulePlan: { slotMinutes: 20, courts: [{ courtId: 'c1', slots: ['19:00'] }] } },
+    r1: { _id: 'bracket_t1_round_1', matches: [{ matchId: 'm1', round: 1, position: 1 }] }
+  })
+
+  const res = await __test__.handleSaveScheduleWithCtx(ctx, {
+    tournamentId: 't1',
+    queues: [{
+      courtId: 'c1',
+      courtName: undefined,
+      items: [{ kind: 'match', matchId: 'm1', order: undefined, scheduledStart: undefined }]
+    }]
+  })
+
+  expect(res.success).toBe(true)
+  expect(hasUndefined(ctx.bracketUpdates[0].data)).toBe(false)
+  expect(hasUndefined(ctx.tournamentUpdates[0].data)).toBe(false)
+  expect(ctx.bracketUpdates[0].data.matches[0]).not.toHaveProperty('queueOrder')
+  expect(ctx.tournamentUpdates[0].data.schedulePlan.queues[0]).not.toHaveProperty('courtName')
+  expect(ctx.tournamentUpdates[0].data.schedulePlan.queues[0].items[0]).not.toHaveProperty('order')
+  expect(ctx.tournamentUpdates[0].data.schedulePlan.queues[0].items[0]).not.toHaveProperty('scheduledStart')
+})
+
 test('markMatchesForRevision sets needsRevision on affected matches only', () => {
   const matches = [
     { matchId: 'm1', player1: { id: 'p1' }, player2: { id: 'p2' } },
@@ -39,3 +63,16 @@ test('markMatchesForRevision sets needsRevision on affected matches only', () =>
   ])
   expect(__test__.markMatchesForRevision(matches, 'p1')).not.toBe(matches)
 })
+
+function hasUndefined(value) {
+  if (typeof value === 'undefined') return true
+  if (Array.isArray(value)) return value.some(hasUndefined)
+  if (isPlainObject(value)) return Object.values(value).some(hasUndefined)
+  return false
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || value instanceof Date) return false
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}

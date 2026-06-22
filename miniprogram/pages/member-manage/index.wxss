@@ -196,16 +196,6 @@
   background: var(--color-warn-wash);
 }
 
-.member-phone {
-  font-size: 24rpx;
-  font-weight: 700;
-  color: var(--color-muted);
-  letter-spacing: 0.04em;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .member-meta {
   font-size: 18rpx;
   font-weight: 800;

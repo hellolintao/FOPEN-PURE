@@ -137,12 +137,12 @@ describe('sanitizeMemberPayload', () => {
 
     expect(result).toEqual({
       name: '张三',
-      phone: '13800000000',
       avatarUrl: 'https://x.com/a.jpg',
       status: 'active',
       admin: true,
       playStyle: 'ice-cow'
     });
+    expect(result).not.toHaveProperty('phone');
   });
 
   test('missing fields are omitted', () => {

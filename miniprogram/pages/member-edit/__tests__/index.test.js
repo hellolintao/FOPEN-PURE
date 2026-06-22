@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 function loadPage() {
   jest.resetModules()
   let pageDef
@@ -42,6 +45,15 @@ describe('member-edit entry', () => {
     jest.restoreAllMocks()
   })
 
+  test('member edit UI uses nickname copy and does not collect phone', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('会员昵称')
+    expect(wxml).toContain('请输入会员昵称')
+    expect(wxml).not.toContain('手机号')
+    expect(wxml).not.toContain('phone')
+  })
+
   test('无 member query 时提示并返回，且不调用 members.add', () => {
     jest.useFakeTimers()
     const def = loadPage()
@@ -81,11 +93,12 @@ describe('member-edit entry', () => {
   test('有效 member query 设置 playStyleIndex', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    const member = { _id: 'm1', name: '张三', status: 'active', admin: false, playStyle: 'iron-lady' }
+    const member = { _id: 'm1', name: '张三', phone: '13800000000', status: 'active', admin: false, playStyle: 'iron-lady' }
     ctx.onLoad({ member: encodeURIComponent(JSON.stringify(member)) })
     expect(ctx.data.memberId).toBe('m1')
     expect(ctx.data.playStyleIndex).toBe(2)
     expect(ctx.data.member.playStyle).toBe('iron-lady')
+    expect(ctx.data.member).not.toHaveProperty('phone')
   })
 
   test('有效 member query 中非法 playStyle 会规范化为空', () => {
@@ -107,7 +120,7 @@ describe('member-edit submit', () => {
   test('缺少姓名时阻止提交', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.member = { name: '', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
+    ctx.data.member = { name: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
     ctx.onSubmit()
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请填写必填项', icon: 'none' })
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
@@ -116,7 +129,7 @@ describe('member-edit submit', () => {
   test('缺少状态时阻止提交', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: '', admin: false, playStyle: 'vers' }
+    ctx.data.member = { name: '张三', avatarUrl: '', status: '', admin: false, playStyle: 'vers' }
     ctx.onSubmit()
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请填写必填项', icon: 'none' })
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
@@ -126,7 +139,7 @@ describe('member-edit submit', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
     ctx.data.memberId = 'm1'
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
+    ctx.data.member = { name: '张三', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
     ctx.onSubmit()
     expect(wx.cloud.callFunction).toHaveBeenCalledTimes(1)
     const call = wx.cloud.callFunction.mock.calls[0][0]
@@ -154,18 +167,18 @@ describe('member-edit submit', () => {
     const call = wx.cloud.callFunction.mock.calls[0][0]
     expect(call.data.data).toEqual({
       name: '张三',
-      phone: '13800000000',
       status: 'active',
       admin: true,
       playStyle: 'moon-queen'
     })
+    expect(call.data.data).not.toHaveProperty('phone')
   })
 
   test('编辑已有会员不强制打法', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
     ctx.data.memberId = 'm1'
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: '' }
+    ctx.data.member = { name: '张三', avatarUrl: '', status: 'active', admin: false, playStyle: '' }
     ctx.onSubmit()
     expect(wx.cloud.callFunction).toHaveBeenCalledTimes(1)
     const call = wx.cloud.callFunction.mock.calls[0][0]
@@ -175,7 +188,7 @@ describe('member-edit submit', () => {
   test('非法打法 slug 被前端拦截', () => {
     const def = loadPage()
     const ctx = makeCtx(def)
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'baseliner' }
+    ctx.data.member = { name: '张三', avatarUrl: '', status: 'active', admin: false, playStyle: 'baseliner' }
     ctx.onSubmit()
     expect(wx.showToast).toHaveBeenCalledWith({ title: '打法选项不合法', icon: 'none' })
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
@@ -188,7 +201,7 @@ describe('member-edit submit', () => {
     })
     const ctx = makeCtx(def)
     ctx.data.memberId = 'm1'
-    ctx.data.member = { name: '张三', phone: '', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
+    ctx.data.member = { name: '张三', avatarUrl: '', status: 'active', admin: false, playStyle: 'vers' }
     ctx.onSubmit()
     expect(wx.hideLoading).toHaveBeenCalled()
     expect(wx.showToast).toHaveBeenCalledWith({ title: '服务端拒绝保存', icon: 'none' })
@@ -209,11 +222,11 @@ describe('member-edit submit', () => {
     expect(global.__testApp.globalData.memberUpdate).toEqual({
       _id: 'm1',
       name: '张三',
-      phone: '13800000000',
       status: 'active',
       admin: true,
       playStyle: 'grinder'
     })
+    expect(global.__testApp.globalData.memberUpdate).not.toHaveProperty('phone')
     expect(wx.navigateBack).not.toHaveBeenCalled()
     jest.runAllTimers()
     expect(wx.navigateBack).toHaveBeenCalled()

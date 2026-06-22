@@ -125,8 +125,7 @@ Page({
 
     const keyword = searchKeyword.trim().toLowerCase()
     const filtered = memberList.filter(m => {
-      return (m.name && m.name.toLowerCase().includes(keyword)) ||
-             (m.phone && m.phone.includes(keyword))
+      return m.name && m.name.toLowerCase().includes(keyword)
     })
 
     this.setData({ filteredMemberList: filtered })

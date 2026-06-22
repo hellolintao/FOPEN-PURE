@@ -201,14 +201,6 @@
   text-overflow: ellipsis;
 }
 
-.member-phone {
-  font-family: var(--font-family-num);
-  font-size: 22rpx;
-  font-weight: 700;
-  color: var(--color-muted);
-  letter-spacing: 0.04em;
-}
-
 .select-badge {
   width: 48rpx;
   height: 48rpx;

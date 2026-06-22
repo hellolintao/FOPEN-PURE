@@ -285,13 +285,6 @@
   letter-spacing: 0.01em;
 }
 
-.member-phone {
-  font-family: var(--font-family-num);
-  font-size: 22rpx;
-  font-weight: 700;
-  color: var(--color-muted);
-}
-
 .select-badge {
   width: 48rpx;
   height: 48rpx;

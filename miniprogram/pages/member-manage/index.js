@@ -40,7 +40,7 @@ Page({
 
   // 更新单个会员项目
   updateMemberItem(updateData) {
-    const { _id, name, phone, status, admin, playStyle } = updateData
+    const { _id, name, status, admin, playStyle } = updateData
     const { memberList } = this.data
 
     const updatedList = memberList.map(item => {
@@ -48,7 +48,6 @@ Page({
         const nextItem = {
           ...item,
           name,
-          phone,
           status,
           admin,
           playStyle,
@@ -135,10 +134,12 @@ Page({
 
   // 格式化会员展示字段
   formatMember(item) {
-    const isUnclaimed = item.claimStatus === 'unclaimed'
+    const safeItem = { ...(item || {}) }
+    delete safeItem.phone
+    const isUnclaimed = safeItem.claimStatus === 'unclaimed'
     return {
-      ...item,
-      formattedTime: this.formatTime(item.createTime),
+      ...safeItem,
+      formattedTime: this.formatTime(safeItem.createTime),
       claimLabel: isUnclaimed ? '待认领' : '',
       claimClass: isUnclaimed ? 'unclaimed' : '',
       avatarLoadFailed: false

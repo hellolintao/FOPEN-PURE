@@ -14,9 +14,8 @@
 |--------|------|------|------|
 | `_id` | String | 否 | 主键，系统自动生成 |
 | `openid` | String | 否 | 微信用户唯一标识；待认领会员为空，注册认领后写入 |
-| `name` | String | 是 | 会员姓名 |
+| `name` | String | 是 | 会员昵称 |
 | `avatarUrl` | String | 否 | 头像 URL |
-| `phone` | String | 否 | 联系电话 |
 | `status` | String | 否 | 会员状态，默认为 'active' |
 | `claimStatus` | String | 否 | `claimed` / `unclaimed`；基线导入创建的占位会员为 `unclaimed` |
 | `admin` | Boolean | 否 | 是否为管理员，默认为 false |
@@ -33,7 +32,6 @@
   "openid": "oxxxxxxxxxxxxxxxxxxx",
   "name": "张三",
   "avatarUrl": "https://example.com/avatar.jpg",
-  "phone": "13800138000",
   "status": "active",
   "claimStatus": "claimed",
   "admin": false,

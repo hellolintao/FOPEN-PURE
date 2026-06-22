@@ -27,22 +27,14 @@
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">01</text>
-        <text class="field-text">会员姓名 <text class="required">*</text></text>
+        <text class="field-text">会员昵称 <text class="required">*</text></text>
       </view>
-      <input class="form-input" placeholder="请输入会员姓名" placeholder-class="form-placeholder" value="{{member.name}}" data-key="name" bindinput="onInput" />
+      <input class="form-input" placeholder="请输入会员昵称" placeholder-class="form-placeholder" value="{{member.name}}" data-key="name" bindinput="onInput" />
     </view>
 
     <view class="form-item">
       <view class="field-label">
         <text class="num field-num">02</text>
-        <text class="field-text">手机号</text>
-      </view>
-      <input class="form-input num" type="number" maxlength="11" placeholder="请输入手机号" placeholder-class="form-placeholder" value="{{member.phone}}" data-key="phone" bindinput="onInput" />
-    </view>
-
-    <view class="form-item">
-      <view class="field-label">
-        <text class="num field-num">03</text>
         <text class="field-text">会员状态 <text class="required">*</text></text>
       </view>
       <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onPickStatus">
@@ -55,7 +47,7 @@
 
     <view class="form-item">
       <view class="field-label">
-        <text class="num field-num">04</text>
+        <text class="num field-num">03</text>
         <text class="field-text">打法 <text class="optional">(选填)</text></text>
       </view>
       <picker mode="selector" range="{{playStyleOptions}}" range-key="label" value="{{playStyleIndex}}" bindchange="onPickPlayStyle">
@@ -68,7 +60,7 @@
 
     <view class="form-item">
       <view class="field-label">
-        <text class="num field-num">05</text>
+        <text class="num field-num">04</text>
         <text class="field-text">管理员权限</text>
       </view>
       <view class="switch-row">

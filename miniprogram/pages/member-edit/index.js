@@ -3,7 +3,7 @@ const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-styl
 Page({
   data: {
     isEdit: true,
-    member: { name: '', phone: '', avatarUrl: '', status: '', admin: false, playStyle: '' },
+    member: { name: '', avatarUrl: '', status: '', admin: false, playStyle: '' },
     memberId: '',
     statusOptions: [
       { label: '活跃', value: 'active' },
@@ -30,9 +30,11 @@ Page({
       const statusIndex = this.data.statusOptions.findIndex(s => s.value === member.status)
       const playStyle = PLAY_STYLE_VALUES.includes(member.playStyle) ? member.playStyle : ''
       const playStyleIndex = PLAY_STYLE_VALUES.indexOf(playStyle)
+      const safeMember = { ...member }
+      delete safeMember.phone
       this.setData({
         isEdit: true,
-        member: { ...this.data.member, ...member, playStyle },
+        member: { ...this.data.member, ...safeMember, playStyle },
         memberId: member._id,
         statusIndex: statusIndex >= 0 ? statusIndex : 0,
         playStyleIndex
@@ -53,6 +55,7 @@ Page({
   // 输入
   onInput(e) {
     const key = e.currentTarget.dataset.key
+    if (key === 'phone') return
     this.setData({ [`member.${key}`]: e.detail.value })
   },
 
@@ -145,7 +148,6 @@ Page({
         _id: this.data.memberId,
         data: {
           name: member.name,
-          phone: member.phone,
           status: member.status,
           admin: member.admin,
           playStyle: member.playStyle || ''
@@ -167,7 +169,6 @@ Page({
         getApp().globalData.memberUpdate = {
           _id: this.data.memberId,
           name: member.name,
-          phone: member.phone,
           status: member.status,
           admin: member.admin,
           playStyle: member.playStyle || ''

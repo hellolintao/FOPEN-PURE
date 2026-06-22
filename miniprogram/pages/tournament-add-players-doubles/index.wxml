@@ -103,7 +103,7 @@
             <text class="search-icon">🔍</text>
             <input
               class="search-input"
-              placeholder="搜索会员姓名或手机号"
+              placeholder="搜索会员昵称"
               value="{{searchKeyword}}"
               bindinput="onSearchInput"
               confirm-type="search"
@@ -126,7 +126,6 @@
               data-type="{{selectingPlayerType}}">
               <view class="member-info">
                 <text class="member-name">{{item.name}}</text>
-                <text class="member-phone">{{item.phone || '未填写手机号'}}</text>
               </view>
               <view class="select-badge {{isMemberSelectedForType(item._id) ? 'selected' : ''}}">
                 <text class="select-icon">{{isMemberSelectedForType(item._id) ? '✓' : ''}}</text>

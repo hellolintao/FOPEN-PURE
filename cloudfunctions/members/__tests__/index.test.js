@@ -107,8 +107,8 @@ describe('members cloud function', () => {
     expect(mockCollection.add).not.toHaveBeenCalled();
   });
 
-  test('action=add existing openid returns existing member and does not add', async () => {
-    const existing = { _id: 'member-1', openid: mockState.openid, name: '张三' };
+  test('action=add existing openid returns existing member without legacy phone and does not add', async () => {
+    const existing = { _id: 'member-1', openid: mockState.openid, name: '张三', phone: '13800000000' };
     mockState.whereGetData = [existing];
 
     const result = await main({
@@ -116,7 +116,11 @@ describe('members cloud function', () => {
       data: { name: '张三', playStyle: 'vers' }
     }, {});
 
-    expect(result).toEqual({ errMsg: 'already registered', data: existing });
+    expect(result).toEqual({
+      errMsg: 'already registered',
+      data: { _id: 'member-1', openid: mockState.openid, name: '张三' }
+    });
+    expect(result.data).not.toHaveProperty('phone');
     expect(mockCollection.where).toHaveBeenCalledWith({ openid: mockState.openid });
     expect(mockCollection.add).not.toHaveBeenCalled();
   });
@@ -140,7 +144,6 @@ describe('members cloud function', () => {
       data: {
         openid: mockState.openid,
         name: '李四',
-        phone: '13800000000',
         avatarUrl: 'https://x.com/a.jpg',
         status: 'active',
         admin: false,
@@ -189,7 +192,6 @@ describe('members cloud function', () => {
       data: {
         openid: mockState.openid,
         name: '标子',
-        phone: '13800000000',
         avatarUrl: 'https://x.com/a.jpg',
         playStyle: 'grinder',
         claimStatus: 'claimed',
@@ -205,7 +207,6 @@ describe('members cloud function', () => {
       data: {
         ...unclaimed,
         openid: mockState.openid,
-        phone: '13800000000',
         avatarUrl: 'https://x.com/a.jpg',
         playStyle: 'grinder',
         claimStatus: 'claimed',
@@ -457,7 +458,6 @@ describe('members cloud function', () => {
     expect(mockQuery.update).toHaveBeenCalledWith({
       data: {
         name: '张三',
-        phone: '13800000000',
         avatarUrl: 'cloud://avatar',
         playStyle: 'vers',
         claimStatus: 'claimed',
@@ -469,7 +469,6 @@ describe('members cloud function', () => {
       data: {
         ...existing,
         name: '张三',
-        phone: '13800000000',
         avatarUrl: 'cloud://avatar',
         playStyle: 'vers',
         claimStatus: 'claimed',
@@ -553,8 +552,8 @@ describe('members cloud function', () => {
     mockState.whereGetData = (filter) => {
       if (filter && filter.$or) return [{ _id: 'admin-1', openid: mockState.openid, admin: true }];
       return [
-        { _id: 'member-1', name: '林大', avatarUrl: cloudAvatar },
-        { _id: 'member-2', name: '乐乐', avatarUrl: 'https://example.com/avatar.jpg' },
+        { _id: 'member-1', name: '林大', phone: '13800000000', avatarUrl: cloudAvatar },
+        { _id: 'member-2', name: '乐乐', phone: '13900000000', avatarUrl: 'https://example.com/avatar.jpg' },
         { _id: 'member-3', name: '空头像', avatarUrl: '' }
       ];
     };
@@ -571,6 +570,39 @@ describe('members cloud function', () => {
       { _id: 'member-1', name: '林大', avatarUrl: 'https://tmp.example.com/private-avatar.png' },
       { _id: 'member-2', name: '乐乐', avatarUrl: 'https://example.com/avatar.jpg' },
       { _id: 'member-3', name: '空头像', avatarUrl: '' }
+    ]);
+    expect(result.data[0]).not.toHaveProperty('phone');
+    expect(result.data[1]).not.toHaveProperty('phone');
+  });
+
+  test('action=search only builds nickname keyword filters, not phone filters', async () => {
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.$or) return [{ _id: 'admin-1', openid: mockState.openid, admin: true }];
+      return [];
+    };
+
+    await main({ action: 'search', keyword: '138', page: 1, pageSize: 20 }, {});
+
+    const searchFilter = mockCollection.where.mock.calls[mockCollection.where.mock.calls.length - 1][0];
+    const serialized = JSON.stringify(searchFilter);
+    expect(serialized).toContain('name');
+    expect(serialized).not.toContain('phone');
+  });
+
+  test('action=list strips legacy phone fields from member rows', async () => {
+    mockState.whereGetData = (filter) => {
+      if (filter && filter.$or) return [{ _id: 'admin-1', openid: mockState.openid, admin: true }];
+      return [
+        { _id: 'member-1', name: '林大', phone: '13800000000', status: 'active' },
+        { _id: 'member-2', name: '乐乐', status: 'inactive' }
+      ];
+    };
+
+    const result = await main({ action: 'list', page: 1, pageSize: 20 }, {});
+
+    expect(result.data).toEqual([
+      { _id: 'member-1', name: '林大', status: 'active' },
+      { _id: 'member-2', name: '乐乐', status: 'inactive' }
     ]);
   });
 

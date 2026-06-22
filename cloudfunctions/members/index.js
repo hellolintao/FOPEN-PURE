@@ -16,7 +16,6 @@ const VALID_PLAY_STYLES = [
 
 const ALLOWED_MEMBER_FIELDS = [
   'name',
-  'phone',
   'avatarUrl',
   'status',
   'admin',
@@ -122,6 +121,13 @@ function publicMemberProfile(member) {
   return publicProfile
 }
 
+function stripLegacyPhoneField(member) {
+  if (!member) return member
+  const safeMember = { ...member }
+  delete safeMember.phone
+  return safeMember
+}
+
 function isCloudFileId(value) {
   return typeof value === 'string' && value.startsWith('cloud://')
 }
@@ -163,6 +169,10 @@ async function resolveAvatarDisplayUrls(members = []) {
   }
 }
 
+async function resolveSafeMemberRows(members = []) {
+  return await resolveAvatarDisplayUrls((members || []).map(stripLegacyPhoneField))
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
@@ -178,7 +188,7 @@ exports.main = async (event, context) => {
       }
       const exist = await collection.where({ openid }).get()
       if (exist.data && exist.data.length > 0) {
-        return { errMsg: 'already registered', data: exist.data[0] }
+        return { errMsg: 'already registered', data: stripLegacyPhoneField(exist.data[0]) }
       }
       const now = db.serverDate()
       const unclaimed = await collection.where({
@@ -221,7 +231,7 @@ exports.main = async (event, context) => {
             error: { code: 'CLAIM_CONFLICT', message: '会员认领失败，记录可能已被其他用户认领，请刷新后重试' }
           }
         }
-        return { data: claimedMember }
+        return { data: stripLegacyPhoneField(claimedMember) }
       }
       return await collection.add({
         data: {
@@ -240,7 +250,11 @@ exports.main = async (event, context) => {
       if (!openid) {
         return { data: [] }
       }
-      return await collection.where({ openid }).get()
+      const result = await collection.where({ openid }).get()
+      return {
+        ...result,
+        data: (result.data || []).map(stripLegacyPhoneField)
+      }
     }
     case 'update': {
       // 更新会员信息 by openid
@@ -286,7 +300,7 @@ exports.main = async (event, context) => {
           error: { code: 'CLAIM_FAILED', message: '认领失败' }
         }
       }
-      return { data: { ...existing, ...updateData } }
+      return { data: stripLegacyPhoneField({ ...existing, ...updateData }) }
     }
     case 'delete': {
       // 删除会员 by openid
@@ -295,15 +309,10 @@ exports.main = async (event, context) => {
     case 'search': {
       const forbidden = await requireAdmin()
       if (forbidden) return forbidden
-      // 支持按姓名或手机号模糊搜索，分页
+      // 支持按昵称模糊搜索，分页
       const query = []
       if (keyword) {
-        query.push(
-          _.or([
-            { name: db.RegExp({ regexp: keyword, options: 'i' }) },
-            { phone: db.RegExp({ regexp: keyword, options: 'i' }) }
-          ])
-        )
+        query.push({ name: db.RegExp({ regexp: keyword, options: 'i' }) })
       }
       const result = await collection
         .where(query.length ? _.and(query) : {})
@@ -313,7 +322,7 @@ exports.main = async (event, context) => {
         .get()
       return {
         ...result,
-        data: await resolveAvatarDisplayUrls(result.data || [])
+        data: await resolveSafeMemberRows(result.data || [])
       }
     }
     case 'list': {
@@ -332,7 +341,7 @@ exports.main = async (event, context) => {
         .get()
       return {
         ...result,
-        data: await resolveAvatarDisplayUrls(result.data || [])
+        data: await resolveSafeMemberRows(result.data || [])
       }
     }
     case 'updateById': {

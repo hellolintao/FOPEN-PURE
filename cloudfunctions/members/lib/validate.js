@@ -9,7 +9,6 @@ const VALID_PLAY_STYLES = [
 
 const ALLOWED_MEMBER_FIELDS = [
   'name',
-  'phone',
   'avatarUrl',
   'status',
   'admin',

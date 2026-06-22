@@ -31,7 +31,7 @@
     <view class="search-bar">
       <input
         class="search-input"
-        placeholder="搜索会员姓名或手机号"
+        placeholder="搜索会员昵称"
         value="{{searchKeyword}}"
         bindinput="onSearchInput"
         confirm-type="search"
@@ -55,7 +55,6 @@
           <view class="member-avatar-placeholder">{{item.name.charAt(0) || '?'}}</view>
           <view class="member-info">
             <text class="member-name-text">{{item.name}}</text>
-            <text class="member-phone">{{item.phone || '未填写手机号'}}</text>
           </view>
           <view class="select-badge {{isMemberSelected(item._id) ? 'selected' : ''}}">
             <text class="select-icon">{{isMemberSelected(item._id) ? '✓' : '+'}}</text>

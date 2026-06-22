@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <rect width="1600" height="1100" fill="#0b1220"/>
+  <text x="72" y="92" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="42" font-weight="800">隐私整改证据 04：会员管理与赛事选人已移除手机号</text>
+  <text x="72" y="138" fill="#cbd5e1" font-family="PingFang SC, Arial, sans-serif" font-size="26">排查范围覆盖资料页、会员管理、会员编辑、赛事加人页与 members 云函数接口。</text>
+
+  <g transform="translate(72 220)">
+    <rect width="1456" height="122" rx="18" fill="#111827" stroke="#334155"/>
+    <rect x="32" y="33" width="56" height="56" rx="14" fill="#22c55e"/>
+    <path d="M47 62 L59 75 L78 48" fill="none" stroke="#052e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="55" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="700">会员管理</text>
+    <text x="112" y="82" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">搜索提示改为“搜索会员昵称”，列表不再展示手机号。</text>
+    <text x="112" y="110" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">旧 phone 字段进入页面即剔除，避免历史数据继续传到编辑页。</text>
+  </g>
+
+  <g transform="translate(72 368)">
+    <rect width="1456" height="122" rx="18" fill="#111827" stroke="#334155"/>
+    <rect x="32" y="33" width="56" height="56" rx="14" fill="#22c55e"/>
+    <path d="M47 62 L59 75 L78 48" fill="none" stroke="#052e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="55" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="700">会员编辑</text>
+    <text x="112" y="82" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">“会员姓名”改为“会员昵称”，删除手机号输入项。</text>
+    <text x="112" y="110" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">保存 payload 和 memberUpdate 不带 phone。</text>
+  </g>
+
+  <g transform="translate(72 516)">
+    <rect width="1456" height="122" rx="18" fill="#111827" stroke="#334155"/>
+    <rect x="32" y="33" width="56" height="56" rx="14" fill="#22c55e"/>
+    <path d="M47 62 L59 75 L78 48" fill="none" stroke="#052e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="55" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="700">赛事加人</text>
+    <text x="112" y="82" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">单打和双打会员选择器不再展示手机号。</text>
+    <text x="112" y="110" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">双打本地搜索只按昵称匹配，不按 phone 命中。</text>
+  </g>
+
+  <g transform="translate(72 664)">
+    <rect width="1456" height="122" rx="18" fill="#111827" stroke="#334155"/>
+    <rect x="32" y="33" width="56" height="56" rx="14" fill="#22c55e"/>
+    <path d="M47 62 L59 75 L78 48" fill="none" stroke="#052e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="55" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="700">members 云函数</text>
+    <text x="112" y="82" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">字段白名单已删除 phone；list/search/get/认领返回前剔除历史 phone。</text>
+    <text x="112" y="110" fill="#86efac" font-family="PingFang SC, Arial, sans-serif" font-size="22">搜索仅按昵称字段，不再按手机号字段过滤。</text>
+  </g>
+
+  <g transform="translate(72 812)">
+    <rect width="1456" height="132" rx="18" fill="#052e16" stroke="#22c55e"/>
+    <text x="32" y="52" fill="#dcfce7" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="800">验证结果</text>
+    <text x="32" y="91" fill="#bbf7d0" font-family="PingFang SC, Arial, sans-serif" font-size="22">miniprogram：31 suites / 312 tests passed；members 云函数：2 suites / 37 tests passed。</text>
+    <text x="32" y="122" fill="#bbf7d0" font-family="PingFang SC, Arial, sans-serif" font-size="22">运行代码敏感词扫描：手机号、手机号码、联系电话、mobile、telephone、tel 均无命中。</text>
+  </g>
+
+  <text x="72" y="1018" fill="#94a3b8" font-family="PingFang SC, Arial, sans-serif" font-size="22">生成时间：2026-06-22；证据文件：04-member-management-privacy-fix.png</text>
+</svg>

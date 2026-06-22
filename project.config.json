@@ -173,6 +173,14 @@
       },
       {
         "type": "folder",
+        "value": "pages/tournament-add-player/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/tournament-add-players-doubles/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "pages/tournament-edit/__tests__"
       },
       {

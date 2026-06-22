@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('tournament_brackets')
+const { stripUndefined } = require('../_shared/sanitize')
 const { advanceWinner, finalRoundOf } = require('./lib/generator')
 const {
   GROUP_CODES,
@@ -1462,7 +1463,7 @@ async function handleSaveScheduleWithCtx(ctx, { tournamentId, queues }) {
     if (!Array.isArray(q.items)) continue
     for (const item of q.items) {
       if (item.kind === 'match') {
-        matchAssignments.set(item.matchId, { courtId: q.courtId, queueOrder: item.order })
+        matchAssignments.set(item.matchId, stripUndefined({ courtId: q.courtId, queueOrder: item.order }))
       }
     }
   }
@@ -1477,13 +1478,13 @@ async function handleSaveScheduleWithCtx(ctx, { tournamentId, queues }) {
   const updated = r1.matches.map(m => {
     const a = matchAssignments.get(m.matchId)
     if (!a) return m
-    return { ...m, courtId: a.courtId, queueOrder: a.queueOrder }
+    return stripUndefined({ ...m, courtId: a.courtId, queueOrder: a.queueOrder })
   })
 
-  await ctx.db.updateBracket(r1Id, {
+  await ctx.db.updateBracket(r1Id, stripUndefined({
     matches: updated,
     updateTime: ctx.serverDate()
-  })
+  }))
 
   // Mirror queues into tournament.schedulePlan.queues — 必须用 _.set() 整体替换
   // 否则 TCB 会把对象展开成 dot-path（schedulePlan.queues），遇到旧 doc
@@ -1492,7 +1493,7 @@ async function handleSaveScheduleWithCtx(ctx, { tournamentId, queues }) {
   const curSP = (tRes && tRes.data && tRes.data.schedulePlan && typeof tRes.data.schedulePlan === 'object')
     ? tRes.data.schedulePlan
     : { slotMinutes: 20, courts: [], queues: [] }
-  const nextSP = { ...curSP, queues }
+  const nextSP = stripUndefined({ ...curSP, queues })
   await ctx.db.updateTournament(tournamentId, {
     schedulePlan: ctx.set(nextSP),
     updateTime: ctx.serverDate()
