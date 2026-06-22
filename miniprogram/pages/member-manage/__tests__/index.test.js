@@ -29,10 +29,12 @@ function makeCtx(def, data = {}) {
 describe('member-manage member formatting', () => {
   test('admin roster UI does not expose phone search or display fields', () => {
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+    const js = fs.readFileSync(path.join(__dirname, '../index.js'), 'utf8')
 
     expect(wxml).toContain('搜索会员昵称')
     expect(wxml).not.toContain('手机号')
     expect(wxml).not.toContain('phone')
+    expect(js).not.toContain('phone')
   })
 
   test('formatMember marks unclaimed members while keeping status label data', () => {

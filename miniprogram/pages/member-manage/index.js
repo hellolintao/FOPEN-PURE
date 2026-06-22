@@ -134,12 +134,18 @@ Page({
 
   // 格式化会员展示字段
   formatMember(item) {
-    const safeItem = { ...(item || {}) }
-    delete safeItem.phone
-    const isUnclaimed = safeItem.claimStatus === 'unclaimed'
+    const source = item || {}
+    const isUnclaimed = source.claimStatus === 'unclaimed'
     return {
-      ...safeItem,
-      formattedTime: this.formatTime(safeItem.createTime),
+      _id: source._id,
+      name: source.name,
+      avatarUrl: source.avatarUrl,
+      status: source.status,
+      admin: source.admin,
+      playStyle: source.playStyle,
+      claimStatus: source.claimStatus,
+      createTime: source.createTime,
+      formattedTime: this.formatTime(source.createTime),
       claimLabel: isUnclaimed ? '待认领' : '',
       claimClass: isUnclaimed ? 'unclaimed' : '',
       avatarLoadFailed: false
