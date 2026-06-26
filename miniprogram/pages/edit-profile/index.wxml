@@ -60,18 +60,6 @@
       </radio-group>
     </view>
 
-    <view class="form-item">
-      <view class="field-label">
-        <text class="num field-num">04</text>
-        <text class="field-text">公开展示 <text class="optional">(可撤回)</text></text>
-      </view>
-      <checkbox-group class="agreement-check" bindchange="onPublicProfileConsentChange">
-        <label class="agreement-copy">
-          <checkbox value="accepted" checked="{{publicProfileConsent}}" color="#0B0C09" />
-          <text>同意在排行榜、战绩页和赛事页向其他会员展示我的昵称、头像和比赛数据。</text>
-        </label>
-      </checkbox-group>
-    </view>
   </view>
 
   <view wx:if="{{needsAgreement}}" class="agreement-panel anim-stage-rise anim-delay-2">
@@ -84,7 +72,7 @@
         <text class="agreement-link" bindtap="onOpenUserAgreement">《用户服务协议》</text>
         <text>和</text>
         <text class="agreement-link" bindtap="onOpenPrivacyPolicy">《隐私政策》</text>
-        <text>，知晓平台将按政策收集、使用和存储注册信息；未单独同意公开展示时，公开榜单仅展示匿名编号和默认头像。</text>
+        <text>，知晓平台将按政策收集、使用和存储注册信息，并在排行榜、球员详情、周星、H2H、近期比赛和赛事页展示我的昵称、头像、打法、比赛成绩、积分和排行。</text>
       </view>
     </view>
   </view>

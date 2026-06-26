@@ -14,7 +14,6 @@ Page({
     avatarPreviewUrl: '',
     avatarUploading: false,
     agreementAccepted: false,
-    publicProfileConsent: false,
     needsAgreement: false,
     showPrivacyDialog: false,
     privacyContractName: '用户隐私保护指引',
@@ -118,8 +117,7 @@ Page({
         name: user.name || '',
         avatarUrl: user.avatarUrl || '',
         playStyle: PLAY_STYLE_VALUES.includes(user.playStyle) ? user.playStyle : null
-      },
-      publicProfileConsent: user.publicProfileConsent === true
+      }
     })
   },
 
@@ -272,13 +270,6 @@ Page({
     this.setData({ agreementAccepted: values.includes('accepted') })
   },
 
-  onPublicProfileConsentChange(e) {
-    const values = e && e.detail && Array.isArray(e.detail.value)
-      ? e.detail.value
-      : []
-    this.setData({ publicProfileConsent: values.includes('accepted') })
-  },
-
   onOpenUserAgreement() {
     wx.navigateTo({ url: '/pages/user-agreement/index' })
   },
@@ -333,8 +324,10 @@ Page({
       const payload = {
         name: cleanName,
         avatarUrl: avatarUrl || DEFAULT_AVATAR_URL,
-        playStyle: playStyle || '',
-        publicProfileConsent: this.data.publicProfileConsent === true
+        playStyle: playStyle || ''
+      }
+      if (shouldCreateMember || shouldClaimExistingMember) {
+        payload.publicProfileConsent = true
       }
       if (shouldCreateMember || isTournamentRegister) {
         payload.claimStatus = 'claimed'

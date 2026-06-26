@@ -35,6 +35,16 @@
         <text class="action-text">设置</text>
         <text class="action-arrow num">→</text>
       </view>
+      <view class="action-tile tap-scale" bindtap="onOpenPrivacyPolicy">
+        <text class="action-num num">04</text>
+        <text class="action-text">隐私政策</text>
+        <text class="action-arrow num">→</text>
+      </view>
+      <view class="action-tile tap-scale" bindtap="onOpenUserAgreement">
+        <text class="action-num num">05</text>
+        <text class="action-text">用户协议</text>
+        <text class="action-arrow num">→</text>
+      </view>
     </view>
 
   </block>

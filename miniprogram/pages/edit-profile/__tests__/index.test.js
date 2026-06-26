@@ -87,6 +87,20 @@ describe('edit-profile privacy-facing copy', () => {
     expect(privacy).not.toContain('手机号')
     expect(agreement).not.toContain('手机号')
   })
+
+  test('legal copy declares public nickname and avatar display after agreement consent', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const privacy = fs.readFileSync(path.join(__dirname, '../../privacy-policy/index.wxml'), 'utf8')
+    const agreement = fs.readFileSync(path.join(__dirname, '../../user-agreement/index.wxml'), 'utf8')
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('展示我的昵称、头像')
+    expect(privacy).toContain('协议更新提示中点击同意')
+    expect(privacy).toContain('展示你的昵称、头像')
+    expect(agreement).toContain('允许平台在排行榜')
+    expect(agreement).toContain('展示你的昵称、头像')
+  })
 })
 
 describe('edit-profile mode handling', () => {
@@ -438,8 +452,16 @@ describe('edit-profile validation and save', () => {
     expect(app.globalData.currentMember).toMatchObject({
       _id: 'm1',
       name: '张三',
-      playStyle: 'ice-cow'
+      playStyle: 'ice-cow',
+      publicProfileConsent: true
     })
+    expect(callFunction).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'add',
+        data: expect.objectContaining({ publicProfileConsent: true })
+      })
+    }))
     expect(app.globalData.isAdmin).toBe(false)
     expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
     expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })

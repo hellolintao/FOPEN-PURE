@@ -5,6 +5,7 @@ function loadPage(callFunctionImpl) {
   global.getApp = () => app
   global.wx = {
     navigateTo: jest.fn(),
+    showModal: jest.fn(),
     showLoading: jest.fn(),
     hideLoading: jest.fn(),
     showToast: jest.fn(),
@@ -85,6 +86,66 @@ describe('mine onLogin', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '登录成功', icon: 'success' })
   })
 
+  test('existing user without updated protocol consent sees prompt and can accept', () => {
+    const user = {
+      _id: 'member-1',
+      name: '张三',
+      avatarUrl: 'cloud://avatar',
+      publicProfileConsent: false
+    }
+    const { pageDef, app } = loadPage((options) => {
+      if (options.name === 'members' && options.data.action === 'get') {
+        options.success({ result: { data: [user] } })
+        return
+      }
+      if (options.name === 'members' && options.data.action === 'update') {
+        options.success({ result: { stats: { updated: 1 } } })
+      }
+    })
+    wx.showModal.mockImplementationOnce(options => {
+      options.success({ confirm: true })
+    })
+    const ctx = makeCtx(pageDef)
+    ctx.loadUserPoints = jest.fn()
+
+    ctx.onLogin()
+
+    expect(wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '协议已更新',
+      confirmText: '同意',
+      cancelText: '查看协议'
+    }))
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'members',
+      data: {
+        action: 'update',
+        data: { publicProfileConsent: true }
+      }
+    }))
+    expect(app.globalData.currentMember).toMatchObject({
+      _id: 'member-1',
+      publicProfileConsent: true
+    })
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '已同意协议', icon: 'success' })
+  })
+
+  test('protocol prompt cancel opens privacy policy for review', () => {
+    const user = {
+      _id: 'member-1',
+      name: '张三',
+      publicProfileConsent: false
+    }
+    const { pageDef } = loadPage(jest.fn())
+    wx.showModal.mockImplementationOnce(options => {
+      options.success({ cancel: true })
+    })
+    const ctx = makeCtx(pageDef)
+
+    ctx.applyMember(user)
+
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/privacy-policy/index' })
+  })
+
   test('checkLogin uses global currentMember without calling members.get again', () => {
     const user = {
       _id: 'member-1',
@@ -117,5 +178,16 @@ describe('mine onLogin', () => {
 
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
     expect(ctx.data.totalPoints).toBe(88)
+  })
+
+  test('legal entries open privacy policy and user agreement', () => {
+    const { pageDef } = loadPage(jest.fn())
+    const ctx = makeCtx(pageDef)
+
+    ctx.onOpenPrivacyPolicy()
+    ctx.onOpenUserAgreement()
+
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/privacy-policy/index' })
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/user-agreement/index' })
   })
 })
