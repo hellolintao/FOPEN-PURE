@@ -606,7 +606,7 @@ describe('members cloud function', () => {
     ]);
   });
 
-  test('action=getById returns public profile fields without phone, openid, or admin flags', async () => {
+  test('action=getById returns anonymous public profile without phone, openid, or admin flags when no consent', async () => {
     mockState.docGetResult = {
       data: {
         _id: 'member-1',
@@ -630,13 +630,43 @@ describe('members cloud function', () => {
     expect(result).toEqual({
       data: {
         _id: 'member-1',
-        name: '赵六',
-        avatarUrl: 'cloud://avatar',
+        name: '匿名选手',
+        avatarUrl: '/images/icons/default-avatar.png',
         status: 'active',
-        playStyle: 'moon-queen',
+        playStyle: '',
+        publicProfileVisible: false,
         createTime: '2026-01-01',
         updateTime: '2026-01-02'
       }
     });
+  });
+
+  test('action=getById returns real public profile only when public consent exists', async () => {
+    mockState.docGetResult = {
+      data: {
+        _id: 'member-1',
+        openid: 'openid-secret',
+        name: '赵六',
+        avatarUrl: 'cloud://avatar',
+        publicProfileConsent: true,
+        publicProfileConsentAt: '2026-01-01',
+        playStyle: 'moon-queen'
+      }
+    };
+
+    const result = await main({ action: 'getById', _id: 'member-1' }, {});
+
+    expect(result).toEqual({
+      data: {
+        _id: 'member-1',
+        name: '赵六',
+        avatarUrl: 'cloud://avatar',
+        playStyle: 'moon-queen',
+        publicProfileVisible: true
+      }
+    });
+    expect(result.data).not.toHaveProperty('openid');
+    expect(result.data).not.toHaveProperty('publicProfileConsent');
+    expect(result.data).not.toHaveProperty('publicProfileConsentAt');
   });
 });

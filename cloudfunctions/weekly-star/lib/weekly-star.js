@@ -1,3 +1,5 @@
+const { toPublicIdentity } = require('../../_shared/public-profile')
+
 function getTime(row) {
   return new Date(row.confirmedAt || row.createTime || row.updateTime || 0).getTime()
 }
@@ -17,10 +19,12 @@ function topStar(map, membersById) {
   if (sorted.length === 0) return null
   const [memberId, points] = sorted[0]
   const member = membersById[memberId] || {}
+  const identity = toPublicIdentity(member, { rank: 1 })
   return {
     memberId,
-    name: member.name || memberId,
-    avatarUrl: member.avatarUrl || '',
+    name: identity.name,
+    avatarUrl: identity.avatarUrl,
+    publicProfileVisible: identity.publicProfileVisible,
     points
   }
 }

@@ -185,7 +185,9 @@ describe('rankList enhancements', () => {
     const row = res.data.rankList.find(r => r._id === 'unclaimed_标子')
     expect(row).toMatchObject({
       _id: 'unclaimed_标子',
-      name: '标子',
+      name: '选手01',
+      avatarUrl: '/images/icons/default-avatar.png',
+      publicProfileVisible: false,
       totalPoints: 1560,
       winCount: 1,
       lossCount: 1,
@@ -278,14 +280,14 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: 'cached player', avatarUrl: '', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
 
   test('rankList refreshes member profile fields on cached rows without recomputing points', async () => {
     const cloud = require('wx-server-sdk')
-    cloud.__rows.members.push({ _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png' })
+    cloud.__rows.members.push({ _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileConsent: true })
     cloud.__rows.members.push({ _id: 'LIVE', name: 'live player' })
     seedMatchesForMember('LIVE', 9, 0, 99)
     cloud.__rows.rank_cache.push({
@@ -303,7 +305,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -373,7 +375,7 @@ describe('rankList enhancements', () => {
 
   test('rankList recomputes live rows when stored scheduled cache is empty', async () => {
     const cloud = require('wx-server-sdk')
-    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true })
     cloud.__rows.baseline_standings.push({
       _id: 'bs1',
       seasonId: 'season_2026',
@@ -397,7 +399,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
     expect(res.data.cachedAt).toBeUndefined()
   })
@@ -405,7 +407,7 @@ describe('rankList enhancements', () => {
   test('rankList recomputes live rows when rank_cache collection is missing', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.__missingCollections.add('rank_cache')
-    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true })
     cloud.__rows.baseline_standings.push({
       _id: 'bs1',
       seasonId: 'season_2026',
@@ -422,14 +424,14 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
   })
 
   test('rankList recomputes live rows when rank_cache document is missing', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.__missingDocs.add('rank_cache/rank_cache_season_2026_singles')
-    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png' })
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true })
     cloud.__rows.baseline_standings.push({
       _id: 'bs1',
       seasonId: 'season_2026',
@@ -446,15 +448,15 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
   })
 
   test('refreshRankCache writes singles and doubles scheduled cache rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push(
-      { _id: 'A', name: '甲', avatarUrl: 'a.png' },
-      { _id: 'B', name: '乙', avatarUrl: 'b.png' }
+      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true },
+      { _id: 'B', name: '乙', avatarUrl: 'b.png', publicProfileConsent: true }
     )
     cloud.__rows.baseline_standings.push(
       { _id: 'bs1', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 4, losses: 1, createTime: '2026-05-01' },
@@ -472,12 +474,14 @@ describe('rankList enhancements', () => {
       seasonId: 'season_2026',
       cacheDate: '2026-05-20',
       rankList: [
-        { _id: 'A', name: '甲', avatarUrl: 'a.png', totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+        { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
       ]
     })
     expect(cloud.__rows.rank_cache.find(row => row.type === 'doubles').rankList[0]).toMatchObject({
       _id: 'B',
       name: '乙',
+      avatarUrl: 'b.png',
+      publicProfileVisible: true,
       totalPoints: 80,
       winRate: 0.5
     })
@@ -710,7 +714,7 @@ describe('playerStats.recent enrichment', () => {
 
   test('recent rows carry tournamentName/Format, roundLabel, opponent, pointsAwarded, confirmedAt', async () => {
     const cloud = require('wx-server-sdk')
-    cloud.__rows.members.push({ _id: 'P', name: 'p' }, { _id: 'X', name: '张昊' })
+    cloud.__rows.members.push({ _id: 'P', name: 'p' }, { _id: 'X', name: '张昊', publicProfileConsent: true })
     cloud.__rows.tournaments.push({ _id: 't1', name: '春季锦标赛', format: 'knockout', totalRounds: 4 })
     cloud.__rows.match_results.push({
       _id: 'm1', tournamentId: 't1', round: 3, score: '6-4, 6-2',
@@ -747,7 +751,7 @@ describe('playerH2H action', () => {
 
   test('returns { singles: [...], doubles: [...] } shaped per spec', async () => {
     const cloud = require('wx-server-sdk')
-    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a' }, { _id: 'P', name: 'p' })
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a', publicProfileConsent: true }, { _id: 'P', name: 'p' })
     cloud.__rows.match_results.push({
       _id: 'm1', seasonId: 's2026', tournamentType: 'singles', resultStatus: 'confirmed',
       confirmedAt: '2026-05-10', createTime: '2026-05-10', playerIds: ['P', 'A'],
@@ -760,14 +764,14 @@ describe('playerH2H action', () => {
     const res = await main({ action: 'playerH2H', playerId: 'P', currentSeasonId: 's2026' })
     expect(res.success).toBe(true)
     expect(res.data.singles).toEqual([
-      { memberId: 'A', name: '甲', avatarUrl: 'a', wins: 1, losses: 0, lastPlayedAt: '2026-05-10' }
+      { memberId: 'A', name: '甲', avatarUrl: 'a', publicProfileVisible: true, wins: 1, losses: 0, lastPlayedAt: '2026-05-10' }
     ])
     expect(res.data.doubles).toEqual([])
   })
 
   test('aggregates beyond the first page of H2H matches', async () => {
     const cloud = require('wx-server-sdk')
-    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a' }, { _id: 'P', name: 'p' })
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a', publicProfileConsent: true }, { _id: 'P', name: 'p' })
     for (let i = 0; i < 1001; i++) {
       cloud.__rows.match_results.push({
         _id: `m${String(i).padStart(4, '0')}`,
@@ -787,7 +791,7 @@ describe('playerH2H action', () => {
     const res = await main({ action: 'playerH2H', playerId: 'P', currentSeasonId: 's2026' })
     expect(res.success).toBe(true)
     expect(res.data.singles).toEqual([
-      { memberId: 'A', name: '甲', avatarUrl: 'a', wins: 1001, losses: 0, lastPlayedAt: '2026-05-10' }
+      { memberId: 'A', name: '甲', avatarUrl: 'a', publicProfileVisible: true, wins: 1001, losses: 0, lastPlayedAt: '2026-05-10' }
     ])
     expect(res.data.doubles).toEqual([])
   })

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <rect width="1600" height="1100" fill="#f8fafc"/>
+  <rect x="64" y="64" width="1472" height="972" rx="28" fill="#ffffff" stroke="#dbe4ee" stroke-width="2"/>
+
+  <text x="112" y="146" fill="#0f172a" font-family="PingFang SC, Arial, sans-serif" font-size="46" font-weight="800">用户隐私与数据规范整改说明</text>
+  <text x="112" y="196" fill="#475569" font-family="PingFang SC, Arial, sans-serif" font-size="28">针对审核反馈，已全面移除手机号相关采集、展示、搜索和接口返回路径。</text>
+
+  <g transform="translate(112 272)">
+    <rect width="1376" height="150" rx="18" fill="#ecfdf5" stroke="#86efac"/>
+    <circle cx="54" cy="68" r="34" fill="#22c55e"/>
+    <path d="M38 68 L51 81 L74 51" fill="none" stroke="#052e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="54" fill="#064e3b" font-family="PingFang SC, Arial, sans-serif" font-size="31" font-weight="800">页面整改</text>
+    <text x="112" y="92" fill="#166534" font-family="PingFang SC, Arial, sans-serif" font-size="24">资料页、会员管理、会员编辑、赛事加人页均不再出现手机号输入、</text>
+    <text x="112" y="124" fill="#166534" font-family="PingFang SC, Arial, sans-serif" font-size="24">展示或搜索。</text>
+  </g>
+
+  <g transform="translate(112 452)">
+    <rect width="1376" height="150" rx="18" fill="#eff6ff" stroke="#93c5fd"/>
+    <circle cx="54" cy="68" r="34" fill="#3b82f6"/>
+    <path d="M38 68 L51 81 L74 51" fill="none" stroke="#0b1220" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="54" fill="#1e3a8a" font-family="PingFang SC, Arial, sans-serif" font-size="31" font-weight="800">数据接口整改</text>
+    <text x="112" y="92" fill="#1d4ed8" font-family="PingFang SC, Arial, sans-serif" font-size="24">members 云函数已删除手机号白名单。</text>
+    <text x="112" y="124" fill="#1d4ed8" font-family="PingFang SC, Arial, sans-serif" font-size="24">列表、搜索、认领返回前剔除历史字段。</text>
+  </g>
+
+  <g transform="translate(112 632)">
+    <rect width="1376" height="136" rx="18" fill="#fff7ed" stroke="#fdba74"/>
+    <circle cx="54" cy="68" r="34" fill="#f97316"/>
+    <path d="M38 68 L51 81 L74 51" fill="none" stroke="#431407" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="54" fill="#7c2d12" font-family="PingFang SC, Arial, sans-serif" font-size="31" font-weight="800">协议与声明同步</text>
+    <text x="112" y="96" fill="#9a3412" font-family="PingFang SC, Arial, sans-serif" font-size="26">隐私政策、用户协议和数据库字段说明已同步更新，仅声明赛事必要数据。</text>
+  </g>
+
+  <g transform="translate(112 800)">
+    <rect width="1376" height="148" rx="18" fill="#0f172a"/>
+    <text x="36" y="54" fill="#f8fafc" font-family="PingFang SC, Arial, sans-serif" font-size="31" font-weight="800">验证结果</text>
+    <text x="36" y="94" fill="#bbf7d0" font-family="PingFang SC, Arial, sans-serif" font-size="24">小程序测试 31 套 / 312 项通过；members 云函数测试 2 套 / 37 项通过。</text>
+    <text x="36" y="126" fill="#bbf7d0" font-family="PingFang SC, Arial, sans-serif" font-size="24">小程序生产代码中 phone、手机号、联系电话、mobile、telephone、tel 均无命中。</text>
+  </g>
+
+  <text x="112" y="994" fill="#64748b" font-family="PingFang SC, Arial, sans-serif" font-size="24">申诉文案：已完成全面整改，当前版本 1.7 已重新上传，members 云函数已部署。</text>
+</svg>

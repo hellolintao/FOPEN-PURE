@@ -1,3 +1,5 @@
+const { toPublicIdentity } = require('../../_shared/public-profile')
+
 function resolveOpponentIds(row, playerId) {
   const type = row && row.tournamentType
   const entries = (row && row.pointsAwarded && row.pointsAwarded.entries) || []
@@ -70,12 +72,14 @@ function computeH2H(rows, playerId, membersMap) {
   }
 
   return [...byOpponent.values()]
-    .map(row => {
+    .map((row, index) => {
       const member = membersMap.get(row.memberId)
+      const identity = toPublicIdentity(member, { index })
       return {
         memberId: row.memberId,
-        name: (member && member.name) || row.memberId,
-        avatarUrl: (member && member.avatarUrl) || '',
+        name: identity.name,
+        avatarUrl: identity.avatarUrl,
+        publicProfileVisible: identity.publicProfileVisible,
         wins: row.wins,
         losses: row.losses,
         lastPlayedAt: row.lastPlayedAt

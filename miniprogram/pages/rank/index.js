@@ -3,7 +3,7 @@ const { syncTabBar } = require('../../utils/tab-bar')
 const { getCacheEntry, removeCache, setCache } = require('../../utils/page-cache')
 const { isPrideMonthSkinActive } = require('../../utils/seasonal-theme')
 
-const RANK_CACHE_VERSION = 'v3'
+const RANK_CACHE_VERSION = 'v4'
 const RANK_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000
 const RANK_CLOUD_TIMEOUT_MS = 20 * 1000
 
@@ -24,6 +24,7 @@ Page({
 
   async onShow() {
     syncTabBar(this, '/pages/rank/index')
+    if (wx.hideShareMenu) wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
     this.refreshSeasonalTheme()
     this.setData({ currentMember: getApp().globalData.currentMember })
     await Promise.all([this.loadRank(), this.loadHero()])

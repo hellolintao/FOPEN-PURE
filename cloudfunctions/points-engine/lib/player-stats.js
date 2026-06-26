@@ -1,3 +1,5 @@
+const { toPublicIdentity } = require('../../_shared/public-profile')
+
 function deriveRoundLabel(tournament, round) {
   if (!tournament) return null
   if (tournament.format !== 'knockout') return null
@@ -100,7 +102,7 @@ function formatScore(score, options = {}) {
 }
 
 function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
-  return (rows || []).map(row => {
+  return (rows || []).map((row, index) => {
     const tournament = tournamentsMap.get(row.tournamentId) || null
     const entries = (row.pointsAwarded && row.pointsAwarded.entries) || []
     const mine = entries.find(e => e.memberId === playerId)
@@ -111,6 +113,7 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
       : entries.find(e => e.memberId !== playerId)
     const opponentId = opponentEntry ? opponentEntry.memberId : null
     const opponentMember = opponentId ? membersMap.get(opponentId) : null
+    const opponentIdentity = toPublicIdentity(opponentMember, { index })
     const sourceMatchId = row.sourceMatchId || row.matchId || row._id
 
     return {
@@ -125,7 +128,8 @@ function enrichRecent(rows, playerId, tournamentsMap, membersMap) {
       roundLabel: deriveRoundLabel(tournament, row.round),
       score: formatScore(row.score, { flip: scoreSide === 'b' }),
       opponentId,
-      opponentName: opponentMember ? (opponentMember.name || opponentId) : (opponentId || ''),
+      opponentName: opponentId ? opponentIdentity.name : '',
+      opponentProfileVisible: opponentId ? opponentIdentity.publicProfileVisible : false,
       won: role === 'winner',
       pointsAwarded: mine ? (mine.points || 0) : 0,
       createTime: row.createTime,

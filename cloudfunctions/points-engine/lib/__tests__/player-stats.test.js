@@ -59,8 +59,8 @@ describe('enrichRecent', () => {
   ])
   const members = new Map([
     ['P', { _id: 'P', name: 'p', avatarUrl: '' }],
-    ['X', { _id: 'X', name: '张昊', avatarUrl: 'x.png' }],
-    ['Y', { _id: 'Y', name: '陈思远', avatarUrl: 'y.png' }]
+    ['X', { _id: 'X', name: '张昊', avatarUrl: 'x.png', publicProfileConsent: true }],
+    ['Y', { _id: 'Y', name: '陈思远', avatarUrl: 'y.png', publicProfileConsent: true }]
   ])
 
   test('knockout SF won -> roundLabel="SF", won=true, pointsAwarded from entries[P], opponent=X', () => {
@@ -170,7 +170,7 @@ describe('enrichRecent', () => {
     expect(out[0]).toMatchObject({ tournamentType: 'doubles', opponentId: 'X', opponentName: '张昊', won: true, pointsAwarded: 15 })
   })
 
-  test('unknown opponent id -> opponentName falls back to id; missing tournament -> tournamentName=""', () => {
+  test('unknown opponent id is anonymized; missing tournament -> tournamentName=""', () => {
     const row = {
       _id: 'm3', tournamentId: 't_missing', round: 1, score: '6-0',
       playerIds: ['P', 'Z'],
@@ -181,7 +181,8 @@ describe('enrichRecent', () => {
       confirmedAt: null, createTime: '2026-05-09'
     }
     const out = enrichRecent([row], 'P', new Map(), members)
-    expect(out[0].opponentName).toBe('Z')
+    expect(out[0].opponentName).toBe('选手01')
+    expect(out[0].opponentProfileVisible).toBe(false)
     expect(out[0].tournamentName).toBe('')
     expect(out[0].tournamentFormat).toBeNull()
   })

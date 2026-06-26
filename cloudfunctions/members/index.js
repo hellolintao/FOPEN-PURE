@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 const collection = db.collection('members')
+const { toPublicIdentity } = require('../_shared/public-profile')
 
 const VALID_PLAY_STYLES = [
   'ice-cow',
@@ -19,7 +20,8 @@ const ALLOWED_MEMBER_FIELDS = [
   'avatarUrl',
   'status',
   'admin',
-  'playStyle'
+  'playStyle',
+  'publicProfileConsent'
 ]
 
 function normalizePayload(data) {
@@ -76,6 +78,9 @@ function sanitizeAndTrimMemberPayload(data) {
   if (typeof payload.name === 'string') {
     payload.name = payload.name.trim()
   }
+  if (Object.prototype.hasOwnProperty.call(payload, 'publicProfileConsent')) {
+    payload.publicProfileConsent = payload.publicProfileConsent === true
+  }
   return payload
 }
 
@@ -116,9 +121,18 @@ function publicMemberProfile(member) {
     phone,
     admin,
     isAdmin,
+    publicProfileConsent,
+    publicProfileConsentAt,
     ...publicProfile
   } = member
-  return publicProfile
+  const identity = toPublicIdentity(member)
+  return {
+    ...publicProfile,
+    name: identity.name,
+    avatarUrl: identity.avatarUrl,
+    playStyle: identity.publicProfileVisible ? (publicProfile.playStyle || '') : '',
+    publicProfileVisible: identity.publicProfileVisible
+  }
 }
 
 function stripLegacyPhoneField(member) {
@@ -126,6 +140,14 @@ function stripLegacyPhoneField(member) {
   const safeMember = { ...member }
   delete safeMember.phone
   return safeMember
+}
+
+function withPublicProfileConsentMetadata(payload, now) {
+  if (!Object.prototype.hasOwnProperty.call(payload, 'publicProfileConsent')) return payload
+  return {
+    ...payload,
+    publicProfileConsentAt: payload.publicProfileConsent ? now : null
+  }
 }
 
 function isCloudFileId(value) {
@@ -181,7 +203,7 @@ exports.main = async (event, context) => {
   switch (action) {
     case 'add': {
       // 新增会员，openid唯一
-      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
+      let payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
       const v = validateMemberAdd(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
@@ -191,6 +213,7 @@ exports.main = async (event, context) => {
         return { errMsg: 'already registered', data: stripLegacyPhoneField(exist.data[0]) }
       }
       const now = db.serverDate()
+      payload = withPublicProfileConsentMetadata(payload, now)
       const unclaimed = await collection.where({
         name: payload.name,
         claimStatus: 'unclaimed'
@@ -258,12 +281,13 @@ exports.main = async (event, context) => {
     }
     case 'update': {
       // 更新会员信息 by openid
-      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
+      let payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
       const v = validateMemberData(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
       const now = db.serverDate()
+      payload = withPublicProfileConsentMetadata(payload, now)
       return await collection.where({ openid }).update({
         data: {
           ...payload,
@@ -272,7 +296,7 @@ exports.main = async (event, context) => {
       })
     }
     case 'claimSelf': {
-      const payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
+      let payload = stripSelfServiceOnlyFields(sanitizeAndTrimMemberPayload(data))
       const v = validateMemberAdd(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
@@ -286,6 +310,7 @@ exports.main = async (event, context) => {
         return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先完善资料' } }
       }
       const now = db.serverDate()
+      payload = withPublicProfileConsentMetadata(payload, now)
       const updateData = {
         ...payload,
         claimStatus: 'claimed',
@@ -351,12 +376,13 @@ exports.main = async (event, context) => {
       }
       const forbidden = await requireAdmin()
       if (forbidden) return forbidden
-      const payload = sanitizeAndTrimMemberPayload(data)
+      let payload = sanitizeAndTrimMemberPayload(data)
       const v = validateMemberData(payload)
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
       const now = db.serverDate()
+      payload = withPublicProfileConsentMetadata(payload, now)
       return await collection.doc(_id).update({
         data: {
           ...payload,

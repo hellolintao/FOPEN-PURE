@@ -101,13 +101,13 @@ describe('computeH2H', () => {
       }
     ]
     const members = new Map([
-      ['A', { name: 'Alice', avatarUrl: 'alice.png' }],
-      ['B', { name: 'Bob', avatarUrl: 'bob.png' }]
+      ['A', { name: 'Alice', avatarUrl: 'alice.png', publicProfileConsent: true }],
+      ['B', { name: 'Bob', avatarUrl: 'bob.png', publicProfileConsent: true }]
     ])
 
     expect(computeH2H(rows, 'P', members)).toEqual([
-      { memberId: 'A', name: 'Alice', avatarUrl: 'alice.png', wins: 1, losses: 1, lastPlayedAt: '2026-05-12' },
-      { memberId: 'B', name: 'Bob', avatarUrl: 'bob.png', wins: 1, losses: 0, lastPlayedAt: '2026-05-13' }
+      { memberId: 'A', name: 'Alice', avatarUrl: 'alice.png', publicProfileVisible: true, wins: 1, losses: 1, lastPlayedAt: '2026-05-12' },
+      { memberId: 'B', name: 'Bob', avatarUrl: 'bob.png', publicProfileVisible: true, wins: 1, losses: 0, lastPlayedAt: '2026-05-13' }
     ])
   })
 
@@ -128,8 +128,8 @@ describe('computeH2H', () => {
     }]
 
     expect(computeH2H(rows, 'P', new Map())).toEqual([
-      { memberId: 'X', name: 'X', avatarUrl: '', wins: 1, losses: 0, lastPlayedAt: '2026-05-14' },
-      { memberId: 'Y', name: 'Y', avatarUrl: '', wins: 1, losses: 0, lastPlayedAt: '2026-05-14' }
+      { memberId: 'X', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, wins: 1, losses: 0, lastPlayedAt: '2026-05-14' },
+      { memberId: 'Y', name: '选手02', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, wins: 1, losses: 0, lastPlayedAt: '2026-05-14' }
     ])
   })
 
@@ -156,7 +156,7 @@ describe('computeH2H', () => {
     expect(computeH2H(rows, 'P', new Map()).map(row => row.memberId)).toEqual(['X', 'Y'])
   })
 
-  test('unknown member falls back to id name and empty avatarUrl', () => {
+  test('unknown member is anonymized for public H2H display', () => {
     const rows = [{
       tournamentType: 'singles',
       confirmedAt: '2026-05-10',
@@ -167,7 +167,7 @@ describe('computeH2H', () => {
     }]
 
     expect(computeH2H(rows, 'P', new Map())).toEqual([
-      { memberId: 'Z', name: 'Z', avatarUrl: '', wins: 1, losses: 0, lastPlayedAt: '2026-05-10' }
+      { memberId: 'Z', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, wins: 1, losses: 0, lastPlayedAt: '2026-05-10' }
     ])
   })
 
@@ -183,7 +183,7 @@ describe('computeH2H', () => {
     }]
 
     expect(computeH2H(rows, 'P', new Map())).toEqual([
-      { memberId: 'A', name: 'A', avatarUrl: '', wins: 0, losses: 1, lastPlayedAt: '2026-05-08' }
+      { memberId: 'A', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, wins: 0, losses: 1, lastPlayedAt: '2026-05-08' }
     ])
   })
 

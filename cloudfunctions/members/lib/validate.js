@@ -12,7 +12,8 @@ const ALLOWED_MEMBER_FIELDS = [
   'avatarUrl',
   'status',
   'admin',
-  'playStyle'
+  'playStyle',
+  'publicProfileConsent'
 ];
 
 function normalizePayload(data) {

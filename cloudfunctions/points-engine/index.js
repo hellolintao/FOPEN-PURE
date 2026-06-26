@@ -10,6 +10,7 @@ const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
 const { computeH2H } = require('./lib/player-h2h')
 const { buildGroupKnockoutPointEntries } = require('./lib/group-knockout')
+const { toPublicIdentity } = require('../_shared/public-profile')
 
 exports.main = async (event = {}) => {
   const action = event.action || 'refreshRankCache'
@@ -233,14 +234,15 @@ async function refreshRankMemberProfiles(rankList) {
 
   const members = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data || []
   const memberMap = Object.fromEntries(members.map(member => [member._id, member]))
-  return rankList.map(row => {
+  return rankList.map((row, index) => {
     const memberId = row && (row._id || row.memberId)
     const member = memberMap[memberId]
-    if (!member) return row
+    const identity = toPublicIdentity(member, { index, rank: index + 1 })
     return {
       ...row,
-      name: member.name || memberId,
-      avatarUrl: member.avatarUrl || ''
+      name: identity.name,
+      avatarUrl: identity.avatarUrl,
+      publicProfileVisible: identity.publicProfileVisible
     }
   })
 }
@@ -570,14 +572,19 @@ async function joinMembers(list) {
   const memberIds = list.map(x => x.memberId)
   const members = (await db.collection('members').where({ _id: _.in(memberIds) }).get()).data
   const memberMap = Object.fromEntries(members.map(m => [m._id, m]))
-  return list.map(x => ({
-    _id: x.memberId,
-    name: (memberMap[x.memberId] && memberMap[x.memberId].name) || x.memberId,
-    avatarUrl: (memberMap[x.memberId] && memberMap[x.memberId].avatarUrl) || '',
-    totalPoints: x.totalPoints || 0,
-    winCount: x.wins || 0,
-    lossCount: x.losses || 0
-  }))
+  return list.map((x, index) => {
+    const member = memberMap[x.memberId]
+    const identity = toPublicIdentity(member, { index, rank: index + 1 })
+    return {
+      _id: x.memberId,
+      name: identity.name,
+      avatarUrl: identity.avatarUrl,
+      publicProfileVisible: identity.publicProfileVisible,
+      totalPoints: x.totalPoints || 0,
+      winCount: x.wins || 0,
+      lossCount: x.losses || 0
+    }
+  })
 }
 
 async function fetchRecentForPlayer(playerId) {

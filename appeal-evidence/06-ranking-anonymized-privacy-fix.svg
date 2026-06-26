@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <rect width="1600" height="1000" fill="#f6f7f3"/>
+  <rect x="70" y="70" width="1460" height="860" rx="34" fill="#ffffff" stroke="#d8ded2" stroke-width="2"/>
+  <text x="120" y="145" font-size="44" font-family="Arial, 'PingFang SC', sans-serif" font-weight="800" fill="#10140f">排行榜公开身份数据整改说明</text>
+  <text x="120" y="198" font-size="25" font-family="Arial, 'PingFang SC', sans-serif" fill="#5f675d">针对审核截图中红框标注的头像、昵称和排行榜公开展示问题，已改为默认匿名化。</text>
+
+  <rect x="120" y="250" width="640" height="500" rx="22" fill="#fff7f7" stroke="#f1b8b8" stroke-width="2"/>
+  <text x="160" y="312" font-size="30" font-family="Arial, 'PingFang SC', sans-serif" font-weight="800" fill="#b3261e">整改前风险</text>
+  <rect x="160" y="350" width="560" height="70" rx="14" fill="#ffffff" stroke="#f1c5c5"/>
+  <circle cx="205" cy="385" r="24" fill="#d8e3c6"/>
+  <text x="250" y="396" font-size="28" font-family="Arial, 'PingFang SC', sans-serif" fill="#121212">小飞</text>
+  <text x="570" y="396" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#121212">2960 PTS</text>
+  <rect x="185" y="338" width="170" height="96" rx="6" fill="none" stroke="#ff3b30" stroke-width="6"/>
+  <text x="160" y="480" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#4d4d4d">问题：未单独证明公开展示同意时，</text>
+  <text x="160" y="520" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#4d4d4d">排行榜直接显示用户头像、昵称、积分和战绩。</text>
+  <text x="160" y="575" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#4d4d4d">触发：平台按“被搜索/内容分享”场景</text>
+  <text x="160" y="615" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#4d4d4d">审核公开页面中的用户数据展示。</text>
+
+  <rect x="840" y="250" width="640" height="500" rx="22" fill="#f3fbf4" stroke="#b8ddbd" stroke-width="2"/>
+  <text x="880" y="312" font-size="30" font-family="Arial, 'PingFang SC', sans-serif" font-weight="800" fill="#137333">整改后状态</text>
+  <rect x="880" y="350" width="560" height="70" rx="14" fill="#ffffff" stroke="#cfe4ce"/>
+  <circle cx="925" cy="385" r="24" fill="#dce5dc"/>
+  <path d="M912 384c6-17 20-17 26 0 7 4 12 10 12 18h-50c0-8 5-14 12-18z" fill="#869184"/>
+  <text x="970" y="396" font-size="28" font-family="Arial, 'PingFang SC', sans-serif" fill="#121212">选手01</text>
+  <text x="1290" y="396" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#121212">2960 PTS</text>
+  <rect x="905" y="338" width="205" height="96" rx="6" fill="none" stroke="#34a853" stroke-width="6"/>
+  <text x="880" y="480" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#2f4b35">默认：未单独同意公开展示时，</text>
+  <text x="880" y="520" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#2f4b35">仅显示匿名编号和默认头像。</text>
+  <text x="880" y="575" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#2f4b35">同意后：可在资料页开启公开展示，</text>
+  <text x="880" y="615" font-size="24" font-family="Arial, 'PingFang SC', sans-serif" fill="#2f4b35">也可随时撤回。</text>
+
+  <rect x="120" y="790" width="1360" height="90" rx="18" fill="#0b0c09"/>
+  <text x="155" y="845" font-size="25" font-family="Arial, 'PingFang SC', sans-serif" fill="#ffffff">代码整改：排行、周星、球员档案、H2H、最近比赛统一脱敏；隐藏分享并禁止收录；手机号采集已移除。</text>
+</svg>

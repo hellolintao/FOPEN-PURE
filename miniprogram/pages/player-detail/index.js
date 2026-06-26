@@ -64,6 +64,7 @@ Page({
   },
 
   async onLoad(query) {
+    if (wx.hideShareMenu) wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
     const playerId = query && query.id;
     if (!playerId) {
       wx.showToast({ title: '参数错误', icon: 'none' });

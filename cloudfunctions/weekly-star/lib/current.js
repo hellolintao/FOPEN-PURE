@@ -1,3 +1,5 @@
+const { toPublicIdentity } = require('../../_shared/public-profile')
+
 async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
   const _ = db.command
   const start = week.start || week.weekStart
@@ -63,6 +65,7 @@ async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
     })
   const top = ranked[0]
   const member = await fetchMember(db, top.memberId)
+  const identity = toPublicIdentity(member, { rank: 1 })
 
   return {
     mode: 'current',
@@ -70,8 +73,9 @@ async function resolveCurrentWeeklyStar({ db, seasonId, type, week }) {
     weekEnd: week.weekEnd,
     star: {
       memberId: top.memberId,
-      name: member.name || top.memberId,
-      avatarUrl: member.avatarUrl || '',
+      name: identity.name,
+      avatarUrl: identity.avatarUrl,
+      publicProfileVisible: identity.publicProfileVisible,
       pointsDelta: top.points,
       wins: top.wins,
       losses: top.losses
