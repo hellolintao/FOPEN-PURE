@@ -1,0 +1,12 @@
+Upload record
+
+Date: 2026-06-30
+AppID: wxd3c473f026505b61
+Version: 1.9
+Description: 隐私合规整改：接入微信官方隐私授权弹窗
+Package size: 1.5 MB / 1615617 bytes
+Result: WeChat DevTools CLI upload succeeded.
+
+Key compliance change:
+- Registration/profile save and avatar upload now call wx.requirePrivacyAuthorize before collecting or updating user profile data.
+- The custom privacy authorization overlay was removed so the WeChat official privacy authorization popup can handle user authorization.
