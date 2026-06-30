@@ -82,23 +82,4 @@
     <view class="footer-btn footer-btn-primary tap-scale {{needsAgreement && !agreementAccepted ? 'footer-btn-disabled' : ''}}" bindtap="onSave">{{isRegister ? '完成注册' : '保存'}}</view>
   </view>
 
-  <view wx:if="{{showPrivacyDialog}}" class="privacy-mask">
-    <view class="privacy-card">
-      <text class="privacy-title">用户隐私保护提示</text>
-      <view class="privacy-copy">
-        <text>上传头像前，需要你阅读并同意</text>
-        <text class="privacy-link" bindtap="onOpenPrivacyContract">{{privacyContractName}}</text>
-        <text>。</text>
-      </view>
-      <view class="privacy-actions">
-        <button class="privacy-btn privacy-btn-ghost" bindtap="onRejectPrivacyAuthorization">暂不同意</button>
-        <button
-          id="edit-profile-privacy-agree"
-          class="privacy-btn privacy-btn-primary"
-          open-type="agreePrivacyAuthorization"
-          bindagreeprivacyauthorization="onAgreePrivacyAuthorization"
-        >同意并继续</button>
-      </view>
-    </view>
-  </view>
 </view>

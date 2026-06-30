@@ -14,6 +14,9 @@ function loadPage(overrides = {}) {
     setNavigationBarTitle: jest.fn(),
     openPrivacyContract: jest.fn(),
     onNeedPrivacyAuthorization: jest.fn(),
+    requirePrivacyAuthorize: jest.fn(({ success }) => {
+      if (success) success({ errMsg: 'requirePrivacyAuthorize:ok' })
+    }),
     chooseMedia: jest.fn(),
     chooseImage: jest.fn(),
     cloud: { uploadFile: jest.fn() }
@@ -116,6 +119,15 @@ describe('edit-profile mode handling', () => {
     expect(callFunction).not.toHaveBeenCalled()
   })
 
+  test('register page does not install a custom privacy authorization handler', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLoad({ mode: 'register' })
+
+    expect(wx.onNeedPrivacyAuthorization).not.toHaveBeenCalled()
+  })
+
   test('default mode edits and loads current member without members.get', () => {
     const { pageDef } = loadPage({
       currentMember: { name: '李四', phone: '13800000000', avatarUrl: 'cloud://avatar', playStyle: 'vers' }
@@ -186,6 +198,41 @@ describe('edit-profile validation and save', () => {
     await ctx.onSave()
 
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请先阅读并同意协议', icon: 'none' })
+    expect(callFunction).not.toHaveBeenCalled()
+  })
+
+  test('register mode syncs official WeChat privacy authorization before saving personal info', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { _id: 'm1' } })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
+
+    await ctx.onSave()
+
+    expect(wx.requirePrivacyAuthorize).toHaveBeenCalled()
+    expect(callFunction).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'add'
+      })
+    }))
+  })
+
+  test('register mode stops saving when official WeChat privacy authorization is rejected', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    wx.requirePrivacyAuthorize.mockImplementationOnce(({ fail }) => {
+      fail({ errMsg: 'requirePrivacyAuthorize:fail privacy permission is not authorized' })
+    })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'vers' }
+    acceptAgreement(ctx)
+
+    await ctx.onSave()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请先同意微信隐私授权', icon: 'none' })
     expect(callFunction).not.toHaveBeenCalled()
   })
 
@@ -559,7 +606,7 @@ describe('edit-profile validation and save', () => {
 })
 
 describe('edit-profile avatar', () => {
-  test('avatar tap uses wx.chooseMedia and uploads returned image path', () => {
+  test('avatar tap requests official WeChat privacy authorization before choosing media', async () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)
     ctx.uploadAvatar = jest.fn()
@@ -567,8 +614,9 @@ describe('edit-profile avatar', () => {
       success({ tempFiles: [{ tempFilePath: 'http://tmp/avatar.jpg' }] })
     })
 
-    ctx.onAvatarActionTap()
+    await ctx.onAvatarActionTap()
 
+    expect(wx.requirePrivacyAuthorize).toHaveBeenCalled()
     expect(wx.chooseMedia).toHaveBeenCalledWith(expect.objectContaining({
       count: 1,
       mediaType: ['image'],
@@ -579,7 +627,22 @@ describe('edit-profile avatar', () => {
     expect(ctx.uploadAvatar).toHaveBeenCalledWith('http://tmp/avatar.jpg')
   })
 
-  test('avatar tap falls back to wx.chooseImage when chooseMedia is unavailable', () => {
+  test('avatar tap stops when official WeChat privacy authorization is rejected', async () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    ctx.uploadAvatar = jest.fn()
+    wx.requirePrivacyAuthorize.mockImplementationOnce(({ fail }) => {
+      fail({ errMsg: 'requirePrivacyAuthorize:fail privacy permission is not authorized' })
+    })
+
+    await ctx.onAvatarActionTap()
+
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '需同意隐私授权后上传头像', icon: 'none' })
+    expect(wx.chooseMedia).not.toHaveBeenCalled()
+    expect(ctx.uploadAvatar).not.toHaveBeenCalled()
+  })
+
+  test('avatar tap falls back to wx.chooseImage when chooseMedia is unavailable', async () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)
     ctx.uploadAvatar = jest.fn()
@@ -588,7 +651,7 @@ describe('edit-profile avatar', () => {
       success({ tempFilePaths: ['http://tmp/fallback.jpg'] })
     })
 
-    ctx.onAvatarActionTap()
+    await ctx.onAvatarActionTap()
 
     expect(wx.chooseImage).toHaveBeenCalledWith(expect.objectContaining({
       count: 1,
@@ -597,26 +660,6 @@ describe('edit-profile avatar', () => {
     }))
     expect(ctx.data.avatarPreviewUrl).toBe('http://tmp/fallback.jpg')
     expect(ctx.uploadAvatar).toHaveBeenCalledWith('http://tmp/fallback.jpg')
-  })
-
-  test('privacy authorization prompt resolves pending chooseAvatar after user agrees', () => {
-    const { pageDef } = loadPage()
-    const ctx = makeCtx(pageDef)
-    const resolve = jest.fn()
-
-    ctx.onLoad({ mode: 'register' })
-    const handler = wx.onNeedPrivacyAuthorization.mock.calls[0][0]
-    handler(resolve, { referrer: 'chooseAvatar' })
-
-    expect(ctx.data.showPrivacyDialog).toBe(true)
-
-    ctx.onAgreePrivacyAuthorization({ target: { id: 'edit-profile-privacy-agree' } })
-
-    expect(resolve).toHaveBeenCalledWith({
-      event: 'agree',
-      buttonId: 'edit-profile-privacy-agree'
-    })
-    expect(ctx.data.showPrivacyDialog).toBe(false)
   })
 
   test('chooseAvatar privacy declaration errors are surfaced with an actionable modal', () => {

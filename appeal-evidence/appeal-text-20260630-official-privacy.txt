@@ -1,0 +1,17 @@
+【申诉原因（200字内）】
+已补充微信官方隐私授权链路：注册保存个人资料、上传头像前均调用 wx.requirePrivacyAuthorize，由微信侧官方隐私授权弹窗同步用户同意状态；不再使用自定义 onNeedPrivacyAuthorization 弹窗替代官方授权。隐私政策、用户协议和后台用户隐私保护指引已同步声明昵称、头像、打法、赛事记录、积分排行及 OpenID 用途，手机号采集/展示已删除。
+
+【整改说明】
+本次根据微信公告《小程序隐私协议开发指南》及“官方隐私授权弹窗功能说明”重新排查。此前小程序虽然已配置后台《小程序用户隐私保护指引》，也有本地《隐私政策》《用户服务协议》和协议更新弹窗，但注册/公开展示资料的同意状态主要依赖自定义协议弹窗；微信官方隐私授权只在头像上传时通过自定义 onNeedPrivacyAuthorization 弹窗间接处理，未在注册保存前统一同步微信侧隐私授权状态。
+
+已完成进一步整改：
+1. 注册/赛事报名补充资料保存前，先调用 wx.requirePrivacyAuthorize，触发微信官方隐私授权弹窗；用户拒绝时不写入会员资料、不记录 publicProfileConsent。
+2. 上传头像前也先调用 wx.requirePrivacyAuthorize，通过微信侧官方弹窗同步同意状态后才调用 chooseMedia/chooseImage 和 uploadFile。
+3. 已移除 edit-profile 页自定义 onNeedPrivacyAuthorization 遮罩弹窗，避免用开发者自定义弹窗替代微信官方授权链路。
+4. app.json 保持 __usePrivacyCheck__: true；隐私政策、用户协议、后台用户隐私保护指引已声明昵称、头像、打法、报名状态、比赛成绩、积分排行和 OpenID 用途。
+5. 生产页面仍无手机号采集/展示、无 getPhoneNumber、无 type="nickname"。
+
+【核验】
+- pages/edit-profile 测试：33 个用例通过，覆盖官方隐私授权成功/拒绝、注册保存、头像上传。
+- 隐私相关页面测试：6 个测试套件、63 个用例通过。
+- 会员云函数测试：2 个测试套件、38 个用例通过。

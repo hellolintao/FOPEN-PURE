@@ -3,8 +3,6 @@ const { removeCachesByPrefix } = require('../../utils/page-cache')
 const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-style')
 const { DEFAULT_AVATAR_URL } = require('../../config')
 
-const PRIVACY_AGREE_BUTTON_ID = 'edit-profile-privacy-agree'
-
 Page({
   data: {
     isRegister: false,
@@ -15,8 +13,6 @@ Page({
     avatarUploading: false,
     agreementAccepted: false,
     needsAgreement: false,
-    showPrivacyDialog: false,
-    privacyContractName: '用户隐私保护指引',
     formData: {
       name: '',
       avatarUrl: '',
@@ -28,7 +24,6 @@ Page({
   onLoad(query) {
     const isRegister = (query && query.mode) === 'register'
     const from = (query && query.from) || ''
-    this.setupPrivacyAuthorization()
     this.setData({
       isRegister,
       from,
@@ -39,23 +34,6 @@ Page({
     if (!isRegister) {
       this.loadUserInfo()
     }
-  },
-
-  setupPrivacyAuthorization() {
-    if (!wx.onNeedPrivacyAuthorization || this.privacyAuthorizationReady) return
-    this.privacyAuthorizationReady = true
-    wx.onNeedPrivacyAuthorization((resolve) => {
-      this.privacyResolve = resolve
-      this.setData({ showPrivacyDialog: true })
-    })
-  },
-
-  resolvePrivacyAuthorization(result) {
-    if (typeof this.privacyResolve === 'function') {
-      this.privacyResolve(result)
-      this.privacyResolve = null
-    }
-    this.setData({ showPrivacyDialog: false })
   },
 
   onOpenPrivacyContract() {
@@ -72,19 +50,23 @@ Page({
     })
   },
 
-  onAgreePrivacyAuthorization(e) {
-    const buttonId = e && e.target && e.target.id
-      ? e.target.id
-      : PRIVACY_AGREE_BUTTON_ID
-    this.resolvePrivacyAuthorization({
-      event: 'agree',
-      buttonId
-    })
-  },
+  ensureOfficialPrivacyAuthorization(rejectTitle) {
+    if (typeof wx.requirePrivacyAuthorize !== 'function') {
+      return Promise.resolve(true)
+    }
 
-  onRejectPrivacyAuthorization() {
-    this.resolvePrivacyAuthorization({ event: 'disagree' })
-    wx.showToast({ title: '需同意隐私指引后上传头像', icon: 'none' })
+    return new Promise(resolve => {
+      wx.requirePrivacyAuthorize({
+        success: () => resolve(true),
+        fail: () => {
+          wx.showToast({
+            title: rejectTitle || '请先同意微信隐私授权',
+            icon: 'none'
+          })
+          resolve(false)
+        }
+      })
+    })
   },
 
   async loadUserInfo() {
@@ -121,8 +103,11 @@ Page({
     })
   },
 
-  onAvatarActionTap() {
+  async onAvatarActionTap() {
     if (this.data.avatarUploading) return
+
+    const authorized = await this.ensureOfficialPrivacyAuthorization('需同意隐私授权后上传头像')
+    if (!authorized) return
 
     if (typeof wx.chooseMedia === 'function') {
       wx.chooseMedia({
@@ -317,6 +302,9 @@ Page({
       wx.showToast({ title: '请先阅读并同意协议', icon: 'none' })
       return
     }
+
+    const privacyAuthorized = await this.ensureOfficialPrivacyAuthorization('请先同意微信隐私授权')
+    if (!privacyAuthorized) return
 
     wx.showLoading({ title: shouldCreateMember ? '注册中...' : '保存中...' })
 
