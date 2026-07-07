@@ -15,6 +15,11 @@
 - Score confirmation must not roll back when analytics cache refresh fails.
 - Trend display states must include `▲N`, `▼N`, `持平`, `新上榜`, and `暂无历史`.
 - Doubles H2H must display `subjectTeam` vs `opponentTeam`, not `current user` vs one opponent.
+- Official settlement routes that change confirmed scores must refresh rank cache and analytics: `batchConfirm`, `batchAdminSave`, `reconfirmMatch`, and `confirmAll`.
+- Ranking and cumulative player totals must continue to use the existing source of truth: `baseline_standings + confirmed match_results + tournament_points`, through `points-engine` ranking/player stats helpers. Analytics must not replace those totals with match-only aggregates.
+- Analytics caches may store member ids, pair ids, and aggregate counts; display names, avatar URLs, and public visibility must be resolved at read time from current `members` data through analytics-owned identity helpers that anonymize both name and avatar when `publicProfileConsent !== true`.
+- Analytics and snapshot rebuilds must page through full collections; no production query may silently cap a season at 500 rows.
+- New collections must be created or documented with required indexes before deployment: `player_analytics`, `pair_analytics`, and `analytics_jobs`.
 - Use additive APIs and fields so existing pages keep working while analytics caches are unavailable.
 - Prefer focused pure helpers under `cloudfunctions/analytics-engine/lib/` and keep cloud SDK code in `cloudfunctions/analytics-engine/index.js`.
 
@@ -31,20 +36,25 @@ Create:
 - `cloudfunctions/analytics-engine/lib/teams.js` — singles/doubles team extraction and display helpers.
 - `cloudfunctions/analytics-engine/lib/player-analytics.js` — pure player analytics aggregation.
 - `cloudfunctions/analytics-engine/lib/pair-analytics.js` — pure doubles pair analytics aggregation.
-- `cloudfunctions/analytics-engine/lib/settlement-impact.js` — pure rank/points impact summary.
+- `cloudfunctions/analytics-engine/lib/identity.js` — resolve public-safe display names from cached member ids at read time.
 - `cloudfunctions/analytics-engine/lib/__tests__/ids.test.js`
 - `cloudfunctions/analytics-engine/lib/__tests__/teams.test.js`
 - `cloudfunctions/analytics-engine/lib/__tests__/player-analytics.test.js`
 - `cloudfunctions/analytics-engine/lib/__tests__/pair-analytics.test.js`
+- `cloudfunctions/analytics-engine/lib/__tests__/identity.test.js`
 - `cloudfunctions/analytics-engine/__tests__/index.test.js`
 
 Modify:
 
 - `cloudfunctions/match-results/index.js` — call analytics refresh after successful admin confirmation paths.
 - `cloudfunctions/match-results/lib/handlers/batch.js` — return `analyticsStatus` and `settlementImpact` from batch admin save / confirm.
+- `cloudfunctions/match-results/lib/handlers/submit.js` — return analytics metadata for direct `confirmAll` and `reconfirmMatch`.
 - `cloudfunctions/match-results/lib/__tests__/handlers/batch.test.js`
+- `cloudfunctions/match-results/lib/__tests__/handlers/submit.test.js`
 - `cloudfunctions/match-results/__tests__/analytics-integration.test.js`
-- `cloudfunctions/points-engine/index.js` — return explicit trend state fields from `rankList`.
+- `cloudfunctions/points-engine/lib/settlement-impact.js` — pure rank/points impact summary used during rank cache refresh.
+- `cloudfunctions/points-engine/lib/__tests__/settlement-impact.test.js`
+- `cloudfunctions/points-engine/index.js` — return explicit trend state fields from `rankList`, write snapshot rows after rank cache refresh, and expose a rebuild action.
 - `cloudfunctions/points-engine/__tests__/index.test.js`
 - `miniprogram/pages/rank/index.js`
 - `miniprogram/pages/rank/index.wxml`
@@ -76,11 +86,12 @@ Modify:
 - Create: `cloudfunctions/analytics-engine/lib/teams.js`
 - Create: `cloudfunctions/analytics-engine/lib/player-analytics.js`
 - Create: `cloudfunctions/analytics-engine/lib/pair-analytics.js`
-- Create: `cloudfunctions/analytics-engine/lib/settlement-impact.js`
+- Create: `cloudfunctions/analytics-engine/lib/identity.js`
 - Create: `cloudfunctions/analytics-engine/lib/__tests__/ids.test.js`
 - Create: `cloudfunctions/analytics-engine/lib/__tests__/teams.test.js`
 - Create: `cloudfunctions/analytics-engine/lib/__tests__/player-analytics.test.js`
 - Create: `cloudfunctions/analytics-engine/lib/__tests__/pair-analytics.test.js`
+- Create: `cloudfunctions/analytics-engine/lib/__tests__/identity.test.js`
 
 **Interfaces:**
 - Produces: `analyticsPlayerId(seasonId: string, memberId: string): string`
@@ -89,7 +100,8 @@ Modify:
 - Produces: `teamLabel(members: Array<{ name: string, memberId: string }>): string`
 - Produces: `buildPlayerAnalytics({ seasonId, memberId, rows, membersById, rankRowsByType }): object`
 - Produces: `buildPairAnalytics({ seasonId, pairMemberIds, rows, membersById }): object`
-- Produces: `buildSettlementImpact({ beforeRankRows, afterRankRows, affectedMemberIds }): object`
+- Produces: `resolveAnalyticsIdentities(doc: object, membersById: Map): object`
+- Produces: `analytics.doubles.teamH2H: Array<{ key, subjectTeam, opponentTeam, subjectTeamLabel, opponentTeamLabel, wins, losses, recentMatches }>`
 
 - [ ] **Step 1: Create package and config**
 
@@ -337,7 +349,8 @@ test('buildPlayerAnalytics includes lastFive, strongAgainst and strugglesAgainst
   expect(out.singles.strongAgainst[0]).toMatchObject({ memberId: 'B', name: '标子', wins: 3, losses: 0 })
   expect(out.singles.strugglesAgainst[0]).toMatchObject({ memberId: 'A', name: '小天', wins: 1, losses: 1 })
   expect(out.doubles.bestPartners[0]).toMatchObject({ memberId: 'M', name: '小野马', wins: 1, losses: 0, matches: 1 })
-  expect(out.recentMatches[0]).toMatchObject({ matchId: 'd1', tournamentType: 'doubles', subjectTeamLabel: '乐乐 / 小野马', opponentTeamLabel: '小天 / 标子' })
+  expect(out.doubles.teamH2H[0]).toMatchObject({ subjectTeam: [{ memberId: 'P' }, { memberId: 'M' }], opponentTeam: [{ memberId: 'A' }, { memberId: 'B' }], wins: 1, losses: 0 })
+  expect(out.recentMatches[0]).toMatchObject({ matchId: 'd1', tournamentType: 'doubles', subjectTeam: [{ memberId: 'P' }, { memberId: 'M' }], opponentTeam: [{ memberId: 'A' }, { memberId: 'B' }] })
 })
 
 function row(id, type, playerIds, winnerId, loserId, confirmedAt) {
@@ -397,8 +410,8 @@ Expected: FAIL with `Cannot find module '../player-analytics'`.
 Create `cloudfunctions/analytics-engine/lib/player-analytics.js` with this public shape and supporting helpers:
 
 ```js
-const { analyticsPlayerId } = require('./ids')
-const { opponentSide, resultRoleForMember, sideMembers, subjectSide, teamLabel } = require('./teams')
+const { analyticsPlayerId, pairKey } = require('./ids')
+const { opponentSide, resultRoleForMember, sideMembers, subjectSide } = require('./teams')
 
 function buildPlayerAnalytics({ seasonId, memberId, rows, membersById, rankRowsByType }) {
   const relevantRows = (rows || [])
@@ -424,12 +437,11 @@ function buildBucket({ rows, memberId, membersById, type }) {
   const wins = rows.filter(row => resultRoleForMember(row, memberId) === 'winner').length
   const losses = rows.filter(row => resultRoleForMember(row, memberId) === 'loser').length
   return {
-    winCount: wins,
-    lossCount: losses,
-    totalPoints: rows.reduce((sum, row) => sum + pointsFor(row, memberId), 0),
-    winRate: wins + losses > 0 ? wins / (wins + losses) : 0,
+    matchWinCount: wins,
+    matchLossCount: losses,
     lastFive: buildLastFive(rows, memberId),
     bestPartners: type === 'doubles' ? buildBestPartners(rows, memberId, membersById) : [],
+    teamH2H: type === 'doubles' ? buildTeamH2H(rows, memberId, membersById) : [],
     strongAgainst: buildOpponentRecords(rows, memberId, membersById).filter(row => row.wins > row.losses),
     strugglesAgainst: buildOpponentRecords(rows, memberId, membersById).filter(row => row.losses >= row.wins)
   }
@@ -459,6 +471,35 @@ function buildBestPartners(rows, memberId, membersById) {
   return [...map.values()].sort((a, b) => b.winRate - a.winRate || b.matches - a.matches || a.memberId.localeCompare(b.memberId))
 }
 
+function buildTeamH2H(rows, memberId, membersById) {
+  const map = new Map()
+  for (const row of rows) {
+    const subject = sideMembers(subjectSide(row, memberId)).map(member => ({ ...member, name: memberName(membersById, member.memberId, member.name) }))
+    const opponent = sideMembers(opponentSide(row, memberId)).map(member => ({ ...member, name: memberName(membersById, member.memberId, member.name) }))
+    if (subject.length !== 2 || opponent.length !== 2) continue
+    const subjectKey = pairKey(subject.map(member => member.memberId)).pairId
+    const opponentKey = pairKey(opponent.map(member => member.memberId)).pairId
+    const key = `${subjectKey}__vs__${opponentKey}`
+    const current = map.get(key) || {
+      key,
+      subjectTeam: subject,
+      opponentTeam: opponent,
+      wins: 0,
+      losses: 0,
+      recentMatches: []
+    }
+    const role = resultRoleForMember(row, memberId)
+    if (role === 'winner') current.wins += 1
+    else if (role === 'loser') current.losses += 1
+    current.recentMatches.push(formatRecent(row, memberId, membersById))
+    current.recentMatches = current.recentMatches
+      .sort((a, b) => timeOf({ confirmedAt: b.confirmedAt }) - timeOf({ confirmedAt: a.confirmedAt }))
+      .slice(0, 3)
+    map.set(key, current)
+  }
+  return [...map.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses) || a.key.localeCompare(b.key))
+}
+
 function buildOpponentRecords(rows, memberId, membersById) {
   const map = new Map()
   for (const row of rows) {
@@ -486,9 +527,7 @@ function formatRecent(row, memberId, membersById) {
     won: resultRoleForMember(row, memberId) === 'winner',
     pointsAwarded: pointsFor(row, memberId),
     subjectTeam: subject,
-    opponentTeam: opponent,
-    subjectTeamLabel: teamLabel(subject),
-    opponentTeamLabel: teamLabel(opponent)
+    opponentTeam: opponent
   }
 }
 
@@ -507,7 +546,7 @@ function timeOf(row) {
   return new Date((row && (row.confirmedAt || row.createTime)) || 0).getTime() || 0
 }
 
-module.exports = { buildPlayerAnalytics, buildBucket, buildLastFive, formatRecent }
+module.exports = { buildPlayerAnalytics, buildBucket, buildLastFive, buildTeamH2H, formatRecent }
 ```
 
 - [ ] **Step 13: Verify player analytics tests pass**
@@ -545,12 +584,11 @@ test('buildPairAnalytics aggregates team-vs-team matchups', () => {
   const out = buildPairAnalytics({ seasonId: 'season_2026', pairMemberIds: ['B', 'A'], rows, membersById })
 
   expect(out._id).toBe('pair_season_2026_A__B')
-  expect(out.memberNames).toEqual(['乐乐', '小野马'])
+  expect(out.memberIds).toEqual(['A', 'B'])
   expect(out).toMatchObject({ matches: 3, wins: 2, losses: 1, winRate: 2 / 3 })
   expect(out.matchups[0]).toMatchObject({
     opponentPairId: 'C__D',
     opponentMemberIds: ['C', 'D'],
-    opponentTeamLabel: '小天 / 标子',
     wins: 2,
     losses: 1
   })
@@ -596,7 +634,7 @@ Create `cloudfunctions/analytics-engine/lib/pair-analytics.js`:
 
 ```js
 const { pairAnalyticsId, pairKey } = require('./ids')
-const { resultRoleForMember, sideMembers, teamLabel } = require('./teams')
+const { resultRoleForMember, sideMembers } = require('./teams')
 
 function buildPairAnalytics({ seasonId, pairMemberIds, rows, membersById }) {
   const normalized = pairKey(pairMemberIds)
@@ -618,7 +656,6 @@ function buildPairAnalytics({ seasonId, pairMemberIds, rows, membersById }) {
       const current = matchups.get(opponentKey.pairId) || {
         opponentPairId: opponentKey.pairId,
         opponentMemberIds: opponentKey.memberIds,
-        opponentTeamLabel: teamLabel(opponent),
         wins: 0,
         losses: 0,
         lastPlayedAt: null
@@ -636,7 +673,6 @@ function buildPairAnalytics({ seasonId, pairMemberIds, rows, membersById }) {
     seasonId,
     pairId: normalized.pairId,
     memberIds: normalized.memberIds,
-    memberNames: normalized.memberIds.map(id => memberName(membersById, id)),
     matches: pairRows.length,
     wins,
     losses,
@@ -663,11 +699,6 @@ function opponentMembers(row, pairSet) {
   return []
 }
 
-function memberName(membersById, memberId) {
-  const member = membersById && membersById.get(memberId)
-  return (member && member.name) || memberId
-}
-
 function timeOf(row) {
   return new Date((row && (row.confirmedAt || row.createTime)) || 0).getTime() || 0
 }
@@ -675,18 +706,139 @@ function timeOf(row) {
 module.exports = { buildPairAnalytics, rowHasPair, opponentMembers }
 ```
 
-- [ ] **Step 17: Verify all pure analytics tests pass**
+- [ ] **Step 17: Write failing public identity resolution tests**
+
+Create `cloudfunctions/analytics-engine/lib/__tests__/identity.test.js`:
+
+```js
+const { resolveAnalyticsIdentities } = require('../identity')
+
+test('resolveAnalyticsIdentities formats cached member ids from current member consent', () => {
+  const membersById = new Map([
+    ['A', { _id: 'A', name: '乐乐', avatarUrl: 'cloud://avatar-a', publicProfileConsent: false }],
+    ['B', { _id: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileConsent: true }],
+    ['C', { _id: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileConsent: true }],
+    ['D', { _id: 'D', name: '标子', avatarUrl: 'cloud://avatar-d', publicProfileConsent: true }]
+  ])
+  const out = resolveAnalyticsIdentities({
+    memberId: 'A',
+    doubles: {
+      teamH2H: [{
+        key: 'A__B__vs__C__D',
+        subjectTeam: [{ memberId: 'A' }, { memberId: 'B' }],
+        opponentTeam: [{ memberId: 'C' }, { memberId: 'D' }],
+        wins: 1,
+        losses: 0,
+        recentMatches: []
+      }]
+    }
+  }, membersById)
+
+  expect(out.displayName).toBe('选手01')
+  expect(out.doubles.teamH2H[0].subjectTeamLabel).toBe('选手01 / 小野马')
+  expect(out.doubles.teamH2H[0].opponentTeamLabel).toBe('小天 / 标子')
+})
+```
+
+- [ ] **Step 18: Run identity tests to verify failure**
 
 Run:
 
 ```bash
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
-npm test -- lib/__tests__/ids.test.js lib/__tests__/teams.test.js lib/__tests__/player-analytics.test.js lib/__tests__/pair-analytics.test.js
+npm test -- lib/__tests__/identity.test.js
+```
+
+Expected: FAIL with `Cannot find module '../identity'`.
+
+- [ ] **Step 19: Implement public identity resolution**
+
+Create `cloudfunctions/analytics-engine/lib/identity.js`:
+
+```js
+const { DEFAULT_PUBLIC_AVATAR_URL, anonymousProfileName, hasPublicProfileConsent } = require('../../_shared/public-profile')
+
+function resolveAnalyticsIdentities(doc, membersById) {
+  if (!doc) return doc
+  const memberIdentity = identityFor(membersById, doc.memberId, 0)
+  const out = {
+    ...doc,
+    displayName: memberIdentity.name,
+    avatarUrl: memberIdentity.avatarUrl,
+    publicProfileVisible: memberIdentity.publicProfileVisible
+  }
+  if (out.doubles && Array.isArray(out.doubles.teamH2H)) {
+    out.doubles = {
+      ...out.doubles,
+      teamH2H: out.doubles.teamH2H.map(row => resolveTeamH2HRow(row, membersById))
+    }
+  }
+  if (Array.isArray(out.recentMatches)) {
+    out.recentMatches = out.recentMatches.map(row => resolveRecentRow(row, membersById))
+  }
+  return out
+}
+
+function resolveTeamH2HRow(row, membersById) {
+  const subjectTeam = resolveTeam(row.subjectTeam, membersById)
+  const opponentTeam = resolveTeam(row.opponentTeam, membersById)
+  return {
+    ...row,
+    subjectTeam,
+    opponentTeam,
+    subjectTeamLabel: teamLabel(subjectTeam),
+    opponentTeamLabel: teamLabel(opponentTeam)
+  }
+}
+
+function resolveRecentRow(row, membersById) {
+  const subjectTeam = resolveTeam(row.subjectTeam, membersById)
+  const opponentTeam = resolveTeam(row.opponentTeam, membersById)
+  return {
+    ...row,
+    subjectTeam,
+    opponentTeam,
+    subjectTeamLabel: teamLabel(subjectTeam),
+    opponentTeamLabel: teamLabel(opponentTeam)
+  }
+}
+
+function resolveTeam(team, membersById) {
+  return (team || []).map((member, index) => {
+    const identity = identityFor(membersById, member.memberId, index)
+    return { memberId: member.memberId, name: identity.name, avatarUrl: identity.avatarUrl, publicProfileVisible: identity.publicProfileVisible }
+  })
+}
+
+function identityFor(membersById, memberId, index) {
+  const member = membersById && membersById.get(memberId)
+  const visible = hasPublicProfileConsent(member)
+  return {
+    name: visible && member && member.name ? member.name : anonymousProfileName({ index }),
+    avatarUrl: visible && member && member.avatarUrl ? member.avatarUrl : DEFAULT_PUBLIC_AVATAR_URL,
+    publicProfileVisible: visible
+  }
+}
+
+function teamLabel(team) {
+  return (team || []).map(member => member.name || member.memberId).filter(Boolean).join(' / ')
+}
+
+module.exports = { resolveAnalyticsIdentities }
+```
+
+- [ ] **Step 20: Verify all pure analytics tests pass**
+
+Run:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/ids.test.js lib/__tests__/teams.test.js lib/__tests__/player-analytics.test.js lib/__tests__/pair-analytics.test.js lib/__tests__/identity.test.js
 ```
 
 Expected: PASS.
 
-- [ ] **Step 18: Commit Task 1**
+- [ ] **Step 21: Commit Task 1**
 
 ```bash
 git add cloudfunctions/analytics-engine
@@ -703,13 +855,14 @@ git commit -m "feat(analytics): add pure ranking analytics aggregators"
 - Modify: `cloudfunctions/analytics-engine/package.json`
 
 **Interfaces:**
-- Consumes from Task 1: `buildPlayerAnalytics`, `buildPairAnalytics`, `analyticsPlayerId`, `pairAnalyticsId`, `pairKey`.
+- Consumes from Task 1: `buildPlayerAnalytics`, `buildPairAnalytics`, `resolveAnalyticsIdentities`, `analyticsPlayerId`, `pairAnalyticsId`, `pairKey`.
 - Produces cloud actions:
   - `refreshAfterSettlement({ seasonId, affectedMemberIds, matchIds })`
   - `rebuildSeason({ seasonId })`
   - `getPlayerAnalytics({ seasonId, memberId })`
   - `getPairAnalytics({ seasonId, memberId })`
 - Produces cache documents in `player_analytics`, `pair_analytics`, and `analytics_jobs`.
+- Produces `getPlayerAnalytics` responses that resolve display names from current `members`, not from stale cached names.
 
 - [ ] **Step 1: Write failing cloud action tests**
 
@@ -742,10 +895,13 @@ jest.mock('wx-server-sdk', () => {
     return {
       where(filter) {
         const filtered = (rows[name] || []).filter(row => rowMatches(row, filter))
+        let offset = 0
+        let count = filtered.length
         return {
-          limit() { return this },
+          skip(n) { offset = Number(n) || 0; return this },
+          limit(n) { count = Number(n) || count; return this },
           orderBy() { return this },
-          async get() { return { data: filtered } }
+          async get() { return { data: filtered.slice(offset, offset + count) } }
         }
       },
       doc(id) {
@@ -812,12 +968,14 @@ test('refreshAfterSettlement writes affected player and pair analytics plus job 
   expect(cloud.__rows.analytics_jobs[0]).toMatchObject({ status: 'success', jobType: 'refreshAfterSettlement' })
 })
 
-test('getPlayerAnalytics returns cached row or null', async () => {
+test('getPlayerAnalytics resolves cached ids through current member privacy state', async () => {
   const cloud = require('wx-server-sdk')
-  cloud.__rows.player_analytics.push({ _id: 'pa_season_2026_A', seasonId: 'season_2026', memberId: 'A' })
+  cloud.__rows.members.push({ _id: 'A', name: '乐乐', publicProfileConsent: false })
+  cloud.__rows.player_analytics.push({ _id: 'pa_season_2026_A', seasonId: 'season_2026', memberId: 'A', doubles: { teamH2H: [] } })
   const { main } = require('../index')
   const res = await main({ action: 'getPlayerAnalytics', seasonId: 'season_2026', memberId: 'A' })
-  expect(res).toEqual({ success: true, data: { _id: 'pa_season_2026_A', seasonId: 'season_2026', memberId: 'A' } })
+  expect(res.success).toBe(true)
+  expect(res.data).toMatchObject({ _id: 'pa_season_2026_A', seasonId: 'season_2026', memberId: 'A', displayName: '选手01', publicProfileVisible: false })
 })
 
 test('rebuildSeason writes analytics for all confirmed rows', async () => {
@@ -843,6 +1001,29 @@ test('rebuildSeason writes analytics for all confirmed rows', async () => {
   expect(res.success).toBe(true)
   expect(res.data.playerCount).toBe(2)
   expect(cloud.__rows.player_analytics).toHaveLength(2)
+})
+
+test('rebuildSeason pages beyond the first 500 confirmed rows', async () => {
+  const cloud = require('wx-server-sdk')
+  for (let i = 0; i < 510; i += 1) {
+    const id = `P${i}`
+    cloud.__rows.members.push({ _id: id, name: id })
+    cloud.__rows.match_results.push({
+      _id: `m${i}`,
+      seasonId: 'season_2026',
+      tournamentType: 'singles',
+      resultStatus: 'confirmed',
+      confirmedAt: '2026-06-01',
+      createTime: `2026-06-${String((i % 28) + 1).padStart(2, '0')}`,
+      playerIds: [id],
+      player1: { id, name: id },
+      pointsAwarded: { entries: [{ memberId: id, points: 1, role: 'winner' }] }
+    })
+  }
+  const { main } = require('../index')
+  const res = await main({ action: 'rebuildSeason', seasonId: 'season_2026' })
+  expect(res.success).toBe(true)
+  expect(res.data.playerCount).toBe(510)
 })
 ```
 
@@ -871,6 +1052,7 @@ const { analyticsPlayerId, pairAnalyticsId, pairKey } = require('./lib/ids')
 const { sideMembers } = require('./lib/teams')
 const { buildPlayerAnalytics } = require('./lib/player-analytics')
 const { buildPairAnalytics } = require('./lib/pair-analytics')
+const { resolveAnalyticsIdentities } = require('./lib/identity')
 
 exports.main = async (event = {}) => main(event)
 
@@ -891,6 +1073,7 @@ async function main(event = {}) {
 async function refreshAfterSettlement({ seasonId, affectedMemberIds = [], matchIds = [] }) {
   if (!seasonId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId required' } }
   const affected = [...new Set((affectedMemberIds || []).filter(Boolean))]
+  await ensureCollections()
   const rows = await fetchSeasonRows(seasonId)
   const membersById = await fetchMembersByIds([...new Set(rows.flatMap(row => row.playerIds || []))])
   const playerRows = []
@@ -920,7 +1103,9 @@ async function rebuildSeason({ seasonId }) {
 async function getPlayerAnalytics({ seasonId, memberId }) {
   if (!seasonId || !memberId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId and memberId required' } }
   const res = await db.collection('player_analytics').doc(analyticsPlayerId(seasonId, memberId)).get().catch(() => ({ data: null }))
-  return { success: true, data: res.data || null }
+  if (!res.data) return { success: true, data: null }
+  const membersById = await fetchMembersForAnalyticsDoc(res.data)
+  return { success: true, data: resolveAnalyticsIdentities(res.data, membersById) }
 }
 
 async function getPairAnalytics({ seasonId, memberId }) {
@@ -930,8 +1115,22 @@ async function getPairAnalytics({ seasonId, memberId }) {
 }
 
 async function fetchSeasonRows(seasonId) {
-  const res = await db.collection('match_results').where({ seasonId, resultStatus: 'confirmed' }).limit(500).get()
-  return res.data || []
+  const out = []
+  const pageSize = 100
+  let skip = 0
+  while (true) {
+    const page = (await db.collection('match_results')
+      .where({ seasonId, resultStatus: 'confirmed' })
+      .orderBy('createTime', 'asc')
+      .orderBy('_id', 'asc')
+      .skip(skip)
+      .limit(pageSize)
+      .get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+    skip += pageSize
+  }
+  return out
 }
 
 async function fetchMembersByIds(ids) {
@@ -988,6 +1187,30 @@ async function writeJob({ jobType, seasonId, status, affectedMemberIds, matchIds
   })
 }
 
+async function ensureCollections() {
+  if (!db || typeof db.createCollection !== 'function') return
+  for (const name of ['player_analytics', 'pair_analytics', 'analytics_jobs']) {
+    await db.createCollection(name).catch(() => null)
+  }
+}
+
+async function fetchMembersForAnalyticsDoc(doc) {
+  return fetchMembersByIds(collectMemberIdsFromAnalyticsDoc(doc))
+}
+
+function collectMemberIdsFromAnalyticsDoc(doc) {
+  const ids = new Set()
+  if (doc && doc.memberId) ids.add(doc.memberId)
+  const visitTeam = team => (team || []).forEach(member => member && member.memberId && ids.add(member.memberId))
+  const visitRows = rows => (rows || []).forEach(row => {
+    visitTeam(row.subjectTeam)
+    visitTeam(row.opponentTeam)
+  })
+  if (doc && doc.doubles) visitRows(doc.doubles.teamH2H)
+  visitRows(doc && doc.recentMatches)
+  return [...ids]
+}
+
 module.exports = { main, collectAffectedPairs }
 ```
 
@@ -1027,7 +1250,9 @@ git commit -m "feat(analytics): add analytics cache cloud actions"
 **Files:**
 - Modify: `cloudfunctions/match-results/index.js`
 - Modify: `cloudfunctions/match-results/lib/handlers/batch.js`
+- Modify: `cloudfunctions/match-results/lib/handlers/submit.js`
 - Modify: `cloudfunctions/match-results/lib/__tests__/handlers/batch.test.js`
+- Create: `cloudfunctions/match-results/lib/__tests__/handlers/submit.test.js`
 - Create: `cloudfunctions/match-results/__tests__/analytics-integration.test.js`
 - Modify: `miniprogram/pages/tournament-score/index.js`
 - Modify: `miniprogram/pages/tournament-score/__tests__/index.test.js`
@@ -1037,11 +1262,11 @@ git commit -m "feat(analytics): add analytics cache cloud actions"
 
 **Interfaces:**
 - Consumes from Task 2: cloud function action `analytics-engine.refreshAfterSettlement`.
-- Produces from `match-results`: batch result data includes:
+- Produces from `match-results`: admin settlement result data includes:
   - `analyticsStatus: 'success' | 'failed' | 'skipped'`
   - `analyticsMessage: string`
   - `settlementImpact: Array<{ memberId, name, pointsDelta, rankDelta, trendLabel }>`
-- Produces frontend cache clearing: `removeCachesByPrefix('rank:')` and `removeCachesByPrefix('player-detail:')` after batch admin save or batch confirm success.
+- Produces frontend cache clearing: `removeCachesByPrefix('rank:')` and `removeCachesByPrefix('player-detail:')` after batch admin save, batch confirm, direct reconfirm, or direct confirm-all success.
 
 - [ ] **Step 1: Write failing batch handler test for analytics metadata passthrough**
 
@@ -1142,7 +1367,111 @@ npm test -- lib/__tests__/handlers/batch.test.js -t "analytics"
 
 Expected: PASS.
 
-- [ ] **Step 5: Write failing match-results index test for cloud calls**
+- [ ] **Step 5: Write failing direct settlement handler tests**
+
+Create `cloudfunctions/match-results/lib/__tests__/handlers/submit.test.js`:
+
+```js
+const { confirmAll, reconfirmMatch } = require('../../handlers/submit')
+
+function makeCtx(overrides = {}) {
+  return {
+    submitter: { _id: 'admin1', isAdmin: true },
+    stateSvc: {
+      confirmAll: jest.fn(async () => ({ confirmedCount: 2 })),
+      reconfirmMatch: jest.fn(async () => ({ ok: true }))
+    },
+    afterSettlement: jest.fn(async ({ successIds }) => ({
+      analyticsStatus: 'success',
+      analyticsMessage: '排行榜已更新',
+      settlementImpact: [{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }],
+      refreshedMatchIds: successIds
+    })),
+    afterSettlementByTournament: jest.fn(async ({ tournamentId }) => ({
+      analyticsStatus: 'success',
+      analyticsMessage: '排行榜已更新',
+      settlementImpact: [{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }],
+      refreshedTournamentId: tournamentId
+    })),
+    ...overrides
+  }
+}
+
+test('reconfirmMatch returns analytics metadata without changing the success contract', async () => {
+  const ctx = makeCtx()
+  const result = await reconfirmMatch(ctx, { matchId: 'm1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null } })
+  expect(ctx.afterSettlement).toHaveBeenCalledWith({ successIds: ['m1'], requestId: 'reconfirmMatch:m1' })
+  expect(result).toMatchObject({ ok: true, analyticsStatus: 'success', analyticsMessage: '排行榜已更新' })
+})
+
+test('confirmAll refreshes analytics by tournament when confirmed rows are unknown', async () => {
+  const ctx = makeCtx()
+  const result = await confirmAll(ctx, { tournamentId: 't1' })
+  expect(ctx.afterSettlementByTournament).toHaveBeenCalledWith({ tournamentId: 't1', requestId: 'confirmAll:t1' })
+  expect(result).toMatchObject({ confirmedCount: 2, analyticsStatus: 'success' })
+})
+```
+
+- [ ] **Step 6: Run direct settlement handler tests to verify failure**
+
+Run:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results
+npm test -- lib/__tests__/handlers/submit.test.js -t "analytics|reconfirmMatch returns|confirmAll refreshes"
+```
+
+Expected: FAIL because `confirmAll` and `reconfirmMatch` do not call analytics hooks.
+
+- [ ] **Step 7: Implement direct settlement analytics hooks**
+
+Modify `cloudfunctions/match-results/lib/handlers/submit.js`:
+
+```js
+async function runAfterSettlement(ctx, successIds, requestId) {
+  if (!Array.isArray(successIds) || successIds.length === 0 || !ctx || typeof ctx.afterSettlement !== 'function') {
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+  }
+  try {
+    return await ctx.afterSettlement({ successIds, requestId })
+  } catch (err) {
+    return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+  }
+}
+
+async function runAfterSettlementByTournament(ctx, tournamentId, requestId) {
+  if (!tournamentId || !ctx || typeof ctx.afterSettlementByTournament !== 'function') {
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+  }
+  try {
+    return await ctx.afterSettlementByTournament({ tournamentId, requestId })
+  } catch (err) {
+    return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+  }
+}
+```
+
+Then update direct admin handlers:
+
+```js
+async function confirmAll(ctx, event) {
+  const admin = ctx.submitter
+  await assertSchedulePublishedForTournament(ctx, event.tournamentId)
+  const r = await ctx.stateSvc.confirmAll({ tournamentId: event.tournamentId, admin })
+  const analytics = await runAfterSettlementByTournament(ctx, event.tournamentId, `confirmAll:${event.tournamentId}`)
+  return { ...r, ...analytics }
+}
+
+async function reconfirmMatch(ctx, event) {
+  const admin = ctx.submitter
+  await assertSchedulePublishedForMatch(ctx, event.matchId)
+  const r = await ctx.stateSvc.reconfirmMatch({ matchId: event.matchId, newScore: event.newScore, admin })
+  const analytics = await runAfterSettlement(ctx, [event.matchId], `reconfirmMatch:${event.matchId}`)
+  return { ok: true, ...(r || {}), ...analytics }
+}
+```
+
+- [ ] **Step 8: Write failing match-results index test for cloud calls**
 
 Append or create a focused test in `cloudfunctions/match-results/__tests__/analytics-integration.test.js`:
 
@@ -1159,7 +1488,10 @@ test('buildBatchCtx.afterSettlement refreshes rank cache and analytics cache', a
   }, true, {
     callFunction: async ({ name, data }) => {
       calls.push({ name, data })
-      return { result: { success: true, data: { ok: true } } }
+      if (name === 'points-engine') {
+        return { result: { success: true, data: { settlementImpact: [{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }] } } }
+      }
+      return { result: { success: true, data: { analyticsStatus: 'success' } } }
     },
     getMatchesByIds: async () => [
       { _id: 'm1', seasonId: 'season_2026', tournamentType: 'singles', playerIds: ['A', 'B'] }
@@ -1169,8 +1501,9 @@ test('buildBatchCtx.afterSettlement refreshes rank cache and analytics cache', a
   const result = await ctx.afterSettlement({ successIds: ['m1'], requestId: 'req1' })
 
   expect(result.analyticsStatus).toBe('success')
+  expect(result.settlementImpact).toEqual([{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }])
   expect(calls).toEqual([
-    { name: 'points-engine', data: { action: 'refreshRankCache', seasonId: 'season_2026' } },
+    { name: 'points-engine', data: { action: 'refreshRankCache', seasonId: 'season_2026', affectedMemberIds: ['A', 'B'], writeSnapshot: true, snapshotKind: 'settlement' } },
     { name: 'analytics-engine', data: { action: 'refreshAfterSettlement', seasonId: 'season_2026', affectedMemberIds: ['A', 'B'], matchIds: ['m1'] } }
   ])
 })
@@ -1187,7 +1520,8 @@ exports.__test__ = {
   guardDirectScoreRowRead,
   mergeScheduledMatchDoc,
   shouldRemoveOrphanMatchDoc,
-  buildBatchCtx
+  buildBatchCtx,
+  buildSubmitCtx
 }
 ```
 
@@ -1199,6 +1533,7 @@ Change `buildBatchCtx` to accept injectable dependencies and attach the new hook
   const scoreRule = require('./lib/score-rule')
 +  const callFunction = options.callFunction || cloud.callFunction
 +  const getMatchesByIds = options.getMatchesByIds || defaultGetMatchesByIds
++  const getMatchesByTournament = options.getMatchesByTournament || defaultGetMatchesByTournament
   return {
     callerOpenid: submitter.openid,
     callerMemberId: submitter._id,
@@ -1206,14 +1541,31 @@ Change `buildBatchCtx` to accept injectable dependencies and attach the new hook
     confirmedAtNow: new Date(),
     nowDate: new Date(),
 +    afterSettlement: buildAfterSettlement({ callFunction, getMatchesByIds }),
++    afterSettlementByTournament: buildAfterSettlementByTournament({ callFunction, getMatchesByTournament }),
     db: {
   }
 }
 ```
 
-Keep the existing `db`, `confirmOne`, and `validateScore` fields in `buildBatchCtx`; this diff only adds `options`, `callFunction`, `getMatchesByIds`, and `afterSettlement`.
+Keep the existing `db`, `confirmOne`, and `validateScore` fields in `buildBatchCtx`; this diff only adds `options`, `callFunction`, `getMatchesByIds`, `getMatchesByTournament`, `afterSettlement`, and `afterSettlementByTournament`.
 
-- [ ] **Step 6: Run integration test to verify failure**
+Also update `buildSubmitCtx` so direct `confirmAll` and `reconfirmMatch` use the same refresh path:
+
+```js
+function buildSubmitCtx(submitter, options = {}) {
+  const callFunction = options.callFunction || cloud.callFunction
+  const getMatchesByIds = options.getMatchesByIds || defaultGetMatchesByIds
+  const getMatchesByTournament = options.getMatchesByTournament || defaultGetMatchesByTournament
+  return {
+    submitter,
+    stateSvc,
+    afterSettlement: buildAfterSettlement({ callFunction, getMatchesByIds }),
+    afterSettlementByTournament: buildAfterSettlementByTournament({ callFunction, getMatchesByTournament })
+  }
+}
+```
+
+- [ ] **Step 9: Run integration test to verify failure**
 
 Run:
 
@@ -1222,16 +1574,43 @@ cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results
 npm test -- __tests__/analytics-integration.test.js
 ```
 
-Expected: FAIL because `buildBatchCtx` is not exported from `exports.__test__` and `afterSettlement` is not implemented.
+Expected: FAIL because `buildBatchCtx` / `buildSubmitCtx` are not exported from `exports.__test__` and settlement hooks are not implemented.
 
-- [ ] **Step 7: Implement afterSettlement in match-results index**
+- [ ] **Step 10: Implement afterSettlement in match-results index**
 
 Modify `cloudfunctions/match-results/index.js`:
 
 ```js
 async function defaultGetMatchesByIds(matchIds) {
   if (!matchIds || matchIds.length === 0) return []
-  return (await db.collection('match_results').where({ _id: _.in(matchIds) }).limit(100).get()).data || []
+  const out = []
+  const uniqueIds = [...new Set(matchIds.filter(Boolean))]
+  for (let i = 0; i < uniqueIds.length; i += 50) {
+    const chunk = uniqueIds.slice(i, i + 50)
+    const res = await db.collection('match_results').where({ _id: _.in(chunk) }).get()
+    out.push(...((res && res.data) || []))
+  }
+  return out
+}
+
+async function defaultGetMatchesByTournament(tournamentId) {
+  if (!tournamentId) return []
+  const out = []
+  const pageSize = 100
+  let skip = 0
+  while (true) {
+    const page = (await db.collection('match_results')
+      .where({ tournamentId, resultStatus: 'confirmed' })
+      .orderBy('createTime', 'asc')
+      .orderBy('_id', 'asc')
+      .skip(skip)
+      .limit(pageSize)
+      .get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+    skip += pageSize
+  }
+  return out
 }
 
 function collectAffectedMemberIds(rows) {
@@ -1256,16 +1635,20 @@ function buildAfterSettlement({ callFunction, getMatchesByIds }) {
         return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
       }
       const seasonId = seasonIds[0]
-      await callFunction({ name: 'points-engine', data: { action: 'refreshRankCache', seasonId } })
+      const rankRes = await callFunction({
+        name: 'points-engine',
+        data: { action: 'refreshRankCache', seasonId, affectedMemberIds, writeSnapshot: true, snapshotKind: 'settlement' }
+      })
+      const rankData = rankRes && rankRes.result && rankRes.result.data
       const analyticsRes = await callFunction({
         name: 'analytics-engine',
         data: { action: 'refreshAfterSettlement', seasonId, affectedMemberIds, matchIds: successIds }
       })
-      const analyticsData = analyticsRes && analyticsRes.result && analyticsRes.result.data
+      const analyticsOk = !(analyticsRes && analyticsRes.result && analyticsRes.result.success === false)
       return {
-        analyticsStatus: 'success',
-        analyticsMessage: '排行榜已更新',
-        settlementImpact: (analyticsData && analyticsData.settlementImpact) || [],
+        analyticsStatus: analyticsOk ? 'success' : 'failed',
+        analyticsMessage: analyticsOk ? '排行榜已更新' : '比分已确认，数据分析稍后重算',
+        settlementImpact: (rankData && rankData.settlementImpact) || [],
         refreshedMatchIds: successIds
       }
     } catch (err) {
@@ -1278,11 +1661,19 @@ function buildAfterSettlement({ callFunction, getMatchesByIds }) {
     }
   }
 }
+
+function buildAfterSettlementByTournament({ callFunction, getMatchesByTournament }) {
+  return async function afterSettlementByTournament({ tournamentId } = {}) {
+    const rows = await getMatchesByTournament(tournamentId)
+    const successIds = rows.map(row => row._id).filter(Boolean)
+    return buildAfterSettlement({ callFunction, getMatchesByIds: async () => rows })({ successIds })
+  }
+}
 ```
 
 Then apply the same `buildBatchCtx` signature/export changes from Step 5.
 
-- [ ] **Step 8: Verify match-results integration tests pass**
+- [ ] **Step 11: Verify match-results integration tests pass**
 
 Run:
 
@@ -1293,7 +1684,7 @@ npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch
 
 Expected: PASS.
 
-- [ ] **Step 9: Write failing miniprogram tournament-score cache clearing test**
+- [ ] **Step 12: Write failing miniprogram tournament-score cache clearing test**
 
 Append to `miniprogram/pages/tournament-score/__tests__/index.test.js`:
 
@@ -1321,6 +1712,29 @@ test('_applySheetResult clears rank and player-detail caches after admin analyti
   expect(removeCachesByPrefix).toHaveBeenCalledWith('player-detail:')
   expect(ctx.data.sheet.result.analyticsMessage).toBe('排行榜已更新')
 })
+
+test('onReconfirm clears rank and player-detail caches after direct analytics success', async () => {
+  const def = loadPage()
+  const { removeCachesByPrefix } = require('../../../utils/page-cache')
+  wx.cloud.callFunction.mockResolvedValue({
+    result: {
+      success: true,
+      data: {
+        ok: true,
+        analyticsStatus: 'success',
+        analyticsMessage: '排行榜已更新',
+        settlementImpact: [{ memberId: 'A', trendLabel: '▲1', pointsDelta: 20 }]
+      }
+    }
+  })
+  const ctx = makeCtx(def)
+  ctx.refresh = jest.fn(async () => null)
+
+  await ctx.onReconfirm({ detail: { matchId: 'm1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null } } })
+
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('player-detail:')
+})
 ```
 
 If `removeCachesByPrefix` is not mocked in this test file, add:
@@ -1329,7 +1743,7 @@ If `removeCachesByPrefix` is not mocked in this test file, add:
 jest.mock('../../../utils/page-cache', () => ({ removeCachesByPrefix: jest.fn() }))
 ```
 
-- [ ] **Step 10: Run miniprogram test to verify failure**
+- [ ] **Step 13: Run miniprogram test to verify failure**
 
 Run:
 
@@ -1340,7 +1754,7 @@ npm test -- pages/tournament-score/__tests__/index.test.js -t "analytics"
 
 Expected: FAIL because `_applySheetResult` does not clear caches.
 
-- [ ] **Step 11: Implement frontend cache clearing and toast**
+- [ ] **Step 14: Implement frontend cache clearing and toast**
 
 Modify `miniprogram/pages/tournament-score/index.js` imports:
 
@@ -1351,17 +1765,28 @@ const { removeCachesByPrefix } = require('../../utils/page-cache')
 Modify `_applySheetResult` after successful result:
 
 ```js
-if (res.data && (res.data.analyticsStatus === 'success' || res.data.analyticsStatus === 'failed')) {
-  removeCachesByPrefix('rank:')
-  removeCachesByPrefix('player-detail:')
-  if (res.data.analyticsMessage) {
-    wx.showToast({ title: res.data.analyticsMessage, icon: res.data.analyticsStatus === 'success' ? 'success' : 'none', duration: 2000 })
-  }
-}
+this._handleSettlementAnalytics(res.data)
 this.setData({ 'sheet.result': res.data })
 ```
 
-- [ ] **Step 12: Add batch-result-sheet analytics display test**
+Add a shared helper and call it from `onReconfirm` after `r.success`:
+
+```js
+_handleSettlementAnalytics(data) {
+  if (!data || (data.analyticsStatus !== 'success' && data.analyticsStatus !== 'failed')) return
+  removeCachesByPrefix('rank:')
+  removeCachesByPrefix('player-detail:')
+  if (data.analyticsMessage) {
+    wx.showToast({ title: data.analyticsMessage, icon: data.analyticsStatus === 'success' ? 'success' : 'none', duration: 2000 })
+  }
+}
+```
+
+```js
+this._handleSettlementAnalytics(r.data || r)
+```
+
+- [ ] **Step 15: Add batch-result-sheet analytics display test**
 
 Append to `miniprogram/components/batch-result-sheet/__tests__/index.test.js`:
 
@@ -1375,7 +1800,7 @@ test('template renders analytics message and settlement impact', () => {
 })
 ```
 
-- [ ] **Step 13: Implement batch-result-sheet analytics display**
+- [ ] **Step 16: Implement batch-result-sheet analytics display**
 
 Modify `miniprogram/components/batch-result-sheet/index.wxml` inside `stateName === 'result'` block:
 
@@ -1420,20 +1845,20 @@ Add focused styles to `miniprogram/components/batch-result-sheet/index.wxss`:
 }
 ```
 
-- [ ] **Step 14: Run Task 3 tests**
+- [ ] **Step 17: Run Task 3 tests**
 
 Run:
 
 ```bash
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results
-npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch.test.js
+npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch.test.js lib/__tests__/handlers/submit.test.js
 cd /Users/liaoxiaole/FOPEN-PURE/miniprogram
 npm test -- pages/tournament-score/__tests__/index.test.js components/batch-result-sheet/__tests__/index.test.js
 ```
 
 Expected: PASS for listed suites.
 
-- [ ] **Step 15: Commit Task 3**
+- [ ] **Step 18: Commit Task 3**
 
 ```bash
 git add cloudfunctions/match-results miniprogram/pages/tournament-score miniprogram/components/batch-result-sheet
@@ -1446,6 +1871,8 @@ git commit -m "feat(scores): refresh analytics after score settlement"
 
 **Files:**
 - Modify: `cloudfunctions/points-engine/index.js`
+- Create: `cloudfunctions/points-engine/lib/settlement-impact.js`
+- Create: `cloudfunctions/points-engine/lib/__tests__/settlement-impact.test.js`
 - Modify: `cloudfunctions/points-engine/__tests__/index.test.js`
 - Modify: `miniprogram/pages/rank/index.js`
 - Modify: `miniprogram/pages/rank/index.wxml`
@@ -1460,8 +1887,245 @@ git commit -m "feat(scores): refresh analytics after score settlement"
   - `trendState: 'up' | 'down' | 'flat' | 'new' | 'no_history'`
   - `trendLabel: string`
 - Consumes frontend row fields `trendState` and `trendLabel`.
+- Produces `points-engine.refreshRankCache({ affectedMemberIds, writeSnapshot, snapshotKind }).data.settlementImpact`.
+- Produces `points-engine.rebuildRankSnapshots({ seasonId, snapshotKind })` for initial baseline/backfill.
 
-- [ ] **Step 1: Write failing points-engine trend state tests**
+- [ ] **Step 1: Write failing settlement impact helper tests**
+
+Create `cloudfunctions/points-engine/lib/__tests__/settlement-impact.test.js`:
+
+```js
+const { buildSettlementImpact } = require('../settlement-impact')
+
+test('buildSettlementImpact compares previous cached ranks with refreshed ranks', () => {
+  const out = buildSettlementImpact({
+    affectedMemberIds: ['A', 'B', 'NEW'],
+    beforeRankRows: [
+      { _id: 'A', name: '乐乐', totalPoints: 100, rank: 3 },
+      { _id: 'B', name: '小野马', totalPoints: 90, rank: 2 }
+    ],
+    afterRankRows: [
+      { _id: 'A', name: '乐乐', totalPoints: 120, rank: 1 },
+      { _id: 'B', name: '小野马', totalPoints: 100, rank: 3 },
+      { _id: 'NEW', name: '新选手', totalPoints: 10, rank: 9 }
+    ]
+  })
+
+  expect(out).toEqual([
+    { memberId: 'A', name: '乐乐', pointsDelta: 20, rankDelta: 2, trendLabel: '▲2' },
+    { memberId: 'B', name: '小野马', pointsDelta: 10, rankDelta: -1, trendLabel: '▼1' },
+    { memberId: 'NEW', name: '新选手', pointsDelta: 10, rankDelta: null, trendLabel: '首次进入榜单' }
+  ])
+})
+```
+
+- [ ] **Step 2: Run settlement impact helper tests to verify failure**
+
+Run:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/points-engine
+npm test -- lib/__tests__/settlement-impact.test.js
+```
+
+Expected: FAIL with `Cannot find module '../settlement-impact'`.
+
+- [ ] **Step 3: Implement settlement impact helper**
+
+Create `cloudfunctions/points-engine/lib/settlement-impact.js`:
+
+```js
+function buildSettlementImpact({ beforeRankRows = [], afterRankRows = [], affectedMemberIds = [] } = {}) {
+  const before = rankMap(beforeRankRows)
+  const after = rankMap(afterRankRows)
+  return [...new Set((affectedMemberIds || []).filter(Boolean))]
+    .map(memberId => impactFor(memberId, before.get(memberId), after.get(memberId)))
+    .filter(Boolean)
+}
+
+function rankMap(rows) {
+  const map = new Map()
+  ;(rows || []).forEach((row, index) => {
+    const memberId = row && (row._id || row.memberId)
+    if (!memberId) return
+    map.set(memberId, {
+      memberId,
+      name: row.name || memberId,
+      totalPoints: Number(row.totalPoints) || 0,
+      rank: Number(row.rank) || index + 1
+    })
+  })
+  return map
+}
+
+function impactFor(memberId, before, after) {
+  if (!after) return null
+  const pointsDelta = after.totalPoints - (before ? before.totalPoints : 0)
+  const rankDelta = before ? before.rank - after.rank : null
+  return {
+    memberId,
+    name: after.name || (before && before.name) || memberId,
+    pointsDelta,
+    rankDelta,
+    trendLabel: trendLabel(rankDelta)
+  }
+}
+
+function trendLabel(rankDelta) {
+  if (rankDelta == null) return '首次进入榜单'
+  if (rankDelta > 0) return `▲${rankDelta}`
+  if (rankDelta < 0) return `▼${Math.abs(rankDelta)}`
+  return '持平'
+}
+
+module.exports = { buildSettlementImpact }
+```
+
+- [ ] **Step 4: Write failing rank cache impact and snapshot tests**
+
+Append to `cloudfunctions/points-engine/__tests__/index.test.js`:
+
+```js
+test('refreshRankCache returns settlementImpact and writes snapshot rows after cache refresh', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push({ _id: 'A', name: '甲', publicProfileConsent: true })
+  cloud.__rows.baseline_standings.push({ _id: 'bs_A', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 1, losses: 0, createTime: '2026-05-01' })
+  cloud.__rows.rank_cache.push({
+    _id: 'rank_cache_season_2026_singles',
+    seasonId: 'season_2026',
+    type: 'singles',
+    rankList: [{ _id: 'A', name: '甲', totalPoints: 80, winCount: 1, lossCount: 0, rank: 3 }]
+  })
+
+  const { main } = require('../index')
+  const res = await main({
+    action: 'refreshRankCache',
+    seasonId: 'season_2026',
+    affectedMemberIds: ['A'],
+    writeSnapshot: true,
+    snapshotKind: 'settlement',
+    now: '2026-07-07T10:00:00.000Z'
+  })
+
+  expect(res.success).toBe(true)
+  expect(res.data.settlementImpact[0]).toMatchObject({ memberId: 'A', pointsDelta: 20 })
+  expect(cloud.__rows.rank_snapshots.some(row => row.seasonId === 'season_2026' && row.type === 'singles' && row.memberId === 'A' && row.snapshotKind === 'settlement')).toBe(true)
+})
+
+test('rebuildRankSnapshots writes baseline snapshots for current rank lists', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push({ _id: 'A', name: '甲', publicProfileConsent: true })
+  cloud.__rows.baseline_standings.push({ _id: 'bs_A', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 1, losses: 0, createTime: '2026-05-01' })
+  const { main } = require('../index')
+  const res = await main({ action: 'rebuildRankSnapshots', seasonId: 'season_2026', snapshotKind: 'baseline', now: '2026-07-07T10:00:00.000Z' })
+  expect(res.success).toBe(true)
+  expect(cloud.__rows.rank_snapshots.some(row => row.memberId === 'A' && row.snapshotKind === 'baseline')).toBe(true)
+})
+```
+
+- [ ] **Step 5: Implement refresh cache impact and snapshot writing**
+
+Modify `cloudfunctions/points-engine/index.js` imports:
+
+```js
+const { buildSettlementImpact } = require('./lib/settlement-impact')
+```
+
+Add the action route near the other compat actions:
+
+```js
+if (action === 'rebuildRankSnapshots') return await rebuildRankSnapshots(event)
+```
+
+Modify `refreshRankCache`:
+
+```js
+async function refreshRankCache({ seasonId, now, affectedMemberIds = [], writeSnapshot = false, snapshotKind = 'settlement' } = {}) {
+  const computedAt = new Date(now || Date.now())
+  const resolvedSeasonId = seasonId || `season_${toBeijingDateKey(computedAt).slice(0, 4)}`
+  const cacheDate = toBeijingDateKey(computedAt)
+  const refreshedTypes = []
+  const settlementImpact = []
+  for (const type of ['singles', 'doubles']) {
+    const previousCache = await fetchRankCache({ seasonId: resolvedSeasonId, type })
+    const beforeRankRows = withRankNumbers((previousCache && previousCache.rankList) || [])
+    const rankList = withRankNumbers(await buildRankList({ seasonId: resolvedSeasonId, type }))
+    settlementImpact.push(...buildSettlementImpact({ beforeRankRows, afterRankRows: rankList, affectedMemberIds }))
+    await upsertRankCache({
+      _id: rankCacheId(resolvedSeasonId, type),
+      seasonId: resolvedSeasonId,
+      type,
+      rankList,
+      cacheDate,
+      computedAt,
+      updateTime: computedAt
+    })
+    if (writeSnapshot) {
+      await writeRankSnapshotsFromRankList({ seasonId: resolvedSeasonId, type, rankList, snapshotKind, computedAt })
+    }
+    refreshedTypes.push(type)
+  }
+  return { success: true, data: { seasonId: resolvedSeasonId, cacheDate, refreshedTypes, settlementImpact } }
+}
+```
+
+Add helpers:
+
+```js
+function withRankNumbers(rankList) {
+  return (rankList || []).map((row, index) => ({ ...row, rank: Number(row.rank) || index + 1 }))
+}
+
+async function writeRankSnapshotsFromRankList({ seasonId, type, rankList, snapshotKind, computedAt }) {
+  const weekId = `${snapshotKind}_${toBeijingDateKey(computedAt)}`
+  const weekStart = toBeijingDateKey(computedAt)
+  const weekEnd = weekStart
+  for (const row of rankList || []) {
+    const memberId = row._id || row.memberId
+    if (!memberId) continue
+    await upsertRankSnapshot({
+      _id: `rs_${seasonId}_${weekId}_${type}_${memberId}`,
+      seasonId,
+      weekId,
+      weekStart,
+      weekEnd,
+      effectiveAt: computedAt,
+      type,
+      memberId,
+      rank: row.rank,
+      totalPoints: row.totalPoints || 0,
+      wins: row.winCount || 0,
+      losses: row.lossCount || 0,
+      snapshotKind,
+      computedAt
+    })
+  }
+}
+
+async function upsertRankSnapshot(row) {
+  const existing = await db.collection('rank_snapshots').doc(row._id).get().catch(() => null)
+  if (existing && existing.data) {
+    const { _id, ...data } = row
+    await db.collection('rank_snapshots').doc(row._id).update({ data })
+    return
+  }
+  await db.collection('rank_snapshots').add({ data: row })
+}
+
+async function rebuildRankSnapshots({ seasonId, snapshotKind = 'baseline', now } = {}) {
+  if (!seasonId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId required' } }
+  const computedAt = new Date(now || Date.now())
+  const writtenTypes = []
+  for (const type of ['singles', 'doubles']) {
+    const rankList = withRankNumbers(await buildRankList({ seasonId, type }))
+    await writeRankSnapshotsFromRankList({ seasonId, type, rankList, snapshotKind, computedAt })
+    writtenTypes.push(type)
+  }
+  return { success: true, data: { seasonId, snapshotKind, writtenTypes } }
+}
+```
+
+- [ ] **Step 6: Write failing points-engine trend state tests**
 
 Append to `cloudfunctions/points-engine/__tests__/index.test.js`:
 
@@ -1486,7 +2150,7 @@ test('rankList marks no_history when no snapshot exists anywhere', async () => {
 })
 ```
 
-- [ ] **Step 2: Run trend backend tests to verify failure**
+- [ ] **Step 7: Run trend backend tests to verify failure**
 
 Run:
 
@@ -1497,7 +2161,7 @@ npm test -- __tests__/index.test.js -t "trend"
 
 Expected: FAIL because `trendState` and `trendLabel` are missing.
 
-- [ ] **Step 3: Implement trend state helper**
+- [ ] **Step 8: Implement trend state helper**
 
 Modify `cloudfunctions/points-engine/index.js`:
 
@@ -1540,7 +2204,7 @@ const out = withWinRate.map((row, i) => {
 })
 ```
 
-- [ ] **Step 4: Verify backend trend tests pass**
+- [ ] **Step 9: Verify backend trend tests pass**
 
 Run:
 
@@ -1551,7 +2215,7 @@ npm test -- __tests__/index.test.js -t "trend"
 
 Expected: PASS.
 
-- [ ] **Step 5: Write failing rank-row tests**
+- [ ] **Step 10: Write failing rank-row tests**
 
 Create `miniprogram/components/rank-row/__tests__/index.test.js`:
 
@@ -1584,7 +2248,7 @@ test('rank-row template renders explicit trendLabel', () => {
 })
 ```
 
-- [ ] **Step 6: Run rank-row tests to verify failure**
+- [ ] **Step 11: Run rank-row tests to verify failure**
 
 Run:
 
@@ -1595,7 +2259,7 @@ npm test -- components/rank-row/__tests__/index.test.js
 
 Expected: FAIL because `trendState` and `trendLabel` are not defined.
 
-- [ ] **Step 7: Implement rank-row trend labels**
+- [ ] **Step 12: Implement rank-row trend labels**
 
 Modify `miniprogram/components/rank-row/index.js` properties:
 
@@ -1626,7 +2290,7 @@ Modify `miniprogram/components/rank-row/index.wxss` by mapping existing colors:
 }
 ```
 
-- [ ] **Step 8: Update rank page sanitizer and template**
+- [ ] **Step 13: Update rank page sanitizer and template**
 
 Modify `miniprogram/pages/rank/index.js` `_sanitizeRankRow`:
 
@@ -1663,7 +2327,7 @@ trend-state="{{item.trendState}}"
 trend-label="{{item.trendLabel}}"
 ```
 
-- [ ] **Step 9: Add rank page tests for trend labels**
+- [ ] **Step 14: Add rank page tests for trend labels**
 
 Append to `miniprogram/pages/rank/__tests__/index.test.js`:
 
@@ -1683,20 +2347,20 @@ test('loadRank preserves backend trend labels', async () => {
 })
 ```
 
-- [ ] **Step 10: Run Task 4 tests**
+- [ ] **Step 15: Run Task 4 tests**
 
 Run:
 
 ```bash
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/points-engine
-npm test -- __tests__/index.test.js -t "trend"
+npm test -- lib/__tests__/settlement-impact.test.js __tests__/index.test.js -t "trend|refreshRankCache returns"
 cd /Users/liaoxiaole/FOPEN-PURE/miniprogram
 npm test -- components/rank-row/__tests__/index.test.js pages/rank/__tests__/index.test.js
 ```
 
 Expected: PASS.
 
-- [ ] **Step 11: Commit Task 4**
+- [ ] **Step 16: Commit Task 4**
 
 ```bash
 git add cloudfunctions/points-engine miniprogram/components/rank-row miniprogram/pages/rank
@@ -1721,6 +2385,7 @@ git commit -m "feat(rank): show explicit ranking trend states"
 - Consumes analytics shape from Task 2:
   - `analytics.singles.lastFive.summary`
   - `analytics.doubles.bestPartners`
+  - `analytics.doubles.teamH2H`
   - `analytics.singles.strongAgainst`
   - `analytics.singles.strugglesAgainst`
   - `analytics.doubles.strongAgainst`
@@ -1888,7 +2553,17 @@ test('loadAll fetches analytics and maps recent form, best partner, and team h2h
     if (name === 'analytics-engine' && data.action === 'getPlayerAnalytics') {
       return Promise.resolve({ result: { success: true, data: {
         singles: { lastFive: { summary: '4W-1L' }, strongAgainst: [{ memberId: 'B', name: '标子', wins: 3, losses: 0 }], strugglesAgainst: [{ memberId: 'C', name: '小天', wins: 1, losses: 2 }] },
-        doubles: { bestPartners: [{ memberId: 'P', name: '小野马', matches: 5, winRate: 0.8 }] },
+        doubles: {
+          bestPartners: [{ memberId: 'P', name: '小野马', matches: 5, winRate: 0.8 }],
+          teamH2H: [{
+            key: 'A__P__vs__B__C',
+            subjectTeamLabel: '乐乐 / 小野马',
+            opponentTeamLabel: '小天 / 标子',
+            wins: 2,
+            losses: 1,
+            recentMatches: [{ matchId: 'd1', score: '4-2', confirmedAt: '2026-06-01' }]
+          }]
+        },
         recentMatches: [{ matchId: 'd1', tournamentType: 'doubles', subjectTeamLabel: '乐乐 / 小野马', opponentTeamLabel: '小天 / 标子' }]
       } } })
     }
@@ -1900,8 +2575,10 @@ test('loadAll fetches analytics and maps recent form, best partner, and team h2h
   expect(ctx.data.analytics.singles.lastFive.summary).toBe('4W-1L')
   expect(ctx.data.activeFormSummary).toBe('4W-1L')
   expect(ctx.data.bestPartner).toMatchObject({ name: '小野马', matches: 5 })
+  expect(ctx.data.bestPartnerWinRatePct).toBe('80%')
   expect(ctx.data.advantageInsight.name).toBe('标子')
   expect(ctx.data.struggleInsight.name).toBe('小天')
+  expect(ctx._teamH2HFromAnalytics().map(row => row.opponentTeamLabel)).toEqual(['小天 / 标子'])
 })
 ```
 
@@ -1925,7 +2602,7 @@ Add defaults:
 ```js
 const DEFAULT_ANALYTICS = {
   singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
-  doubles: { lastFive: null, bestPartners: [], strongAgainst: [], strugglesAgainst: [] },
+  doubles: { lastFive: null, bestPartners: [], teamH2H: [], strongAgainst: [], strugglesAgainst: [] },
   recentMatches: []
 }
 ```
@@ -1936,6 +2613,7 @@ Add data fields:
 analytics: DEFAULT_ANALYTICS,
 activeFormSummary: '',
 bestPartner: null,
+bestPartnerWinRatePct: '',
 advantageInsight: null,
 struggleInsight: null,
 expandedTeamH2HKey: '',
@@ -1967,9 +2645,11 @@ Add helper:
 _getAnalyticsActiveData(type, analytics = this.data.analytics || DEFAULT_ANALYTICS) {
   const activeType = type === 'doubles' ? 'doubles' : 'singles'
   const bucket = analytics[activeType] || {}
+  const bestPartner = activeType === 'doubles' && bucket.bestPartners && bucket.bestPartners[0] ? bucket.bestPartners[0] : null
   return {
     activeFormSummary: bucket.lastFive && bucket.lastFive.summary ? bucket.lastFive.summary : '',
-    bestPartner: activeType === 'doubles' && bucket.bestPartners && bucket.bestPartners[0] ? bucket.bestPartners[0] : null,
+    bestPartner,
+    bestPartnerWinRatePct: bestPartner ? `${Math.round(Number(bestPartner.winRate || 0) * 100)}%` : '',
     advantageInsight: bucket.strongAgainst && bucket.strongAgainst[0] ? bucket.strongAgainst[0] : null,
     struggleInsight: bucket.strugglesAgainst && bucket.strugglesAgainst[0] ? bucket.strugglesAgainst[0] : null
   }
@@ -1991,7 +2671,7 @@ Modify `miniprogram/pages/player-detail/index.wxml` after active stats:
   <view class="pd-analytics-card" wx:if="{{bestPartner}}">
     <text class="pd-analytics-label">最佳搭档</text>
     <text class="pd-analytics-value">{{bestPartner.name}}</text>
-    <text class="pd-analytics-meta">{{bestPartner.matches}} 场 · {{bestPartner.winRate ? (bestPartner.winRate * 100).toFixed(0) : 0}}%</text>
+    <text class="pd-analytics-meta">{{bestPartner.matches}} 场 · {{bestPartnerWinRatePct}}</text>
   </view>
   <view class="pd-analytics-card" wx:if="{{advantageInsight}}">
     <text class="pd-analytics-label">优势对手</text>
@@ -2050,14 +2730,14 @@ In `miniprogram/pages/player-detail/index.js`, add a mapping helper:
 
 ```js
 _teamH2HFromAnalytics(analytics = this.data.analytics || DEFAULT_ANALYTICS) {
-  const bestPartners = analytics && analytics.doubles && analytics.doubles.bestPartners
-  return Array.isArray(bestPartners) ? bestPartners.map(partner => ({
-    key: `partner:${partner.memberId}`,
-    subjectTeamLabel: `${(this.data.player && this.data.player.name) || '我'} / ${partner.name}`,
-    opponentTeamLabel: partner.topOpponentTeamLabel || '对手组合',
-    wins: partner.wins || 0,
-    losses: partner.losses || 0,
-    recentMatches: partner.recentMatches || []
+  const rows = analytics && analytics.doubles && analytics.doubles.teamH2H
+  return Array.isArray(rows) ? rows.map(row => ({
+    key: row.key || `${row.subjectTeamLabel || ''}|${row.opponentTeamLabel || ''}`,
+    subjectTeamLabel: row.subjectTeamLabel || '我方组合',
+    opponentTeamLabel: row.opponentTeamLabel || '对手组合',
+    wins: row.wins || 0,
+    losses: row.losses || 0,
+    recentMatches: row.recentMatches || []
   })) : []
 }
 ```
@@ -2066,12 +2746,13 @@ Then for doubles active H2H prefer analytics rows if present:
 
 ```js
 const teamH2H = activeType === 'doubles' ? this._teamH2HFromAnalytics(analytics) : []
-activeH2H: teamH2H.length ? teamH2H : existingRows
+activeH2H: teamH2H.length ? teamH2H : existingRows.map(row => ({ ...row, key: row.key || row.memberId }))
 ```
 
 Update WXML `h2h-row` call:
 
 ```xml
+wx:key="key"
 subject-team-label="{{item.subjectTeamLabel}}"
 opponent-team-label="{{item.opponentTeamLabel}}"
 recent-matches="{{item.recentMatches}}"
@@ -2134,11 +2815,18 @@ Per-season per-member analytics cache generated by `analytics-engine`.
 | `seasonId` | string | Season id, for example `season_2026` |
 | `memberId` | string | Member id |
 | `singles` | object | Singles aggregate, last five, strongAgainst, strugglesAgainst |
-| `doubles` | object | Doubles aggregate, last five, bestPartners, strongAgainst, strugglesAgainst |
-| `recentMatches` | array | Display-ready recent rows; doubles rows include full teams |
+| `doubles` | object | Doubles aggregate, last five, bestPartners, teamH2H, strongAgainst, strugglesAgainst |
+| `recentMatches` | array | Id-based recent rows; doubles rows include `subjectTeam` and `opponentTeam` member ids, labels resolved on read |
 | `lastSettlementImpact` | object/null | Last settlement impact shown after score confirmation |
 | `sourceVersion` | number | Analytics schema version |
 | `updatedAt` | Date | Cache update time |
+
+Privacy rule: cache member ids and aggregate records; resolve names, avatar URLs, and public visibility from current `members` data in `analytics-engine.getPlayerAnalytics` so revoke/delete flows cannot leave stale display names in the UI.
+
+Indexes:
+
+1. `_id` unique
+2. `(seasonId, memberId)` for player analytics reads
 
 ## pair_analytics
 
@@ -2150,15 +2838,20 @@ Per-season per-doubles-pair analytics cache generated by `analytics-engine`.
 | `seasonId` | string | Season id |
 | `pairId` | string | `<memberA>__<memberB>` |
 | `memberIds` | array | Sorted member ids |
-| `memberNames` | array | Display names in sorted member id order |
 | `matches` | number | Total doubles matches for the pair |
 | `wins` | number | Pair wins |
 | `losses` | number | Pair losses |
 | `winRate` | number | `wins / matches`, or 0 |
-| `recentMatches` | array | Last 5 pair matches |
-| `matchups` | array | Opponent pair records with wins/losses |
+| `recentMatches` | array | Id-based last 5 pair matches |
+| `matchups` | array | Opponent pair id/member id records with wins/losses |
 | `sourceVersion` | number | Analytics schema version |
 | `updatedAt` | Date | Cache update time |
+
+Indexes:
+
+1. `_id` unique
+2. `(seasonId, memberIds)` for pair analytics reads by member id
+3. `(seasonId, pairId)` for direct pair lookup and audit tools
 
 ## analytics_jobs
 
@@ -2175,6 +2868,12 @@ Refresh and rebuild audit log for analytics cache work.
 | `error` | string | Failure message, empty on success |
 | `createTime` | Date | Create time |
 | `updateTime` | Date | Update time |
+
+Indexes:
+
+1. `_id` unique
+2. `(seasonId, jobType, createTime DESC)` for rebuild/refresh audit
+3. `(status, updateTime DESC)` for failed job review
 ```
 
 - [ ] **Step 2: Update E2E runbook**
@@ -2185,14 +2884,18 @@ Add to `docs/testing/e2e-regression-runbook.md`:
 ### Ranking Analytics Smoke
 
 1. Deploy `analytics-engine`, `points-engine`, and `match-results` to the target environment.
-2. Rebuild current season analytics:
+2. Rebuild current season rank snapshots:
+   `points-engine.rebuildRankSnapshots({ seasonId: 'season_2026', snapshotKind: 'baseline' })`
+3. Rebuild current season analytics:
    `analytics-engine.rebuildSeason({ seasonId: 'season_2026' })`
-3. Confirm one singles score as admin.
-4. Verify `rank_cache` updates and rank page no longer shows only `—` for trend states.
-5. Confirm one doubles score as admin.
-6. Open the affected player detail page.
-7. Verify recent form, best partner, strong/struggle opponent cards, and team-vs-team doubles H2H.
-8. If analytics refresh fails, verify the score remains confirmed and `analytics_jobs` records `status: failed`.
+4. Confirm one singles score as admin through batch confirm.
+5. Verify `rank_cache` updates, rank snapshots receive a `settlement` row, and rank page no longer shows only `—` for trend states.
+6. Confirm one doubles score as admin through direct reconfirm.
+7. Open the affected player detail page.
+8. Verify recent form, best partner, strong/struggle opponent cards, and team-vs-team doubles H2H.
+9. Revoke public display for one affected member.
+10. Verify analytics rows render the revoked member through anonymous public identity.
+11. If analytics refresh fails, verify the score remains confirmed and `analytics_jobs` records `status: failed`.
 ```
 
 - [ ] **Step 3: Run full focused tests**
@@ -2203,9 +2906,9 @@ Run:
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
 npm test
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results
-npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch.test.js
+npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch.test.js lib/__tests__/handlers/submit.test.js
 cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/points-engine
-npm test -- __tests__/index.test.js
+npm test -- lib/__tests__/settlement-impact.test.js __tests__/index.test.js
 cd /Users/liaoxiaole/FOPEN-PURE/miniprogram
 npm test -- pages/rank/__tests__/index.test.js pages/player-detail/__tests__/index.test.js pages/tournament-score/__tests__/index.test.js components/h2h-row/__tests__/index.test.js components/batch-result-sheet/__tests__/index.test.js
 ```
