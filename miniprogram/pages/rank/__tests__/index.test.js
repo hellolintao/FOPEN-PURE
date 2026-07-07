@@ -48,7 +48,15 @@ test('loadRank maps decimal win rate to percent label', async () => {
     data: { action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' },
     config: { timeout: 20000 },
   })
-  expect(ctx.data.rankList).toEqual([{ memberId: 'A', winCount: 3, lossCount: 1, winRate: 0.75, winRatePct: '75%' }])
+  expect(ctx.data.rankList).toEqual([{
+    memberId: 'A',
+    winCount: 3,
+    lossCount: 1,
+    winRate: 0.75,
+    winRatePct: '75%',
+    trendState: 'no_history',
+    trendLabel: '暂无历史'
+  }])
   expect(ctx.data.loading).toBe(false)
 })
 
@@ -232,7 +240,16 @@ test('loadRank renders fresh 2-hour page cache before refreshing cloud profile d
     config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([
-    { _id: 'A', name: '新头像用户', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+    {
+      _id: 'A',
+      name: '新头像用户',
+      winCount: 1,
+      lossCount: 0,
+      winRate: 1,
+      winRatePct: '100%',
+      trendState: 'no_history',
+      trendLabel: '暂无历史'
+    }
   ])
 })
 
@@ -263,8 +280,55 @@ test('loadRank ignores fresh empty page cache and fetches cloud data', async () 
     config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([
-    { _id: 'A', winCount: 2, lossCount: 0, winRate: 1, winRatePct: '100%' }
+    {
+      _id: 'A',
+      winCount: 2,
+      lossCount: 0,
+      winRate: 1,
+      winRatePct: '100%',
+      trendState: 'no_history',
+      trendLabel: '暂无历史'
+    }
   ])
+})
+
+test('loadRank preserves backend trend labels', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, trendDelta: 0, trendState: 'flat', trendLabel: '持平' },
+          { _id: 'B', winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'new', trendLabel: '新上榜' }
+        ]
+      }
+    }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(ctx.data.rankList.map(row => row.trendLabel)).toEqual(['持平', '新上榜'])
+})
+
+test('_sanitizeRankRow derives fallback trend metadata from trendDelta', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def)
+
+  const row = ctx._sanitizeRankRow({ _id: 'A', winCount: 1, lossCount: 0, winRate: 1, trendDelta: 2 })
+
+  expect(row.trendState).toBe('up')
+  expect(row.trendLabel).toBe('▲2')
+})
+
+test('rank page passes trend state and label into rank-row', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('trend-state="{{item.trendState}}"')
+  expect(wxml).toContain('trend-label="{{item.trendLabel}}"')
 })
 
 test('loadRank surfaces cloud failure envelopes instead of showing an empty list', async () => {

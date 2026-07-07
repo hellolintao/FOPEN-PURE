@@ -106,16 +106,17 @@
   justify-content: flex-end;
 }
 
-.trend-arrow {
+.trend-text {
   font-size: 24rpx;
   font-weight: 700;
   line-height: 1;
 }
 
-.trend-up { color: var(--color-success); }
-.trend-down { color: var(--color-danger); }
-
-.trend-flat {
+.trend-up .trend-text { color: var(--color-success); }
+.trend-down .trend-text { color: var(--color-danger); }
+.trend-flat .trend-text,
+.trend-new .trend-text,
+.trend-no_history .trend-text {
   color: var(--color-muted-2);
   font-size: 26rpx;
   font-weight: 600;
@@ -125,7 +126,6 @@
 .rank-row.highlight-pride .name,
 .rank-row.highlight-pride .winrate,
 .rank-row.highlight-pride .pts,
-.rank-row.highlight-pride .trend-arrow,
-.rank-row.highlight-pride .trend-flat {
+.rank-row.highlight-pride .trend-text {
   color: #FFF8F0;
 }

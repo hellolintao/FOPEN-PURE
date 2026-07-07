@@ -261,6 +261,51 @@ describe('rankList enhancements', () => {
     expect(res.data.rankList[0].trendDelta).toBe(0)
   })
 
+  test('rankList marks flat trend when snapshot rank equals current rank', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲' })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs_A',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 1,
+      losses: 0,
+      createTime: '2026-05-01'
+    })
+    cloud.__rows.rank_snapshots.push({
+      _id: 'rs_A',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      rank: 1,
+      effectiveAt: new Date('2026-05-10'),
+      computedAt: new Date('2026-05-10')
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+    expect(res.data.rankList[0]).toMatchObject({ trendDelta: 0, trendState: 'flat', trendLabel: '持平' })
+  })
+
+  test('rankList marks no_history when no snapshot exists anywhere', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲' })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs_A',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 1,
+      losses: 0,
+      createTime: '2026-05-01'
+    })
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+    expect(res.data.rankList[0]).toMatchObject({ trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' })
+  })
+
   test('rankList returns stored scheduled cache without recomputing live rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'LIVE', name: 'live player' })
@@ -399,7 +444,19 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      {
+        _id: 'A',
+        name: '甲',
+        avatarUrl: '',
+        publicProfileVisible: true,
+        totalPoints: 100,
+        winCount: 4,
+        lossCount: 1,
+        winRate: 0.8,
+        trendDelta: null,
+        trendState: 'no_history',
+        trendLabel: '暂无历史'
+      }
     ])
     expect(res.data.cachedAt).toBeUndefined()
   })
@@ -424,7 +481,19 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      {
+        _id: 'A',
+        name: '甲',
+        avatarUrl: '',
+        publicProfileVisible: true,
+        totalPoints: 100,
+        winCount: 4,
+        lossCount: 1,
+        winRate: 0.8,
+        trendDelta: null,
+        trendState: 'no_history',
+        trendLabel: '暂无历史'
+      }
     ])
   })
 
@@ -448,7 +517,19 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      {
+        _id: 'A',
+        name: '甲',
+        avatarUrl: '',
+        publicProfileVisible: true,
+        totalPoints: 100,
+        winCount: 4,
+        lossCount: 1,
+        winRate: 0.8,
+        trendDelta: null,
+        trendState: 'no_history',
+        trendLabel: '暂无历史'
+      }
     ])
   })
 
@@ -467,14 +548,31 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'refreshRankCache', seasonId: 'season_2026', now: '2026-05-20T23:30:00+08:00' })
 
     expect(res.success).toBe(true)
-    expect(res.data).toEqual({ seasonId: 'season_2026', cacheDate: '2026-05-20', refreshedTypes: ['singles', 'doubles'] })
+    expect(res.data).toEqual({
+      seasonId: 'season_2026',
+      cacheDate: '2026-05-20',
+      refreshedTypes: ['singles', 'doubles'],
+      settlementImpact: []
+    })
     expect(cloud.__rows.rank_cache).toHaveLength(2)
     expect(cloud.__rows.rank_cache.find(row => row.type === 'singles')).toMatchObject({
       _id: 'rank_cache_season_2026_singles',
       seasonId: 'season_2026',
       cacheDate: '2026-05-20',
       rankList: [
-        { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+        {
+          _id: 'A',
+          name: '甲',
+          avatarUrl: '',
+          publicProfileVisible: true,
+          totalPoints: 100,
+          winCount: 4,
+          lossCount: 1,
+          winRate: 0.8,
+          trendDelta: null,
+          trendState: 'no_history',
+          trendLabel: '暂无历史'
+        }
       ]
     })
     expect(cloud.__rows.rank_cache.find(row => row.type === 'doubles').rankList[0]).toMatchObject({
@@ -483,8 +581,79 @@ describe('rankList enhancements', () => {
       avatarUrl: '',
       publicProfileVisible: true,
       totalPoints: 80,
-      winRate: 0.5
+      winRate: 0.5,
+      trendState: 'no_history',
+      trendLabel: '暂无历史'
     })
+  })
+
+  test('refreshRankCache returns settlementImpact and writes snapshot rows after cache refresh', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', publicProfileConsent: true })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs_A',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 1,
+      losses: 0,
+      createTime: '2026-05-01'
+    })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      rankList: [{ _id: 'A', name: '甲', totalPoints: 80, winCount: 1, lossCount: 0, rank: 3 }]
+    })
+
+    const { main } = require('../index')
+    const res = await main({
+      action: 'refreshRankCache',
+      seasonId: 'season_2026',
+      affectedMemberIds: ['A'],
+      writeSnapshot: true,
+      snapshotKind: 'settlement',
+      now: '2026-07-07T10:00:00.000Z'
+    })
+
+    expect(res.success).toBe(true)
+    expect(res.data.settlementImpact[0]).toMatchObject({ memberId: 'A', pointsDelta: 20 })
+    expect(cloud.__rows.rank_snapshots.some(row => (
+      row.seasonId === 'season_2026' &&
+      row.type === 'singles' &&
+      row.memberId === 'A' &&
+      row.snapshotKind === 'settlement'
+    ))).toBe(true)
+  })
+
+  test('rebuildRankSnapshots writes baseline snapshots for current rank lists', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', publicProfileConsent: true })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs_A',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 1,
+      losses: 0,
+      createTime: '2026-05-01'
+    })
+
+    const { main } = require('../index')
+    const res = await main({
+      action: 'rebuildRankSnapshots',
+      seasonId: 'season_2026',
+      snapshotKind: 'baseline',
+      now: '2026-07-07T10:00:00.000Z'
+    })
+
+    expect(res.success).toBe(true)
+    expect(cloud.__rows.rank_snapshots.some(row => (
+      row.memberId === 'A' &&
+      row.snapshotKind === 'baseline'
+    ))).toBe(true)
   })
 })
 

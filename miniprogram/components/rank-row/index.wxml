@@ -15,13 +15,7 @@
     <text class="pts num">{{totalPoints}}</text>
   </view>
 
-  <view class="trend-cell">
-    <block wx:if="{{trendDelta !== null && trendDelta > 0}}">
-      <text class="trend-arrow trend-up">▲{{trendDelta}}</text>
-    </block>
-    <block wx:elif="{{trendDelta !== null && trendDelta < 0}}">
-      <text class="trend-arrow trend-down">▼{{-trendDelta}}</text>
-    </block>
-    <text wx:else class="trend-flat">—</text>
+  <view class="trend-cell trend-{{trendState}}">
+    <text class="trend-text">{{trendLabel}}</text>
   </view>
 </view>

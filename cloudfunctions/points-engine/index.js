@@ -10,6 +10,7 @@ const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
 const { computeH2H } = require('./lib/player-h2h')
 const { buildGroupKnockoutPointEntries } = require('./lib/group-knockout')
+const { buildSettlementImpact } = require('./lib/settlement-impact')
 const { toRankingIdentity } = require('../_shared/public-profile')
 
 exports.main = async (event = {}) => {
@@ -18,6 +19,7 @@ exports.main = async (event = {}) => {
     if (action === 'rankAggregate')    return await rankAggregate(event)
     if (action === 'recompute')        return await recompute(event)
     if (action === 'refreshRankCache') return await refreshRankCache(event)
+    if (action === 'rebuildRankSnapshots') return await rebuildRankSnapshots(event)
 
     // 兼容 wrappers (旧前端契约保持)
     if (action === 'rankList')         return await rankListCompat(event)
@@ -218,11 +220,14 @@ async function buildRankList({ seasonId, type = 'singles' }) {
     return { ...row, winRate: matches > 0 ? row.winCount / matches : 0 }
   })
   const memberIds = withWinRate.map(row => row._id)
-  const snapshotMap = await fetchLatestSnapshotMap({ seasonId, type, memberIds })
+  const [snapshotMap, hasHistory] = await Promise.all([
+    fetchLatestSnapshotMap({ seasonId, type, memberIds }),
+    hasAnyRankSnapshot({ seasonId, type })
+  ])
   const out = withWinRate.map((row, i) => {
     const currentRank = i + 1
     const snap = snapshotMap.get(row._id)
-    return { ...row, trendDelta: snap ? (snap.rank - currentRank) : null }
+    return { ...row, ...trendMeta(snap, currentRank, hasHistory) }
   })
   return out
 }
@@ -247,13 +252,21 @@ async function refreshRankMemberProfiles(rankList) {
   })
 }
 
-async function refreshRankCache({ seasonId, now } = {}) {
+async function refreshRankCache({ seasonId, now, affectedMemberIds = [], writeSnapshot = false, snapshotKind = 'settlement' } = {}) {
   const computedAt = new Date(now || Date.now())
   const resolvedSeasonId = seasonId || `season_${toBeijingDateKey(computedAt).slice(0, 4)}`
   const cacheDate = toBeijingDateKey(computedAt)
   const refreshedTypes = []
+  const settlementImpact = []
   for (const type of ['singles', 'doubles']) {
-    const rankList = await buildRankList({ seasonId: resolvedSeasonId, type })
+    const previousCache = await fetchRankCache({ seasonId: resolvedSeasonId, type })
+    const beforeRankRows = withRankNumbers((previousCache && previousCache.rankList) || [])
+    const rankList = withRankNumbers(await buildRankList({ seasonId: resolvedSeasonId, type }))
+    settlementImpact.push(...buildSettlementImpact({
+      beforeRankRows,
+      afterRankRows: rankList,
+      affectedMemberIds
+    }))
     await upsertRankCache({
       _id: rankCacheId(resolvedSeasonId, type),
       seasonId: resolvedSeasonId,
@@ -263,9 +276,18 @@ async function refreshRankCache({ seasonId, now } = {}) {
       computedAt,
       updateTime: computedAt
     })
+    if (writeSnapshot) {
+      await writeRankSnapshotsFromRankList({
+        seasonId: resolvedSeasonId,
+        type,
+        rankList,
+        snapshotKind,
+        computedAt
+      })
+    }
     refreshedTypes.push(type)
   }
-  return { success: true, data: { seasonId: resolvedSeasonId, cacheDate, refreshedTypes } }
+  return { success: true, data: { seasonId: resolvedSeasonId, cacheDate, refreshedTypes, settlementImpact } }
 }
 
 async function persistRankCache({ seasonId, type, rankList }) {
@@ -382,9 +404,32 @@ function rankCacheId(seasonId, type) {
   return `rank_cache_${seasonId}_${type}`
 }
 
+function withRankNumbers(rankList) {
+  return (rankList || []).map((row, index) => ({ ...row, rank: Number(row.rank) || index + 1 }))
+}
+
 function toBeijingDateKey(date) {
   const d = new Date(date)
   return new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+function trendMeta(snap, currentRank, hasAnySnapshot) {
+  if (!hasAnySnapshot) return { trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+  if (!snap) return { trendDelta: null, trendState: 'new', trendLabel: '新上榜' }
+  const delta = snap.rank - currentRank
+  if (delta > 0) return { trendDelta: delta, trendState: 'up', trendLabel: `▲${delta}` }
+  if (delta < 0) return { trendDelta: delta, trendState: 'down', trendLabel: `▼${Math.abs(delta)}` }
+  return { trendDelta: 0, trendState: 'flat', trendLabel: '持平' }
+}
+
+async function hasAnyRankSnapshot({ seasonId, type }) {
+  try {
+    const res = await db.collection('rank_snapshots').where({ seasonId, type }).limit(1).get()
+    return !!(res && res.data && res.data.length)
+  } catch (err) {
+    if (isMissingCollectionError(err)) return false
+    throw err
+  }
 }
 
 async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {
@@ -405,6 +450,55 @@ async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {
     }
   }
   return out
+}
+
+async function writeRankSnapshotsFromRankList({ seasonId, type, rankList, snapshotKind, computedAt }) {
+  const weekId = `${snapshotKind}_${toBeijingDateKey(computedAt)}`
+  const weekStart = toBeijingDateKey(computedAt)
+  const weekEnd = weekStart
+  for (const row of rankList || []) {
+    const memberId = row._id || row.memberId
+    if (!memberId) continue
+    await upsertRankSnapshot({
+      _id: `rs_${seasonId}_${weekId}_${type}_${memberId}`,
+      seasonId,
+      weekId,
+      weekStart,
+      weekEnd,
+      effectiveAt: computedAt,
+      computedAt,
+      type,
+      memberId,
+      rank: row.rank,
+      totalPoints: row.totalPoints || 0,
+      wins: row.winCount || 0,
+      losses: row.lossCount || 0,
+      snapshotKind
+    })
+  }
+}
+
+async function upsertRankSnapshot(row) {
+  const collection = db.collection('rank_snapshots')
+  const existing = await collection.doc(row._id).get().catch(() => null)
+  if (existing && existing.data) {
+    const { _id, ...data } = row
+    await collection.doc(row._id).update({ data })
+    return
+  }
+  await collection.add({ data: row })
+}
+
+async function rebuildRankSnapshots({ seasonId, snapshotKind = 'baseline', now } = {}) {
+  if (!seasonId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId required' } }
+  const computedAt = new Date(now || Date.now())
+  const writtenTypes = []
+  for (const type of ['singles', 'doubles']) {
+    const rankList = withRankNumbers(await buildRankList({ seasonId, type }))
+    await writeRankSnapshotsFromRankList({ seasonId, type, rankList, snapshotKind, computedAt })
+    writtenTypes.push(type)
+  }
+  return { success: true, data: { seasonId, snapshotKind, writtenTypes } }
 }
 
 async function fetchRankHistory({ seasonId, type, memberId, limit = 12 }) {

@@ -64,6 +64,8 @@
       win-rate-pct="{{item.winRatePct}}"
       total-points="{{item.totalPoints}}"
       trend-delta="{{item.trendDelta}}"
+      trend-state="{{item.trendState}}"
+      trend-label="{{item.trendLabel}}"
       player-id="{{item._id}}"
       highlight="{{currentMember && item._id === currentMember._id}}"
       pride-highlight="{{isPrideMonthSkinActive && currentMember && item._id === currentMember._id}}"
