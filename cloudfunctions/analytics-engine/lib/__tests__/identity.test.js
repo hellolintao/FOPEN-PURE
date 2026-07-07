@@ -68,3 +68,27 @@ test('resolveAnalyticsIdentities formats cached member ids from current member c
   expect(out.recentMatches[0].subjectTeamLabel).toBe('选手01 / 小野马')
   expect(out.recentMatches[0].opponentTeamLabel).toBe('小天 / 标子')
 })
+
+test('resolveAnalyticsIdentities resolves doubles rows even when teamH2H is missing', () => {
+  const membersById = new Map([
+    ['A', { _id: 'A', name: '乐乐', avatarUrl: 'cloud://avatar-a', publicProfileConsent: false }],
+    ['B', { _id: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileConsent: true }],
+    ['C', { _id: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileConsent: true }]
+  ])
+
+  const out = resolveAnalyticsIdentities(
+    {
+      memberId: 'A',
+      doubles: {
+        bestPartners: [{ memberId: 'B', name: '旧搭档', avatarUrl: 'stale://b', wins: 2, losses: 0, matches: 2 }],
+        strongAgainst: [{ memberId: 'C', name: '旧对手', avatarUrl: 'stale://c', wins: 2, losses: 1, matches: 3 }],
+        strugglesAgainst: [{ memberId: 'A', name: '旧自己', avatarUrl: 'stale://a', wins: 1, losses: 2, matches: 3 }]
+      }
+    },
+    membersById
+  )
+
+  expect(out.doubles.bestPartners[0]).toMatchObject({ memberId: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileVisible: true })
+  expect(out.doubles.strongAgainst[0]).toMatchObject({ memberId: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileVisible: true })
+  expect(out.doubles.strugglesAgainst[0]).toMatchObject({ memberId: 'A', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false })
+})

@@ -17,7 +17,7 @@ function buildPlayerAnalytics({ seasonId, memberId, rows, membersById, rankRowsB
     doubles: buildBucket({ rows: doublesRows, memberId, type: 'doubles' }),
     recentMatches: relevantRows.slice(0, 10).map(row => formatRecent(row, memberId)),
     lastSettlementImpact: null,
-    rankSnapshot: rankRowsByType || { singles: [], doubles: [] }
+    rankSnapshot: sanitizeRankSnapshot(rankRowsByType)
   }
 }
 
@@ -139,4 +139,37 @@ function timeOf(row) {
   return new Date((row && (row.confirmedAt || row.createTime)) || 0).getTime() || 0
 }
 
-module.exports = { buildPlayerAnalytics, buildBucket, buildLastFive, buildTeamH2H, formatRecent }
+function sanitizeRankSnapshot(rankRowsByType) {
+  const snapshot = rankRowsByType || { singles: [], doubles: [] }
+  return {
+    singles: sanitizeRankRows(snapshot.singles),
+    doubles: sanitizeRankRows(snapshot.doubles)
+  }
+}
+
+function sanitizeRankRows(rows) {
+  return (rows || []).map(row => {
+    const safe = {}
+    for (const key of SAFE_RANK_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(row || {}, key)) {
+        safe[key] = row[key]
+      }
+    }
+    return safe
+  })
+}
+
+const SAFE_RANK_FIELDS = [
+  '_id',
+  'memberId',
+  'rank',
+  'totalPoints',
+  'winCount',
+  'lossCount',
+  'winRate',
+  'trendDelta',
+  'trendState',
+  'trendLabel'
+]
+
+module.exports = { buildPlayerAnalytics, buildBucket, buildLastFive, buildTeamH2H, formatRecent, sanitizeRankSnapshot }

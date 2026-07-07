@@ -283,3 +283,69 @@ Observed result:
 - `PASS lib/__tests__/ids.test.js`
 - `Test Suites: 5 passed, 5 total`
 - `Tests: 10 passed, 10 total`
+
+## Review Fix Round 2
+
+### Findings Addressed
+
+1. Important: doubles identity resolution now runs even when `teamH2H` is missing
+2. Defensive privacy hardening: `rankSnapshot` is now sanitized to safe ranking fields only
+
+### TDD Evidence For Fix
+
+Tests changed first:
+- `cloudfunctions/analytics-engine/lib/__tests__/identity.test.js`
+- `cloudfunctions/analytics-engine/lib/__tests__/player-analytics.test.js`
+
+Focused RED command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/player-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed RED:
+- `FAIL lib/__tests__/player-analytics.test.js`
+- `buildPlayerAnalytics sanitizes rankSnapshot to safe ranking fields only`
+- received leaked display fields in `rankSnapshot`, including `name`, `avatarUrl`, `displayName`, and `publicProfileVisible`
+- `FAIL lib/__tests__/identity.test.js`
+- `resolveAnalyticsIdentities resolves doubles rows even when teamH2H is missing`
+- stale cached doubles values like `name: "旧搭档"` and `avatarUrl: "stale://b"` survived when `teamH2H` was absent
+
+Implementation changes after RED:
+- `cloudfunctions/analytics-engine/lib/identity.js`
+  - `resolveAnalyticsIdentities` now resolves `out.doubles` whenever the doubles bucket exists, regardless of `teamH2H`
+- `cloudfunctions/analytics-engine/lib/player-analytics.js`
+  - added `sanitizeRankSnapshot`
+  - rank snapshot now whitelists only `_id`, `memberId`, `rank`, `totalPoints`, `winCount`, `lossCount`, `winRate`, `trendDelta`, `trendState`, and `trendLabel`
+
+Focused GREEN command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/player-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed GREEN:
+- `PASS lib/__tests__/player-analytics.test.js`
+- `PASS lib/__tests__/identity.test.js`
+- `Test Suites: 2 passed, 2 total`
+- `Tests: 4 passed, 4 total`
+
+### Final Verification After Review Fix Round 2
+
+Command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/ids.test.js lib/__tests__/teams.test.js lib/__tests__/player-analytics.test.js lib/__tests__/pair-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed result:
+- `PASS lib/__tests__/player-analytics.test.js`
+- `PASS lib/__tests__/teams.test.js`
+- `PASS lib/__tests__/pair-analytics.test.js`
+- `PASS lib/__tests__/identity.test.js`
+- `PASS lib/__tests__/ids.test.js`
+- `Test Suites: 5 passed, 5 total`
+- `Tests: 12 passed, 12 total`

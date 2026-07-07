@@ -51,6 +51,82 @@ test('buildPlayerAnalytics includes lastFive, strongAgainst and strugglesAgainst
   expect(out.recentMatches[0].opponentTeam[0].name).toBeUndefined()
 })
 
+test('buildPlayerAnalytics sanitizes rankSnapshot to safe ranking fields only', () => {
+  const out = buildPlayerAnalytics({
+    seasonId: 'season_2026',
+    memberId: 'P',
+    rows: [],
+    membersById,
+    rankRowsByType: {
+      singles: [
+        {
+          _id: 'rank-s-1',
+          memberId: 'P',
+          rank: 1,
+          totalPoints: 120,
+          winCount: 6,
+          lossCount: 1,
+          winRate: 0.857,
+          trendDelta: 2,
+          trendState: 'up',
+          trendLabel: '+2',
+          name: '乐乐',
+          avatarUrl: 'cloud://avatar-p',
+          publicProfileVisible: true,
+          displayName: '乐乐'
+        }
+      ],
+      doubles: [
+        {
+          _id: 'rank-d-1',
+          memberId: 'M',
+          rank: 2,
+          totalPoints: 88,
+          winCount: 4,
+          lossCount: 2,
+          winRate: 0.667,
+          trendDelta: -1,
+          trendState: 'down',
+          trendLabel: '-1',
+          name: '小野马',
+          avatarUrl: 'cloud://avatar-m'
+        }
+      ]
+    }
+  })
+
+  expect(out.rankSnapshot).toEqual({
+    singles: [
+      {
+        _id: 'rank-s-1',
+        memberId: 'P',
+        rank: 1,
+        totalPoints: 120,
+        winCount: 6,
+        lossCount: 1,
+        winRate: 0.857,
+        trendDelta: 2,
+        trendState: 'up',
+        trendLabel: '+2'
+      }
+    ],
+    doubles: [
+      {
+        _id: 'rank-d-1',
+        memberId: 'M',
+        rank: 2,
+        totalPoints: 88,
+        winCount: 4,
+        lossCount: 2,
+        winRate: 0.667,
+        trendDelta: -1,
+        trendState: 'down',
+        trendLabel: '-1'
+      }
+    ]
+  })
+})
+
 function row(id, type, playerIds, winnerId, loserId, confirmedAt) {
   return {
     _id: id,

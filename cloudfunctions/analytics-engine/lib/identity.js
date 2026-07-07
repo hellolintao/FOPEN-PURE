@@ -12,7 +12,7 @@ function resolveAnalyticsIdentities(doc, membersById) {
   if (out.singles) {
     out.singles = resolveBucket(out.singles, membersById)
   }
-  if (out.doubles && Array.isArray(out.doubles.teamH2H)) {
+  if (out.doubles) {
     out.doubles = resolveBucket(out.doubles, membersById)
   }
   if (Array.isArray(out.recentMatches)) {
