@@ -1,7 +1,7 @@
 // migrated legacy: submit / confirmAll / reconfirmMatch
 async function runAfterSettlement(ctx, successIds, requestId) {
   if (!ctx || typeof ctx.afterSettlement !== 'function') {
-    return {}
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
   }
   if (!Array.isArray(successIds) || successIds.length === 0) {
     return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
@@ -15,7 +15,7 @@ async function runAfterSettlement(ctx, successIds, requestId) {
 
 async function runAfterSettlementByTournament(ctx, tournamentId, requestId) {
   if (!ctx || typeof ctx.afterSettlementByTournament !== 'function') {
-    return {}
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
   }
   if (!tournamentId) {
     return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }

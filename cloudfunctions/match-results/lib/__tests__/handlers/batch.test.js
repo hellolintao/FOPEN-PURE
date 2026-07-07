@@ -64,6 +64,9 @@ test('batchConfirm happy: all matches confirmed', async () => {
     requestId: 'req_1',
     successIds: ['mr_a', 'mr_b'],
     failures: [],
+    analyticsStatus: 'skipped',
+    analyticsMessage: '',
+    settlementImpact: [],
   })
   expect(ctx._state.matchesById.mr_a.resultStatus).toBe('confirmed')
   expect(ctx._state.matchesById.mr_b.resultStatus).toBe('confirmed')
@@ -597,6 +600,29 @@ test('batchAdminSave does not fail confirmation when ctx.afterSettlement fails',
   expect(result.successIds).toEqual(['mr_a'])
   expect(result.analyticsStatus).toBe('failed')
   expect(result.analyticsMessage).toBe('比分已确认，数据分析稍后重算')
+})
+
+test('batchConfirm returns skipped analytics envelope when ctx.afterSettlement is missing', async () => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    matches: [
+      { _id: 'mr_a', resultStatus: 'submitted', updateTime, score: { sets: [{ a: 4, b: 2 }], tiebreak: null } },
+    ],
+  })
+
+  const result = await batchConfirm(ctx, {
+    matches: [{ matchId: 'mr_a', expectedUpdateTime: updateTime.toISOString() }],
+    requestId: 'req_skipped_batch_confirm',
+  })
+
+  expect(result).toMatchObject({
+    requestId: 'req_skipped_batch_confirm',
+    successIds: ['mr_a'],
+    failures: [],
+    analyticsStatus: 'skipped',
+    analyticsMessage: '',
+    settlementImpact: [],
+  })
 })
 
 test('submit handler rejects unpublished schedule before member score changes', async () => {

@@ -38,3 +38,27 @@ test('confirmAll refreshes analytics by tournament when confirmed rows are unkno
   expect(ctx.afterSettlementByTournament).toHaveBeenCalledWith({ tournamentId: 't1', requestId: 'confirmAll:t1' })
   expect(result).toMatchObject({ confirmedCount: 2, analyticsStatus: 'success' })
 })
+
+test('reconfirmMatch returns skipped analytics envelope when ctx.afterSettlement is missing', async () => {
+  const ctx = makeCtx({ afterSettlement: undefined })
+  const result = await reconfirmMatch(ctx, { matchId: 'm1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null } })
+
+  expect(result).toMatchObject({
+    ok: true,
+    analyticsStatus: 'skipped',
+    analyticsMessage: '',
+    settlementImpact: [],
+  })
+})
+
+test('confirmAll returns skipped analytics envelope when ctx.afterSettlementByTournament is missing', async () => {
+  const ctx = makeCtx({ afterSettlementByTournament: undefined })
+  const result = await confirmAll(ctx, { tournamentId: 't1' })
+
+  expect(result).toMatchObject({
+    confirmedCount: 2,
+    analyticsStatus: 'skipped',
+    analyticsMessage: '',
+    settlementImpact: [],
+  })
+})

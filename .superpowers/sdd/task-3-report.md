@@ -114,3 +114,49 @@
 ### Concerns
 
 - None.
+
+---
+
+## Follow-up Fix: skipped analytics envelope when settlement hooks are missing
+
+### What I fixed
+
+- Restored the Task 3 brief contract for missing settlement hooks:
+  - `cloudfunctions/match-results/lib/handlers/batch.js` `runAfterSettlement(...)`
+  - `cloudfunctions/match-results/lib/handlers/submit.js` `runAfterSettlement(...)`
+  - `cloudfunctions/match-results/lib/handlers/submit.js` `runAfterSettlementByTournament(...)`
+- These helpers now return the skipped envelope when the hook is absent:
+  - `analyticsStatus: 'skipped'`
+  - `analyticsMessage: ''`
+  - `settlementImpact: []`
+
+### RED evidence
+
+- Command:
+  - `cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results && npm test -- lib/__tests__/handlers/batch.test.js lib/__tests__/handlers/submit.test.js`
+- Initial failing summary:
+  - `batchConfirm returns skipped analytics envelope when ctx.afterSettlement is missing`
+  - `reconfirmMatch returns skipped analytics envelope when ctx.afterSettlement is missing`
+  - `confirmAll returns skipped analytics envelope when ctx.afterSettlementByTournament is missing`
+- Expected failure reason:
+  - the handlers returned no analytics fields at all because the missing-hook fallback returned `{}` instead of the skipped envelope.
+
+### GREEN evidence
+
+- Commands:
+  - `cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results && npm test -- lib/__tests__/handlers/batch.test.js lib/__tests__/handlers/submit.test.js`
+  - `cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/match-results && npm test -- __tests__/analytics-integration.test.js`
+- Results:
+  - handler suites: PASS, 2 suites / 43 tests
+  - analytics integration suite: PASS, 1 suite / 2 tests
+
+### Files changed for the fix
+
+- `cloudfunctions/match-results/lib/handlers/batch.js`
+- `cloudfunctions/match-results/lib/handlers/submit.js`
+- `cloudfunctions/match-results/lib/__tests__/handlers/batch.test.js`
+- `cloudfunctions/match-results/lib/__tests__/handlers/submit.test.js`
+
+### Concerns
+
+- None.

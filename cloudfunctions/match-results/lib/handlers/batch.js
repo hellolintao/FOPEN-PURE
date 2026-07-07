@@ -17,7 +17,7 @@ function isoToTime(iso) {
 
 async function runAfterSettlement(ctx, successIds, requestId) {
   if (!ctx || typeof ctx.afterSettlement !== 'function') {
-    return {}
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
   }
   if (!Array.isArray(successIds) || successIds.length === 0) {
     return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
