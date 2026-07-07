@@ -71,3 +71,46 @@
 ## Concerns, if any
 
 - None.
+
+---
+
+## Follow-up Fix: tournament-manage batchConfirm cache invalidation
+
+### What I fixed
+
+- Added settlement analytics cache handling to `miniprogram/pages/tournament-manage/index.js`.
+- `batchConfirm` success handling now clears both `rank:` and `player-detail:` caches when official settlement returns `analyticsStatus: 'success'` or `'failed'`.
+- Applied the same behavior to:
+  - the shared `_applyResult` path used by `onSheetCommit` and batch-level retry
+  - the per-row retry success path in `onSheetRetry`
+- Preserved failure semantics:
+  - no cache clearing when `res.ok === false`
+  - analytics toast behavior matches `tournament-score`
+
+### RED evidence
+
+- Command:
+  - `cd /Users/liaoxiaole/FOPEN-PURE/miniprogram && npm test -- pages/tournament-manage/__tests__/index.test.js`
+- Initial failing summary:
+  - `_applyResult clears rank and player-detail caches after successful batchConfirm analytics metadata`
+  - `onSheetRetry clears rank and player-detail caches after per-row batchConfirm analytics success`
+- Expected failure reason:
+  - `removeCachesByPrefix('rank:')` and `removeCachesByPrefix('player-detail:')` had zero calls on successful `batchConfirm` settlement metadata.
+
+### GREEN evidence
+
+- Commands:
+  - `cd /Users/liaoxiaole/FOPEN-PURE/miniprogram && npm test -- pages/tournament-manage/__tests__/index.test.js`
+  - `cd /Users/liaoxiaole/FOPEN-PURE/miniprogram && npm test -- pages/tournament-score/__tests__/index.test.js components/batch-result-sheet/__tests__/index.test.js`
+- Results:
+  - `pages/tournament-manage/__tests__/index.test.js`: PASS, 4 tests
+  - `pages/tournament-score/__tests__/index.test.js` + `components/batch-result-sheet/__tests__/index.test.js`: PASS, 35 tests
+
+### Files changed for the fix
+
+- `miniprogram/pages/tournament-manage/index.js`
+- `miniprogram/pages/tournament-manage/__tests__/index.test.js`
+
+### Concerns
+
+- None.

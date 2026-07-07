@@ -1,4 +1,5 @@
 const { call } = require('../../utils/cloud')
+const { removeCachesByPrefix } = require('../../utils/page-cache')
 
 const EMPTY_SNAPSHOT = {
   pendingConfirm: { total: 0, byTournament: [] },
@@ -140,7 +141,21 @@ Page({
       })
       return
     }
+    this._handleSettlementAnalytics(res.data)
     this.setData({ 'sheet.result': res.data })
+  },
+
+  _handleSettlementAnalytics(data) {
+    if (!data || (data.analyticsStatus !== 'success' && data.analyticsStatus !== 'failed')) return
+    removeCachesByPrefix('rank:')
+    removeCachesByPrefix('player-detail:')
+    if (data.analyticsMessage) {
+      wx.showToast({
+        title: data.analyticsMessage,
+        icon: data.analyticsStatus === 'success' ? 'success' : 'none',
+        duration: 2000,
+      })
+    }
   },
 
   async onSheetRetry(e) {
@@ -197,6 +212,7 @@ Page({
     }
     const prior = this.data.sheet.result || { successIds: [], failures: [] }
     const mergedSuccessIds = [...new Set([...(prior.successIds || []), ...res.data.successIds])]
+    this._handleSettlementAnalytics(res.data)
     this.setData({ 'sheet.result': { ...res.data, successIds: mergedSuccessIds } })
   },
 
