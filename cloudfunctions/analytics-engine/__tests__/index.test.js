@@ -147,6 +147,44 @@ test('getPlayerAnalytics resolves cached ids through current member privacy stat
   })
 })
 
+test('getPlayerAnalytics resolves member ids from analytics buckets outside recent matches', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push(
+    { _id: 'A', name: '乐乐', publicProfileConsent: true, avatarUrl: 'cloud://avatar-a' },
+    { _id: 'B', name: '小野马', publicProfileConsent: true, avatarUrl: 'cloud://avatar-b' },
+    { _id: 'C', name: '小天', publicProfileConsent: true, avatarUrl: 'cloud://avatar-c' },
+    { _id: 'D', name: '标子', publicProfileConsent: true, avatarUrl: 'cloud://avatar-d' }
+  )
+  cloud.__rows.player_analytics.push({
+    _id: 'pa_season_2026_A',
+    seasonId: 'season_2026',
+    memberId: 'A',
+    singles: {
+      bestPartners: [{ memberId: 'B', wins: 2, losses: 1, matches: 3 }],
+      strongAgainst: [{ memberId: 'C', wins: 3, losses: 0, matches: 3 }],
+      strugglesAgainst: [{ memberId: 'D', wins: 1, losses: 2, matches: 3 }]
+    },
+    doubles: {
+      bestPartners: [{ memberId: 'B', wins: 4, losses: 1, matches: 5 }],
+      strongAgainst: [{ memberId: 'C', wins: 2, losses: 0, matches: 2 }],
+      strugglesAgainst: [{ memberId: 'D', wins: 1, losses: 3, matches: 4 }],
+      teamH2H: []
+    },
+    recentMatches: []
+  })
+
+  const { main } = require('../index')
+  const res = await main({ action: 'getPlayerAnalytics', seasonId: 'season_2026', memberId: 'A' })
+
+  expect(res.success).toBe(true)
+  expect(res.data.singles.bestPartners[0]).toMatchObject({ memberId: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileVisible: true })
+  expect(res.data.singles.strongAgainst[0]).toMatchObject({ memberId: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileVisible: true })
+  expect(res.data.singles.strugglesAgainst[0]).toMatchObject({ memberId: 'D', name: '标子', avatarUrl: 'cloud://avatar-d', publicProfileVisible: true })
+  expect(res.data.doubles.bestPartners[0]).toMatchObject({ memberId: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileVisible: true })
+  expect(res.data.doubles.strongAgainst[0]).toMatchObject({ memberId: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileVisible: true })
+  expect(res.data.doubles.strugglesAgainst[0]).toMatchObject({ memberId: 'D', name: '标子', avatarUrl: 'cloud://avatar-d', publicProfileVisible: true })
+})
+
 test('rebuildSeason writes analytics for all confirmed rows', async () => {
   const cloud = require('wx-server-sdk')
   cloud.__rows.members.push({ _id: 'A', name: '乐乐' }, { _id: 'B', name: '小天' })
@@ -176,6 +214,53 @@ test('rebuildSeason writes analytics for all confirmed rows', async () => {
   expect(cloud.__rows.player_analytics).toHaveLength(2)
 })
 
+test('refreshAfterSettlement keeps cached analytics identity fields id-only', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push(
+    { _id: 'A', name: '乐乐', avatarUrl: 'cloud://avatar-a', publicProfileConsent: true },
+    { _id: 'B', name: '小野马', avatarUrl: 'cloud://avatar-b', publicProfileConsent: true },
+    { _id: 'C', name: '小天', avatarUrl: 'cloud://avatar-c', publicProfileConsent: true },
+    { _id: 'D', name: '标子', avatarUrl: 'cloud://avatar-d', publicProfileConsent: true }
+  )
+  cloud.__rows.match_results.push({
+    _id: 'm1',
+    seasonId: 'season_2026',
+    tournamentType: 'doubles',
+    resultStatus: 'confirmed',
+    confirmedAt: '2026-06-01',
+    createTime: '2026-06-01',
+    playerIds: ['A', 'B', 'C', 'D'],
+    player1: { id: 'A', name: '乐乐', partnerId: 'B', partnerName: '小野马' },
+    player2: { id: 'C', name: '小天', partnerId: 'D', partnerName: '标子' },
+    pointsAwarded: {
+      entries: [
+        { memberId: 'A', points: 20, role: 'winner' },
+        { memberId: 'B', points: 20, role: 'winner' },
+        { memberId: 'C', points: 10, role: 'loser' },
+        { memberId: 'D', points: 10, role: 'loser' }
+      ]
+    }
+  })
+
+  const { main } = require('../index')
+  const res = await main({
+    action: 'refreshAfterSettlement',
+    seasonId: 'season_2026',
+    affectedMemberIds: ['A', 'B', 'C', 'D'],
+    matchIds: ['m1']
+  })
+
+  expect(res.success).toBe(true)
+  const playerDoc = cloud.__rows.player_analytics.find(row => row._id === 'pa_season_2026_A')
+  expect(playerDoc.recentMatches[0].subjectTeam).toEqual([{ memberId: 'A' }, { memberId: 'B' }])
+  expect(playerDoc.recentMatches[0].opponentTeam).toEqual([{ memberId: 'C' }, { memberId: 'D' }])
+  expect(playerDoc.doubles.bestPartners[0]).toEqual(expect.objectContaining({ memberId: 'B' }))
+  expect(playerDoc.doubles.bestPartners[0].name).toBeUndefined()
+  expect(playerDoc.doubles.strongAgainst[0].name).toBeUndefined()
+  expect(playerDoc.doubles.teamH2H[0].subjectTeam).toEqual([{ memberId: 'A' }, { memberId: 'B' }])
+  expect(playerDoc.doubles.teamH2H[0].opponentTeam).toEqual([{ memberId: 'C' }, { memberId: 'D' }])
+})
+
 test('rebuildSeason pages beyond the first 500 confirmed rows', async () => {
   const cloud = require('wx-server-sdk')
   for (let i = 0; i < 510; i += 1) {
@@ -201,4 +286,67 @@ test('rebuildSeason pages beyond the first 500 confirmed rows', async () => {
 
   expect(res.success).toBe(true)
   expect(res.data.playerCount).toBe(510)
+})
+
+test('getPairAnalytics pages beyond the first 100 pair rows', async () => {
+  const cloud = require('wx-server-sdk')
+  for (let i = 0; i < 125; i += 1) {
+    cloud.__rows.pair_analytics.push({
+      _id: `pair_season_2026_A__P${i}`,
+      seasonId: 'season_2026',
+      memberIds: ['A', `P${i}`],
+      pairId: `A__P${i}`
+    })
+  }
+
+  const { main } = require('../index')
+  const res = await main({ action: 'getPairAnalytics', seasonId: 'season_2026', memberId: 'A' })
+
+  expect(res.success).toBe(true)
+  expect(res.data).toHaveLength(125)
+})
+
+test('refreshAfterSettlement logs a failed analytics job when processing throws', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push(
+    { _id: 'A', name: '乐乐' },
+    { _id: 'B', name: '小野马' }
+  )
+  cloud.__rows.match_results.push({
+    _id: 'm1',
+    seasonId: 'season_2026',
+    tournamentType: 'doubles',
+    resultStatus: 'confirmed',
+    confirmedAt: '2026-06-01',
+    createTime: '2026-06-01',
+    playerIds: ['A', 'B'],
+    player1: { id: 'A', name: '乐乐', partnerId: 'A', partnerName: '乐乐' },
+    player2: { id: 'B', name: '小野马' },
+    pointsAwarded: {
+      entries: [
+        { memberId: 'A', points: 20, role: 'winner' },
+        { memberId: 'B', points: 10, role: 'loser' }
+      ]
+    }
+  })
+
+  const { main } = require('../index')
+  const res = await main({
+    action: 'refreshAfterSettlement',
+    seasonId: 'season_2026',
+    affectedMemberIds: ['A', 'B'],
+    matchIds: ['m1']
+  })
+
+  expect(res.success).toBe(false)
+  expect(res.error.code).toBe('PAIR_REQUIRES_TWO_DISTINCT_MEMBERS')
+  expect(cloud.__rows.analytics_jobs).toHaveLength(1)
+  expect(cloud.__rows.analytics_jobs[0]).toMatchObject({
+    jobType: 'refreshAfterSettlement',
+    seasonId: 'season_2026',
+    status: 'failed',
+    affectedMemberIds: ['A', 'B'],
+    matchIds: ['m1'],
+    error: 'PAIR_REQUIRES_TWO_DISTINCT_MEMBERS'
+  })
 })

@@ -5,7 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { analyticsPlayerId, pairAnalyticsId, pairKey } = require('./lib/ids')
+const { analyticsPlayerId, pairKey } = require('./lib/ids')
 const { sideMembers } = require('./lib/teams')
 const { buildPlayerAnalytics } = require('./lib/player-analytics')
 const { buildPairAnalytics } = require('./lib/pair-analytics')
@@ -104,27 +104,14 @@ async function getPlayerAnalytics({ seasonId, memberId }) {
 
 async function getPairAnalytics({ seasonId, memberId }) {
   if (!seasonId || !memberId) return { success: false, error: { code: 'INVALID_ARG', message: 'seasonId and memberId required' } }
-  const rows = await db.collection('pair_analytics').where({ seasonId, memberIds: _.in([memberId]) }).limit(100).get()
-  return { success: true, data: rows.data || [] }
+  const data = await fetchPagedRows('pair_analytics', { seasonId, memberIds: _.in([memberId]) })
+  return { success: true, data }
 }
 
 async function fetchSeasonRows(seasonId) {
-  const out = []
-  const pageSize = 100
-  let skip = 0
-  while (true) {
-    const page = (await db.collection('match_results')
-      .where({ seasonId, resultStatus: 'confirmed' })
-      .orderBy('createTime', 'asc')
-      .orderBy('_id', 'asc')
-      .skip(skip)
-      .limit(pageSize)
-      .get()).data || []
-    out.push(...page)
-    if (page.length < pageSize) break
-    skip += pageSize
-  }
-  return out
+  return fetchPagedRows('match_results', { seasonId, resultStatus: 'confirmed' }, query =>
+    query.orderBy('createTime', 'asc').orderBy('_id', 'asc')
+  )
 }
 
 async function fetchMembersByIds(ids) {
@@ -204,11 +191,42 @@ function collectMemberIdsFromAnalyticsDoc(doc) {
     visitTeam(row.subjectTeam)
     visitTeam(row.opponentTeam)
   })
+  const visitMemberRows = rows => (rows || []).forEach(row => {
+    if (row && row.memberId) ids.add(row.memberId)
+  })
+
+  if (doc && doc.singles) {
+    visitMemberRows(doc.singles.bestPartners)
+    visitMemberRows(doc.singles.strongAgainst)
+    visitMemberRows(doc.singles.strugglesAgainst)
+  }
+  if (doc && doc.doubles) {
+    visitMemberRows(doc.doubles.bestPartners)
+    visitMemberRows(doc.doubles.strongAgainst)
+    visitMemberRows(doc.doubles.strugglesAgainst)
+  }
 
   if (doc && doc.doubles) visitRows(doc.doubles.teamH2H)
   visitRows(doc && doc.recentMatches)
 
   return [...ids]
+}
+
+async function fetchPagedRows(collectionName, filter, decorateQuery) {
+  const out = []
+  const pageSize = 100
+  let skip = 0
+
+  while (true) {
+    let query = db.collection(collectionName).where(filter)
+    if (decorateQuery) query = decorateQuery(query)
+    const page = (await query.skip(skip).limit(pageSize).get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+    skip += pageSize
+  }
+
+  return out
 }
 
 module.exports = { main, collectAffectedPairs }
