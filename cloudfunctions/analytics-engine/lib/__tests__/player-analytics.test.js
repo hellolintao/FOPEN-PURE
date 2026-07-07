@@ -27,21 +27,28 @@ test('buildPlayerAnalytics includes lastFive, strongAgainst and strugglesAgainst
 
   expect(out._id).toBe('pa_season_2026_P')
   expect(out.singles.lastFive.summary).toBe('4W-1L')
-  expect(out.singles.strongAgainst[0]).toMatchObject({ memberId: 'B', name: '标子', wins: 3, losses: 0 })
-  expect(out.singles.strugglesAgainst[0]).toMatchObject({ memberId: 'A', name: '小天', wins: 1, losses: 1 })
-  expect(out.doubles.bestPartners[0]).toMatchObject({ memberId: 'M', name: '小野马', wins: 1, losses: 0, matches: 1 })
+  expect(out.singles.strongAgainst[0]).toMatchObject({ memberId: 'B', wins: 3, losses: 0 })
+  expect(out.singles.strongAgainst[0].name).toBeUndefined()
+  expect(out.singles.strugglesAgainst[0]).toMatchObject({ memberId: 'A', wins: 1, losses: 1 })
+  expect(out.singles.strugglesAgainst[0].name).toBeUndefined()
+  expect(out.doubles.bestPartners[0]).toMatchObject({ memberId: 'M', wins: 1, losses: 0, matches: 1 })
+  expect(out.doubles.bestPartners[0].name).toBeUndefined()
   expect(out.doubles.teamH2H[0]).toMatchObject({
     subjectTeam: [{ memberId: 'P' }, { memberId: 'M' }],
     opponentTeam: [{ memberId: 'A' }, { memberId: 'B' }],
     wins: 1,
     losses: 0
   })
+  expect(out.doubles.teamH2H[0].subjectTeam[0].name).toBeUndefined()
+  expect(out.doubles.teamH2H[0].opponentTeam[0].name).toBeUndefined()
   expect(out.recentMatches[0]).toMatchObject({
     matchId: 'd1',
     tournamentType: 'doubles',
     subjectTeam: [{ memberId: 'P' }, { memberId: 'M' }],
     opponentTeam: [{ memberId: 'A' }, { memberId: 'B' }]
   })
+  expect(out.recentMatches[0].subjectTeam[0].name).toBeUndefined()
+  expect(out.recentMatches[0].opponentTeam[0].name).toBeUndefined()
 })
 
 function row(id, type, playerIds, winnerId, loserId, confirmedAt) {

@@ -205,3 +205,81 @@ Observed result:
 
 - Commit created after final verification:
   - `feat(analytics): add pure ranking analytics aggregators`
+
+## Review Fix Round 1
+
+### Findings Addressed
+
+1. Critical: removed cached display names from analytics aggregate outputs
+2. Critical: expanded `resolveAnalyticsIdentities` to sanitize/resolve all analytics display surfaces
+3. Important: added regression coverage for stale cached names and nested recent matches
+4. Minor: removed unused `membersById` parameter from `buildPairAnalytics`
+
+### TDD Evidence For Fix
+
+Tests changed first:
+- `cloudfunctions/analytics-engine/lib/__tests__/player-analytics.test.js`
+- `cloudfunctions/analytics-engine/lib/__tests__/identity.test.js`
+
+Focused RED command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/player-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed RED:
+- `FAIL lib/__tests__/player-analytics.test.js`
+- `expect(received).toBeUndefined()`
+- `Received: "标子"`
+- `FAIL lib/__tests__/identity.test.js`
+- stale cached identity remained in `singles.strongAgainst[0]`
+- received stale values like `name: "旧名字C"` and `avatarUrl: "stale://c"` instead of current member identity
+
+Implementation changes after RED:
+- `cloudfunctions/analytics-engine/lib/player-analytics.js`
+  - cache rows now store IDs plus metrics only
+  - cached `subjectTeam`/`opponentTeam` arrays now store `{ memberId }` only
+  - nested `teamH2H[*].recentMatches` also store ID-only teams
+- `cloudfunctions/analytics-engine/lib/identity.js`
+  - now resolves `singles.strongAgainst`
+  - now resolves `singles.strugglesAgainst`
+  - now resolves `doubles.bestPartners`
+  - now resolves `doubles.strongAgainst`
+  - now resolves `doubles.strugglesAgainst`
+  - now resolves `doubles.teamH2H[*].recentMatches`
+  - continues resolving top-level identity, `doubles.teamH2H`, and top-level `recentMatches`
+  - stale cached `name`/`avatarUrl` values are overwritten from current member consent state or anonymized defaults
+- `cloudfunctions/analytics-engine/lib/pair-analytics.js`
+  - removed unused `membersById` parameter from the function signature
+
+Focused GREEN command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/player-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed GREEN:
+- `PASS lib/__tests__/player-analytics.test.js`
+- `PASS lib/__tests__/identity.test.js`
+- `Test Suites: 2 passed, 2 total`
+- `Tests: 2 passed, 2 total`
+
+### Final Verification After Fix
+
+Command:
+
+```bash
+cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/analytics-engine
+npm test -- lib/__tests__/ids.test.js lib/__tests__/teams.test.js lib/__tests__/player-analytics.test.js lib/__tests__/pair-analytics.test.js lib/__tests__/identity.test.js
+```
+
+Observed result:
+- `PASS lib/__tests__/player-analytics.test.js`
+- `PASS lib/__tests__/teams.test.js`
+- `PASS lib/__tests__/identity.test.js`
+- `PASS lib/__tests__/pair-analytics.test.js`
+- `PASS lib/__tests__/ids.test.js`
+- `Test Suites: 5 passed, 5 total`
+- `Tests: 10 passed, 10 total`

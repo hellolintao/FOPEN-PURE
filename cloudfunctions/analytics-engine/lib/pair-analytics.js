@@ -1,7 +1,7 @@
 const { pairAnalyticsId, pairKey } = require('./ids')
 const { resultRoleForMember, sideMembers } = require('./teams')
 
-function buildPairAnalytics({ seasonId, pairMemberIds, rows, membersById }) {
+function buildPairAnalytics({ seasonId, pairMemberIds, rows }) {
   const normalized = pairKey(pairMemberIds)
   const pairSet = new Set(normalized.memberIds)
   const pairRows = (rows || [])

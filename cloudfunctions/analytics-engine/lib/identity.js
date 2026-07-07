@@ -9,16 +9,26 @@ function resolveAnalyticsIdentities(doc, membersById) {
     avatarUrl: memberIdentity.avatarUrl,
     publicProfileVisible: memberIdentity.publicProfileVisible
   }
+  if (out.singles) {
+    out.singles = resolveBucket(out.singles, membersById)
+  }
   if (out.doubles && Array.isArray(out.doubles.teamH2H)) {
-    out.doubles = {
-      ...out.doubles,
-      teamH2H: out.doubles.teamH2H.map(row => resolveTeamH2HRow(row, membersById))
-    }
+    out.doubles = resolveBucket(out.doubles, membersById)
   }
   if (Array.isArray(out.recentMatches)) {
     out.recentMatches = out.recentMatches.map(row => resolveRecentRow(row, membersById))
   }
   return out
+}
+
+function resolveBucket(bucket, membersById) {
+  return {
+    ...bucket,
+    bestPartners: resolveMemberRows(bucket.bestPartners, membersById),
+    strongAgainst: resolveMemberRows(bucket.strongAgainst, membersById),
+    strugglesAgainst: resolveMemberRows(bucket.strugglesAgainst, membersById),
+    teamH2H: Array.isArray(bucket.teamH2H) ? bucket.teamH2H.map(row => resolveTeamH2HRow(row, membersById)) : bucket.teamH2H
+  }
 }
 
 function resolveTeamH2HRow(row, membersById) {
@@ -28,6 +38,7 @@ function resolveTeamH2HRow(row, membersById) {
     ...row,
     subjectTeam,
     opponentTeam,
+    recentMatches: Array.isArray(row.recentMatches) ? row.recentMatches.map(match => resolveRecentRow(match, membersById)) : row.recentMatches,
     subjectTeamLabel: teamLabel(subjectTeam),
     opponentTeamLabel: teamLabel(opponentTeam)
   }
@@ -43,6 +54,19 @@ function resolveRecentRow(row, membersById) {
     subjectTeamLabel: teamLabel(subjectTeam),
     opponentTeamLabel: teamLabel(opponentTeam)
   }
+}
+
+function resolveMemberRows(rows, membersById) {
+  return (rows || []).map((row, index) => {
+    const identity = identityFor(membersById, row.memberId, index)
+    return {
+      ...row,
+      memberId: row.memberId,
+      name: identity.name,
+      avatarUrl: identity.avatarUrl,
+      publicProfileVisible: identity.publicProfileVisible
+    }
+  })
 }
 
 function resolveTeam(team, membersById) {

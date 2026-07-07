@@ -13,25 +13,25 @@ function buildPlayerAnalytics({ seasonId, memberId, rows, membersById, rankRowsB
     memberId,
     updatedAt: new Date(),
     sourceVersion: 1,
-    singles: buildBucket({ rows: singlesRows, memberId, membersById, type: 'singles' }),
-    doubles: buildBucket({ rows: doublesRows, memberId, membersById, type: 'doubles' }),
-    recentMatches: relevantRows.slice(0, 10).map(row => formatRecent(row, memberId, membersById)),
+    singles: buildBucket({ rows: singlesRows, memberId, type: 'singles' }),
+    doubles: buildBucket({ rows: doublesRows, memberId, type: 'doubles' }),
+    recentMatches: relevantRows.slice(0, 10).map(row => formatRecent(row, memberId)),
     lastSettlementImpact: null,
     rankSnapshot: rankRowsByType || { singles: [], doubles: [] }
   }
 }
 
-function buildBucket({ rows, memberId, membersById, type }) {
+function buildBucket({ rows, memberId, type }) {
   const wins = rows.filter(row => resultRoleForMember(row, memberId) === 'winner').length
   const losses = rows.filter(row => resultRoleForMember(row, memberId) === 'loser').length
   return {
     matchWinCount: wins,
     matchLossCount: losses,
     lastFive: buildLastFive(rows, memberId),
-    bestPartners: type === 'doubles' ? buildBestPartners(rows, memberId, membersById) : [],
-    teamH2H: type === 'doubles' ? buildTeamH2H(rows, memberId, membersById) : [],
-    strongAgainst: buildOpponentRecords(rows, memberId, membersById).filter(row => row.wins > row.losses),
-    strugglesAgainst: buildOpponentRecords(rows, memberId, membersById).filter(row => row.losses >= row.wins)
+    bestPartners: type === 'doubles' ? buildBestPartners(rows, memberId) : [],
+    teamH2H: type === 'doubles' ? buildTeamH2H(rows, memberId) : [],
+    strongAgainst: buildOpponentRecords(rows, memberId).filter(row => row.wins > row.losses),
+    strugglesAgainst: buildOpponentRecords(rows, memberId).filter(row => row.losses >= row.wins)
   }
 }
 
@@ -42,7 +42,7 @@ function buildLastFive(rows, memberId) {
   return { results: list, wins, losses, summary: `${wins}W-${losses}L` }
 }
 
-function buildBestPartners(rows, memberId, membersById) {
+function buildBestPartners(rows, memberId) {
   const map = new Map()
   for (const row of rows) {
     const subject = subjectSide(row, memberId)
@@ -50,7 +50,6 @@ function buildBestPartners(rows, memberId, membersById) {
       if (member.memberId === memberId) continue
       const current = map.get(member.memberId) || {
         memberId: member.memberId,
-        name: memberName(membersById, member.memberId, member.name),
         wins: 0,
         losses: 0,
         matches: 0
@@ -65,17 +64,11 @@ function buildBestPartners(rows, memberId, membersById) {
   return [...map.values()].sort((a, b) => b.winRate - a.winRate || b.matches - a.matches || a.memberId.localeCompare(b.memberId))
 }
 
-function buildTeamH2H(rows, memberId, membersById) {
+function buildTeamH2H(rows, memberId) {
   const map = new Map()
   for (const row of rows) {
-    const subject = sideMembers(subjectSide(row, memberId)).map(member => ({
-      ...member,
-      name: memberName(membersById, member.memberId, member.name)
-    }))
-    const opponent = sideMembers(opponentSide(row, memberId)).map(member => ({
-      ...member,
-      name: memberName(membersById, member.memberId, member.name)
-    }))
+    const subject = sideMembers(subjectSide(row, memberId)).map(member => ({ memberId: member.memberId }))
+    const opponent = sideMembers(opponentSide(row, memberId)).map(member => ({ memberId: member.memberId }))
     if (subject.length !== 2 || opponent.length !== 2) continue
     const subjectKey = pairKey(subject.map(member => member.memberId)).pairId
     const opponentKey = pairKey(opponent.map(member => member.memberId)).pairId
@@ -91,7 +84,7 @@ function buildTeamH2H(rows, memberId, membersById) {
     const role = resultRoleForMember(row, memberId)
     if (role === 'winner') current.wins += 1
     else if (role === 'loser') current.losses += 1
-    current.recentMatches.push(formatRecent(row, memberId, membersById))
+    current.recentMatches.push(formatRecent(row, memberId))
     current.recentMatches = current.recentMatches
       .sort((a, b) => timeOf({ confirmedAt: b.confirmedAt }) - timeOf({ confirmedAt: a.confirmedAt }))
       .slice(0, 3)
@@ -100,14 +93,13 @@ function buildTeamH2H(rows, memberId, membersById) {
   return [...map.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses) || a.key.localeCompare(b.key))
 }
 
-function buildOpponentRecords(rows, memberId, membersById) {
+function buildOpponentRecords(rows, memberId) {
   const map = new Map()
   for (const row of rows) {
     const opponents = sideMembers(opponentSide(row, memberId))
     for (const opponent of opponents) {
       const current = map.get(opponent.memberId) || {
         memberId: opponent.memberId,
-        name: memberName(membersById, opponent.memberId, opponent.name),
         wins: 0,
         losses: 0,
         matches: 0
@@ -122,15 +114,9 @@ function buildOpponentRecords(rows, memberId, membersById) {
   return [...map.values()].sort((a, b) => b.matches - a.matches || a.memberId.localeCompare(b.memberId))
 }
 
-function formatRecent(row, memberId, membersById) {
-  const subject = sideMembers(subjectSide(row, memberId)).map(member => ({
-    ...member,
-    name: memberName(membersById, member.memberId, member.name)
-  }))
-  const opponent = sideMembers(opponentSide(row, memberId)).map(member => ({
-    ...member,
-    name: memberName(membersById, member.memberId, member.name)
-  }))
+function formatRecent(row, memberId) {
+  const subject = sideMembers(subjectSide(row, memberId)).map(member => ({ memberId: member.memberId }))
+  const opponent = sideMembers(opponentSide(row, memberId)).map(member => ({ memberId: member.memberId }))
   return {
     matchId: row._id,
     tournamentId: row.tournamentId || '',
@@ -147,11 +133,6 @@ function pointsFor(row, memberId) {
   const entries = (row && row.pointsAwarded && row.pointsAwarded.entries) || []
   const entry = entries.find(item => item.memberId === memberId)
   return entry ? Number(entry.points) || 0 : 0
-}
-
-function memberName(membersById, memberId, fallback) {
-  const member = membersById && membersById.get(memberId)
-  return (member && member.name) || fallback || memberId
 }
 
 function timeOf(row) {
