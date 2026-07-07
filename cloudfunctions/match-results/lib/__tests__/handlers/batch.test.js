@@ -556,6 +556,49 @@ test('batchAdminSave rejects audit rows before confirming scores', async () => {
   expect(ctx.confirmOne).not.toHaveBeenCalled()
 })
 
+test('batchAdminSave returns analytics metadata when ctx.afterSettlement succeeds', async () => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    isAdmin: true,
+    matches: [{ _id: 'mr_a', resultStatus: 'submitted', playerIds: ['A', 'B'], tournamentId: 't1', updateTime, score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+  })
+  ctx.validateScore = jest.fn(() => ({ valid: true }))
+  ctx.afterSettlement = jest.fn(async ({ successIds }) => ({
+    analyticsStatus: 'success',
+    analyticsMessage: '排行榜已更新',
+    settlementImpact: [{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }],
+    refreshedMatchIds: successIds,
+  }))
+
+  const result = await batchAdminSave(ctx, {
+    matches: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_analytics',
+  })
+
+  expect(ctx.afterSettlement).toHaveBeenCalledWith({ successIds: ['mr_a'], requestId: 'req_analytics' })
+  expect(result.analyticsStatus).toBe('success')
+  expect(result.settlementImpact).toEqual([{ memberId: 'A', pointsDelta: 20, rankDelta: 1, trendLabel: '▲1' }])
+})
+
+test('batchAdminSave does not fail confirmation when ctx.afterSettlement fails', async () => {
+  const updateTime = new Date('2026-05-16T09:00:00.000Z')
+  const ctx = makeCtx({
+    isAdmin: true,
+    matches: [{ _id: 'mr_a', resultStatus: 'submitted', playerIds: ['A', 'B'], tournamentId: 't1', updateTime, score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+  })
+  ctx.validateScore = jest.fn(() => ({ valid: true }))
+  ctx.afterSettlement = jest.fn(async () => { throw new Error('analytics down') })
+
+  const result = await batchAdminSave(ctx, {
+    matches: [{ matchId: 'mr_a', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_analytics_fail',
+  })
+
+  expect(result.successIds).toEqual(['mr_a'])
+  expect(result.analyticsStatus).toBe('failed')
+  expect(result.analyticsMessage).toBe('比分已确认，数据分析稍后重算')
+})
+
 test('submit handler rejects unpublished schedule before member score changes', async () => {
   const err = new Error('赛程发布后才能录入成绩')
   err.code = 'SCHEDULE_NOT_PUBLISHED'

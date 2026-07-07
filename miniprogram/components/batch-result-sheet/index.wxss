@@ -9,6 +9,9 @@
 .brs-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .brs-spinner { width: 64rpx; height: 64rpx; border: 4rpx solid var(--color-border); border-top-color: var(--color-lime); border-radius: 50%; animation: brs-spin 0.8s linear infinite; }
 @keyframes brs-spin { to { transform: rotate(360deg); } }
+.brs-analytics { margin: 12rpx 0; padding: 14rpx 18rpx; border-radius: 8rpx; background: var(--color-bg-surface); color: var(--color-text-primary); font-size: 24rpx; }
+.brs-impact { display: flex; flex-direction: column; gap: 8rpx; margin-bottom: 12rpx; }
+.brs-impact-row { display: flex; justify-content: space-between; gap: 12rpx; font-size: 22rpx; color: var(--color-text-secondary); }
 .brs-card { background: var(--color-bg-2); border-radius: var(--radius-md); padding: 16rpx 20rpx; }
 .brs-card--ok { background: rgba(132, 204, 22, 0.10); }
 .brs-card--err { background: rgba(220, 38, 38, 0.10); }

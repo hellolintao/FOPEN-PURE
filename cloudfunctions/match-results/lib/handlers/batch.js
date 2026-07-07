@@ -15,6 +15,24 @@ function isoToTime(iso) {
   return Number.isFinite(t) ? t : NaN
 }
 
+async function runAfterSettlement(ctx, successIds, requestId) {
+  if (!ctx || typeof ctx.afterSettlement !== 'function') {
+    return {}
+  }
+  if (!Array.isArray(successIds) || successIds.length === 0) {
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+  }
+  try {
+    return await ctx.afterSettlement({ successIds, requestId })
+  } catch (err) {
+    return {
+      analyticsStatus: 'failed',
+      analyticsMessage: '比分已确认，数据分析稍后重算',
+      settlementImpact: [],
+    }
+  }
+}
+
 async function batchConfirm(ctx, payload) {
   if (!ctx.isAdmin) {
     const err = new Error('FORBIDDEN')
@@ -107,7 +125,8 @@ async function batchConfirm(ctx, payload) {
     closedAt: existingLog ? existingLog.closedAt : null,
   })
 
-  return { requestId, successIds, failures }
+  const analytics = await runAfterSettlement(ctx, successIds, requestId)
+  return { requestId, successIds, failures, ...analytics }
 }
 
 async function batchSubmit(ctx, payload) {
@@ -302,7 +321,8 @@ async function batchAdminSave(ctx, payload) {
     closedAt: existingLog ? existingLog.closedAt : null,
   })
 
-  return { requestId, successIds, failures }
+  const analytics = await runAfterSettlement(ctx, successIds, requestId)
+  return { requestId, successIds, failures, ...analytics }
 }
 
 function scoresDiffer(a, b) {

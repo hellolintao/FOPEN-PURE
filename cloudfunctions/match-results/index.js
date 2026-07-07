@@ -431,14 +431,130 @@ function playerIdentityKey(player) {
 
 // Phase 9 v2.1 — ctx builder helpers for new handler routes
 
-function buildBatchCtx(submitter, isAdminFlag) {
+async function defaultGetMatchesByIds(matchIds) {
+  const uniqueIds = [...new Set((matchIds || []).filter(Boolean))]
+  if (uniqueIds.length === 0) return []
+  const out = []
+  for (let i = 0; i < uniqueIds.length; i += 50) {
+    const chunk = uniqueIds.slice(i, i + 50)
+    const res = await db.collection('match_results').where({ _id: _.in(chunk) }).get()
+    out.push(...((res && res.data) || []))
+  }
+  return out
+}
+
+async function defaultGetMatchesByTournament(tournamentId) {
+  if (!tournamentId) return []
+  const out = []
+  const pageSize = 100
+  let skip = 0
+  while (true) {
+    const page = (await db.collection('match_results')
+      .where({ tournamentId, resultStatus: 'confirmed' })
+      .orderBy('createTime', 'asc')
+      .orderBy('_id', 'asc')
+      .skip(skip)
+      .limit(pageSize)
+      .get()).data || []
+    out.push(...page)
+    if (page.length < pageSize) break
+    skip += pageSize
+  }
+  return out
+}
+
+function collectAffectedMemberIds(rows) {
+  return [...new Set((rows || []).flatMap(row => row.playerIds || []).filter(Boolean))]
+}
+
+function collectSeasonIds(rows) {
+  return [...new Set((rows || []).map(row => row && row.seasonId).filter(Boolean))]
+}
+
+function normalizeFunctionResult(res) {
+  return (res && typeof res === 'object' && Object.prototype.hasOwnProperty.call(res, 'result')) ? res.result : res
+}
+
+function isFunctionSuccess(res) {
+  const env = normalizeFunctionResult(res)
+  return !(env && env.success === false)
+}
+
+function functionData(res) {
+  const env = normalizeFunctionResult(res)
+  return (env && env.data) || null
+}
+
+async function refreshAfterSettlementRows({ callFunction, rows, successIds }) {
+  try {
+    const seasonIds = collectSeasonIds(rows)
+    const affectedMemberIds = collectAffectedMemberIds(rows)
+    if (seasonIds.length !== 1 || affectedMemberIds.length === 0) {
+      return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+    }
+    const seasonId = seasonIds[0]
+    const rankRes = await callFunction({
+      name: 'points-engine',
+      data: {
+        action: 'refreshRankCache',
+        seasonId,
+        affectedMemberIds,
+        writeSnapshot: true,
+        snapshotKind: 'settlement',
+      },
+    })
+    if (!isFunctionSuccess(rankRes)) {
+      return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+    }
+    const rankData = functionData(rankRes) || {}
+    const analyticsRes = await callFunction({
+      name: 'analytics-engine',
+      data: { action: 'refreshAfterSettlement', seasonId, affectedMemberIds, matchIds: successIds },
+    })
+    const analyticsOk = isFunctionSuccess(analyticsRes)
+    return {
+      analyticsStatus: analyticsOk ? 'success' : 'failed',
+      analyticsMessage: analyticsOk ? '排行榜已更新' : '比分已确认，数据分析稍后重算',
+      settlementImpact: rankData.settlementImpact || [],
+      refreshedMatchIds: successIds,
+    }
+  } catch (err) {
+    return {
+      analyticsStatus: 'failed',
+      analyticsMessage: '比分已确认，数据分析稍后重算',
+      settlementImpact: [],
+    }
+  }
+}
+
+function buildAfterSettlement({ callFunction, getMatchesByIds }) {
+  return async function afterSettlement({ successIds = [] } = {}) {
+    const rows = await getMatchesByIds(successIds)
+    return refreshAfterSettlementRows({ callFunction, rows, successIds })
+  }
+}
+
+function buildAfterSettlementByTournament({ callFunction, getMatchesByTournament }) {
+  return async function afterSettlementByTournament({ tournamentId, requestId } = {}) {
+    const rows = await getMatchesByTournament(tournamentId)
+    const successIds = rows.map(row => row && row._id).filter(Boolean)
+    return refreshAfterSettlementRows({ callFunction, rows, successIds, requestId })
+  }
+}
+
+function buildBatchCtx(submitter, isAdminFlag, options = {}) {
   const scoreRule = require('./lib/score-rule')
+  const callFunction = options.callFunction || cloud.callFunction
+  const getMatchesByIds = options.getMatchesByIds || defaultGetMatchesByIds
+  const getMatchesByTournament = options.getMatchesByTournament || defaultGetMatchesByTournament
   return {
     callerOpenid: submitter.openid,
     callerMemberId: submitter._id,
     isAdmin: isAdminFlag,
     confirmedAtNow: new Date(),
     nowDate: new Date(),
+    afterSettlement: buildAfterSettlement({ callFunction, getMatchesByIds }),
+    afterSettlementByTournament: buildAfterSettlementByTournament({ callFunction, getMatchesByTournament }),
     db: {
       getMatch: async (id) => {
         const r = await db.collection('match_results').doc(id).get().catch(() => null)
@@ -600,10 +716,15 @@ function isCollectionMissing(e) {
   return (e && e.errCode === -502005) || /collection not exists|Db or Table not exist|not exist/i.test(text)
 }
 
-function buildSubmitCtx(submitter) {
+function buildSubmitCtx(submitter, options = {}) {
+  const callFunction = options.callFunction || cloud.callFunction
+  const getMatchesByIds = options.getMatchesByIds || defaultGetMatchesByIds
+  const getMatchesByTournament = options.getMatchesByTournament || defaultGetMatchesByTournament
   return {
     submitter,
     stateSvc,
+    afterSettlement: buildAfterSettlement({ callFunction, getMatchesByIds }),
+    afterSettlementByTournament: buildAfterSettlementByTournament({ callFunction, getMatchesByTournament }),
   }
 }
 
@@ -1239,4 +1360,6 @@ exports.__test__ = {
   guardDirectScoreRowRead,
   mergeScheduledMatchDoc,
   shouldRemoveOrphanMatchDoc,
+  buildBatchCtx,
+  buildSubmitCtx,
 }

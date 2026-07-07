@@ -93,3 +93,11 @@ test('onEditRow emits editrow with matchId', () => {
   def.methods.onEditRow.call(ctx, { currentTarget: { dataset: { matchid: 'm1' } } })
   expect(ctx.triggerEvent).toHaveBeenCalledWith('editrow', { matchId: 'm1' })
 })
+
+test('template renders analytics message and settlement impact', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+  expect(wxml).toContain('analyticsMessage')
+  expect(wxml).toContain('settlementImpact')
+})

@@ -1,5 +1,6 @@
 const app = getApp()
 const { call } = require('../../utils/cloud')
+const { removeCachesByPrefix } = require('../../utils/page-cache')
 
 Page({
   data: {
@@ -279,7 +280,11 @@ Page({
         wx.showToast({ title: (r && r.error && r.error.message) || '更新失败', icon: 'none' })
         return
       }
-      wx.showToast({ title: '已更新', icon: 'success' })
+      const settlement = r.data || r
+      this._handleSettlementAnalytics(settlement)
+      if (!settlement || !settlement.analyticsMessage) {
+        wx.showToast({ title: '已更新', icon: 'success' })
+      }
       await this.refresh()
     } catch (err) {
       console.error('[tournament-score] reconfirm', err)
@@ -427,7 +432,21 @@ Page({
       })
       return
     }
+    this._handleSettlementAnalytics(res.data)
     this.setData({ 'sheet.result': res.data })
+  },
+
+  _handleSettlementAnalytics(data) {
+    if (!data || (data.analyticsStatus !== 'success' && data.analyticsStatus !== 'failed')) return
+    removeCachesByPrefix('rank:')
+    removeCachesByPrefix('player-detail:')
+    if (data.analyticsMessage) {
+      wx.showToast({
+        title: data.analyticsMessage,
+        icon: data.analyticsStatus === 'success' ? 'success' : 'none',
+        duration: 2000,
+      })
+    }
   },
 
   async onSheetRetry(e) {

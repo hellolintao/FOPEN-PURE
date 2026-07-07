@@ -1,3 +1,5 @@
+jest.mock('../../../utils/page-cache', () => ({ removeCachesByPrefix: jest.fn() }))
+
 function loadPage({ app: appOverride = {}, tournament = null, matchResults = [] } = {}) {
   jest.resetModules()
   let pageDef
@@ -439,4 +441,53 @@ test('admin adjust mode can edit confirmed rows', async () => {
   expect(ctx.data.mode).toBe('adjust')
   expect(ctx.data.adjustMode).toBe(true)
   expect(ctx.data.rowsByRound[0].matches[0].canAdminAdjust).toBe(true)
+})
+
+test('_applySheetResult clears rank and player-detail caches after admin analytics success', () => {
+  const def = loadPage()
+  const { removeCachesByPrefix } = require('../../../utils/page-cache')
+  removeCachesByPrefix.mockClear()
+  const ctx = makeCtx(def, {
+    sheet: { visible: true, title: '', mode: 'adminSave', items: [{ matchId: 'm1' }], result: null, requestId: 'req' },
+  })
+
+  ctx._applySheetResult({
+    ok: true,
+    data: {
+      requestId: 'req',
+      successIds: ['m1'],
+      failures: [],
+      analyticsStatus: 'success',
+      analyticsMessage: '排行榜已更新',
+      settlementImpact: [{ memberId: 'A', trendLabel: '▲1', pointsDelta: 20 }],
+    },
+  }, [{ matchId: 'm1' }])
+
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('player-detail:')
+  expect(ctx.data.sheet.result.analyticsMessage).toBe('排行榜已更新')
+})
+
+test('onReconfirm clears rank and player-detail caches after direct analytics success', async () => {
+  const def = loadPage()
+  const { removeCachesByPrefix } = require('../../../utils/page-cache')
+  removeCachesByPrefix.mockClear()
+  wx.cloud.callFunction.mockResolvedValue({
+    result: {
+      success: true,
+      data: {
+        ok: true,
+        analyticsStatus: 'success',
+        analyticsMessage: '排行榜已更新',
+        settlementImpact: [{ memberId: 'A', trendLabel: '▲1', pointsDelta: 20 }],
+      },
+    },
+  })
+  const ctx = makeCtx(def)
+  ctx.refresh = jest.fn(async () => null)
+
+  await ctx.onReconfirm({ detail: { matchId: 'm1', newScore: { sets: [{ a: 4, b: 2 }], tiebreak: null } } })
+
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
+  expect(removeCachesByPrefix).toHaveBeenCalledWith('player-detail:')
 })

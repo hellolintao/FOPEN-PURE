@@ -1,4 +1,32 @@
 // migrated legacy: submit / confirmAll / reconfirmMatch
+async function runAfterSettlement(ctx, successIds, requestId) {
+  if (!ctx || typeof ctx.afterSettlement !== 'function') {
+    return {}
+  }
+  if (!Array.isArray(successIds) || successIds.length === 0) {
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+  }
+  try {
+    return await ctx.afterSettlement({ successIds, requestId })
+  } catch (err) {
+    return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+  }
+}
+
+async function runAfterSettlementByTournament(ctx, tournamentId, requestId) {
+  if (!ctx || typeof ctx.afterSettlementByTournament !== 'function') {
+    return {}
+  }
+  if (!tournamentId) {
+    return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
+  }
+  try {
+    return await ctx.afterSettlementByTournament({ tournamentId, requestId })
+  } catch (err) {
+    return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+  }
+}
+
 async function submit(ctx, event) {
   const submitter = ctx.submitter
   await assertSchedulePublishedForMatch(ctx, event.matchId)
@@ -10,14 +38,16 @@ async function confirmAll(ctx, event) {
   const admin = ctx.submitter
   await assertSchedulePublishedForTournament(ctx, event.tournamentId)
   const r = await ctx.stateSvc.confirmAll({ tournamentId: event.tournamentId, admin })
-  return r
+  const analytics = await runAfterSettlementByTournament(ctx, event.tournamentId, `confirmAll:${event.tournamentId}`)
+  return { ...r, ...analytics }
 }
 
 async function reconfirmMatch(ctx, event) {
   const admin = ctx.submitter
   await assertSchedulePublishedForMatch(ctx, event.matchId)
-  await ctx.stateSvc.reconfirmMatch({ matchId: event.matchId, newScore: event.newScore, admin })
-  return { ok: true }
+  const r = await ctx.stateSvc.reconfirmMatch({ matchId: event.matchId, newScore: event.newScore, admin })
+  const analytics = await runAfterSettlement(ctx, [event.matchId], `reconfirmMatch:${event.matchId}`)
+  return { ok: true, ...(r || {}), ...analytics }
 }
 
 async function voidMatch(ctx, event) {
