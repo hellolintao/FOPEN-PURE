@@ -1,6 +1,6 @@
 const { derivePhase, getWithdrawDeadline, canWithdraw, isActiveRegistration } = require('../../../_shared/tournament-phase')
 const { isActiveScoreRow } = require('../active-row')
-const { canExposeScoreRows } = require('./query')
+const { canExposeScoreRows, publicScoreRows } = require('./query')
 
 async function mySummary(ctx, payload) {
   const memberId = ctx.callerMemberId
@@ -26,9 +26,12 @@ async function mySummary(ctx, payload) {
   const tournamentDocs = tIds.length ? await ctx.db.getTournamentsByIds(tIds) : []
   const tMap = Object.fromEntries(tournamentDocs.map(t => [t._id, t]))
   const visibleMatch = row => isActiveScoreRow(row) && canExposeScoreRows(tMap[row.tournamentId])
-  const pendingRows = rawPendingRows.filter(visibleMatch)
-  const submittedRows = rawSubmittedRows.filter(visibleMatch)
-  const confirmedRows = rawConfirmedRows.filter(visibleMatch)
+  const publicCtx = { ...ctx, isAdmin: !!ctx.isAdmin }
+  const [pendingRows, submittedRows, confirmedRows] = await Promise.all([
+    publicScoreRows(publicCtx, rawPendingRows.filter(visibleMatch)),
+    publicScoreRows(publicCtx, rawSubmittedRows.filter(visibleMatch)),
+    publicScoreRows(publicCtx, rawConfirmedRows.filter(visibleMatch)),
+  ])
   const nowValue = ctx.now ? ctx.now() : new Date()
 
   function sideLabel(side) {

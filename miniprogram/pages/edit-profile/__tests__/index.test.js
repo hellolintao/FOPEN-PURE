@@ -68,6 +68,10 @@ function acceptAgreement(ctx) {
   ctx.data.agreementAccepted = true
 }
 
+function grantPublicProfileConsent(ctx) {
+  ctx.data.publicProfileConsent = true
+}
+
 describe('edit-profile privacy-facing copy', () => {
   test('profile form uses nickname text input and does not collect phone', () => {
     const fs = require('fs')
@@ -91,18 +95,19 @@ describe('edit-profile privacy-facing copy', () => {
     expect(agreement).not.toContain('手机号')
   })
 
-  test('legal copy declares public nickname and avatar display after agreement consent', () => {
+  test('legal copy separates required service processing from optional public display consent', () => {
     const fs = require('fs')
     const path = require('path')
     const privacy = fs.readFileSync(path.join(__dirname, '../../privacy-policy/index.wxml'), 'utf8')
     const agreement = fs.readFileSync(path.join(__dirname, '../../user-agreement/index.wxml'), 'utf8')
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
 
-    expect(wxml).toContain('展示我的昵称、头像')
-    expect(privacy).toContain('协议更新提示中点击同意')
-    expect(privacy).toContain('展示你的昵称、头像')
-    expect(agreement).toContain('允许平台在排行榜')
-    expect(agreement).toContain('展示你的昵称、头像')
+    expect(wxml).toContain('公开展示我的昵称、头像和打法')
+    expect(wxml).toContain('未勾选时')
+    expect(privacy).toContain('必要服务处理')
+    expect(privacy).toContain('另行勾选公开展示授权')
+    expect(agreement).toContain('注册、报名、赛程和成绩统计属于必要服务处理')
+    expect(agreement).toContain('公开展示授权为可选')
   })
 })
 
@@ -142,6 +147,21 @@ describe('edit-profile mode handling', () => {
     expect(ctx.data.formData.playStyle).toBe('vers')
     expect(wx.setNavigationBarTitle).toHaveBeenCalledWith({ title: '编辑资料' })
     expect(callFunction).not.toHaveBeenCalled()
+  })
+
+  test('default mode does not load member when official privacy authorization is rejected', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    wx.requirePrivacyAuthorize.mockImplementationOnce(({ fail }) => {
+      fail({ errMsg: 'requirePrivacyAuthorize:fail' })
+    })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadUserInfo()
+
+    expect(wx.requirePrivacyAuthorize).toHaveBeenCalled()
+    expect(callFunction).not.toHaveBeenCalled()
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请先同意微信隐私授权', icon: 'none' })
   })
 
   test('tournament-register query stores return context for save', () => {
@@ -365,7 +385,8 @@ describe('edit-profile validation and save', () => {
         action: 'add',
         data: expect.objectContaining({
           name: '张三',
-          claimStatus: 'claimed'
+          claimStatus: 'claimed',
+          publicProfileConsent: false
         })
       })
     }))
@@ -414,7 +435,11 @@ describe('edit-profile validation and save', () => {
       name: 'members',
       data: expect.objectContaining({
         action: 'claimSelf',
-        data: expect.objectContaining({ name: '张三', claimStatus: 'claimed' })
+        data: expect.objectContaining({
+          name: '张三',
+          claimStatus: 'claimed',
+          publicProfileConsent: false
+        })
       })
     }))
     expect(app.globalData.currentMember).toBeNull()
@@ -483,7 +508,7 @@ describe('edit-profile validation and save', () => {
     jest.useRealTimers()
   })
 
-  test('register success stores new member with _id and reLaunches to mine', async () => {
+  test('register success defaults public real-identity display consent to false', async () => {
     jest.useFakeTimers()
     const { pageDef, app } = loadPage()
     const { callFunction } = require('../../../utils/cloud')
@@ -500,8 +525,34 @@ describe('edit-profile validation and save', () => {
       _id: 'm1',
       name: '张三',
       playStyle: 'ice-cow',
-      publicProfileConsent: true
+      publicProfileConsent: false
     })
+    expect(callFunction).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'members',
+      data: expect.objectContaining({
+        action: 'add',
+        data: expect.objectContaining({ publicProfileConsent: false })
+      })
+    }))
+    expect(app.globalData.isAdmin).toBe(false)
+    expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
+    expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
+    jest.useRealTimers()
+  })
+
+  test('register success sends public display consent when user explicitly opts in', async () => {
+    jest.useFakeTimers()
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { _id: 'm1' } })
+    const ctx = makeCtx(pageDef, { isRegister: true })
+    ctx.data.formData = { name: '张三', phone: '', avatarUrl: '', playStyle: 'ice-cow' }
+    acceptAgreement(ctx)
+    grantPublicProfileConsent(ctx)
+
+    await ctx.onSave()
+    jest.runAllTimers()
+
     expect(callFunction).toHaveBeenCalledWith(expect.objectContaining({
       name: 'members',
       data: expect.objectContaining({
@@ -509,9 +560,7 @@ describe('edit-profile validation and save', () => {
         data: expect.objectContaining({ publicProfileConsent: true })
       })
     }))
-    expect(app.globalData.isAdmin).toBe(false)
-    expect(removeCachesByPrefix).toHaveBeenCalledWith('rank:')
-    expect(wx.reLaunch).toHaveBeenCalledWith({ url: '/pages/mine/index' })
+    expect(app.globalData.currentMember).toMatchObject({ publicProfileConsent: true })
     jest.useRealTimers()
   })
 

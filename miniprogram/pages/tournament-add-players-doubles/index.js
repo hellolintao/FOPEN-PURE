@@ -31,10 +31,13 @@ Page({
   // 加载赛事信息
   async loadTournament() {
     try {
-      const db = wx.cloud.database()
-      const result = await db.collection('tournaments').doc(this.data.tournamentId).get()
-      if (result.data) {
-        this.setData({ tournament: result.data })
+      const result = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: { action: 'get', id: this.data.tournamentId }
+      })
+      const tournament = unpackTournamentRecord(result)
+      if (tournament) {
+        this.setData({ tournament })
       }
     } catch (err) {
       console.error('加载赛事信息失败:', err)
@@ -431,3 +434,10 @@ Page({
     })
   }
 })
+
+function unpackTournamentRecord(res) {
+  const data = res && res.result && res.result.data
+  if (data && data.tournament) return data.tournament
+  if (data) return data
+  return null
+}

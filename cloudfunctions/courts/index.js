@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const COLLECTION_NAME = 'courts'
 const collection = db.collection(COLLECTION_NAME)
@@ -23,6 +24,29 @@ function ok(data) {
 
 function generateCourtId() {
   return `court_${Date.now()}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveMemberByOpenid(openid) {
+  if (!openid) return null
+  const query = _ && typeof _.or === 'function'
+    ? _.or([{ openid }, { openId: openid }])
+    : { openid }
+  const res = await db.collection('members').where(query).get().catch(() => ({ data: [] }))
+  const member = (res.data || [])[0]
+  return member ? { ...member, openid: member.openid || member.openId || openid } : null
+}
+
+async function requireAdmin() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return fail('FORBIDDEN', '需要登录')
+  const member = await resolveMemberByOpenid(openid)
+  if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+  return null
 }
 
 async function handleList() {
@@ -77,8 +101,16 @@ exports.main = async (event) => {
       case 'list':
         return await handleList()
       case 'create':
+        {
+          const adminGate = await requireAdmin()
+          if (adminGate) return adminGate
+        }
         return await handleCreate(event)
       case 'update':
+        {
+          const adminGate = await requireAdmin()
+          if (adminGate) return adminGate
+        }
         return await handleUpdate(event)
       default:
         return fail('UNKNOWN_ACTION', `未知 action: ${action}`)

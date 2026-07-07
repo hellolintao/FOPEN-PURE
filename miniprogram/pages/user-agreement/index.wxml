@@ -2,7 +2,7 @@
   <view class="legal-head anim-stage-rise">
     <text class="tape tape-stamped">FOPEN TERMS</text>
     <text class="legal-title">用户服务协议</text>
-    <text class="legal-updated">更新日期：2026年6月27日</text>
+    <text class="legal-updated">更新日期：2026年6月30日</text>
   </view>
 
   <view class="legal-section">
@@ -22,7 +22,7 @@
 
   <view class="legal-section">
     <text class="legal-section-title">四、数据展示</text>
-    <text class="legal-body">你同意本协议和隐私政策后，即表示允许平台在排行榜、球员详情、周星、H2H、近期比赛、赛事报名和赛事赛程等页面，向其他会员展示你的昵称、头像、打法、报名状态、比赛成绩、积分和排行。OpenID 等账号识别信息不会公开展示；如需撤回公开展示授权，可联系俱乐部管理员处理。</text>
+    <text class="legal-body">注册、报名、赛程和成绩统计属于必要服务处理。公开展示授权为可选；仅当你另行勾选或确认公开展示后，平台才会在排行榜、球员详情、周星、H2H、近期比赛、赛事报名和赛事赛程等页面，向其他会员展示你的昵称、头像、打法、报名状态、比赛成绩、积分和排行。OpenID 等账号识别信息不会公开展示；如需撤回公开展示授权或删除账号资料，可在设置页处理。</text>
   </view>
 
   <view class="legal-section">

@@ -692,10 +692,76 @@ test('isAffectedMatch and hasSubmittedScore cover legacy and registrationStatus 
   expect(hasSubmittedScore({ resultStatus: 'pending' })).toBe(false)
 })
 
+test.each([
+  ['add', {
+    data: {
+      tournamentId: TID,
+      seasonId: 'season-2026',
+      type: 'singles',
+      playerId: 'member-a',
+      playerName: 'Alice'
+    }
+  }],
+  ['update', {
+    id: 'reg-1',
+    data: {
+      seasonId: 'season-2026',
+      type: 'singles',
+      playerId: 'member-a',
+      playerName: 'Alice'
+    }
+  }],
+  ['delete', { id: 'reg-1' }],
+  ['updateStatus', { id: 'reg-1', status: 'withdrew' }],
+  ['updateSeed', { id: 'reg-1', seed: 3 }]
+])('%s rejects non-admin legacy mutation before writing', async (action, payload) => {
+  const count = jest.fn(async () => ({ total: 0 }))
+  const add = jest.fn(async () => ({ _id: 'created' }))
+  const update = jest.fn(async () => ({ stats: { updated: 1 } }))
+  const remove = jest.fn(async () => ({ stats: { removed: 1 } }))
+  const doc = jest.fn(() => ({ update, remove }))
+  const registrationWhere = jest.fn(() => ({ count }))
+  const memberWhere = jest.fn(() => ({
+    get: jest.fn(async () => ({ data: [{ _id: 'member-a', openid: 'openid-a', admin: false }] }))
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'members') return { where: memberWhere }
+    if (name === 'tournament_registrations') {
+      return { where: registrationWhere, doc, add }
+    }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({ action, ...payload }, {})
+
+  expect(res).toEqual({
+    success: false,
+    error: { code: 'FORBIDDEN', message: '需要管理员权限' }
+  })
+  expect(count).not.toHaveBeenCalled()
+  expect(add).not.toHaveBeenCalled()
+  expect(update).not.toHaveBeenCalled()
+  expect(remove).not.toHaveBeenCalled()
+})
+
 test('updateStatus(withdrew) synchronizes registrationStatus', async () => {
   const update = jest.fn(async () => ({ stats: { updated: 1 } }))
   const doc = jest.fn(() => ({ update }))
-  mockDb.collection.mockImplementation(() => ({ doc }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'members') {
+      return {
+        where: jest.fn(() => ({
+          get: jest.fn(async () => ({ data: [{ _id: 'admin-a', openid: 'openid-a', admin: true }] }))
+        }))
+      }
+    }
+    return { doc }
+  })
 
   let main
   jest.isolateModules(() => {
@@ -717,7 +783,16 @@ test('updateStatus(withdrew) synchronizes registrationStatus', async () => {
 test('updateStatus rejects legacy registered status without writing', async () => {
   const update = jest.fn(async () => ({ stats: { updated: 1 } }))
   const doc = jest.fn(() => ({ update }))
-  mockDb.collection.mockImplementation(() => ({ doc }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'members') {
+      return {
+        where: jest.fn(() => ({
+          get: jest.fn(async () => ({ data: [{ _id: 'admin-a', openid: 'openid-a', admin: true }] }))
+        }))
+      }
+    }
+    return { doc }
+  })
 
   let main
   jest.isolateModules(() => {
@@ -869,4 +944,111 @@ test('list status filter uses registrationStatus before legacy status', async ()
   expect(res.data.map(row => row._id)).toEqual(['new-active', 'legacy-active'])
   expect(res.total).toBe(2)
   expect(chain.where).toHaveBeenCalledWith({ tournamentId: TID })
+})
+
+test('list returns public identities for non-admin callers without consent fields', async () => {
+  const rows = [
+    {
+      _id: 'reg-public',
+      tournamentId: TID,
+      seasonId: 'season-2026',
+      type: 'singles',
+      playerId: 'member-public',
+      playerName: 'Raw Public Name',
+      playerAvatarUrl: '/raw-public.png',
+      registrationStatus: 'confirmed',
+      seed: 1,
+      openid: 'openid-public',
+      phone: '13800000000',
+      publicProfileConsent: true,
+      publicProfileConsentAt: '2026-06-01T00:00:00+08:00'
+    },
+    {
+      _id: 'reg-private',
+      tournamentId: TID,
+      seasonId: 'season-2026',
+      type: 'singles',
+      playerId: 'member-private',
+      playerName: 'Raw Private Name',
+      playerAvatarUrl: '/raw-private.png',
+      registrationStatus: 'confirmed',
+      seed: 2,
+      admin: true,
+      publicProfileConsent: false
+    }
+  ]
+  const members = {
+    'member-public': {
+      _id: 'member-public',
+      name: 'Visible Player',
+      avatarUrl: '/visible.png',
+      publicProfileConsent: true
+    },
+    'member-private': {
+      _id: 'member-private',
+      name: 'Private Player',
+      avatarUrl: '/private.png',
+      publicProfileConsent: false
+    }
+  }
+
+  const registrationChain = {
+    where: jest.fn(() => registrationChain),
+    orderBy: jest.fn(() => registrationChain),
+    skip: jest.fn(() => registrationChain),
+    limit: jest.fn(() => registrationChain),
+    get: jest.fn(async () => ({ data: rows })),
+    count: jest.fn(async () => ({ total: rows.length }))
+  }
+  const memberWhere = jest.fn((query) => ({
+    get: jest.fn(async () => {
+      if (query && Array.isArray(query.$or)) {
+        return { data: [{ _id: 'viewer', openid: 'openid-a', admin: false }] }
+      }
+      const ids = query && query._id && query._id.$in
+      return { data: (ids || []).map(id => members[id]).filter(Boolean) }
+    })
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'tournament_registrations') return registrationChain
+    if (name === 'members') return { where: memberWhere }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({
+    action: 'list',
+    tournamentId: TID,
+    pageSize: 20,
+    pageNum: 1
+  }, {})
+
+  expect(res.success).toBe(true)
+  expect(res.data).toEqual([
+    expect.objectContaining({
+      _id: 'reg-public',
+      playerId: 'member-public',
+      playerName: 'Visible Player',
+      playerAvatarUrl: '/visible.png',
+      playerPublicProfileVisible: true
+    }),
+    expect.objectContaining({
+      _id: 'reg-private',
+      playerId: 'member-private',
+      playerName: 'Private Player',
+      playerAvatarUrl: '/private.png',
+      playerPublicProfileVisible: false
+    })
+  ])
+  for (const row of res.data) {
+    expect(row).not.toHaveProperty('openid')
+    expect(row).not.toHaveProperty('phone')
+    expect(row).not.toHaveProperty('admin')
+    expect(row).not.toHaveProperty('publicProfileConsent')
+    expect(row).not.toHaveProperty('publicProfileConsentAt')
+  }
 })

@@ -5,19 +5,21 @@ const mockState = {
   tempFileURLResult: { fileList: [] },
   addResult: { _id: 'created-member' },
   whereUpdateResult: { stats: { updated: 1 } },
+  whereRemoveResult: { stats: { removed: 1 } },
   docUpdateResult: { stats: { updated: 1 } },
+  docRemoveResult: { stats: { removed: 1 } },
   docGetResult: { data: null }
 };
 
 const mockQuery = {
   get: jest.fn(() => {
     const data = typeof mockState.whereGetData === 'function'
-      ? mockState.whereGetData(mockQuery.filter)
+      ? mockState.whereGetData(mockQuery.filter, mockQuery.collectionName)
       : mockState.whereGetData;
     return Promise.resolve({ data });
   }),
   update: jest.fn(() => Promise.resolve(mockState.whereUpdateResult)),
-  remove: jest.fn(),
+  remove: jest.fn(() => Promise.resolve(mockState.whereRemoveResult)),
   orderBy: jest.fn(function orderBy() { return this; }),
   skip: jest.fn(function skip() { return this; }),
   limit: jest.fn(function limit() { return this; })
@@ -25,13 +27,14 @@ const mockQuery = {
 
 const mockDoc = {
   update: jest.fn(() => Promise.resolve(mockState.docUpdateResult)),
-  remove: jest.fn(),
+  remove: jest.fn(() => Promise.resolve(mockState.docRemoveResult)),
   get: jest.fn(() => Promise.resolve(mockState.docGetResult))
 };
 
 const mockCollection = {
   where: jest.fn((filter) => {
     mockQuery.filter = filter;
+    mockQuery.collectionName = mockCollection.collectionName || 'members';
     return mockQuery;
   }),
   add: jest.fn(() => Promise.resolve(mockState.addResult)),
@@ -46,11 +49,15 @@ const mockDb = {
   command: {
     or: jest.fn((conditions) => ({ $or: conditions })),
     and: jest.fn((conditions) => ({ $and: conditions })),
-    exists: jest.fn((value) => ({ $exists: value }))
+    exists: jest.fn((value) => ({ $exists: value })),
+    in: jest.fn((values) => ({ $in: values }))
   },
   RegExp: jest.fn((options) => ({ $regex: options })),
   serverDate: jest.fn(() => mockState.serverDate),
-  collection: jest.fn(() => mockCollection)
+  collection: jest.fn((name = 'members') => {
+    mockCollection.collectionName = name;
+    return mockCollection;
+  })
 };
 
 jest.mock('wx-server-sdk', () => ({
@@ -58,7 +65,8 @@ jest.mock('wx-server-sdk', () => ({
   init: jest.fn(),
   getWXContext: jest.fn(() => ({ OPENID: mockState.openid })),
   database: jest.fn(() => mockDb),
-  getTempFileURL: jest.fn(() => Promise.resolve(mockState.tempFileURLResult))
+  getTempFileURL: jest.fn(() => Promise.resolve(mockState.tempFileURLResult)),
+  deleteFile: jest.fn(() => Promise.resolve({ fileList: [] }))
 }));
 
 const cloud = require('wx-server-sdk');
@@ -74,8 +82,12 @@ describe('members cloud function', () => {
     mockState.tempFileURLResult = { fileList: [] };
     mockState.addResult = { _id: 'created-member' };
     mockState.whereUpdateResult = { stats: { updated: 1 } };
+    mockState.whereRemoveResult = { stats: { removed: 1 } };
     mockState.docUpdateResult = { stats: { updated: 1 } };
+    mockState.docRemoveResult = { stats: { removed: 1 } };
     mockState.docGetResult = { data: null };
+    mockCollection.collectionName = 'members';
+    mockQuery.collectionName = 'members';
     jest.isolateModules(() => {
       ({ main } = require('../index'));
     });
@@ -433,6 +445,141 @@ describe('members cloud function', () => {
     });
   });
 
+  test('action=revokePublicProfile revokes consent only for the current openid', async () => {
+    const result = await main({
+      action: 'revokePublicProfile',
+      data: { _id: 'other-member', openid: 'other-openid', publicProfileConsent: true }
+    }, {});
+
+    expect(result).toEqual(mockState.whereUpdateResult);
+    expect(mockCollection.where).toHaveBeenCalledWith({ openid: mockState.openid });
+    expect(mockQuery.update).toHaveBeenCalledWith({
+      data: {
+        publicProfileConsent: false,
+        publicProfileConsentAt: null,
+        updateTime: mockState.serverDate
+      }
+    });
+    expect(mockCollection.doc).not.toHaveBeenCalled();
+  });
+
+  test('action=delete rejects arbitrary target IDs from normal self-service callers', async () => {
+    const result = await main({
+      action: 'delete',
+      _id: 'other-member',
+      data: { memberId: 'other-member', openid: 'other-openid' }
+    }, {});
+
+    expect(result).toMatchObject({
+      success: false,
+      error: { code: 'SELF_SCOPE_ONLY' }
+    });
+    expect(mockQuery.remove).not.toHaveBeenCalled();
+    expect(mockCollection.doc).not.toHaveBeenCalled();
+  });
+
+  test('action=deleteSelf removes member row and deletes or anonymizes related user data', async () => {
+    const member = {
+      _id: 'member-self',
+      openid: mockState.openid,
+      name: '张三',
+      avatarUrl: 'cloud://fopen-prod/avatar/member-self.png'
+    };
+    mockState.whereGetData = (filter, collectionName) => {
+      if (collectionName === 'members') return [member];
+      if (collectionName === 'tournament_registrations') {
+        return [{ _id: 'reg-self', playerId: 'member-self', playerName: '张三' }];
+      }
+      if (collectionName === 'match_results') {
+        return [{
+          _id: 'result-self',
+          player1: { id: 'member-self', name: '张三', avatarUrl: member.avatarUrl },
+          player2: { id: 'member-other', name: '李四' },
+          playerIds: ['member-self', 'member-other'],
+          winnerId: 'member-self',
+          winner: { id: 'member-self', name: '张三' },
+          submittedBy: 'member-self',
+          pointsAwarded: {
+            entries: [
+              { memberId: 'member-self', points: 10 },
+              { memberId: 'member-other', points: 3 }
+            ]
+          }
+        }];
+      }
+      if (collectionName === 'tournament_brackets') {
+        return [{
+          _id: 'bracket-self',
+          matches: [{
+            matchId: 'm1',
+            player1: { id: 'member-self', name: '张三', avatarUrl: member.avatarUrl },
+            player2: { id: 'member-other', name: '李四' },
+            winner: { id: 'member-self', name: '张三' },
+            playerIds: ['member-self', 'member-other']
+          }]
+        }];
+      }
+      if (collectionName === 'tournament_points') return [{ _id: 'points-self', memberId: 'member-self' }];
+      if (collectionName === 'rank_snapshots') return [{ _id: 'rank-snapshot-self', memberId: 'member-self' }];
+      if (collectionName === 'rank_cache') return [{ _id: 'rank-cache-singles' }];
+      if (collectionName === 'weekly_stars') return [{ _id: 'weekly-star-current' }];
+      return [];
+    };
+
+    const result = await main({
+      action: 'deleteSelf',
+      data: { memberId: 'other-member', openid: 'other-openid' }
+    }, {});
+
+    expect(result).toMatchObject({ success: true });
+    expect(mockDb.collection.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
+      'members',
+      'tournament_registrations',
+      'match_results',
+      'tournament_brackets',
+      'tournament_points',
+      'rank_cache',
+      'rank_snapshots',
+      'weekly_stars'
+    ]));
+    expect(cloud.deleteFile).toHaveBeenCalledWith({ fileList: [member.avatarUrl] });
+    expect(mockCollection.doc).toHaveBeenCalledWith('reg-self');
+    expect(mockCollection.doc).toHaveBeenCalledWith('points-self');
+    expect(mockCollection.doc).toHaveBeenCalledWith('rank-snapshot-self');
+    expect(mockCollection.doc).toHaveBeenCalledWith('rank-cache-singles');
+    expect(mockCollection.doc).toHaveBeenCalledWith('weekly-star-current');
+
+    const updatePayloads = mockDoc.update.mock.calls.map(call => call[0] && call[0].data);
+    const serializedUpdates = JSON.stringify(updatePayloads);
+    expect(serializedUpdates).toContain('已删除用户');
+    expect(serializedUpdates).not.toContain('member-self');
+    expect(serializedUpdates).not.toContain('张三');
+    expect(serializedUpdates).not.toContain(member.avatarUrl);
+  });
+
+  test('action=deleteSelf anonymizes raw openid references in related match rows', async () => {
+    mockState.whereGetData = (filter, collectionName) => {
+      if (collectionName === 'members') {
+        return [{ _id: 'member-self', openid: mockState.openid, name: '张三' }];
+      }
+      if (collectionName === 'match_results') {
+        return [{
+          _id: 'result-openid',
+          openid: mockState.openid,
+          submittedByOpenid: mockState.openid,
+          player1: { id: 'member-other', name: '李四' }
+        }];
+      }
+      return [];
+    };
+
+    const result = await main({ action: 'deleteSelf' }, {});
+
+    expect(result).toMatchObject({ success: true });
+    const updatePayloads = mockDoc.update.mock.calls.map(call => call[0] && call[0].data);
+    expect(JSON.stringify(updatePayloads)).not.toContain(mockState.openid);
+  });
+
   test('action=claimSelf persists claimed status for openid-bound unclaimed member', async () => {
     const existing = {
       _id: 'member-openid-unclaimed',
@@ -606,7 +753,7 @@ describe('members cloud function', () => {
     ]);
   });
 
-  test('action=getById returns anonymous public profile without phone, openid, or admin flags when no consent', async () => {
+  test('action=getById returns public profile without phone, openid, or admin flags when no consent', async () => {
     mockState.docGetResult = {
       data: {
         _id: 'member-1',
@@ -628,12 +775,12 @@ describe('members cloud function', () => {
     const result = await main({ action: 'getById', _id: 'member-1' }, {});
 
     expect(result).toEqual({
-      data: {
-        _id: 'member-1',
-        name: '匿名选手',
-        avatarUrl: '/images/icons/default-avatar.png',
-        status: 'active',
-        playStyle: '',
+        data: {
+          _id: 'member-1',
+          name: '赵六',
+          avatarUrl: 'cloud://avatar',
+          status: 'active',
+          playStyle: '',
         publicProfileVisible: false,
         createTime: '2026-01-01',
         updateTime: '2026-01-02'

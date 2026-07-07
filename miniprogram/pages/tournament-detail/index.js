@@ -68,7 +68,6 @@ Page({
   },
 
   async refresh() {
-    await this.ensureIdentity()
     await Promise.all([
       this.loadTournamentDetail(),
       this.loadRegistrations(),
@@ -83,13 +82,39 @@ Page({
     this.scrollToRegistrationSectionIfNeeded()
   },
 
-  async ensureIdentity() {
+  ensureOfficialPrivacyAuthorization(rejectTitle) {
+    if (typeof wx.requirePrivacyAuthorize !== 'function') {
+      return Promise.resolve(true)
+    }
+
+    return new Promise(resolve => {
+      wx.requirePrivacyAuthorize({
+        success: () => resolve(true),
+        fail: () => {
+          wx.showToast({
+            title: rejectTitle || '请先同意微信隐私授权',
+            icon: 'none'
+          })
+          resolve(false)
+        }
+      })
+    })
+  },
+
+  async ensureIdentity(options = {}) {
     try {
+      if (app.globalData && app.globalData.currentMember) return true
+      if (options.requirePrivacy) {
+        const authorized = await this.ensureOfficialPrivacyAuthorization('请先同意微信隐私授权')
+        if (!authorized) return false
+      }
       if (app.globalData && !app.globalData.currentMember && typeof app.refreshIdentity === 'function') {
         await app.refreshIdentity()
       }
+      return true
     } catch (err) {
       console.warn('[tournament-detail] refresh identity failed', err)
+      return false
     }
   },
 
@@ -200,14 +225,17 @@ Page({
   async loadTournamentDetail() {
     this.setData({ loading: true })
     try {
-      const db = wx.cloud.database()
-      const result = await db.collection('tournaments').doc(this.data.tournamentId).get()
-      if (!result.data) {
+      const result = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: { action: 'get', id: this.data.tournamentId }
+      })
+      const rawTournament = unpackTournamentRecord(result)
+      if (!rawTournament) {
         wx.showToast({ title: '赛事不存在', icon: 'none' })
         setTimeout(() => wx.navigateBack(), 1500)
         return
       }
-      const tournament = await this.enrichTournamentSeason(result.data)
+      const tournament = await this.enrichTournamentSeason(rawTournament)
       const me = app.globalData && app.globalData.currentMember
       const isCreator = isTournamentCreator(tournament, me)
       const isAdmin = !!((app.globalData && app.globalData.isAdmin) || isCreator)
@@ -235,25 +263,16 @@ Page({
 
   async loadRegistrations() {
     try {
-      const db = wx.cloud.database()
-      const result = await db.collection('tournament_registrations')
-        .where({
+      const result = await wx.cloud.callFunction({
+        name: 'tournament-registrations',
+        data: {
+          action: 'list',
           tournamentId: this.data.tournamentId
-        })
-        .orderBy('seed', 'asc')
-        .get()
-      const rawRegs = (result.data || []).filter(isActiveRegistration)
-
-      // 收集所有 playerId / partnerId 一次性查头像
-      const ids = new Set()
-      rawRegs.forEach(r => {
-        if (r.playerId) ids.add(r.playerId)
-        if (r.partnerId) ids.add(r.partnerId)
+        }
       })
+      const rawRegs = unpackRegistrationRows(result).filter(isActiveRegistration)
 
-      const avatarMap = await fetchAvatarMap([...ids])
-
-      const registrations = buildRosterPeople(rawRegs, avatarMap)
+      const registrations = buildRosterPeople(rawRegs)
       const isParticipant = this.isCurrentMemberRegistered(rawRegs)
       const accessState = this.buildAccessState({
         tournament: this.data.tournament,
@@ -353,7 +372,8 @@ Page({
       return
     }
 
-    await this.ensureIdentity()
+    const identityReady = await this.ensureIdentity({ requirePrivacy: true })
+    if (!identityReady) return
     const member = app.globalData && app.globalData.currentMember
     if (needsRegistrationIdentity(member)) {
       this.openRegistrationIdentityEditor()
@@ -1000,7 +1020,7 @@ function yearFromSeasonId(value) {
 function buildRosterPeople(rawRegs, avatarMap) {
   const seen = new Set()
   const people = []
-  const push = (id, name, reg) => {
+  const push = (id, name, reg, avatarUrl) => {
     if (!id || seen.has(id)) return
     seen.add(id)
     const status = (reg && (reg.registrationStatus || reg.status)) || 'registered'
@@ -1010,15 +1030,30 @@ function buildRosterPeople(rawRegs, avatarMap) {
       playerName: name || '',
       seed: reg && reg.seed,
       displayStatus: status,
-      avatarUrl: avatarMap[id] || '',
+      avatarUrl: avatarUrl || (avatarMap && avatarMap[id]) || '',
       playerInitial: firstChar(name)
     })
   }
   ;(rawRegs || []).forEach(reg => {
-    push(reg.playerId, reg.playerName, reg)
-    push(reg.partnerId, reg.partnerName, reg)
+    push(reg.playerId, reg.playerName, reg, reg.playerAvatarUrl || reg.avatarUrl)
+    push(reg.partnerId, reg.partnerName, reg, reg.partnerAvatarUrl)
   })
   return people
+}
+
+function unpackRegistrationRows(res) {
+  const data = res && res.result && res.result.data
+  if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.registrations)) return data.registrations
+  if (data && Array.isArray(data.items)) return data.items
+  return []
+}
+
+function unpackTournamentRecord(res) {
+  const data = res && res.result && res.result.data
+  if (data && data.tournament) return data.tournament
+  if (data) return data
+  return null
 }
 
 function unpackMatchResultRows(res) {
@@ -1538,17 +1573,13 @@ function firstChar(name) {
 
 function needsRegistrationIdentity(member) {
   if (!member) return true
-  if (!member._id || (!member.openid && !member.openId)) return true
+  if (!member._id) return true
   return member.claimStatus === 'pending' || member.claimStatus === 'unclaimed'
 }
 
 function isTournamentCreator(tournament, member) {
   if (!tournament || !member) return false
-  const memberOpenid = member.openid || member.openId
-  return !!(
-    (tournament.createdBy && tournament.createdBy === member._id) ||
-    (tournament.createdByOpenid && memberOpenid && tournament.createdByOpenid === memberOpenid)
-  )
+  return !!(tournament.createdBy && tournament.createdBy === member._id)
 }
 
 function _isSuccess(res) {
@@ -1769,22 +1800,4 @@ function dateTimeLabel(value) {
   const month = Number(dateMatch[2])
   const day = Number(dateMatch[3])
   return timeMatch ? `${month}月${day}日 ${timeMatch[1]}:${timeMatch[2]}` : `${month}月${day}日`
-}
-
-async function fetchAvatarMap(ids) {
-  if (!ids || ids.length === 0) return {}
-  const db = wx.cloud.database()
-  // 小程序云数据库一次 in 查询限制 ~20，按 20 个一批拉取
-  const chunkSize = 20
-  const map = {}
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const chunk = ids.slice(i, i + chunkSize)
-    try {
-      const r = await db.collection('members').where({ _id: db.command.in(chunk) }).field({ avatarUrl: true, name: true }).get()
-      ;(r.data || []).forEach(m => { map[m._id] = m.avatarUrl || '' })
-    } catch (e) {
-      console.error('[tournament-detail] fetchAvatarMap chunk failed', e)
-    }
-  }
-  return map
 }

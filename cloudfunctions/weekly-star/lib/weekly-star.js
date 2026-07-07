@@ -1,4 +1,4 @@
-const { toPublicIdentity } = require('../../_shared/public-profile')
+const { toRankingIdentity } = require('../../_shared/public-profile')
 
 function getTime(row) {
   return new Date(row.confirmedAt || row.createTime || row.updateTime || 0).getTime()
@@ -19,7 +19,7 @@ function topStar(map, membersById) {
   if (sorted.length === 0) return null
   const [memberId, points] = sorted[0]
   const member = membersById[memberId] || {}
-  const identity = toPublicIdentity(member, { rank: 1 })
+  const identity = toRankingIdentity(member, { rank: 1 })
   return {
     memberId,
     name: identity.name,

@@ -150,8 +150,235 @@ function withPublicProfileConsentMetadata(payload, now) {
   }
 }
 
+function hasSelfServiceTarget(data, id) {
+  data = normalizePayload(data)
+  return !!(
+    id ||
+    data._id ||
+    data.id ||
+    data.memberId ||
+    data.openid ||
+    data.openId
+  )
+}
+
 function isCloudFileId(value) {
   return typeof value === 'string' && value.startsWith('cloud://')
+}
+
+const DELETE_PAGE_SIZE = 100
+const DELETED_MEMBER_ID = 'deleted-member'
+const DELETED_MEMBER_NAME = '已删除用户'
+
+function isMissingCollectionOrDocument(err) {
+  const text = `${(err && (err.errMsg || err.message || err.code)) || ''}`
+  return (err && err.errCode === -502005) ||
+    /collection not exists|Db or Table not exist|not exist|document.*does not exist|not found/i.test(text)
+}
+
+function compactFilters(filters) {
+  return filters.filter(Boolean)
+}
+
+function inFilter(values) {
+  return _.in(Array.from(new Set(values.filter(Boolean))))
+}
+
+function stripDocumentId(row = {}) {
+  const { _id, ...rest } = row
+  return rest
+}
+
+function removedCount(result) {
+  return (result && result.stats && result.stats.removed) || (result && result.removed) || 0
+}
+
+async function fetchDocs(collectionName, filter = {}, pageSize = DELETE_PAGE_SIZE) {
+  const rows = []
+  for (let skip = 0; ; skip += pageSize) {
+    try {
+      const res = await db.collection(collectionName)
+        .where(filter)
+        .skip(skip)
+        .limit(pageSize)
+        .get()
+      const page = (res && res.data) || []
+      rows.push(...page)
+      if (page.length < pageSize) break
+    } catch (err) {
+      if (isMissingCollectionOrDocument(err)) return rows
+      throw err
+    }
+  }
+  return rows
+}
+
+async function fetchUniqueDocsByFilters(collectionName, filters) {
+  const byId = new Map()
+  for (const filter of compactFilters(filters)) {
+    const rows = await fetchDocs(collectionName, filter)
+    rows.forEach(row => {
+      if (row && row._id && !byId.has(row._id)) byId.set(row._id, row)
+    })
+  }
+  return Array.from(byId.values())
+}
+
+async function removeDocs(collectionName, docs) {
+  let removed = 0
+  for (const doc of docs || []) {
+    if (!doc || !doc._id) continue
+    try {
+      const result = await db.collection(collectionName).doc(doc._id).remove()
+      removed += removedCount(result) || 1
+    } catch (err) {
+      if (!isMissingCollectionOrDocument(err)) throw err
+    }
+  }
+  return removed
+}
+
+async function removeDocsByFilters(collectionName, filters) {
+  return removeDocs(collectionName, await fetchUniqueDocsByFilters(collectionName, filters))
+}
+
+async function removeAllDocs(collectionName) {
+  return removeDocs(collectionName, await fetchDocs(collectionName, {}))
+}
+
+async function updateDocs(collectionName, docs, transform) {
+  let updated = 0
+  for (const doc of docs || []) {
+    if (!doc || !doc._id) continue
+    const data = transform(doc)
+    try {
+      await db.collection(collectionName).doc(doc._id).update({ data })
+      updated += 1
+    } catch (err) {
+      if (!isMissingCollectionOrDocument(err)) throw err
+    }
+  }
+  return updated
+}
+
+function targetIdentifiers(values) {
+  return Array.from(new Set((Array.isArray(values) ? values : [values]).filter(Boolean)))
+}
+
+function hasTargetIdentifier(value, identifiers) {
+  return identifiers.includes(value)
+}
+
+function stringWithoutTargetIdentifiers(value, identifiers) {
+  if (!hasTargetIdentifier(value, identifiers) && !(typeof value === 'string' && value.includes(','))) return value
+  const parts = String(value).split(',').map(part => part.trim()).filter(Boolean)
+  if (!parts.some(part => hasTargetIdentifier(part, identifiers))) return value
+  return parts.map(part => hasTargetIdentifier(part, identifiers) ? DELETED_MEMBER_ID : part).join(',')
+}
+
+function anonymizeMemberReferences(value, identifiers) {
+  identifiers = targetIdentifiers(identifiers)
+  if (identifiers.length === 0 || value == null) return value
+  if (typeof value === 'string') return stringWithoutTargetIdentifiers(value, identifiers)
+  if (Array.isArray(value)) return value.map(item => anonymizeMemberReferences(item, identifiers))
+  if (typeof value !== 'object') return value
+
+  const out = {}
+  for (const [key, child] of Object.entries(value)) {
+    out[key] = anonymizeMemberReferences(child, identifiers)
+  }
+
+  const matchesPrimaryId = ['id', 'playerId', 'memberId', '_id', 'openid', 'openId', 'unionid'].some(key => hasTargetIdentifier(value[key], identifiers))
+  const matchesPartnerId = hasTargetIdentifier(value.partnerId, identifiers)
+  if (matchesPrimaryId || matchesPartnerId) {
+    for (const key of ['id', 'playerId', 'memberId', '_id', 'partnerId', 'openid', 'openId', 'unionid']) {
+      if (hasTargetIdentifier(out[key], identifiers)) out[key] = DELETED_MEMBER_ID
+    }
+    for (const key of ['name', 'playerName', 'memberName', 'nickName', 'nickname', 'partnerName', 'teamName']) {
+      if (Object.prototype.hasOwnProperty.call(out, key)) out[key] = DELETED_MEMBER_NAME
+    }
+    for (const key of ['avatarUrl', 'playerAvatarUrl', 'memberAvatarUrl', 'partnerAvatarUrl']) {
+      if (Object.prototype.hasOwnProperty.call(out, key)) out[key] = ''
+    }
+    if (Object.prototype.hasOwnProperty.call(out, 'publicProfileVisible')) out.publicProfileVisible = false
+    if (Object.prototype.hasOwnProperty.call(out, 'partnerPublicProfileVisible')) out.partnerPublicProfileVisible = false
+  }
+  return out
+}
+
+function valueContainsTargetIdentifier(value, identifiers) {
+  identifiers = targetIdentifiers(identifiers)
+  if (identifiers.length === 0 || value == null) return false
+  if (typeof value === 'string') {
+    if (hasTargetIdentifier(value, identifiers)) return true
+    if (value.includes(',')) {
+      return value.split(',').map(part => part.trim()).some(part => hasTargetIdentifier(part, identifiers))
+    }
+    return false
+  }
+  if (Array.isArray(value)) return value.some(item => valueContainsTargetIdentifier(item, identifiers))
+  if (typeof value === 'object') return Object.values(value).some(item => valueContainsTargetIdentifier(item, identifiers))
+  return false
+}
+
+function selfDataFilters(memberId, openid) {
+  return compactFilters([
+    memberId && { memberId },
+    memberId && { playerId: memberId },
+    memberId && { partnerId: memberId },
+    memberId && { playerIds: inFilter([memberId]) },
+    memberId && { memberIds: inFilter([memberId]) },
+    openid && { openid },
+    openid && { openId: openid }
+  ])
+}
+
+async function deleteCloudAvatar(member) {
+  const avatarUrl = member && member.avatarUrl
+  if (!isCloudFileId(avatarUrl) || typeof cloud.deleteFile !== 'function') return 0
+  try {
+    await cloud.deleteFile({ fileList: [avatarUrl] })
+    return 1
+  } catch (err) {
+    console.warn('[members] delete avatar file failed', err)
+    return 0
+  }
+}
+
+async function deleteSelfData(openid) {
+  const member = await resolveCallerMember()
+  const memberId = member && member._id
+  const identifiers = targetIdentifiers([memberId, openid])
+  const summary = {
+    avatarFilesDeleted: await deleteCloudAvatar(member),
+    registrationsRemoved: await removeDocsByFilters('tournament_registrations', selfDataFilters(memberId, openid)),
+    matchResultsAnonymized: 0,
+    tournamentBracketsAnonymized: 0,
+    tournamentPointsRemoved: await removeDocsByFilters('tournament_points', selfDataFilters(memberId, openid)),
+    rankSnapshotsRemoved: await removeDocsByFilters('rank_snapshots', selfDataFilters(memberId, openid)),
+    rankCacheRemoved: await removeAllDocs('rank_cache'),
+    weeklyStarsRemoved: await removeAllDocs('weekly_stars'),
+    memberRemoved: 0
+  }
+
+  if (identifiers.length > 0) {
+    const matchDocs = (await fetchDocs('match_results', {}))
+      .filter(row => valueContainsTargetIdentifier(row, identifiers))
+    summary.matchResultsAnonymized = await updateDocs('match_results', matchDocs, row => stripDocumentId(anonymizeMemberReferences(row, identifiers)))
+  }
+
+  if (memberId) {
+    const bracketDocs = (await fetchDocs('tournament_brackets', {}))
+      .filter(row => valueContainsTargetIdentifier(row, [memberId]))
+    summary.tournamentBracketsAnonymized = await updateDocs('tournament_brackets', bracketDocs, row => stripDocumentId(anonymizeMemberReferences(row, identifiers)))
+  }
+
+  summary.memberRemoved = await removeDocsByFilters('members', compactFilters([
+    memberId && { _id: memberId },
+    openid && { openid },
+    openid && { openId: openid }
+  ]))
+  return { success: true, data: summary }
 }
 
 async function resolveAvatarDisplayUrls(members = []) {
@@ -327,9 +554,37 @@ exports.main = async (event, context) => {
       }
       return { data: stripLegacyPhoneField({ ...existing, ...updateData }) }
     }
+    case 'revokePublicProfile': {
+      if (!openid) {
+        return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先登录' } }
+      }
+      const now = db.serverDate()
+      return await collection.where({ openid }).update({
+        data: {
+          publicProfileConsent: false,
+          publicProfileConsentAt: null,
+          updateTime: now
+        }
+      })
+    }
     case 'delete': {
       // 删除会员 by openid
+      if (!openid) {
+        return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先登录' } }
+      }
+      if (hasSelfServiceTarget(data, _id)) {
+        return {
+          success: false,
+          error: { code: 'SELF_SCOPE_ONLY', message: '只能删除当前账号资料' }
+        }
+      }
       return await collection.where({ openid }).remove()
+    }
+    case 'deleteSelf': {
+      if (!openid) {
+        return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先登录' } }
+      }
+      return await deleteSelfData(openid)
     }
     case 'search': {
       const forbidden = await requireAdmin()

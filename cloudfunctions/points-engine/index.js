@@ -10,7 +10,7 @@ const { getCurrentNaturalWeek } = require('./lib/week-window')
 const { enrichRecent } = require('./lib/player-stats')
 const { computeH2H } = require('./lib/player-h2h')
 const { buildGroupKnockoutPointEntries } = require('./lib/group-knockout')
-const { toPublicIdentity } = require('../_shared/public-profile')
+const { toRankingIdentity } = require('../_shared/public-profile')
 
 exports.main = async (event = {}) => {
   const action = event.action || 'refreshRankCache'
@@ -237,7 +237,7 @@ async function refreshRankMemberProfiles(rankList) {
   return rankList.map((row, index) => {
     const memberId = row && (row._id || row.memberId)
     const member = memberMap[memberId]
-    const identity = toPublicIdentity(member, { index, rank: index + 1 })
+    const identity = toRankingIdentity(member, { index, rank: index + 1 })
     return {
       ...row,
       name: identity.name,
@@ -574,7 +574,7 @@ async function joinMembers(list) {
   const memberMap = Object.fromEntries(members.map(m => [m._id, m]))
   return list.map((x, index) => {
     const member = memberMap[x.memberId]
-    const identity = toPublicIdentity(member, { index, rank: index + 1 })
+    const identity = toRankingIdentity(member, { index, rank: index + 1 })
     return {
       _id: x.memberId,
       name: identity.name,

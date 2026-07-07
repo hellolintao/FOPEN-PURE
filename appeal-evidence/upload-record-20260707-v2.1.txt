@@ -1,0 +1,9 @@
+Date: 2026-07-07 12:03:58 CST
+Tool: WeChat DevTools CLI
+Project: /Users/liaoxiaole/FOPEN-PURE
+AppID: wxd3c473f026505b61
+Version: 2.1
+Description: 隐私合规与排行榜头像修复：排行榜不展示头像，其他页面保留头像；优化登录静默恢复和官方隐私授权路径；补充撤回、删除与公开读取收口。
+Result: WeChat DevTools CLI upload succeeded.
+Package size: 1.5 MB / 1536239 Byte
+Info output: appeal-evidence/upload-info-20260707-v2.1.json

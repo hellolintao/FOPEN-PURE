@@ -1,5 +1,6 @@
 // query handlers: submittedQueue / listByTournament / listByPlayer / pendingReviewItems
 const { isActiveScoreRow } = require('../active-row')
+const { toPublicIdentity } = require('../../../_shared/public-profile')
 
 const GROUP_KNOCKOUT_SCORE_VISIBLE_PHASES = new Set([
   'group_published',
@@ -61,6 +62,107 @@ async function filterRowsByScheduleVisibility(ctx, rows) {
   return visibleRows
 }
 
+function sideMemberId(side) {
+  if (!side) return ''
+  return side.id || side.playerId || side.memberId || side._id || ''
+}
+
+function sideMemberIds(side) {
+  const ids = []
+  const primaryId = sideMemberId(side)
+  if (primaryId && primaryId !== 'BYE') ids.push(primaryId)
+  if (side && side.partnerId && side.partnerId !== 'BYE') ids.push(side.partnerId)
+  return ids
+}
+
+function rowIdentitySides(row) {
+  const sides = [
+    row && row.player1,
+    row && row.player2,
+    row && row.winner,
+  ]
+  if (row && Array.isArray(row.players)) sides.push(...row.players)
+  return sides.filter(Boolean)
+}
+
+function resultMemberIds(rows = []) {
+  const ids = []
+  for (const row of rows || []) {
+    for (const side of rowIdentitySides(row)) ids.push(...sideMemberIds(side))
+  }
+  return [...new Set(ids.filter(Boolean))]
+}
+
+function memberOrdinalMap(rows = []) {
+  const map = new Map()
+  for (const row of rows || []) {
+    for (const side of rowIdentitySides(row)) {
+      for (const id of sideMemberIds(side)) {
+        if (!map.has(id)) map.set(id, map.size)
+      }
+    }
+  }
+  return map
+}
+
+function isSensitiveIdentityField(key) {
+  const normalized = String(key || '').toLowerCase()
+  return normalized.includes('openid') ||
+    normalized.includes('phone') ||
+    normalized.includes('admin') ||
+    normalized.includes('publicprofileconsent') ||
+    normalized.includes('playstyle')
+}
+
+function stripSensitiveIdentityFields(value = {}) {
+  return Object.keys(value || {}).reduce((acc, key) => {
+    if (!isSensitiveIdentityField(key)) acc[key] = value[key]
+    return acc
+  }, {})
+}
+
+function publicSideIdentity(side, membersById, ordinals) {
+  if (!side || typeof side !== 'object') return side
+  if (side.id === 'BYE' || side.name === 'BYE') return { ...stripSensitiveIdentityFields(side), name: 'BYE' }
+
+  const safe = stripSensitiveIdentityFields(side)
+  const primaryId = sideMemberId(side)
+  if (primaryId) {
+    const identity = toPublicIdentity(membersById.get(primaryId), { index: ordinals.get(primaryId) })
+    safe.name = identity.name
+    safe.avatarUrl = identity.avatarUrl
+    safe.publicProfileVisible = identity.publicProfileVisible
+  }
+
+  if (side.partnerId) {
+    const partnerIdentity = toPublicIdentity(membersById.get(side.partnerId), { index: ordinals.get(side.partnerId) })
+    safe.partnerName = partnerIdentity.name
+    safe.partnerAvatarUrl = partnerIdentity.avatarUrl
+    safe.partnerPublicProfileVisible = partnerIdentity.publicProfileVisible
+  }
+
+  return safe
+}
+
+async function publicScoreRows(ctx, rows = []) {
+  if (ctx.isAdmin || rows.length === 0) return rows
+  const ids = resultMemberIds(rows)
+  const members = ids.length && ctx.db && typeof ctx.db.getMembersByIds === 'function'
+    ? await ctx.db.getMembersByIds(ids)
+    : []
+  const membersById = new Map((members || []).map(member => [member._id, member]))
+  const ordinals = memberOrdinalMap(rows)
+  return rows.map(row => ({
+    ...row,
+    player1: publicSideIdentity(row.player1, membersById, ordinals),
+    player2: publicSideIdentity(row.player2, membersById, ordinals),
+    winner: publicSideIdentity(row.winner, membersById, ordinals),
+    players: Array.isArray(row.players)
+      ? row.players.map(player => publicSideIdentity(player, membersById, ordinals))
+      : row.players,
+  }))
+}
+
 async function listByTournament(ctx, event) {
   if (!event.tournamentId) {
     const err = new Error('tournamentId 必填')
@@ -70,7 +172,7 @@ async function listByTournament(ctx, event) {
   const tournament = await ctx.db.getTournament(event.tournamentId)
   if (!ctx.isAdmin && !canExposeScoreRows(tournament)) return { results: [] }
   const results = (await ctx.db.listByTournament(event.tournamentId)).filter(isActiveScoreRow)
-  return { results }
+  return { results: await publicScoreRows(ctx, results) }
 }
 
 async function listByPlayer(ctx, event) {
@@ -80,7 +182,7 @@ async function listByPlayer(ctx, event) {
     throw err
   }
   const matches = await filterRowsByScheduleVisibility(ctx, await ctx.db.listByPlayerNotConfirmed(event.memberId))
-  return { matches }
+  return { matches: await publicScoreRows(ctx, matches) }
 }
 
 async function pendingReviewItems(ctx, payload) {
@@ -221,9 +323,11 @@ module.exports = {
   pendingEntryGroups,
   canExposeScoreRows,
   isActiveScoreRow,
+  publicScoreRows,
   __test__: {
     canExposeScoreRows,
     isActiveScoreRow,
+    publicScoreRows,
     listByTournamentWithCtx: listByTournament,
     listByPlayerWithCtx: listByPlayer,
   },

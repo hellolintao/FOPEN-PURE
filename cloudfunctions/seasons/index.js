@@ -7,6 +7,33 @@ const db = cloud.database()
 const _ = db.command
 const collection = db.collection('seasons')
 
+function fail(code, message) {
+  return { success: false, error: { code, message } }
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveMemberByOpenid(openid, database = db, command = _) {
+  if (!openid) return null
+  const query = command && typeof command.or === 'function'
+    ? command.or([{ openid }, { openId: openid }])
+    : { openid }
+  const res = await database.collection('members').where(query).get().catch(() => ({ data: [] }))
+  const member = (res.data || [])[0]
+  return member ? { ...member, openid: member.openid || member.openId || openid } : null
+}
+
+async function requireAdmin() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return fail('FORBIDDEN', '需要登录')
+  const member = await resolveMemberByOpenid(openid)
+  if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+  return null
+}
+
 function getShanghaiDate(now = new Date()) {
   const date = new Date(now)
   const shanghaiTime = date.getTime() + 8 * 60 * 60 * 1000
@@ -43,6 +70,9 @@ exports.main = async (event, context) => {
   const now = db.serverDate()
   switch (action) {
     case 'add': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
+
       // 新增赛季
       return await collection.add({
         data: {
@@ -62,6 +92,9 @@ exports.main = async (event, context) => {
       return await collection.doc(id).get()
     }
     case 'update': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
+
       // 更新赛季
       return await collection.doc(id).update({
         data: {
@@ -71,6 +104,9 @@ exports.main = async (event, context) => {
       })
     }
     case 'delete': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
+
       // 删除赛季
       return await collection.doc(id).remove()
     }
@@ -95,4 +131,4 @@ exports.main = async (event, context) => {
   }
 }
 
-exports.__test__ = { getCurrentSeason, getShanghaiDate }
+exports.__test__ = { getCurrentSeason, getShanghaiDate, isAdminMember, resolveMemberByOpenid }

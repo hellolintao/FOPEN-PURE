@@ -1,4 +1,3 @@
-const db = wx.cloud.database()
 const { syncTabBar } = require('../../utils/tab-bar')
 const { decorateTournamentStatus } = require('../../utils/tournament-status')
 const { PHASE, derivePhase, isActiveRegistration } = require('../../utils/tournament-phase')
@@ -21,7 +20,6 @@ Page({
 	},
 	async loadTournaments() {
 		try {
-			await this.ensureIdentity()
 			const cacheKey = this._tournamentsCacheKey()
 			const dirtyState = this._consumeTournamentListDirtyState()
 			const cached = getCacheEntry(cacheKey)
@@ -39,8 +37,11 @@ Page({
 				this.setData({ loading: true })
 			}
 
-			const result = await db.collection('tournaments').get()
-			const tournaments = sortTournamentsByCreateTimeDesc(await this.decorateTournamentPermissions(result.data || []))
+			const result = await wx.cloud.callFunction({
+				name: 'tournaments',
+				data: { action: 'list', page: 1, pageSize: 100 }
+			})
+			const tournaments = sortTournamentsByCreateTimeDesc(await this.decorateTournamentPermissions(unpackTournamentRows(result)))
 			this.setData({ tournaments, loading: false })
 			setCache(cacheKey, { tournaments }, { ttlMs: MATCH_CACHE_TTL_MS })
 		} catch (err) {
@@ -65,15 +66,6 @@ Page({
 			globalData.deletedTournamentId = ''
 		}
 		return state
-	},
-	async ensureIdentity() {
-		try {
-			if (app.globalData && !app.globalData.currentMember && typeof app.refreshIdentity === 'function') {
-				await app.refreshIdentity()
-			}
-		} catch (err) {
-			console.warn('[match] refresh identity failed', err)
-		}
 	},
 	async decorateTournamentPermissions(tournaments) {
 		const isAdmin = !!(app.globalData && app.globalData.isAdmin)
@@ -199,6 +191,14 @@ function unpackRegistrationRows(res) {
 	const data = res && res.result && res.result.data
 	if (Array.isArray(data)) return data
 	if (data && Array.isArray(data.registrations)) return data.registrations
+	if (data && Array.isArray(data.items)) return data.items
+	return []
+}
+
+function unpackTournamentRows(res) {
+	const data = res && res.result && res.result.data
+	if (Array.isArray(data)) return data
+	if (data && Array.isArray(data.tournaments)) return data.tournaments
 	if (data && Array.isArray(data.items)) return data.items
 	return []
 }

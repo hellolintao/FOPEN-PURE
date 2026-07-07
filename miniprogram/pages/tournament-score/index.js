@@ -81,13 +81,6 @@ Page({
   },
 
   async syncIdentity() {
-    try {
-      if (app.globalData && !app.globalData.currentMember && typeof app.refreshIdentity === 'function') {
-        await app.refreshIdentity()
-      }
-    } catch (e) {
-      console.warn('[tournament-score] syncIdentity', e)
-    }
     const currentMember = app.globalData && app.globalData.currentMember
     this.setData({
       isAdmin: !!(app.globalData && app.globalData.isAdmin),

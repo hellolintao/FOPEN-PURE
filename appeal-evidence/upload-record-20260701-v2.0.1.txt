@@ -1,0 +1,11 @@
+Date: 2026-07-01 15:48:39 CST
+Tool: WeChat DevTools CLI
+Project: /Users/liaoxiaole/FOPEN-PURE
+AppID: wxd3c473f026505b61
+Version: 2.0.1
+Description: 隐私合规修复：公开页面不再主动获取用户身份；登录、编辑资料、注册保存均接入微信官方隐私授权；设置页提供撤回公开展示授权和删除账号资料入口。
+Result: WeChat DevTools CLI upload succeeded.
+Package size: 1.5 MB / 1624603 Byte
+Info output: appeal-evidence/upload-info-20260701-v2.0.1.json
+
+Note: The earlier cloud-function deployment command was interrupted before a success result was returned, because the latest user instruction was to directly upload mini-program version 2.0.1.

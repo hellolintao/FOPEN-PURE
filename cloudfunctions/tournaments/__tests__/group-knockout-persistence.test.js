@@ -9,6 +9,14 @@ const mockAdd = jest.fn(async ({ data }) => {
 })
 
 const mockCollection = jest.fn((name) => {
+  if (name === 'members') {
+    return {
+      where: jest.fn(() => ({
+        get: jest.fn(async () => ({ data: [{ _id: 'admin1', openid: 'admin-openid', admin: true }] })),
+      })),
+    }
+  }
+
   if (name !== 'tournaments') {
     return {
       where: jest.fn(() => ({
@@ -37,6 +45,7 @@ const mockCollection = jest.fn((name) => {
 jest.mock('wx-server-sdk', () => {
   const db = {
     command: {
+      or: jest.fn((conditions) => ({ $or: conditions })),
       set: jest.fn((value) => value),
     },
     serverDate: jest.fn(() => mockServerDateValue),
@@ -46,7 +55,7 @@ jest.mock('wx-server-sdk', () => {
     init: jest.fn(),
     DYNAMIC_CURRENT_ENV: 'test-env',
     database: jest.fn(() => db),
-    getWXContext: jest.fn(() => ({ OPENID: '' })),
+    getWXContext: jest.fn(() => ({ OPENID: 'admin-openid' })),
   }
 })
 

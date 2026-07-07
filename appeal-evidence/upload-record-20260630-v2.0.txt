@@ -1,0 +1,22 @@
+Upload record
+
+Date: 2026-06-30
+AppID: wxd3c473f026505b61
+Cloud env: cloud1-0gthnke69a09f52a
+Version: 2.0
+Description: 隐私合规整改：赛事数据脱敏和隐私控制闭环
+Package size: 1.5 MB / 1621548 bytes
+Result: WeChat DevTools CLI upload succeeded.
+
+Cloud functions deployed:
+- members: success=true, files=10, packSize=53.5 KB
+- tournament-registrations: success=true, files=9, packSize=61.4 KB
+- tournament-brackets: success=true, files=14, packSize=75.1 KB
+- match-results: success=true, files=19, packSize=80.9 KB
+
+Key compliance changes:
+- Non-admin registration, bracket, score, and my-match APIs now return public identity only, stripping sensitive member fields from public data responses.
+- Tournament detail page now reads registrations through the cloud function boundary instead of directly reading registration/member collections.
+- Unused tournament-view page was removed from app.json to reduce stale public-display surface.
+- Settings now includes Privacy Policy, User Agreement, Revoke Public Profile Consent, and Delete Account entries.
+- Privacy Policy and User Agreement were updated for the new self-service controls.

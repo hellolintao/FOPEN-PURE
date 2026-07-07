@@ -59,6 +59,14 @@ describe('tournament-detail WXML layout', () => {
     expect(wxml).not.toContain('我的</view>')
     expect(wxss).not.toContain('inset 8rpx 0 0 var(--color-ink)')
   })
+
+  test('frontend creator logic does not compare WeChat openid fields', () => {
+    const js = fs.readFileSync(path.join(__dirname, '../index.js'), 'utf8')
+
+    expect(js).not.toContain('createdByOpenid')
+    expect(js).not.toContain('member.openid')
+    expect(js).not.toContain('member.openId')
+  })
 })
 
 function loadPage(options = {}) {
@@ -71,6 +79,12 @@ function loadPage(options = {}) {
   const seasons = options.seasons || {}
   const currentSeason = options.currentSeason || null
   const members = options.members || []
+  const membersById = Object.fromEntries(members.map(member => [member._id, member]))
+  const safeRegistrations = options.safeRegistrations || registrations.map(reg => ({
+    ...reg,
+    playerAvatarUrl: reg.playerAvatarUrl || (membersById[reg.playerId] && membersById[reg.playerId].avatarUrl) || reg.avatarUrl || '',
+    partnerAvatarUrl: reg.partnerAvatarUrl || (membersById[reg.partnerId] && membersById[reg.partnerId].avatarUrl) || ''
+  }))
   const callFunction = options.callFunction
   const registrationChain = {
     where: jest.fn(() => ({
@@ -119,7 +133,13 @@ function loadPage(options = {}) {
     cloud: {
       database: jest.fn(() => db),
       callFunction: jest.fn(({ name, data }) => {
+        if (name === 'tournaments' && data && data.action === 'get') {
+          return Promise.resolve({ result: { success: true, data: tournament } })
+        }
         if (callFunction) return callFunction({ name, data })
+        if (name === 'tournament-registrations') {
+          return Promise.resolve({ result: { success: true, data: safeRegistrations, total: safeRegistrations.length } })
+        }
         if (name === 'match-results') {
           return Promise.resolve({ result: { success: true, data: { results: matchResults } } })
         }
@@ -139,7 +159,7 @@ function loadPage(options = {}) {
   }
   global.Page = def => { pageDef = def }
   require('../index')
-  return { pageDef, app }
+  return { pageDef, app, db, registrationChain, memberChain }
 }
 
 function makeCtx(def, data = {}) {
@@ -165,6 +185,48 @@ async function loadDetail(options = {}) {
 }
 
 describe('tournament-detail score permissions', () => {
+  test('loads tournament detail through cloud function instead of direct collection read', async () => {
+    const { pageDef, db } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: 'FU Open',
+        type: 'singles',
+        format: 'regular',
+        startDate: '2026-05-25',
+        scheduleStatus: 'published'
+      },
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.loadTournamentDetail()
+
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournaments',
+      data: { action: 'get', id: 't1' }
+    })
+    expect(db.collection).not.toHaveBeenCalledWith('tournaments')
+  })
+
+  test('does not refresh identity while browsing public tournament detail', async () => {
+    const app = { globalData: {}, refreshIdentity: jest.fn().mockResolvedValue(null) }
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: 'FU Open',
+        type: 'singles',
+        format: 'regular',
+        scheduleStatus: 'published'
+      },
+      app
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.refresh()
+
+    expect(app.refreshIdentity).not.toHaveBeenCalled()
+  })
+
   test('group knockout draft shows edit and arrange bracket footer actions', async () => {
     const ctx = await loadDetail({
       tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'group_draft', status: 'upcoming', scheduleStatus: 'none' },
@@ -783,6 +845,72 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.isParticipant).toBe(true)
     expect(ctx.data.canEnterScore).toBe(true)
     expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/tournament-score/index?tournamentId=t1' })
+  })
+
+  test('loadRegistrations consumes safe cloud rows without direct roster database reads', async () => {
+    const safeRows = [
+      {
+        _id: 'reg-safe-1',
+        tournamentId: 't1',
+        playerId: 'm1',
+        playerName: '选手01',
+        playerAvatarUrl: '/images/icons/default-avatar.png',
+        registrationStatus: 'confirmed',
+        seed: 1
+      },
+      {
+        _id: 'reg-safe-2',
+        tournamentId: 't1',
+        playerId: 'm2',
+        playerName: 'Visible Player',
+        playerAvatarUrl: '/visible.png',
+        registrationStatus: 'confirmed',
+        seed: 2
+      }
+    ]
+    const { pageDef, db } = loadPage({
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } },
+      registrations: [{
+        _id: 'reg-raw',
+        tournamentId: 't1',
+        playerId: 'm1',
+        playerName: 'Raw Private Name',
+        registrationStatus: 'confirmed'
+      }],
+      members: [{ _id: 'm1', avatarUrl: '/raw-private.png' }],
+      callFunction: ({ name, data }) => {
+        if (name === 'tournament-registrations' && data.action === 'list') {
+          return Promise.resolve({ result: { success: true, data: safeRows, total: safeRows.length } })
+        }
+        return Promise.resolve({ result: { success: true, data: [] } })
+      }
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await ctx.loadRegistrations()
+
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournament-registrations',
+      data: expect.objectContaining({
+        action: 'list',
+        tournamentId: 't1'
+      })
+    })
+    expect(db.collection).not.toHaveBeenCalledWith('tournament_registrations')
+    expect(db.collection).not.toHaveBeenCalledWith('members')
+    expect(ctx.data.isParticipant).toBe(true)
+    expect(ctx.data.registrations).toEqual([
+      expect.objectContaining({
+        playerId: 'm1',
+        playerName: '选手01',
+        avatarUrl: '/images/icons/default-avatar.png'
+      }),
+      expect.objectContaining({
+        playerId: 'm2',
+        playerName: 'Visible Player',
+        avatarUrl: '/visible.png'
+      })
+    ])
   })
 
   test('viewer sees toast instead of entering score page', () => {

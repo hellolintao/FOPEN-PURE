@@ -3,7 +3,7 @@ const { syncTabBar } = require('../../utils/tab-bar')
 const { getCacheEntry, removeCache, setCache } = require('../../utils/page-cache')
 const { isPrideMonthSkinActive } = require('../../utils/seasonal-theme')
 
-const RANK_CACHE_VERSION = 'v4'
+const RANK_CACHE_VERSION = 'v5'
 const RANK_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000
 const RANK_CLOUD_TIMEOUT_MS = 20 * 1000
 
@@ -43,13 +43,16 @@ Page({
     const cachedList = cached && cached.value && Array.isArray(cached.value.rankList)
       ? cached.value.rankList
       : null
-    if (cachedList && cachedList.length > 0) {
-      this.setData({ rankList: cachedList })
+    const visibleCachedList = cachedList && cachedList.length > 0
+      ? cachedList.map(row => this._sanitizeRankRow(row))
+      : null
+    if (visibleCachedList) {
+      this.setData({ rankList: visibleCachedList })
     } else if (cachedList) {
       removeCache(cacheKey)
     }
 
-    this.setData({ loading: !(cachedList && cachedList.length > 0) })
+    this.setData({ loading: !visibleCachedList })
     try {
       const res = await callFunction({
         name: 'points-engine',
@@ -65,10 +68,7 @@ Page({
       }
       const rankData = res && res.result && res.result.data
       const list = (rankData && rankData.rankList) || []
-      const enriched = list.map(row => ({
-        ...row,
-        winRatePct: this._formatWinRatePct(row)
-      }))
+      const enriched = list.map(row => this._sanitizeRankRow(row))
       this.setData({ rankList: enriched })
       if (enriched.length > 0) {
         setCache(cacheKey, { rankList: enriched }, { ttlMs: RANK_REFRESH_INTERVAL_MS })
@@ -93,7 +93,7 @@ Page({
     const cached = getCacheEntry(cacheKey)
     const hasHero = cached && cached.value && Object.prototype.hasOwnProperty.call(cached.value, 'starHero')
     if (hasHero) {
-      this.setData({ starHero: cached.value.starHero })
+      this.setData({ starHero: this._sanitizeStarHero(cached.value.starHero) })
     }
 
     try {
@@ -106,7 +106,7 @@ Page({
         }
       })
       const data = res && res.result && res.result.data
-      const starHero = data || { mode: 'empty', star: null, subtitle: null }
+      const starHero = this._sanitizeStarHero(data || { mode: 'empty', star: null, subtitle: null })
       this.setData({ starHero })
       setCache(cacheKey, { starHero }, { ttlMs: RANK_REFRESH_INTERVAL_MS })
     } catch (err) {
@@ -129,6 +129,23 @@ Page({
 
   _cacheKey(kind) {
     return `rank:${kind}:${RANK_CACHE_VERSION}:${this._getCurrentSeasonId()}:${this.data.activeTab}`
+  },
+
+  _sanitizeRankRow(row) {
+    const { avatarUrl, ...safeRow } = row || {}
+    return {
+      ...safeRow,
+      winRatePct: this._formatWinRatePct(row)
+    }
+  },
+
+  _sanitizeStarHero(hero) {
+    if (!hero || !hero.star) return hero
+    const { avatarUrl, ...safeStar } = hero.star
+    return {
+      ...hero,
+      star: safeStar
+    }
   },
 
   _formatWinRatePct(row) {

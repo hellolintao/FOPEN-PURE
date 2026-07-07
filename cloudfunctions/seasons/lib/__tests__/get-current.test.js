@@ -1,28 +1,42 @@
 function makeCollection(rows) {
+  const docApi = {
+    get: jest.fn().mockResolvedValue({ data: rows[0] || null }),
+    update: jest.fn().mockResolvedValue({ stats: { updated: 1 } }),
+    remove: jest.fn().mockResolvedValue({ stats: { removed: 1 } })
+  }
   const collection = {
     where: jest.fn(() => collection),
     orderBy: jest.fn(() => collection),
     limit: jest.fn(() => collection),
-    get: jest.fn().mockResolvedValue({ data: rows })
+    skip: jest.fn(() => collection),
+    get: jest.fn().mockResolvedValue({ data: rows }),
+    add: jest.fn().mockResolvedValue({ _id: 'season-created' }),
+    doc: jest.fn(() => docApi)
   }
   return collection
 }
 
-function loadFunction(rows = []) {
+function loadFunction(rows = [], options = {}) {
   jest.resetModules()
   const collection = makeCollection(rows)
+  const memberCollection = {
+    where: jest.fn(() => ({
+      get: jest.fn().mockResolvedValue({ data: options.member ? [options.member] : [] })
+    }))
+  }
   const db = {
     command: { and: jest.fn() },
-    collection: jest.fn(() => collection),
+    collection: jest.fn(name => (name === 'members' ? memberCollection : collection)),
     serverDate: jest.fn(() => 'server-date'),
     RegExp: jest.fn(options => options)
   }
   jest.doMock('wx-server-sdk', () => ({
     DYNAMIC_CURRENT_ENV: 'test-env',
     init: jest.fn(),
+    getWXContext: jest.fn(() => ({ OPENID: options.openid || 'openid-a' })),
     database: jest.fn(() => db)
   }), { virtual: true })
-  return { seasonsFunction: require('../../index'), collection, db }
+  return { seasonsFunction: require('../../index'), collection, memberCollection, db }
 }
 
 describe('seasons.getCurrent', () => {
@@ -156,5 +170,25 @@ describe('seasons.getCurrent', () => {
         name: '2026 Spring'
       }
     })
+  })
+
+  test.each([
+    ['add', { data: { _id: 'season_2026', name: '2026', startDate: '2026-01-01', endDate: '2026-12-31' } }],
+    ['update', { id: 'season_2026', data: { name: '2026 Updated' } }],
+    ['delete', { id: 'season_2026' }]
+  ])('%s rejects non-admin legacy season mutation before writing', async (action, payload) => {
+    const { seasonsFunction, collection } = loadFunction([], {
+      member: { _id: 'member-a', openid: 'openid-a', admin: false }
+    })
+
+    const result = await seasonsFunction.main({ action, ...payload }, {})
+
+    expect(result).toEqual({
+      success: false,
+      error: { code: 'FORBIDDEN', message: '需要管理员权限' }
+    })
+    expect(collection.add).not.toHaveBeenCalled()
+    expect(collection.doc().update).not.toHaveBeenCalled()
+    expect(collection.doc().remove).not.toHaveBeenCalled()
   })
 })

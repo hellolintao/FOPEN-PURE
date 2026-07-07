@@ -125,6 +125,49 @@ function isAdminMember(member) {
   return !!(member && (member.admin === true || member.isAdmin === true))
 }
 
+async function resolveCallerMember() {
+  try {
+    const wxContext = cloud.getWXContext()
+    const openid = wxContext && wxContext.OPENID
+    if (!openid) return null
+    return await resolveMemberByOpenid(openid)
+  } catch (e) {
+    console.warn('[tournaments] resolve caller failed', e)
+    return null
+  }
+}
+
+async function requireAdmin() {
+  const member = await resolveCallerMember()
+  if (!member) return fail('FORBIDDEN', '需要登录')
+  if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+  return null
+}
+
+function isPublicSensitiveField(key) {
+  const normalized = String(key || '').toLowerCase()
+  return normalized.includes('openid') ||
+    normalized.includes('unionid') ||
+    normalized.includes('phone') ||
+    normalized === 'admin' ||
+    normalized === 'isadmin' ||
+    normalized.includes('publicprofileconsent')
+}
+
+function sanitizePublicDocument(value) {
+  if (Array.isArray(value)) return value.map(item => sanitizePublicDocument(item))
+  if (!value || typeof value !== 'object' || value instanceof Date) return value
+  return Object.keys(value).reduce((acc, key) => {
+    if (!isPublicSensitiveField(key)) acc[key] = sanitizePublicDocument(value[key])
+    return acc
+  }, {})
+}
+
+function sanitizeTournamentForCaller(tournament, isAdmin) {
+  if (isAdmin || !tournament) return tournament
+  return sanitizePublicDocument(tournament)
+}
+
 async function resolveMemberByOpenid(openid, database = db, command = _) {
   if (!openid) return null
   const memberRes = await database.collection('members').where(command.or([
@@ -254,8 +297,9 @@ async function actionUpdate(event) {
 // Action: list
 // ---------------------------------------------------------------------------
 
-async function actionList(event) {
+async function actionList(event, options = {}) {
   const { page = 1, pageSize = 10, keyword, status, statusNot, createdBy, ids, data: extraData } = event
+  const isAdmin = !!options.isAdmin
 
   // NOTE: Return shape is { success: true, data: { tournaments: [...], total: N } }
   // This replaces the old { data: [...] } shape.
@@ -309,7 +353,10 @@ async function actionList(event) {
           )
         )
       : {}
-    const enriched = tournaments.map(t => ({ ...t, seasonName: seasonMap[t.seasonId] || '-' }))
+    const enriched = tournaments.map(t => sanitizeTournamentForCaller({
+      ...t,
+      seasonName: seasonMap[t.seasonId] || '-'
+    }, isAdmin))
 
     return { success: true, data: { tournaments: enriched, total } }
   } catch (e) {
@@ -541,6 +588,8 @@ exports.main = async (event, context) => {
   switch (action) {
     // ── Legacy action: keep old contract so tournament-edit still works ──
     case 'add': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       // Old callers read res.result._id or res.result.data._id, and check errMsg
       const rawData = data || {}
       const errors = validateTournament(rawData)
@@ -589,14 +638,23 @@ exports.main = async (event, context) => {
     }
 
     // ── New action: create (Phase 7 wizard) ──
-    case 'create':
+    case 'create': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return actionCreate(event)
+    }
 
-    case 'get':
-      return collection.doc(id).get()
+    case 'get': {
+      const caller = await resolveCallerMember()
+      const isAdmin = isAdminMember(caller)
+      const result = await collection.doc(id).get()
+      return { ...result, data: sanitizeTournamentForCaller(result && result.data, isAdmin) }
+    }
 
     // ── Legacy action: keep old errMsg contract so tournament-edit still works ──
     case 'update': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       const rawData = data || {}
       const errors = validateTournament(rawData)
       if (errors.length > 0) {
@@ -608,23 +666,40 @@ exports.main = async (event, context) => {
     }
 
     // ── New action: update with envelope (for new wizard pages) ──
-    case 'updateNew':
+    case 'updateNew': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return actionUpdate(event)
+    }
 
-    case 'updateConfig':
+    case 'updateConfig': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return collection.doc(id).update({ data: { config: data.config, updateTime: now } })
+    }
 
-    case 'updatePointsRules':
+    case 'updatePointsRules': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return collection.doc(id).update({ data: { pointsRules: data.pointsRules, updateTime: now } })
+    }
 
-    case 'updateStatus':
+    case 'updateStatus': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return collection.doc(_id || id).update({ data: { status, updateTime: now } })
+    }
 
-    case 'delete':
+    case 'delete': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       return collection.doc(_id || id).remove()
+    }
 
-    case 'list':
-      return actionList(event)
+    case 'list': {
+      const caller = await resolveCallerMember()
+      return actionList(event, { isAdmin: isAdminMember(caller) })
+    }
 
     case 'lastPointsRules':
       return actionLastPointsRules(event)

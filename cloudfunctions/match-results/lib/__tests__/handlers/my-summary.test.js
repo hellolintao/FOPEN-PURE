@@ -1,6 +1,6 @@
 const { mySummary } = require('../../handlers/my-summary')
 
-function makeCtx({ memberId = 'mA', allMatches = [], registrations = [], tournaments = {}, now = '2026-05-22T12:00:00+08:00' } = {}) {
+function makeCtx({ memberId = 'mA', allMatches = [], registrations = [], tournaments = {}, members = {}, now = '2026-05-22T12:00:00+08:00' } = {}) {
   return {
     callerMemberId: memberId,
     now: () => now,
@@ -25,6 +25,7 @@ function makeCtx({ memberId = 'mA', allMatches = [], registrations = [], tournam
         (Array.isArray(r.memberIds) && r.memberIds.includes(mid))
       ),
       getTournamentsByIds: async (ids) => ids.map(id => tournaments[id]).filter(Boolean),
+      getMembersByIds: async (ids) => ids.map(id => members[id]).filter(Boolean),
     },
   }
 }
@@ -56,6 +57,40 @@ test('mySummary pending matches partnerId', async () => {
   })
   const result = await mySummary(ctx, { historyLimit: 10 })
   expect(result.pending).toHaveLength(1)
+})
+
+test('mySummary returns opponent avatar and name while stripping sensitive fields', async () => {
+  const ctx = makeCtx({
+    memberId: 'mA',
+    members: {
+      mA: { _id: 'mA', name: 'Me', avatarUrl: '/me.png', publicProfileConsent: true },
+      mB: { _id: 'mB', name: 'Private Opponent', avatarUrl: '/private.png', publicProfileConsent: false },
+    },
+    allMatches: [
+      {
+        _id: 'mr_private',
+        tournamentId: 't1',
+        resultStatus: 'pending',
+        playerIds: ['mA', 'mB'],
+        round: 1,
+        position: 1,
+        player1: { id: 'mA', name: 'Raw Me', avatarUrl: '/raw-me.png' },
+        player2: { id: 'mB', name: 'Raw Private Opponent', avatarUrl: '/raw-private.png', phone: '13800000000' },
+      },
+    ],
+    tournaments: { t1: { _id: 't1', name: 'A' } },
+  })
+
+  const result = await mySummary(ctx, { historyLimit: 10 })
+
+  expect(result.pending[0].opponentLabel).toBe('Private Opponent')
+  expect(result.pending[0].p2).toMatchObject({
+    id: 'mB',
+    name: 'Private Opponent',
+    avatarUrl: '/private.png',
+    publicProfileVisible: false,
+  })
+  expect(result.pending[0].p2).not.toHaveProperty('phone')
 })
 
 test('mySummary confirmed pointsEarned aggregates only my entries', async () => {

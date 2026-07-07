@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "audit:polish-data": "node audit-polish-data.js",
+    "audit:privacy": "node privacy-adversarial-scan.js",
     "test": "jest"
   },
   "dependencies": {

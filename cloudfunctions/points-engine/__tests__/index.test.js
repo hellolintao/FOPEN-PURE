@@ -185,8 +185,8 @@ describe('rankList enhancements', () => {
     const row = res.data.rankList.find(r => r._id === 'unclaimed_标子')
     expect(row).toMatchObject({
       _id: 'unclaimed_标子',
-      name: '选手01',
-      avatarUrl: '/images/icons/default-avatar.png',
+      name: '标子',
+      avatarUrl: '',
       publicProfileVisible: false,
       totalPoints: 1560,
       winCount: 1,
@@ -280,7 +280,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '选手01', avatarUrl: '/images/icons/default-avatar.png', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '选手01', avatarUrl: '', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -305,7 +305,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: '', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -399,7 +399,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
     expect(res.data.cachedAt).toBeUndefined()
   })
@@ -424,7 +424,7 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
   })
 
@@ -448,7 +448,7 @@ describe('rankList enhancements', () => {
 
     expect(res.success).toBe(true)
     expect(res.data.rankList).toEqual([
-      { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+      { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
     ])
   })
 
@@ -474,13 +474,13 @@ describe('rankList enhancements', () => {
       seasonId: 'season_2026',
       cacheDate: '2026-05-20',
       rankList: [
-        { _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
+        { _id: 'A', name: '甲', avatarUrl: '', publicProfileVisible: true, totalPoints: 100, winCount: 4, lossCount: 1, winRate: 0.8, trendDelta: null }
       ]
     })
     expect(cloud.__rows.rank_cache.find(row => row.type === 'doubles').rankList[0]).toMatchObject({
       _id: 'B',
       name: '乙',
-      avatarUrl: 'b.png',
+      avatarUrl: '',
       publicProfileVisible: true,
       totalPoints: 80,
       winRate: 0.5

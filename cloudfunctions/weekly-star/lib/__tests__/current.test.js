@@ -82,6 +82,7 @@ describe("weekly-star.current - previous natural week display", () => {
     const out = await resolveCurrentWeeklyStar({ db, seasonId: 's2026', type: 'singles', week })
     expect(out.mode).toBe('current')
     expect(out.star.memberId).toBe('A')
+    expect(out.star.avatarUrl).toBe('')
     expect(out.star.pointsDelta).toBe(50)
     expect(out.star.wins).toBe(1)
     expect(out.star.losses).toBe(0)

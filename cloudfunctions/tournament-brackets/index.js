@@ -16,6 +16,7 @@ const {
   groupBracketDocId,
   knockoutBracketDocId,
 } = require('./lib/group-knockout')
+const { toPublicIdentity } = require('../_shared/public-profile')
 
 // 生成对位表ID
 function generateBracketId(tournamentId, round) {
@@ -108,6 +109,129 @@ function isAdminMember(member) {
   return !!(member && (member.admin === true || member.isAdmin === true))
 }
 
+function identityPrimaryId(value) {
+  return value && (value.id || value.playerId || value.memberId || value._id)
+}
+
+function hasIdentityShape(value) {
+  if (!value || typeof value !== 'object') return false
+  if (value.id === 'BYE' || value.name === 'BYE' || value.playerId === 'BYE') return true
+  const hasPrimary = !!identityPrimaryId(value)
+  return hasPrimary && (
+    Object.prototype.hasOwnProperty.call(value, 'name') ||
+    Object.prototype.hasOwnProperty.call(value, 'playerName') ||
+    Object.prototype.hasOwnProperty.call(value, 'avatarUrl') ||
+    Object.prototype.hasOwnProperty.call(value, 'playerAvatarUrl') ||
+    Object.prototype.hasOwnProperty.call(value, 'partnerName') ||
+    Object.prototype.hasOwnProperty.call(value, 'partnerAvatarUrl')
+  )
+}
+
+function collectIdentityIds(value, ids = []) {
+  if (!value) return ids
+  if (Array.isArray(value)) {
+    value.forEach(item => collectIdentityIds(item, ids))
+    return ids
+  }
+  if (typeof value !== 'object') return ids
+  if (hasIdentityShape(value)) {
+    const id = identityPrimaryId(value)
+    if (id && id !== 'BYE' && id !== 'TBD') ids.push(id)
+    if (value.partnerId && value.partnerId !== 'BYE' && value.partnerId !== 'TBD') ids.push(value.partnerId)
+  }
+  Object.keys(value).forEach(key => collectIdentityIds(value[key], ids))
+  return ids
+}
+
+function identityOrdinalMap(values = []) {
+  const ordinals = new Map()
+  for (const id of collectIdentityIds(values)) {
+    if (!ordinals.has(id)) ordinals.set(id, ordinals.size)
+  }
+  return ordinals
+}
+
+function isSensitiveIdentityField(key) {
+  const normalized = String(key || '').toLowerCase()
+  return normalized.includes('openid') ||
+    normalized.includes('phone') ||
+    normalized.includes('admin') ||
+    normalized.includes('publicprofileconsent') ||
+    normalized.includes('playstyle')
+}
+
+function stripSensitiveIdentityFields(value = {}) {
+  return Object.keys(value || {}).reduce((acc, key) => {
+    if (!isSensitiveIdentityField(key)) acc[key] = value[key]
+    return acc
+  }, {})
+}
+
+async function getMembersByIds(ids, database = db, command = _) {
+  const uniqueIds = [...new Set((ids || []).filter(Boolean))]
+  if (uniqueIds.length === 0) return new Map()
+  const query = command && typeof command.in === 'function'
+    ? { _id: command.in(uniqueIds) }
+    : { _id: uniqueIds }
+  const res = await database.collection('members').where(query).get().catch(() => ({ data: [] }))
+  return new Map((res.data || []).map(member => [member._id, member]))
+}
+
+function publicIdentityValue(value, membersById, ordinals) {
+  if (!value) return value
+  if (Array.isArray(value)) return value.map(item => publicIdentityValue(item, membersById, ordinals))
+  if (typeof value !== 'object') return value
+
+  const safe = stripSensitiveIdentityFields(value)
+  const shouldApplyIdentity = hasIdentityShape(value)
+  if (value.id === 'BYE' || value.name === 'BYE' || value.playerId === 'BYE') {
+    safe.name = 'BYE'
+    if (Object.prototype.hasOwnProperty.call(safe, 'playerName')) safe.playerName = 'BYE'
+    return safe
+  }
+
+  if (shouldApplyIdentity) {
+    const id = identityPrimaryId(value)
+    if (id) {
+      const identity = toPublicIdentity(membersById.get(id), { index: ordinals.get(id) })
+      if (Object.prototype.hasOwnProperty.call(safe, 'playerName')) {
+        safe.playerName = identity.name
+        safe.playerAvatarUrl = identity.avatarUrl
+        safe.playerPublicProfileVisible = identity.publicProfileVisible
+      }
+      safe.name = identity.name
+      safe.avatarUrl = identity.avatarUrl
+      safe.publicProfileVisible = identity.publicProfileVisible
+    }
+    if (value.partnerId) {
+      const partnerIdentity = toPublicIdentity(membersById.get(value.partnerId), { index: ordinals.get(value.partnerId) })
+      safe.partnerName = partnerIdentity.name
+      safe.partnerAvatarUrl = partnerIdentity.avatarUrl
+      safe.partnerPublicProfileVisible = partnerIdentity.publicProfileVisible
+    }
+  }
+
+  Object.keys(safe).forEach(key => {
+    safe[key] = publicIdentityValue(safe[key], membersById, ordinals)
+  })
+  return safe
+}
+
+async function shouldReturnRawIdentity() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  const member = await resolveMemberByOpenid(openid)
+  return isAdminMember(member)
+}
+
+async function publicIdentityPayload(payload) {
+  if (await shouldReturnRawIdentity()) return payload
+  const ids = [...new Set(collectIdentityIds(payload))]
+  const membersById = await getMembersByIds(ids)
+  const ordinals = identityOrdinalMap(payload)
+  return publicIdentityValue(payload, membersById, ordinals)
+}
+
 async function resolveMemberByOpenid(openid, database = db, command = _) {
   if (!openid) return null
   const query = command && typeof command.or === 'function'
@@ -134,6 +258,9 @@ exports.main = async (event, context) => {
   try {
     switch (action) {
       case 'add': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 新增对位表
         const errors = validateBracket(data)
         if (errors.length > 0) {
@@ -162,6 +289,9 @@ exports.main = async (event, context) => {
       }
 
       case 'update': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新对位表
         const errors = validateBracket(data)
         if (errors.length > 0) {
@@ -179,13 +309,20 @@ exports.main = async (event, context) => {
       }
 
       case 'delete': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 删除对位表
         return await collection.doc(id).remove()
       }
 
       case 'get': {
         // 获取单个对位表
-        return await collection.doc(id).get()
+        const result = await collection.doc(id).get()
+        return {
+          ...result,
+          data: result && result.data ? await publicIdentityPayload(result.data) : result.data
+        }
       }
 
       case 'getByTournament': {
@@ -195,7 +332,7 @@ exports.main = async (event, context) => {
           .orderBy('round', 'asc')
           .get()
 
-        return { data: result.data }
+        return { data: await publicIdentityPayload(result.data) }
       }
 
       case 'getByRound': {
@@ -207,7 +344,7 @@ exports.main = async (event, context) => {
           })
           .get()
 
-        return { data: result.data }
+        return { data: await publicIdentityPayload(result.data) }
       }
 
       case 'list': {
@@ -225,7 +362,7 @@ exports.main = async (event, context) => {
         const countResult = await collection.where(query).count()
 
         return {
-          data: result.data,
+          data: await publicIdentityPayload(result.data),
           total: countResult.total,
           page,
           pageSize
@@ -233,6 +370,9 @@ exports.main = async (event, context) => {
       }
 
       case 'updateMatch': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新单场比赛
         if (!id || !matchId) {
           return { errMsg: '对位表ID和比赛ID不能为空' }
@@ -264,6 +404,9 @@ exports.main = async (event, context) => {
       }
 
       case 'updateMatchScore': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新比赛比分
         if (!id || !matchId) {
           return { errMsg: '对位表ID和比赛ID不能为空' }
@@ -297,6 +440,9 @@ exports.main = async (event, context) => {
       }
 
       case 'updateMatchStatus': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新比赛状态
         if (!id || !matchId) {
           return { errMsg: '对位表ID和比赛ID不能为空' }
@@ -675,15 +821,18 @@ async function handleGetGroupKnockoutBracket({ tournamentId }) {
 
   const groupBrackets = ctx.brackets.filter(bracket => bracket.stage === 'group')
   const knockoutBrackets = ctx.brackets.filter(bracket => bracket.stage === 'knockout')
+  const safePayload = await publicIdentityPayload({
+    groups: ctx.groups,
+    standings: ctx.standings,
+    groupBrackets: sortGroupBrackets(groupBrackets),
+    knockoutBrackets: sortRoundBrackets(knockoutBrackets)
+  })
 
   return {
     success: true,
     data: {
       tournament: ctx.tournament,
-      groups: ctx.groups,
-      standings: ctx.standings,
-      groupBrackets: sortGroupBrackets(groupBrackets),
-      knockoutBrackets: sortRoundBrackets(knockoutBrackets)
+      ...safePayload
     }
   }
 }

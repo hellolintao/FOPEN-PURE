@@ -12,6 +12,7 @@ Page({
     avatarPreviewUrl: '',
     avatarUploading: false,
     agreementAccepted: false,
+    publicProfileConsent: false,
     needsAgreement: false,
     formData: {
       name: '',
@@ -76,6 +77,9 @@ Page({
       return
     }
 
+    const authorized = await this.ensureOfficialPrivacyAuthorization('请先同意微信隐私授权')
+    if (!authorized) return
+
     try {
       const res = await callFunction({ name: 'members', data: { action: 'get' } })
       const user = res.result && res.result.data && res.result.data[0]
@@ -95,6 +99,7 @@ Page({
   setUserForm(user) {
     this.setData({
       avatarPreviewUrl: '',
+      publicProfileConsent: user.publicProfileConsent === true,
       formData: {
         name: user.name || '',
         avatarUrl: user.avatarUrl || '',
@@ -255,6 +260,13 @@ Page({
     this.setData({ agreementAccepted: values.includes('accepted') })
   },
 
+  onPublicProfileConsentChange(e) {
+    const values = e && e.detail && Array.isArray(e.detail.value)
+      ? e.detail.value
+      : []
+    this.setData({ publicProfileConsent: values.includes('publicProfile') })
+  },
+
   onOpenUserAgreement() {
     wx.navigateTo({ url: '/pages/user-agreement/index' })
   },
@@ -312,10 +324,8 @@ Page({
       const payload = {
         name: cleanName,
         avatarUrl: avatarUrl || DEFAULT_AVATAR_URL,
-        playStyle: playStyle || ''
-      }
-      if (shouldCreateMember || shouldClaimExistingMember) {
-        payload.publicProfileConsent = true
+        playStyle: playStyle || '',
+        publicProfileConsent: this.data.publicProfileConsent === true
       }
       if (shouldCreateMember || isTournamentRegister) {
         payload.claimStatus = 'claimed'

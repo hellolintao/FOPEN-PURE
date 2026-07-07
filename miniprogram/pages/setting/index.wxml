@@ -6,6 +6,26 @@
     <text class="brand-mark">FOPEN</text>
     <text class="brand-sub num">/ TENNIS CLUB · EST. 2026</text>
     <view class="brand-divider"></view>
-    <text class="brand-meta">设置页 · 后续会加入通知、隐私、关于等条目</text>
+    <text class="brand-meta">设置页</text>
+  </view>
+
+  <view class="setting-section anim-stage-rise">
+    <text class="section-title">隐私与账号</text>
+    <button class="setting-row" bindtap="onOpenPrivacyPolicy">
+      <text class="row-main">隐私政策</text>
+      <text class="row-meta">查看个人信息处理规则</text>
+    </button>
+    <button class="setting-row" bindtap="onOpenUserAgreement">
+      <text class="row-main">用户服务协议</text>
+      <text class="row-meta">查看账号与赛事服务条款</text>
+    </button>
+    <button class="setting-row warning" bindtap="onRevokePublicProfile">
+      <text class="row-main">撤回公开展示授权</text>
+      <text class="row-meta">排行榜、球员详情和赛事页将匿名展示</text>
+    </button>
+    <button class="setting-row danger" bindtap="onDeleteAccount">
+      <text class="row-main">删除账号资料</text>
+      <text class="row-meta">删除当前微信账号绑定的会员资料</text>
+    </button>
   </view>
 </view>

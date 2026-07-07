@@ -88,14 +88,6 @@
   gap: var(--space-4);
 }
 
-.star-avatar {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 50%;
-  background: var(--color-bg-3);
-  border: 2rpx solid var(--color-lime);
-}
-
 .star-info {
   flex: 1;
   display: flex;
@@ -233,11 +225,6 @@
   font-size: 22rpx;
   line-height: 1.22;
   text-align: right;
-}
-
-.theme-pride-month .star-avatar {
-  border: 4rpx solid var(--color-lime);
-  box-shadow: 0 0 0 3rpx rgba(255, 255, 255, 0.88);
 }
 
 .theme-pride-month .star-name,

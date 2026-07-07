@@ -11,6 +11,7 @@ const {
   withdrawRegistration
 } = require('./lib/service')
 const { isActiveRegistration } = require('../_shared/tournament-phase')
+const { toPublicIdentity } = require('../_shared/public-profile')
 
 // 生成报名ID
 function generateRegistrationId(tournamentId, index) {
@@ -77,6 +78,22 @@ function isAdminMember(member) {
   return !!(member && (member.admin === true || member.isAdmin === true))
 }
 
+function isSensitivePublicField(key) {
+  const normalized = String(key || '').toLowerCase()
+  return normalized.includes('openid') ||
+    normalized.includes('phone') ||
+    normalized.includes('admin') ||
+    normalized.includes('publicprofileconsent') ||
+    normalized.includes('playstyle')
+}
+
+function stripSensitivePublicFields(row = {}) {
+  return Object.keys(row).reduce((acc, key) => {
+    if (!isSensitivePublicField(key)) acc[key] = row[key]
+    return acc
+  }, {})
+}
+
 async function resolveMemberByOpenid(openid, database = db, command = _) {
   if (!openid) return null
   const query = command && typeof command.or === 'function'
@@ -94,6 +111,58 @@ async function requireAdmin() {
   const member = await resolveMemberByOpenid(openid)
   if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
   return null
+}
+
+async function getMembersByIds(ids, database = db, command = _) {
+  const uniqueIds = [...new Set((ids || []).filter(Boolean))]
+  if (uniqueIds.length === 0) return new Map()
+  const query = command && typeof command.in === 'function'
+    ? { _id: command.in(uniqueIds) }
+    : { _id: uniqueIds }
+  const res = await database.collection('members').where(query).get().catch(() => ({ data: [] }))
+  return new Map((res.data || []).map(member => [member._id, member]))
+}
+
+function registrationMemberIds(rows = []) {
+  const ids = []
+  for (const row of rows || []) {
+    if (row && row.playerId) ids.push(row.playerId)
+    if (row && row.partnerId) ids.push(row.partnerId)
+  }
+  return ids
+}
+
+function publicRegistrationRow(row = {}, membersById, index) {
+  const safe = stripSensitivePublicFields(row)
+  delete safe.name
+  delete safe.avatarUrl
+
+  if (row.playerId) {
+    const identity = toPublicIdentity(membersById.get(row.playerId), { rank: row.seed, index })
+    safe.playerName = identity.name
+    safe.playerAvatarUrl = identity.avatarUrl
+    safe.playerPublicProfileVisible = identity.publicProfileVisible
+  }
+
+  if (row.partnerId) {
+    const identity = toPublicIdentity(membersById.get(row.partnerId), { rank: row.seed, index })
+    safe.partnerName = identity.name
+    safe.partnerAvatarUrl = identity.avatarUrl
+    safe.partnerPublicProfileVisible = identity.publicProfileVisible
+  }
+
+  return safe
+}
+
+async function publicRegistrationRows(rows = []) {
+  const membersById = await getMembersByIds(registrationMemberIds(rows))
+  return (rows || []).map((row, index) => publicRegistrationRow(row, membersById, index))
+}
+
+async function shouldReturnAdminRegistrationRows(wxContext) {
+  const openid = wxContext && wxContext.OPENID
+  const member = await resolveMemberByOpenid(openid)
+  return isAdminMember(member)
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +402,9 @@ exports.main = async (event, context) => {
         return await withdrawRegistration(buildServiceCtx(wxContext), event)
 
       case 'add': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 添加报名
         const validationErrors = validateRegistration(data)
         if (validationErrors.length > 0) {
@@ -381,6 +453,9 @@ exports.main = async (event, context) => {
       }
 
       case 'update': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新报名
         if (!id) {
           return {
@@ -412,6 +487,9 @@ exports.main = async (event, context) => {
       }
 
       case 'delete': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 删除报名
         if (!id) {
           return {
@@ -436,10 +514,14 @@ exports.main = async (event, context) => {
         }
 
         const result = await db.collection('tournament_registrations').doc(id).get()
+        const adminRows = await shouldReturnAdminRegistrationRows(wxContext)
+        const data = adminRows
+          ? result.data
+          : (await publicRegistrationRows(result.data ? [result.data] : []))[0]
 
         return {
           success: true,
-          data: result.data
+          data
         }
       }
 
@@ -474,10 +556,12 @@ exports.main = async (event, context) => {
           const filtered = (result.data || [])
             .filter(row => getRegistrationStatus(row) === statusFilter)
           const offset = (pageNum - 1) * pageSize
+          const pageRows = filtered.slice(offset, offset + pageSize)
+          const adminRows = await shouldReturnAdminRegistrationRows(wxContext)
 
           return {
             success: true,
-            data: filtered.slice(offset, offset + pageSize),
+            data: adminRows ? pageRows : await publicRegistrationRows(pageRows),
             total: filtered.length,
             pageNum,
             pageSize
@@ -494,10 +578,11 @@ exports.main = async (event, context) => {
         const countResult = await db.collection('tournament_registrations')
           .where(query)
           .count()
+        const adminRows = await shouldReturnAdminRegistrationRows(wxContext)
 
         return {
           success: true,
-          data: result.data,
+          data: adminRows ? result.data : await publicRegistrationRows(result.data || []),
           total: countResult.total,
           pageNum,
           pageSize
@@ -537,6 +622,9 @@ exports.main = async (event, context) => {
       }
 
       case 'updateStatus': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新报名状态
         if (!id) {
           return {
@@ -576,6 +664,9 @@ exports.main = async (event, context) => {
       }
 
       case 'updateSeed': {
+        const adminGate = await requireAdmin()
+        if (adminGate) return adminGate
+
         // 更新种子排名
         if (!id) {
           return {

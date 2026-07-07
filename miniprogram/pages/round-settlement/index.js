@@ -18,13 +18,13 @@ Page({
 
   async loadTournament(tournamentId) {
     try {
-      const db = wx.cloud.database();
-      const result = await db.collection('tournaments')
-        .doc(tournamentId)
-        .get();
+      const result = await wx.cloud.callFunction({
+        name: 'tournaments',
+        data: { action: 'get', id: tournamentId }
+      });
 
-      if (result.data) {
-        const tournament = result.data;
+      const tournament = unpackTournamentRecord(result);
+      if (tournament) {
 
         // 通过 seasonID 加载赛季信息
         if (tournament.seasonId) {
@@ -42,14 +42,15 @@ Page({
 
   async loadSeason(seasonId) {
     try {
-      const db = wx.cloud.database();
-      const result = await db.collection('seasons')
-        .doc(seasonId)
-        .get();
+      const result = await wx.cloud.callFunction({
+        name: 'seasons',
+        data: { action: 'get', id: seasonId }
+      });
+      const season = unpackSeasonRecord(result);
 
-      if (result.data) {
+      if (season) {
         this.setData({
-          seasonName: result.data.name
+          seasonName: season.name
         });
       }
     } catch (err) {
@@ -93,3 +94,17 @@ Page({
     }
   }
 });
+
+function unpackTournamentRecord(res) {
+  const data = res && res.result && res.result.data;
+  if (data && data.tournament) return data.tournament;
+  if (data) return data;
+  return null;
+}
+
+function unpackSeasonRecord(res) {
+  if (!res) return null
+  if (res.result && res.result.success === true) return res.result.data || null
+  if (res.result && res.result.data) return res.result.data
+  return res.data || null
+}

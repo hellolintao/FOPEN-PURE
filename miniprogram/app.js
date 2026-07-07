@@ -15,7 +15,6 @@ App({
       return;
     }
     wx.cloud.init({ env: this.globalData.env, traceUser: true });
-    this.identityReady = this.refreshIdentity();
   },
 
   async refreshIdentity() {

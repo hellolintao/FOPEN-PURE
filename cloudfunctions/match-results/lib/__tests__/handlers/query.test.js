@@ -137,6 +137,82 @@ test('listByTournament filters invalidated and history rows from active score ro
   expect(res.results.map(row => row._id)).toEqual(['result_t1_m1'])
 })
 
+test('listByTournament returns public player identities without sensitive fields for non-admin callers', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: false,
+    tournament: { _id: 't1', scheduleStatus: 'published' },
+    members: {
+      private: {
+        _id: 'private',
+        name: 'Private Player',
+        avatarUrl: '/private.png',
+        publicProfileConsent: false
+      },
+      public: {
+        _id: 'public',
+        name: 'Visible Player',
+        avatarUrl: '/visible.png',
+        publicProfileConsent: true
+      }
+    },
+    rows: [{
+      _id: 'result_t1_m1',
+      tournamentId: 't1',
+      resultStatus: 'confirmed',
+      playerIds: ['private', 'public'],
+      player1: {
+        id: 'private',
+        name: 'Raw Private Name',
+        avatarUrl: '/raw-private.png',
+        openid: 'private-openid',
+        phone: '13800000000',
+        publicProfileConsent: false
+      },
+      player2: {
+        id: 'public',
+        name: 'Raw Public Name',
+        avatarUrl: '/raw-public.png',
+        admin: true
+      },
+      winner: {
+        id: 'private',
+        name: 'Raw Private Name',
+        avatarUrl: '/raw-private.png',
+        publicProfileConsentAt: '2026-06-01T00:00:00+08:00'
+      }
+    }]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  const row = res.results[0]
+  expect(row.player1).toMatchObject({
+    id: 'private',
+    name: 'Private Player',
+    avatarUrl: '/private.png',
+    publicProfileVisible: false
+  })
+  expect(row.player2).toMatchObject({
+    id: 'public',
+    name: 'Visible Player',
+    avatarUrl: '/visible.png',
+    publicProfileVisible: true
+  })
+  expect(row.winner).toMatchObject({
+    id: 'private',
+    name: 'Private Player',
+    avatarUrl: '/private.png',
+    publicProfileVisible: false
+  })
+  for (const side of [row.player1, row.player2, row.winner]) {
+    expect(side).not.toHaveProperty('openid')
+    expect(side).not.toHaveProperty('phone')
+    expect(side).not.toHaveProperty('admin')
+    expect(side).not.toHaveProperty('publicProfileConsent')
+    expect(side).not.toHaveProperty('publicProfileConsentAt')
+  }
+})
+
 test('listByPlayer filters non-admin rows by tournament schedule visibility', async () => {
   const ctx = makeQueryCtx({
     isAdmin: false,

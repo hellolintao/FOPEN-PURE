@@ -88,12 +88,17 @@ test('loadHero caches weekly star data for 2 hours', async () => {
   const def = loadPage()
   const { callFunction } = require('../../../utils/cloud')
   callFunction.mockResolvedValue({
-    result: { data: { mode: 'current', star: { memberId: 'A' }, subtitle: 'hot' } }
+    result: { data: { mode: 'current', star: { memberId: 'A', avatarUrl: 'fresh.png' }, subtitle: 'hot' } }
   })
   const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
 
   await ctx.loadHero()
 
+  expect(ctx.data.starHero).toEqual({
+    mode: 'current',
+    star: { memberId: 'A' },
+    subtitle: 'hot'
+  })
   const cacheEntry = wx.setStorageSync.mock.calls[0][1]
   expect(cacheEntry.expiresAt).toBe(2000 + 2 * 60 * 60 * 1000)
   nowSpy.mockRestore()
@@ -147,6 +152,10 @@ test('rank page passes the June-only Pride skin flag to weekly star and personal
   expect(wxml).toContain('star-pride-waves pride-s-curve')
   expect(wxml).toContain('pride-wave-green')
   expect(wxml).toContain('pride-highlight="{{isPrideMonthSkinActive && currentMember && item._id === currentMember._id}}"')
+  expect(wxml).not.toContain('avatar-url="{{item.avatarUrl}}"')
+  expect(wxml).not.toContain('starHero.star.avatarUrl')
+  expect(wxml).not.toContain('star-avatar')
+  expect(wxml).not.toContain('default-avatar.png')
 })
 
 test('loadRank shows 0% for played matches and dash only for no matches', async () => {
@@ -223,7 +232,7 @@ test('loadRank renders fresh 2-hour page cache before refreshing cloud profile d
     config: { timeout: 20000 },
   })
   expect(ctx.data.rankList).toEqual([
-    { _id: 'A', name: '新头像用户', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
+    { _id: 'A', name: '新头像用户', winCount: 1, lossCount: 0, winRate: 1, winRatePct: '100%' }
   ])
 })
 

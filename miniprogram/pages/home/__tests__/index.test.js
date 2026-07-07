@@ -89,6 +89,39 @@ describe('home stats', () => {
     expect(ctx.data.myStats.singles.totalPoints).toBe(30)
   })
 
+  test('silently restores identity before rendering personal home stats', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockImplementation(async () => {
+        app.globalData.currentMember = { _id: 'm1', name: '张三', avatarUrl: 'cloud://avatar' }
+        app.globalData.isAdmin = true
+        return app.globalData.currentMember
+      })
+    }
+    const def = loadPage(app)
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValue({
+      result: {
+        data: {
+          stats: {
+            singles: { winCount: 1, lossCount: 1, winRate: 0.5, totalPoints: 12 }
+          }
+        }
+      }
+    })
+    const ctx = makeCtx(def)
+
+    await ctx.loadHome()
+
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
+    expect(callFunction).toHaveBeenCalledWith({
+      name: 'points-engine',
+      data: { action: 'playerStats', playerId: 'm1', currentSeasonId: `season_${ctx.data.seasonYear}` }
+    })
+    expect(ctx.data.currentMember).toMatchObject({ _id: 'm1', avatarUrl: 'cloud://avatar' })
+    expect(ctx.data.isAdmin).toBe(true)
+  })
+
   test('home page exposes a June-only Pride skin class and label', () => {
     const fs = require('fs')
     const path = require('path')

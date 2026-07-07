@@ -204,6 +204,7 @@ describe('weekly-star.current natural-week display', () => {
     expect(res.data.weekStart).toBe('2026-05-25')
     expect(res.data.weekEnd).toBe('2026-05-31')
     expect(res.data.star.memberId).toBe('A')
+    expect(res.data.star.avatarUrl).toBe('')
     expect(res.data.star.pointsDelta).toBe(80)
   })
 

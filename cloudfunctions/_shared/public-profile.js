@@ -17,18 +17,18 @@ function anonymousProfileName(options = {}) {
 
 function toPublicIdentity(member, options = {}) {
   const visible = hasPublicProfileConsent(member)
-  if (visible) {
-    return {
-      name: member.name || anonymousProfileName(options),
-      avatarUrl: member.avatarUrl || DEFAULT_PUBLIC_AVATAR_URL,
-      publicProfileVisible: true
-    }
-  }
-
   return {
-    name: anonymousProfileName(options),
-    avatarUrl: DEFAULT_PUBLIC_AVATAR_URL,
-    publicProfileVisible: false
+    name: member && member.name ? member.name : anonymousProfileName(options),
+    avatarUrl: member && member.avatarUrl ? member.avatarUrl : DEFAULT_PUBLIC_AVATAR_URL,
+    publicProfileVisible: visible
+  }
+}
+
+function toRankingIdentity(member, options = {}) {
+  const identity = toPublicIdentity(member, options)
+  return {
+    ...identity,
+    avatarUrl: ''
   }
 }
 
@@ -36,5 +36,6 @@ module.exports = {
   DEFAULT_PUBLIC_AVATAR_URL,
   anonymousProfileName,
   hasPublicProfileConsent,
-  toPublicIdentity
+  toPublicIdentity,
+  toRankingIdentity
 }

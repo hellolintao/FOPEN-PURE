@@ -1,7 +1,7 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
 const { validateResultSubmission } = require('./lib/validate')
-const { canExposeScoreRows } = require('./lib/handlers/query')
+const { canExposeScoreRows, publicScoreRows } = require('./lib/handlers/query')
 const { isActiveScoreRow } = require('./lib/active-row')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -136,6 +136,14 @@ async function filterScoreRowsVisibleToSubmitter(result) {
     }
   }
   return { ...activeResult, data: visibleRows }
+}
+
+async function sanitizeScoreRowsResultForSubmitter(result) {
+  if (!result || !Array.isArray(result.data) || result.data.length === 0) return result
+  const submitter = await resolveSubmitter()
+  if (submitter && submitter.isAdmin) return result
+  const ctx = buildQueryCtx(submitter || { isAdmin: false })
+  return { ...result, data: await publicScoreRows(ctx, result.data) }
 }
 
 function isScheduleWriteBlocked(tournament) {
@@ -602,6 +610,7 @@ function buildSubmitCtx(submitter) {
 function buildSummaryCtx(submitter) {
   return {
     callerMemberId: submitter._id,
+    isAdmin: !!(submitter && submitter.isAdmin),
     db: {
       queryMyPending: async (mid) => (await db.collection('match_results').where({
         playerIds: _.in([mid]),
@@ -641,6 +650,10 @@ function buildSummaryCtx(submitter) {
         if (!ids.length) return []
         return (await db.collection('tournaments').where({ _id: _.in(ids) }).get()).data
       },
+      getMembersByIds: async (ids) => {
+        if (!ids.length) return []
+        return (await db.collection('members').where({ _id: _.in(ids) }).get()).data
+      },
     },
   }
 }
@@ -651,6 +664,8 @@ exports.main = async (event, context) => {
 
   switch (action) {
     case 'add': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       // 数据验证
       const errors = validateMatchResult(data)
       if (errors.length > 0) {
@@ -732,6 +747,8 @@ exports.main = async (event, context) => {
     }
 
     case 'update': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }
       }
@@ -768,6 +785,8 @@ exports.main = async (event, context) => {
     }
 
     case 'delete': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       // 删除比赛
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }
@@ -814,9 +833,10 @@ exports.main = async (event, context) => {
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .get()
-      return data && data.tournamentId
+      const visibleResult = data && data.tournamentId
         ? filterActiveScoreRowsResult(result)
         : await filterScoreRowsVisibleToSubmitter(result)
+      return await sanitizeScoreRowsResultForSubmitter(visibleResult)
     }
 
     case 'getByTournament': {
@@ -832,11 +852,12 @@ exports.main = async (event, context) => {
         query.round = data.round
       }
 
-      return filterActiveScoreRowsResult(await collection
+      const result = filterActiveScoreRowsResult(await collection
         .where(query)
         .orderBy('round', 'asc')
         .orderBy('createTime', 'asc')
         .get())
+      return await sanitizeScoreRowsResultForSubmitter(result)
     }
 
     case 'getByPlayer': {
@@ -851,15 +872,18 @@ exports.main = async (event, context) => {
         { loserId: db.RegExp({ regexp: `(^|,)${playerId}(,|$)` }) }
       ])
 
-      return filterScoreRowsVisibleToSubmitter(await collection
+      const result = await filterScoreRowsVisibleToSubmitter(await collection
         .where(query)
         .orderBy('createTime', 'desc')
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .get())
+      return await sanitizeScoreRowsResultForSubmitter(result)
     }
 
     case 'updateStatus': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       // 更新比赛状态
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }
@@ -877,6 +901,8 @@ exports.main = async (event, context) => {
     }
 
     case 'updateScore': {
+      const adminGate = await requireAdmin()
+      if (adminGate) return adminGate
       // 更新比分
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }

@@ -2,7 +2,7 @@
   <view class="legal-head anim-stage-rise">
     <text class="tape tape-stamped">FOPEN PRIVACY</text>
     <text class="legal-title">隐私政策</text>
-    <text class="legal-updated">更新日期：2026年6月27日</text>
+    <text class="legal-updated">更新日期：2026年6月30日</text>
   </view>
 
   <view class="legal-section">
@@ -17,7 +17,7 @@
 
   <view class="legal-section">
     <text class="legal-section-title">三、使用目的</text>
-    <text class="legal-body">我们使用这些信息完成会员注册、身份识别、赛事报名、赛程编排、成绩统计、积分排行、管理员审核和异常问题处理，不会用于与俱乐部赛事管理无关的用途。</text>
+    <text class="legal-body">必要服务处理包括会员注册、身份识别、赛事报名、赛程编排、成绩统计、积分排行、管理员审核和异常问题处理，不会用于与俱乐部赛事管理无关的用途。</text>
   </view>
 
   <view class="legal-section">
@@ -27,12 +27,12 @@
 
   <view class="legal-section">
     <text class="legal-section-title">五、展示与共享</text>
-    <text class="legal-body">当你勾选同意本隐私政策和用户服务协议，或在协议更新提示中点击同意后，即表示你同意我们在排行榜、球员详情、周星、H2H、近期比赛、赛事报名和赛事赛程等页面，向其他会员展示你的昵称、头像、打法、报名状态、比赛成绩、积分和排行。OpenID 等账号识别信息不会在公开页面展示。</text>
+    <text class="legal-body">公开展示为可选授权。仅当你另行勾选公开展示授权或在设置、个人页主动确认公开展示后，我们才会在排行榜、球员详情、周星、H2H、近期比赛、赛事报名和赛事赛程等页面，向其他会员展示你的昵称、头像、打法、报名状态、比赛成绩、积分和排行。未授权时，上述公开页面会使用匿名身份和默认头像；OpenID 等账号识别信息不会在公开页面展示。</text>
   </view>
 
   <view class="legal-section">
     <text class="legal-section-title">六、你的权利</text>
-    <text class="legal-body">你可以在编辑资料页修改头像、昵称和打法；也可以在个人页随时查看本政策和用户服务协议。如需删除账号资料、撤回公开展示授权或处理个人信息相关问题，可联系俱乐部管理员协助处理。撤回后，排行榜、球员详情、周星、H2H、近期比赛和赛事页会改为匿名展示。</text>
+    <text class="legal-body">你可以在编辑资料页修改头像、昵称和打法；也可以在设置页查看本政策和用户服务协议、撤回公开展示授权或删除账号资料。撤回后，排行榜、球员详情、周星、H2H、近期比赛和赛事页会改为匿名展示；删除账号资料会清除当前微信账号绑定的会员资料。如需处理其他个人信息问题，可联系俱乐部管理员协助。</text>
   </view>
 
   <view class="legal-section">

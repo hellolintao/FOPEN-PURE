@@ -67,17 +67,7 @@
 .player-cell {
   display: flex;
   align-items: center;
-  gap: 12rpx;
   min-width: 0;
-}
-
-.player-cell .avatar {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background: var(--color-bg-3);
-  border: 2rpx solid var(--color-ink);
-  flex: none;
 }
 
 .player-cell .name {
@@ -138,9 +128,4 @@
 .rank-row.highlight-pride .trend-arrow,
 .rank-row.highlight-pride .trend-flat {
   color: #FFF8F0;
-}
-
-.rank-row.highlight-pride .avatar {
-  border: 4rpx solid #FFF8F0;
-  box-shadow: 0 0 0 3rpx var(--color-lime);
 }

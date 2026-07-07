@@ -521,11 +521,24 @@ describe('direct legacy score writes schedule gate', () => {
     ['add', { data: { ...validMatchData, _id: 'r_add' } }],
     ['update', { id: 'r1', data: validMatchData }],
     ['updateScore', { id: 'r1', data: { score: '4-2', winnerId: 'a', loserId: 'b' } }],
-    ['submit-result', { data: { matchId: 'r1', submittedBy: 'member1', role: 'player', winnerIds: ['a'], score: '4-2' } }],
-  ])('blocks %s when scheduleStatus is draft', async (action, payload) => {
-    setState({ scheduleStatus: 'draft' })
+  ])('blocks admin %s when scheduleStatus is draft', async (action, payload) => {
+    setState({ scheduleStatus: 'draft', isAdmin: true })
 
     const res = await main({ action, ...payload })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' },
+    })
+  })
+
+  test('blocks participant submit-result when scheduleStatus is draft', async () => {
+    setState({ scheduleStatus: 'draft' })
+
+    const res = await main({
+      action: 'submit-result',
+      data: { matchId: 'r1', submittedBy: 'member1', role: 'player', winnerIds: ['a'], score: '4-2' }
+    })
 
     expect(res).toEqual({
       success: false,
@@ -536,8 +549,8 @@ describe('direct legacy score writes schedule gate', () => {
   test.each([
     ['missing'],
     ['published'],
-  ])('allows updateScore when scheduleStatus is %s', async (scheduleStatus) => {
-    setState({ scheduleStatus })
+  ])('allows admin updateScore when scheduleStatus is %s', async (scheduleStatus) => {
+    setState({ scheduleStatus, isAdmin: true })
 
     const res = await main({
       action: 'updateScore',
@@ -549,8 +562,8 @@ describe('direct legacy score writes schedule gate', () => {
     expect(mockState.rows.r1.score).toBe('4-2')
   })
 
-  test('allows updateScore for group knockout group-published tournament when scheduleStatus is none', async () => {
-    setState({ scheduleStatus: 'none' })
+  test('allows admin updateScore for group knockout group-published tournament when scheduleStatus is none', async () => {
+    setState({ scheduleStatus: 'none', isAdmin: true })
     mockState.tournaments.t1 = {
       _id: 't1',
       format: 'group_knockout',
@@ -569,7 +582,7 @@ describe('direct legacy score writes schedule gate', () => {
   })
 
   test('blocks updateScore for group knockout draft tournament when scheduleStatus is none', async () => {
-    setState({ scheduleStatus: 'none' })
+    setState({ scheduleStatus: 'none', isAdmin: true })
     mockState.tournaments.t1 = {
       _id: 't1',
       format: 'group_knockout',

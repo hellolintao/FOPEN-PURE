@@ -49,6 +49,27 @@ beforeEach(() => {
 })
 
 test.each([
+  ['add', {
+    data: {
+      tournamentId: 't1',
+      round: 1,
+      type: 'singles',
+      matches: [{ matchId: 'm1', position: 1, player1: null, player2: null }]
+    }
+  }],
+  ['update', {
+    id: 'bracket-1',
+    data: {
+      tournamentId: 't1',
+      round: 1,
+      type: 'singles',
+      matches: [{ matchId: 'm1', position: 1, player1: null, player2: null }]
+    }
+  }],
+  ['delete', { id: 'bracket-1' }],
+  ['updateMatch', { id: 'bracket-1', matchId: 'm1', data: { match: { status: 'ongoing' } } }],
+  ['updateMatchScore', { id: 'bracket-1', matchId: 'm1', data: { winner: { id: 'p1', name: 'P1' }, score: '6-4', status: 'completed' } }],
+  ['updateMatchStatus', { id: 'bracket-1', matchId: 'm1', data: { status: 'ongoing', courtId: 'court-1' } }],
   ['saveInitialMatches', { tournamentId: 't1', matches: [{ matchId: 'm1', round: 1, position: 1 }] }],
   ['saveSchedule', { tournamentId: 't1', queues: [] }],
   ['regenerateDraft', { tournamentId: 't1' }],
@@ -62,6 +83,27 @@ test.each([
 })
 
 test.each([
+  ['add', {
+    data: {
+      tournamentId: 't1',
+      round: 1,
+      type: 'singles',
+      matches: [{ matchId: 'm1', position: 1, player1: null, player2: null }]
+    }
+  }],
+  ['update', {
+    id: 'bracket-1',
+    data: {
+      tournamentId: 't1',
+      round: 1,
+      type: 'singles',
+      matches: [{ matchId: 'm1', position: 1, player1: null, player2: null }]
+    }
+  }],
+  ['delete', { id: 'bracket-1' }],
+  ['updateMatch', { id: 'bracket-1', matchId: 'm1', data: { match: { status: 'ongoing' } } }],
+  ['updateMatchScore', { id: 'bracket-1', matchId: 'm1', data: { winner: { id: 'p1', name: 'P1' }, score: '6-4', status: 'completed' } }],
+  ['updateMatchStatus', { id: 'bracket-1', matchId: 'm1', data: { status: 'ongoing', courtId: 'court-1' } }],
   ['saveInitialMatches', { tournamentId: 't1', matches: [{ matchId: 'm1', round: 1, position: 1 }] }],
   ['saveSchedule', { tournamentId: 't1', queues: [] }],
   ['regenerateDraft', { tournamentId: 't1' }],

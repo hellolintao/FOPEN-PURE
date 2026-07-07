@@ -38,8 +38,8 @@ Page({
   async loadHome() {
     const app = getApp();
     await this.ensureIdentity(app);
-    const member = app.globalData.currentMember;
-    const isAdmin = app.globalData.isAdmin || false;
+    const member = app && app.globalData ? app.globalData.currentMember : null;
+    const isAdmin = app && app.globalData ? (app.globalData.isAdmin || false) : false;
     this.setData({ isAdmin, currentMember: member || null });
     if (!member) return;
 

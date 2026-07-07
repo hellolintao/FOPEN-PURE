@@ -61,8 +61,8 @@ describe('computeWeeklyStarsFromRows', () => {
 
     expect(result._id).toBe('s2026_ws_2026-05-11')
     expect(result.weekId).toBe('ws_2026-05-11')
-    expect(result.singlesStar).toEqual({ memberId: 'm1', name: 'A', avatarUrl: 'a.png', publicProfileVisible: true, points: 120 })
-    expect(result.doublesStar).toEqual({ memberId: 'm3', name: 'C', avatarUrl: 'c.png', publicProfileVisible: true, points: 30 })
+    expect(result.singlesStar).toEqual({ memberId: 'm1', name: 'A', avatarUrl: '', publicProfileVisible: true, points: 120 })
+    expect(result.doublesStar).toEqual({ memberId: 'm3', name: 'C', avatarUrl: '', publicProfileVisible: true, points: 30 })
   })
 
   test('忽略周外、赛季外、未 confirmed 数据', () => {

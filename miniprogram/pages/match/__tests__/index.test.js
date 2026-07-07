@@ -22,6 +22,14 @@ function loadPage(options = {}) {
     cloud: {
       database: jest.fn(() => db),
       callFunction: jest.fn(({ name, data }) => {
+        if (name === 'tournaments') {
+          return Promise.resolve({
+            result: {
+              success: true,
+              data: { tournaments, total: tournaments.length }
+            }
+          })
+        }
         if (name === 'match-results') {
           return Promise.resolve({
             result: {
@@ -104,6 +112,29 @@ describe('match page tournament entry permissions', () => {
     await ctx.loadTournaments()
 
     expect(ctx.data.tournaments.map(t => t._id)).toEqual(['new', 'mid', 'old'])
+  })
+
+  test('loads tournaments through cloud function instead of direct collection read', async () => {
+    const { pageDef, db } = loadPage()
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournaments',
+      data: expect.objectContaining({ action: 'list', pageSize: 100 })
+    })
+    expect(db.collection).not.toHaveBeenCalledWith('tournaments')
+  })
+
+  test('does not refresh identity while browsing public tournament list', async () => {
+    const app = { globalData: {}, refreshIdentity: jest.fn().mockResolvedValue(null) }
+    const { pageDef } = loadPage({ app })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadTournaments()
+
+    expect(app.refreshIdentity).not.toHaveBeenCalled()
   })
 
   test('decorates admin schedule-published events as editable', async () => {
@@ -282,7 +313,11 @@ describe('match page tournament entry permissions', () => {
       tournaments: [{ _id: 't1', name: 'Still Here' }],
       loading: false
     })
-    expect(db.collection).toHaveBeenCalledWith('tournaments')
+    expect(wx.cloud.callFunction).toHaveBeenCalledWith({
+      name: 'tournaments',
+      data: expect.objectContaining({ action: 'list', pageSize: 100 })
+    })
+    expect(db.collection).not.toHaveBeenCalledWith('tournaments')
     expect(ctx.data.tournaments).toEqual([
       expect.objectContaining({ _id: 't1', name: 'Still Here' })
     ])

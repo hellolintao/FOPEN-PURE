@@ -220,6 +220,20 @@ test('group knockout legacy rows without stage or group stay visible under fallb
   expect(ctx.getAllMatches()).toHaveLength(ctx.data.totalCount)
 })
 
+test('syncIdentity does not refresh identity while browsing public score results', async () => {
+  const app = {
+    globalData: { currentMember: null, isAdmin: false },
+    refreshIdentity: jest.fn().mockResolvedValue(null),
+  }
+  const pageDef = loadPage({ app })
+  const ctx = makeCtx(pageDef)
+
+  await ctx.syncIdentity()
+
+  expect(app.refreshIdentity).not.toHaveBeenCalled()
+  expect(ctx.data.currentMemberId).toBe('')
+})
+
 test('group knockout legacy fallback row can still be anchored', async () => {
   const pageDef = loadPage({
     tournament: { _id: 't1', format: 'group_knockout', type: 'singles', groupKnockoutPhase: 'group_published' },

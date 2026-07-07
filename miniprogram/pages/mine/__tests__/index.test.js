@@ -1,7 +1,10 @@
 function loadPage(callFunctionImpl) {
   jest.resetModules()
   let pageDef
-  const app = { globalData: { currentMember: null, isAdmin: false } }
+  const app = {
+    globalData: { currentMember: null, isAdmin: false },
+    refreshIdentity: jest.fn().mockResolvedValue(null)
+  }
   global.getApp = () => app
   global.wx = {
     navigateTo: jest.fn(),
@@ -86,7 +89,7 @@ describe('mine onLogin', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '登录成功', icon: 'success' })
   })
 
-  test('existing user without updated protocol consent sees prompt and can accept', () => {
+  test('existing user without public display consent is not prompted to publish real identity', () => {
     const user = {
       _id: 'member-1',
       name: '张三',
@@ -98,52 +101,48 @@ describe('mine onLogin', () => {
         options.success({ result: { data: [user] } })
         return
       }
-      if (options.name === 'members' && options.data.action === 'update') {
-        options.success({ result: { stats: { updated: 1 } } })
-      }
-    })
-    wx.showModal.mockImplementationOnce(options => {
-      options.success({ confirm: true })
     })
     const ctx = makeCtx(pageDef)
     ctx.loadUserPoints = jest.fn()
 
     ctx.onLogin()
 
-    expect(wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
-      title: '协议已更新',
-      confirmText: '同意',
-      cancelText: '查看协议'
-    }))
-    expect(wx.cloud.callFunction).toHaveBeenCalledWith(expect.objectContaining({
+    expect(wx.showModal).not.toHaveBeenCalled()
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
       name: 'members',
-      data: {
-        action: 'update',
-        data: { publicProfileConsent: true }
-      }
+      data: expect.objectContaining({ action: 'update' })
     }))
     expect(app.globalData.currentMember).toMatchObject({
       _id: 'member-1',
-      publicProfileConsent: true
+      publicProfileConsent: false
     })
-    expect(wx.showToast).toHaveBeenCalledWith({ title: '已同意协议', icon: 'success' })
   })
 
-  test('protocol prompt cancel opens privacy policy for review', () => {
+  test('onLogin does not query identity when official privacy authorization is rejected', () => {
+    const { pageDef } = loadPage(jest.fn())
+    wx.requirePrivacyAuthorize = jest.fn(({ fail }) => fail({ errMsg: 'requirePrivacyAuthorize:fail' }))
+    const ctx = makeCtx(pageDef)
+
+    ctx.onLogin()
+
+    expect(wx.requirePrivacyAuthorize).toHaveBeenCalled()
+    expect(wx.cloud.callFunction).not.toHaveBeenCalled()
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '请先同意微信隐私授权', icon: 'none' })
+  })
+
+  test('applyMember does not show legacy protocol prompt for optional public display', () => {
     const user = {
       _id: 'member-1',
       name: '张三',
       publicProfileConsent: false
     }
     const { pageDef } = loadPage(jest.fn())
-    wx.showModal.mockImplementationOnce(options => {
-      options.success({ cancel: true })
-    })
     const ctx = makeCtx(pageDef)
 
     ctx.applyMember(user)
 
-    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/privacy-policy/index' })
+    expect(wx.showModal).not.toHaveBeenCalled()
+    expect(wx.navigateTo).not.toHaveBeenCalledWith({ url: '/pages/privacy-policy/index' })
   })
 
   test('checkLogin uses global currentMember without calling members.get again', () => {
@@ -163,6 +162,47 @@ describe('mine onLogin', () => {
     expect(wx.cloud.callFunction).not.toHaveBeenCalled()
     expect(ctx.data.currentMemberId).toBe('member-1')
     expect(ctx.loadUserPoints).toHaveBeenCalledWith('member-1')
+  })
+
+  test('checkLogin silently restores an existing member after app restart', async () => {
+    const restored = {
+      _id: 'member-restored',
+      name: '恢复用户',
+      avatarUrl: 'cloud://restored-avatar',
+      admin: true
+    }
+    const { pageDef, app } = loadPage(jest.fn())
+    app.refreshIdentity.mockResolvedValueOnce(restored)
+    const ctx = makeCtx(pageDef)
+    ctx.loadUserPoints = jest.fn()
+
+    await ctx.checkLogin()
+
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
+    expect(wx.requirePrivacyAuthorize).toBeUndefined()
+    expect(ctx.data).toMatchObject({
+      isLogin: true,
+      isAdmin: true,
+      currentMemberId: 'member-restored',
+      userInfo: {
+        avatarUrl: 'cloud://restored-avatar',
+        name: '恢复用户'
+      }
+    })
+    expect(ctx.loadUserPoints).toHaveBeenCalledWith('member-restored')
+  })
+
+  test('checkLogin leaves visitor logged out when silent identity restore finds no member', async () => {
+    const { pageDef } = loadPage(jest.fn())
+    const ctx = makeCtx(pageDef)
+
+    await ctx.checkLogin()
+
+    expect(ctx.data).toMatchObject({
+      isLogin: false,
+      isAdmin: false,
+      totalPoints: 0
+    })
   })
 
   test('loadUserPoints uses fresh cached total without calling match-results', async () => {

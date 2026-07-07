@@ -1,0 +1,230 @@
+{
+  "ok": true,
+  "summary": [
+    {
+      "case": "home public browse",
+      "records": []
+    },
+    {
+      "case": "match public browse",
+      "tournamentId": "tournament_2026_016750_864",
+      "records": [
+        {
+          "name": "tournaments",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "page": 1,
+            "pageSize": 100
+          }
+        },
+        {
+          "name": "tournaments",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "page": 1,
+            "pageSize": 100
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_278038_457"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_119928_882"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_278038_457"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_119928_882"
+          }
+        }
+      ]
+    },
+    {
+      "case": "tournament detail public browse",
+      "tournamentId": "tournament_2026_016750_864",
+      "records": [
+        {
+          "name": "tournaments",
+          "action": "get",
+          "data": {
+            "action": "get",
+            "id": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "tournament-registrations",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "tournament-brackets",
+          "action": "getByTournament",
+          "data": {
+            "action": "getByTournament",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "free-plays",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "tournaments",
+          "action": "get",
+          "data": {
+            "action": "get",
+            "id": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "tournament-registrations",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "tournament-brackets",
+          "action": "getByTournament",
+          "data": {
+            "action": "getByTournament",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "free-plays",
+          "action": "list",
+          "data": {
+            "action": "list",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "seasons",
+          "action": "get",
+          "data": {
+            "action": "get",
+            "id": "season_2026"
+          }
+        },
+        {
+          "name": "seasons",
+          "action": "get",
+          "data": {
+            "action": "get",
+            "id": "season_2026"
+          }
+        },
+        {
+          "name": "seasons",
+          "action": "getCurrent",
+          "data": {
+            "action": "getCurrent",
+            "date": "2026-07-05"
+          }
+        },
+        {
+          "name": "seasons",
+          "action": "getCurrent",
+          "data": {
+            "action": "getCurrent",
+            "date": "2026-07-05"
+          }
+        }
+      ]
+    },
+    {
+      "case": "tournament score public browse",
+      "tournamentId": "tournament_2026_016750_864",
+      "records": [
+        {
+          "name": "tournaments",
+          "action": "get",
+          "data": {
+            "action": "get",
+            "id": "tournament_2026_016750_864"
+          }
+        },
+        {
+          "name": "match-results",
+          "action": "listByTournament",
+          "data": {
+            "action": "listByTournament",
+            "tournamentId": "tournament_2026_016750_864"
+          }
+        }
+      ]
+    },
+    {
+      "case": "mine login privacy rejection blocks identity fetch",
+      "authCalls": 1,
+      "records": []
+    },
+    {
+      "case": "edit profile privacy rejection blocks identity fetch",
+      "authCalls": 1,
+      "records": []
+    },
+    {
+      "case": "register save privacy rejection blocks member write",
+      "authCalls": 1,
+      "records": []
+    },
+    {
+      "case": "setting privacy controls visible",
+      "buttonTexts": [
+        "隐私政策\n查看个人信息处理规则",
+        "用户服务协议\n查看账号与赛事服务条款",
+        "撤回公开展示授权\n排行榜、球员详情和赛事页将匿名展示",
+        "删除账号资料\n删除当前微信账号绑定的会员资料"
+      ],
+      "records": []
+    }
+  ]
+}

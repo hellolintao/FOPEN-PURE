@@ -36,7 +36,7 @@
     "packNpmRelationList": [],
     "minifyWXSS": false,
     "compileWorklet": false,
-    "minifyWXML": false,
+    "minifyWXML": true,
     "localPlugins": false,
     "disableUseStrict": false,
     "useCompilerPlugins": false,
@@ -113,6 +113,10 @@
       },
       {
         "type": "folder",
+        "value": "components/h2h-row/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "components/score-row/__tests__"
       },
       {
@@ -161,6 +165,10 @@
       },
       {
         "type": "folder",
+        "value": "pages/round-settlement/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "pages/rank/__tests__"
       },
       {
@@ -181,7 +189,19 @@
       },
       {
         "type": "folder",
+        "value": "pages/tournament-brackets/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/tournament-detail/__tests__"
+      },
+      {
+        "type": "folder",
         "value": "pages/tournament-edit/__tests__"
+      },
+      {
+        "type": "folder",
+        "value": "pages/tournament-manage/__tests__"
       },
       {
         "type": "folder",

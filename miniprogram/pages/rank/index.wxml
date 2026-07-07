@@ -36,7 +36,6 @@
       <text class="star-range">{{starHero.weekStart}} – {{starHero.weekEnd}}</text>
     </view>
     <view class="star-body">
-      <image class="star-avatar" src="{{(starHero.star && starHero.star.avatarUrl) || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
       <view class="star-info">
         <text class="star-name">{{starHero.star && starHero.star.name}}</text>
         <text class="star-subtitle">{{starHero.subtitle}}</text>
@@ -62,7 +61,6 @@
       wx:for="{{rankList}}" wx:key="_id"
       rank="{{index + 1}}"
       name="{{item.name}}"
-      avatar-url="{{item.avatarUrl}}"
       win-rate-pct="{{item.winRatePct}}"
       total-points="{{item.totalPoints}}"
       trend-delta="{{item.trendDelta}}"

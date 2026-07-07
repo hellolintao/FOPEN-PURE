@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const COLLECTION_NAME = 'free_plays'
 const collection = db.collection(COLLECTION_NAME)
@@ -24,6 +25,29 @@ function fail(code, message) {
 
 function ok(data) {
   return { success: true, data }
+}
+
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
+async function resolveMemberByOpenid(openid) {
+  if (!openid) return null
+  const query = _ && typeof _.or === 'function'
+    ? _.or([{ openid }, { openId: openid }])
+    : { openid }
+  const res = await db.collection('members').where(query).get().catch(() => ({ data: [] }))
+  const member = (res.data || [])[0]
+  return member ? { ...member, openid: member.openid || member.openId || openid } : null
+}
+
+async function requireAdmin() {
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return fail('FORBIDDEN', '需要登录')
+  const member = await resolveMemberByOpenid(openid)
+  if (!isAdminMember(member)) return fail('FORBIDDEN', '需要管理员权限')
+  return null
 }
 
 async function handleBulkSet({ tournamentId, items }) {
@@ -101,12 +125,24 @@ exports.main = async (event) => {
   try {
     switch (action) {
       case 'bulkSet':
+        {
+          const adminGate = await requireAdmin()
+          if (adminGate) return adminGate
+        }
         return await handleBulkSet(event)
       case 'create':
+        {
+          const adminGate = await requireAdmin()
+          if (adminGate) return adminGate
+        }
         return await handleCreate(event)
       case 'list':
         return await handleList(event)
       case 'remove':
+        {
+          const adminGate = await requireAdmin()
+          if (adminGate) return adminGate
+        }
         return await handleRemove(event)
       default:
         return fail('UNKNOWN_ACTION', `未知 action: ${action}`)

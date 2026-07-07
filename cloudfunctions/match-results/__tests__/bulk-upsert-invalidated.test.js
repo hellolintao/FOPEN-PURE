@@ -188,6 +188,7 @@ test('confirmed row invalidation history plus bulk merge exposes one active pend
   }
 
   const res = await queryTest.listByTournamentWithCtx({
+    isAdmin: true,
     db: {
       getTournament: async () => ({ _id: 't1', scheduleStatus: 'published' }),
       listByTournament: async () => [active, history],

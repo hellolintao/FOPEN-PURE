@@ -1,0 +1,22 @@
+【申诉原因（200字内）】
+已完成二次隐私整改：除补齐微信官方隐私授权链路外，赛事报名、签表、成绩、我的比赛等公开/非管理员接口均改为后端脱敏输出，仅返回昵称、头像及必要赛事实绩；前端赛事详情不再直接读取报名/会员库，废弃 tournament-view 页面已移除；设置页新增撤回公开展示同意、注销账号、隐私政策和用户协议入口。v2.0 已上传，相关云函数已部署。
+
+【整改说明】
+本次按微信“小程序用户隐私和数据规范”“小程序隐私协议开发指南”及敏感信息公开展示风险做对抗性复查，重点处理“公开页面/非管理员接口返回超出展示所需的用户资料”的问题。
+
+已完成进一步整改：
+1. tournament-registrations 云函数对非管理员 list/get 返回做脱敏，仅保留报名展示必需字段和公开身份字段。
+2. tournament-brackets 云函数对签表、分组、淘汰赛节点中的成员对象做递归脱敏，避免把会员完整记录透出到公开签表。
+3. match-results 云函数对赛事成绩、按球员查询、我的比赛摘要中的对手/胜者身份做公开身份输出。
+4. tournament-detail 前端改为通过 tournament-registrations 云函数读取报名名单，不再直接读取 tournament_registrations 和 members 集合拼接头像。
+5. app.json 移除废弃 pages/tournament-view/index，降低历史页面继续暴露数据的风险。
+6. settings 页面新增隐私政策、用户协议、撤回公开展示同意、注销账号入口；members 云函数新增 revokePublicProfile 和 deleteSelf 自助能力。
+7. 隐私政策、用户协议同步更新自助撤回/注销说明。
+
+【核验】
+- cloudfunctions/tournament-registrations：2 个测试套件、35 个用例通过。
+- cloudfunctions/tournament-brackets：10 个测试套件、136 个用例通过。
+- cloudfunctions/match-results：9 个测试套件、206 个用例通过。
+- cloudfunctions/members：2 个测试套件、41 个用例通过。
+- miniprogram：32 个测试套件、326 个用例通过。
+- 静态扫描确认生产代码无 getPhoneNumber、open-type="getPhoneNumber"、type="nickname"、open-type="chooseAvatar"、pages/tournament-view/index。

@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-06-30T09:56:33.744Z",
+  "screenshots": [
+    {
+      "file": "20260630-v2-devtools-00-official-privacy-authorize.png",
+      "bytes": 131624,
+      "note": "微信官方统一用户隐私保护提示：wx.requirePrivacyAuthorize 触发"
+    },
+    {
+      "file": "20260630-v2-devtools-00-setting-privacy-account.png",
+      "bytes": 138080,
+      "note": "设置页：隐私政策、用户协议、撤回公开展示授权、删除账号资料"
+    },
+    {
+      "file": "20260630-v2-devtools-01-revoke-public-profile-modal.png",
+      "bytes": 114727,
+      "note": "撤回公开展示授权确认弹窗：撤回后排行榜、球员详情、赛事页匿名展示"
+    },
+    {
+      "file": "20260630-v2-devtools-02-delete-account-modal.png",
+      "bytes": 112905,
+      "note": "删除账号资料确认弹窗：删除当前账号会员资料且无法直接恢复"
+    },
+    {
+      "file": "20260630-v2-devtools-03-rank-public-display.png",
+      "bytes": 196424,
+      "note": "排行榜公开展示：仅头像、昵称、胜率、积分、趋势"
+    },
+    {
+      "file": "20260630-v2-devtools-04-privacy-policy-user-rights.png",
+      "bytes": 504353,
+      "note": "隐私政策：OpenID 不公开展示；用户可撤回公开展示或删除资料"
+    },
+    {
+      "file": "20260630-v2-devtools-05-tournament-detail-roster-public-display.png",
+      "bytes": 138819,
+      "note": "赛事详情：报名/参赛人员公开区域只展示必要赛事信息和公开身份"
+    }
+  ]
+}

@@ -72,7 +72,19 @@
         <text class="agreement-link" bindtap="onOpenUserAgreement">《用户服务协议》</text>
         <text>和</text>
         <text class="agreement-link" bindtap="onOpenPrivacyPolicy">《隐私政策》</text>
-        <text>，知晓平台将按政策收集、使用和存储注册信息，并在排行榜、球员详情、周星、H2H、近期比赛和赛事页展示我的昵称、头像、打法、比赛成绩、积分和排行。</text>
+        <text>，知晓平台将为注册、报名、赛程和成绩统计处理必要的昵称、头像、打法、报名记录、比赛成绩、积分和排行。</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="agreement-panel anim-stage-rise anim-delay-2">
+    <view class="agreement-row">
+      <checkbox-group class="agreement-check" bindchange="onPublicProfileConsentChange">
+        <checkbox value="publicProfile" checked="{{publicProfileConsent}}" color="#0B0C09" />
+      </checkbox-group>
+      <view class="agreement-copy">
+        <text>公开展示我的昵称、头像和打法，并在排行榜、球员详情、周星、H2H、近期比赛和赛事页展示报名状态、比赛成绩、积分和排行。</text>
+        <text>未勾选时，上述公开页面将以匿名身份展示，注册、报名、赛程和成绩统计仍可正常使用。</text>
       </view>
     </view>
   </view>
