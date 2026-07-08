@@ -12,6 +12,7 @@ Page({
     activeTab: 'singles',
     rankList: [],
     currentMember: null,
+    canViewRankAvatars: false,
     starHero: null,
     loading: false,
     seasonYear: new Date().getFullYear(),
@@ -26,7 +27,11 @@ Page({
     syncTabBar(this, '/pages/rank/index')
     if (wx.hideShareMenu) wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
     this.refreshSeasonalTheme()
-    this.setData({ currentMember: getApp().globalData.currentMember })
+    const currentMember = getApp().globalData.currentMember
+    this.setData({
+      currentMember,
+      canViewRankAvatars: this._canViewRankAvatars(currentMember)
+    })
     await Promise.all([this.loadRank(), this.loadHero()])
   },
 
@@ -131,8 +136,15 @@ Page({
     return `rank:${kind}:${RANK_CACHE_VERSION}:${this._getCurrentSeasonId()}:${this.data.activeTab}`
   },
 
+  _canViewRankAvatars(member) {
+    return !!(member && member._id && member.publicProfileConsent === true)
+  },
+
   _sanitizeRankRow(row) {
-    const { avatarUrl, ...safeRow } = row || {}
+    const safeRow = { ...(row || {}) }
+    if (!this.data.canViewRankAvatars) {
+      delete safeRow.avatarUrl
+    }
     return {
       ...safeRow,
       winRatePct: this._formatWinRatePct(row),

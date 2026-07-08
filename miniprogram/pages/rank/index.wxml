@@ -61,6 +61,7 @@
       wx:for="{{rankList}}" wx:key="_id"
       rank="{{index + 1}}"
       name="{{item.name}}"
+      avatar-url="{{item.avatarUrl}}"
       win-rate-pct="{{item.winRatePct}}"
       total-points="{{item.totalPoints}}"
       trend-delta="{{item.trendDelta}}"

@@ -1,7 +1,7 @@
-function loadPage() {
+function loadPage(currentMember = { _id: 'me' }) {
   jest.resetModules()
   let pageDef
-  global.getApp = () => ({ globalData: { currentMember: { _id: 'me' } } })
+  global.getApp = () => ({ globalData: { currentMember } })
   global.wx = {
     navigateTo: jest.fn(),
     showToast: jest.fn(),
@@ -160,7 +160,7 @@ test('rank page passes the June-only Pride skin flag to weekly star and personal
   expect(wxml).toContain('star-pride-waves pride-s-curve')
   expect(wxml).toContain('pride-wave-green')
   expect(wxml).toContain('pride-highlight="{{isPrideMonthSkinActive && currentMember && item._id === currentMember._id}}"')
-  expect(wxml).not.toContain('avatar-url="{{item.avatarUrl}}"')
+  expect(wxml).toContain('avatar-url="{{item.avatarUrl}}"')
   expect(wxml).not.toContain('starHero.star.avatarUrl')
   expect(wxml).not.toContain('star-avatar')
   expect(wxml).not.toContain('default-avatar.png')
@@ -320,6 +320,71 @@ test('_sanitizeRankRow derives fallback trend metadata from trendDelta', () => {
 
   expect(row.trendState).toBe('up')
   expect(row.trendLabel).toBe('▲2')
+})
+
+test('_canViewRankAvatars requires a registered current member with public display consent', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def)
+
+  expect(ctx._canViewRankAvatars(null)).toBe(false)
+  expect(ctx._canViewRankAvatars({ _id: 'me', publicProfileConsent: false })).toBe(false)
+  expect(ctx._canViewRankAvatars({ _id: 'me', publicProfileConsent: true })).toBe(true)
+})
+
+test('_sanitizeRankRow keeps avatar only when current visitor can view rank avatars', () => {
+  const def = loadPage()
+  const privateCtx = makeCtx(def, { canViewRankAvatars: false })
+  const publicCtx = makeCtx(def, { canViewRankAvatars: true })
+
+  expect(privateCtx._sanitizeRankRow({ _id: 'A', avatarUrl: 'a.png', winCount: 1, lossCount: 0 })).not.toHaveProperty('avatarUrl')
+  expect(publicCtx._sanitizeRankRow({ _id: 'A', avatarUrl: 'a.png', winCount: 1, lossCount: 0 }).avatarUrl).toBe('a.png')
+})
+
+test('loadRank preserves cloud avatars for visitors who can view ranking avatars', async () => {
+  const def = loadPage({ _id: 'me', publicProfileConsent: true })
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', name: '公开选手', avatarUrl: 'a.png', winCount: 1, lossCount: 0, winRate: 1 }
+        ]
+      }
+    }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026, canViewRankAvatars: true })
+
+  await ctx.loadRank()
+
+  expect(ctx.data.rankList[0].avatarUrl).toBe('a.png')
+})
+
+test('loadRank strips cached and cloud avatars for visitors who cannot view ranking avatars', async () => {
+  const def = loadPage(null)
+  const { callFunction } = require('../../../utils/cloud')
+  wx.getStorageSync.mockReturnValue({
+    value: {
+      rankList: [
+        { _id: 'A', name: '缓存选手', avatarUrl: 'cached.png', winCount: 1, lossCount: 0, winRate: 1 }
+      ]
+    },
+    updatedAt: 1000,
+    expiresAt: Date.now() + 60 * 1000
+  })
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', name: '云端选手', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1 }
+        ]
+      }
+    }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026, canViewRankAvatars: false })
+
+  await ctx.loadRank()
+
+  expect(ctx.data.rankList[0]).not.toHaveProperty('avatarUrl')
 })
 
 test('rank page passes trend state and label into rank-row', () => {
