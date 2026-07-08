@@ -36,7 +36,8 @@
         <text>{{result.analyticsMessage}}</text>
       </view>
       <view wx:if="{{result.settlementImpact && result.settlementImpact.length}}" class="brs-impact">
-        <view wx:for="{{result.settlementImpact}}" wx:key="memberId" class="brs-impact-row">
+        <view wx:for="{{result.settlementImpact}}" wx:key="impactKey" class="brs-impact-row">
+          <text>{{item.typeLabel || item.type || ''}}</text>
           <text>{{item.name || item.memberId}}</text>
           <text>{{item.trendLabel || ''}}</text>
           <text wx:if="{{item.pointsDelta}}">+{{item.pointsDelta}}</text>

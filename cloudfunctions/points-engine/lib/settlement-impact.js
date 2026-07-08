@@ -1,8 +1,8 @@
-function buildSettlementImpact({ beforeRankRows = [], afterRankRows = [], affectedMemberIds = [] } = {}) {
+function buildSettlementImpact({ type = '', beforeRankRows = [], afterRankRows = [], affectedMemberIds = [] } = {}) {
   const before = rankMap(beforeRankRows)
   const after = rankMap(afterRankRows)
   return [...new Set((affectedMemberIds || []).filter(Boolean))]
-    .map(memberId => impactFor(memberId, before.get(memberId), after.get(memberId)))
+    .map(memberId => impactFor(type, memberId, before.get(memberId), after.get(memberId)))
     .filter(Boolean)
 }
 
@@ -21,17 +21,26 @@ function rankMap(rows) {
   return map
 }
 
-function impactFor(memberId, before, after) {
+function impactFor(type, memberId, before, after) {
   if (!after) return null
   const pointsDelta = after.totalPoints - (before ? before.totalPoints : 0)
   const rankDelta = before ? before.rank - after.rank : null
   return {
+    impactKey: `${type}:${memberId}`,
+    type,
+    typeLabel: ladderTypeLabel(type),
     memberId,
     name: after.name || (before && before.name) || memberId,
     pointsDelta,
     rankDelta,
     trendLabel: trendLabel(rankDelta)
   }
+}
+
+function ladderTypeLabel(type) {
+  if (type === 'singles') return '单打'
+  if (type === 'doubles') return '双打'
+  return type || ''
 }
 
 function trendLabel(rankDelta) {

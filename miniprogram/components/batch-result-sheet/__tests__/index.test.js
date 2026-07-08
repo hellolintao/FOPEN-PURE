@@ -100,4 +100,6 @@ test('template renders analytics message and settlement impact', () => {
   const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
   expect(wxml).toContain('analyticsMessage')
   expect(wxml).toContain('settlementImpact')
+  expect(wxml).toContain('wx:key="impactKey"')
+  expect(wxml).toContain("{{item.typeLabel || item.type || ''}}")
 })

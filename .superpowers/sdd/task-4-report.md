@@ -75,3 +75,64 @@
 ## Concerns, if any
 
 - None.
+
+---
+
+## Review Fix Follow-up (2026-07-08)
+
+### Findings addressed
+
+1. Cached `rankList` responses could still return rows with `trendDelta` only and no `trendState` / `trendLabel`.
+2. `refreshRankCache().data.settlementImpact` flattened singles and doubles impacts without a ladder discriminator, and the result sheet keyed repeated same-member impacts by `memberId`.
+
+### What changed
+
+- Updated cached-rank refresh flow in `cloudfunctions/points-engine/index.js` so cached rows are backfilled with the same trend contract as live rows:
+  - positive `trendDelta` => `up` / `▲N`
+  - negative `trendDelta` => `down` / `▼N`
+  - zero => `flat` / `持平`
+  - null/undefined => `no_history` when the ladder has no snapshots, otherwise `new`
+- Refactored live trend derivation to share the same `trendMetaFromDelta(...)` helper used by cached rows.
+- Extended `buildSettlementImpact(...)` to include:
+  - `impactKey`
+  - `type`
+  - `typeLabel`
+  while preserving existing fields `memberId`, `name`, `pointsDelta`, `rankDelta`, and `trendLabel`.
+- Updated `refreshRankCache(...)` to pass ladder `type` into impact generation.
+- Updated `miniprogram/components/batch-result-sheet/index.wxml` to key impacts by `impactKey` and render the ladder label so same-member singles/doubles impacts no longer collide visually.
+
+### Review-fix TDD evidence
+
+#### RED
+
+- `cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/points-engine && npm test -- lib/__tests__/settlement-impact.test.js __tests__/index.test.js`
+  - FAILED with the expected review regressions:
+    - cached `rankList` rows were missing `trendState` / `trendLabel`
+    - cached rows with `trendDelta: 2` did not backfill `up` / `▲2`
+    - cached rows with `trendDelta: null` and existing ladder history did not backfill `new`
+    - `settlementImpact` entries were missing `impactKey`, `type`, and `typeLabel`
+    - same-member singles/doubles impacts were still ambiguous in the backend payload
+- `cd /Users/liaoxiaole/FOPEN-PURE/miniprogram && npm test -- components/batch-result-sheet/__tests__/index.test.js`
+  - PASS after the minimal template adjustment; this check served as focused regression coverage for the result-sheet key/display path.
+
+#### GREEN
+
+- `cd /Users/liaoxiaole/FOPEN-PURE/cloudfunctions/points-engine && npm test -- lib/__tests__/settlement-impact.test.js __tests__/index.test.js`
+  - PASS, 36 tests
+- `cd /Users/liaoxiaole/FOPEN-PURE/miniprogram && npm test -- components/batch-result-sheet/__tests__/index.test.js`
+  - PASS, 11 tests
+
+### Files changed for review fix
+
+- `cloudfunctions/points-engine/lib/settlement-impact.js`
+- `cloudfunctions/points-engine/lib/__tests__/settlement-impact.test.js`
+- `cloudfunctions/points-engine/index.js`
+- `cloudfunctions/points-engine/__tests__/index.test.js`
+- `miniprogram/components/batch-result-sheet/index.wxml`
+- `miniprogram/components/batch-result-sheet/__tests__/index.test.js`
+
+### Self-review
+
+- Cached rows still do not recompute live points; only identity fields and trend-contract backfill are applied.
+- Result-sheet display remains backward-compatible with older impact entries because it falls back from `typeLabel` to `type`.
+- Ranking privacy remains unchanged; no player-detail or H2H surfaces were touched.

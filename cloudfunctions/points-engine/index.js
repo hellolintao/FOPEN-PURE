@@ -196,10 +196,11 @@ async function rankListCompat({ type = 'singles', currentSeasonId }) {
   if (!currentSeasonId) return { success: true, data: { rankList: [] } }
   const cached = await fetchRankCache({ seasonId: currentSeasonId, type })
   if (cached && cached.rankList.length > 0 && await isRankCacheCurrent({ cached, seasonId: currentSeasonId, type })) {
+    const hasHistory = await hasAnyRankSnapshot({ seasonId: currentSeasonId, type })
     return {
       success: true,
       data: {
-        rankList: await refreshRankMemberProfiles(cached.rankList || []),
+        rankList: await refreshRankMemberProfiles(cached.rankList || [], { hasHistory }),
         cachedAt: cached.computedAt || null,
         cacheDate: cached.cacheDate || null
       }
@@ -232,7 +233,7 @@ async function buildRankList({ seasonId, type = 'singles' }) {
   return out
 }
 
-async function refreshRankMemberProfiles(rankList) {
+async function refreshRankMemberProfiles(rankList, { hasHistory = false } = {}) {
   if (!Array.isArray(rankList) || rankList.length === 0) return []
   const memberIds = [...new Set(rankList.map(row => row && (row._id || row.memberId)).filter(Boolean))]
   if (memberIds.length === 0) return rankList
@@ -247,7 +248,8 @@ async function refreshRankMemberProfiles(rankList) {
       ...row,
       name: identity.name,
       avatarUrl: identity.avatarUrl,
-      publicProfileVisible: identity.publicProfileVisible
+      publicProfileVisible: identity.publicProfileVisible,
+      ...trendMetaFromDelta(row && row.trendDelta, hasHistory)
     }
   })
 }
@@ -263,6 +265,7 @@ async function refreshRankCache({ seasonId, now, affectedMemberIds = [], writeSn
     const beforeRankRows = withRankNumbers((previousCache && previousCache.rankList) || [])
     const rankList = withRankNumbers(await buildRankList({ seasonId: resolvedSeasonId, type }))
     settlementImpact.push(...buildSettlementImpact({
+      type,
       beforeRankRows,
       afterRankRows: rankList,
       affectedMemberIds
@@ -414,11 +417,17 @@ function toBeijingDateKey(date) {
 }
 
 function trendMeta(snap, currentRank, hasAnySnapshot) {
-  if (!hasAnySnapshot) return { trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
-  if (!snap) return { trendDelta: null, trendState: 'new', trendLabel: '新上榜' }
-  const delta = snap.rank - currentRank
-  if (delta > 0) return { trendDelta: delta, trendState: 'up', trendLabel: `▲${delta}` }
-  if (delta < 0) return { trendDelta: delta, trendState: 'down', trendLabel: `▼${Math.abs(delta)}` }
+  return trendMetaFromDelta(snap ? (snap.rank - currentRank) : null, hasAnySnapshot)
+}
+
+function trendMetaFromDelta(trendDelta, hasAnySnapshot) {
+  if (trendDelta === null || trendDelta === undefined) {
+    return hasAnySnapshot
+      ? { trendDelta: null, trendState: 'new', trendLabel: '新上榜' }
+      : { trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+  }
+  if (trendDelta > 0) return { trendDelta, trendState: 'up', trendLabel: `▲${trendDelta}` }
+  if (trendDelta < 0) return { trendDelta, trendState: 'down', trendLabel: `▼${Math.abs(trendDelta)}` }
   return { trendDelta: 0, trendState: 'flat', trendLabel: '持平' }
 }
 

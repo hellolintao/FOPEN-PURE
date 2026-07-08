@@ -325,7 +325,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '选手01', avatarUrl: '', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '选手01', avatarUrl: '', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -350,9 +350,68 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '新头像用户', avatarUrl: '', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: '', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
+  })
+
+  test('rankList backfills up trend metadata on cached rows without recomputing points', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'CACHED', name: '甲', publicProfileConsent: true })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'CACHED', name: '旧缓存', avatarUrl: 'stale.png', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: 2 }
+      ]
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList[0]).toMatchObject({
+      _id: 'CACHED',
+      trendDelta: 2,
+      trendState: 'up',
+      trendLabel: '▲2'
+    })
+  })
+
+  test('rankList backfills new trend metadata on cached rows when ladder has snapshots', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'CACHED', name: '甲', publicProfileConsent: true })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'CACHED', name: '旧缓存', avatarUrl: 'stale.png', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      ]
+    })
+    cloud.__rows.rank_snapshots.push({
+      _id: 'rs_history_only',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'OTHER',
+      rank: 3,
+      effectiveAt: new Date('2026-05-10'),
+      computedAt: new Date('2026-05-10')
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList[0]).toMatchObject({
+      _id: 'CACHED',
+      trendDelta: null,
+      trendState: 'new',
+      trendLabel: '新上榜'
+    })
   })
 
   test('rankList recomputes when stored cache is older than a confirmed match settlement', async () => {
@@ -618,7 +677,13 @@ describe('rankList enhancements', () => {
     })
 
     expect(res.success).toBe(true)
-    expect(res.data.settlementImpact[0]).toMatchObject({ memberId: 'A', pointsDelta: 20 })
+    expect(res.data.settlementImpact[0]).toMatchObject({
+      impactKey: 'singles:A',
+      type: 'singles',
+      typeLabel: '单打',
+      memberId: 'A',
+      pointsDelta: 20
+    })
     expect(cloud.__rows.rank_snapshots.some(row => (
       row.seasonId === 'season_2026' &&
       row.type === 'singles' &&
@@ -654,6 +719,33 @@ describe('rankList enhancements', () => {
       row.memberId === 'A' &&
       row.snapshotKind === 'baseline'
     ))).toBe(true)
+  })
+
+  test('refreshRankCache disambiguates same member impacts across singles and doubles', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', publicProfileConsent: true })
+    cloud.__rows.baseline_standings.push(
+      { _id: 'bs_A_s', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 1, losses: 0, createTime: '2026-05-01' },
+      { _id: 'bs_A_d', seasonId: 'season_2026', type: 'doubles', memberId: 'A', totalPoints: 80, wins: 1, losses: 0, createTime: '2026-05-01' }
+    )
+    cloud.__rows.rank_cache.push(
+      { _id: 'rank_cache_season_2026_singles', seasonId: 'season_2026', type: 'singles', rankList: [{ _id: 'A', name: '甲', totalPoints: 60, winCount: 1, lossCount: 0, rank: 2 }] },
+      { _id: 'rank_cache_season_2026_doubles', seasonId: 'season_2026', type: 'doubles', rankList: [{ _id: 'A', name: '甲', totalPoints: 50, winCount: 1, lossCount: 0, rank: 4 }] }
+    )
+
+    const { main } = require('../index')
+    const res = await main({
+      action: 'refreshRankCache',
+      seasonId: 'season_2026',
+      affectedMemberIds: ['A'],
+      now: '2026-07-08T10:00:00.000Z'
+    })
+
+    expect(res.success).toBe(true)
+    expect(res.data.settlementImpact).toEqual([
+      expect.objectContaining({ impactKey: 'singles:A', type: 'singles', typeLabel: '单打', memberId: 'A' }),
+      expect.objectContaining({ impactKey: 'doubles:A', type: 'doubles', typeLabel: '双打', memberId: 'A' })
+    ])
   })
 })
 
