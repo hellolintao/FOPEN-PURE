@@ -298,7 +298,15 @@ test('loadRank strips cached avatars for visitors who cannot view ranking avatar
     updatedAt: 1000,
     expiresAt: Date.now() + 60 * 1000
   })
-  callFunction.mockResolvedValue({ result: { data: { rankList: [] } } })
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', name: '云端选手', avatarUrl: 'fresh.png', winCount: 1, lossCount: 0, winRate: 1 }
+        ]
+      }
+    }
+  })
   const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026, canViewRankAvatars: false })
 
   await ctx.loadRank()
