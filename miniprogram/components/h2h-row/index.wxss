@@ -1,6 +1,5 @@
 .h2h-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3, 16rpx);
   min-height: 88rpx;
@@ -10,12 +9,27 @@
   transition: background-color 160ms var(--ease-out, ease);
 }
 
+.h2h-row--single {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.h2h-row--team {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
 .h2h-row--active {
   background: var(--color-bg-2, #fafaf7);
 }
 
-.avatar {
+.h2h-identity {
   grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 16rpx);
+  min-width: 0;
+}
+
+.avatar {
   flex: 0 0 auto;
   width: 56rpx;
   height: 56rpx;
@@ -24,7 +38,6 @@
 }
 
 .name {
-  grid-column: 2;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -37,7 +50,6 @@
 }
 
 .pill {
-  grid-column: 3;
   flex: 0 0 auto;
   max-width: 140rpx;
   overflow: hidden;
@@ -52,6 +64,16 @@
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.h2h-row--single .pill {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.h2h-row--team .pill {
+  grid-column: 2;
+  justify-self: center;
 }
 
 .pill-win {

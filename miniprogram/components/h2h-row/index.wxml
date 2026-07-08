@@ -1,4 +1,4 @@
-<view class="h2h-row" bindtap="onTap" hover-class="h2h-row--active" hover-stay-time="80">
+<view class="h2h-row {{subjectTeamLabel || opponentTeamLabel ? 'h2h-row--team' : 'h2h-row--single'}}" bindtap="onTap" hover-class="h2h-row--active" hover-stay-time="80">
   <block wx:if="{{subjectTeamLabel || opponentTeamLabel}}">
     <view class="team team-subject">
       <text class="team-kicker">我方组合</text>
@@ -17,8 +17,10 @@
     </view>
   </block>
   <block wx:else>
-    <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
-    <text class="name">{{name}}</text>
+    <view class="h2h-identity">
+      <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
+      <text class="name">{{name}}</text>
+    </view>
     <text class="pill pill-{{pillClass}} num">{{record}}</text>
   </block>
 </view>

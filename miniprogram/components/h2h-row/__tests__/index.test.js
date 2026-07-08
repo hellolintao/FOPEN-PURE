@@ -40,6 +40,20 @@ test('template keeps row tap binding without rendering a right arrow icon', () =
   expect(wxml).not.toMatch(/class=["']arrow["']|>→<\/text>|>➡️<\/text>/)
 })
 
+test('single rows keep avatar and name grouped while score is pinned right', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')
+
+  expect(wxml).toContain('h2h-row--single')
+  expect(wxml).toContain('class="h2h-identity"')
+  const identityIndex = wxml.indexOf('class="h2h-identity"')
+  const singleScoreIndex = wxml.indexOf('class="pill pill-{{pillClass}} num"', identityIndex)
+  expect(identityIndex).toBeGreaterThan(-1)
+  expect(singleScoreIndex).toBeGreaterThan(identityIndex)
+  expect(wxss).toMatch(/\.h2h-row--single\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/s)
+  expect(wxss).toMatch(/\.h2h-row--single\s+\.pill\s*{[^}]*justify-self:\s*end/s)
+})
+
 test('component supports team-vs-team labels and expanded recent matches', () => {
   const def = loadComponent()
 
