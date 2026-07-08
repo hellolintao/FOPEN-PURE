@@ -668,10 +668,81 @@ describe('tournament-detail score permissions', () => {
     expect(ctx.data.footerActions.map(a => a.label)).toEqual(['分享'])
   })
 
-  test.each([
-    ['missing identity', null],
-    ['unclaimed identity', { _id: 'm1', claimStatus: 'unclaimed' }]
-  ])('onRegisterSelf navigates to edit profile for %s', async (_caseName, member) => {
+  test('onRegisterSelf cancels guest login without refreshing identity or registering', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockResolvedValue(null)
+    }
+    const { pageDef } = loadPage({ app })
+    wx.showModal.mockImplementationOnce(({ success }) => success({ confirm: false }))
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '登录后报名',
+      confirmText: '去登录'
+    }))
+    expect(app.refreshIdentity).not.toHaveBeenCalled()
+    expect(wx.navigateTo).not.toHaveBeenCalled()
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tournament-registrations'
+    }))
+    expect(ctx.refresh).not.toHaveBeenCalled()
+  })
+
+  test('onRegisterSelf returns registered guest to registration section without auto-registering', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockImplementation(async () => {
+        app.globalData.currentMember = { _id: 'm1', name: 'Alice', claimStatus: 'claimed' }
+        return app.globalData.currentMember
+      })
+    }
+    const { pageDef } = loadPage({ app })
+    wx.showModal.mockImplementationOnce(({ success }) => success({ confirm: true }))
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', entry: '' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(app.refreshIdentity).toHaveBeenCalled()
+    expect(ctx.data.entry).toBe('register')
+    expect(ctx.refresh).toHaveBeenCalled()
+    expect(wx.navigateTo).not.toHaveBeenCalled()
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tournament-registrations'
+    }))
+  })
+
+  test('onRegisterSelf sends unregistered guest to register flow without auto-registering', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockResolvedValue(null)
+    }
+    const { pageDef } = loadPage({ app })
+    wx.showModal.mockImplementationOnce(({ success }) => success({ confirm: true }))
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    ctx.refresh = jest.fn()
+
+    await ctx.onRegisterSelf()
+
+    expect(app.refreshIdentity).toHaveBeenCalled()
+    expect(wx.navigateTo).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/pages/edit-profile/index?mode=register&from=tournament-register&tournamentId=t1',
+      events: expect.objectContaining({
+        registrationIdentityReady: expect.any(Function)
+      })
+    }))
+    expect(wx.cloud.callFunction).not.toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tournament-registrations'
+    }))
+    expect(ctx.refresh).not.toHaveBeenCalled()
+  })
+
+  test('onRegisterSelf navigates to edit profile for unclaimed identity', async () => {
+    const member = { _id: 'm1', claimStatus: 'unclaimed' }
     const { pageDef } = loadPage({
       app: { globalData: { currentMember: member, isAdmin: false } }
     })

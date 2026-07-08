@@ -101,6 +101,19 @@ Page({
     })
   },
 
+  confirmRegistrationLogin() {
+    return new Promise(resolve => {
+      wx.showModal({
+        title: '登录后报名',
+        content: '报名需要先登录或注册会员资料。登录完成后将返回本赛事报名区。',
+        confirmText: '去登录',
+        cancelText: '暂不登录',
+        success: ({ confirm }) => resolve(!!confirm),
+        fail: () => resolve(false)
+      })
+    })
+  },
+
   async ensureIdentity(options = {}) {
     try {
       if (app.globalData && app.globalData.currentMember) return true
@@ -372,11 +385,23 @@ Page({
       return
     }
 
+    const hadMemberBeforeLogin = !!(app.globalData && app.globalData.currentMember)
+    if (!hadMemberBeforeLogin) {
+      const shouldLogin = await this.confirmRegistrationLogin()
+      if (!shouldLogin) return
+    }
+
     const identityReady = await this.ensureIdentity({ requirePrivacy: true })
     if (!identityReady) return
     const member = app.globalData && app.globalData.currentMember
     if (needsRegistrationIdentity(member)) {
       this.openRegistrationIdentityEditor()
+      return
+    }
+    if (!hadMemberBeforeLogin) {
+      this.registrationEntryScrolled = false
+      this.setData({ entry: 'register' })
+      await this.refresh()
       return
     }
     if (isTournamentCreator(this.data.tournament, member)) {
@@ -406,6 +431,7 @@ Page({
       url: `/pages/edit-profile/index?mode=register&from=tournament-register&tournamentId=${this.data.tournamentId}`,
       events: {
         registrationIdentityReady: () => {
+          this.registrationEntryScrolled = false
           this.setData({ entry: 'register' })
           this.refresh()
         }
