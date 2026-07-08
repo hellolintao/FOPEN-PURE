@@ -90,10 +90,16 @@ Page({
     this.setData({ loading: true, expandedTeamH2HKey: '' });
     const seasonId = this._getCurrentSeasonId();
     try {
+      const analyticsPromise = callFunction({
+        name: 'analytics-engine',
+        data: { action: 'getPlayerAnalytics', seasonId, memberId: playerId }
+      }).catch(() => {
+        return null;
+      });
       const [playerRes, statsRes, analyticsRes] = await Promise.all([
         callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
         callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } }),
-        callFunction({ name: 'analytics-engine', data: { action: 'getPlayerAnalytics', seasonId, memberId: playerId } })
+        analyticsPromise
       ]);
 
       if (statsRes && statsRes.result && statsRes.result.success === false) {

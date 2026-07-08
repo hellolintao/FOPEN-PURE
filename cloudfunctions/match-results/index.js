@@ -491,33 +491,38 @@ async function refreshAfterSettlementRows({ callFunction, rows, successIds }) {
     const refreshedMatchIds = []
     let analyticsOk = true
     for (const group of groups) {
-      const rankRes = await callFunction({
-        name: 'points-engine',
-        data: {
-          action: 'refreshRankCache',
-          seasonId: group.seasonId,
-          affectedMemberIds: group.affectedMemberIds,
-          writeSnapshot: true,
-          snapshotKind: 'settlement',
-        },
-      })
-      if (!isFunctionSuccess(rankRes)) {
+      try {
+        const rankRes = await callFunction({
+          name: 'points-engine',
+          data: {
+            action: 'refreshRankCache',
+            seasonId: group.seasonId,
+            affectedMemberIds: group.affectedMemberIds,
+            writeSnapshot: true,
+            snapshotKind: 'settlement',
+          },
+        })
+        if (!isFunctionSuccess(rankRes)) {
+          analyticsOk = false
+          continue
+        }
+        const rankData = functionData(rankRes) || {}
+        settlementImpact.push(...(rankData.settlementImpact || []))
+        refreshedMatchIds.push(...group.matchIds)
+        const analyticsRes = await callFunction({
+          name: 'analytics-engine',
+          data: {
+            action: 'refreshAfterSettlement',
+            seasonId: group.seasonId,
+            affectedMemberIds: group.affectedMemberIds,
+            matchIds: group.matchIds,
+          },
+        })
+        if (!isFunctionSuccess(analyticsRes)) analyticsOk = false
+      } catch (err) {
         analyticsOk = false
         continue
       }
-      const rankData = functionData(rankRes) || {}
-      settlementImpact.push(...(rankData.settlementImpact || []))
-      const analyticsRes = await callFunction({
-        name: 'analytics-engine',
-        data: {
-          action: 'refreshAfterSettlement',
-          seasonId: group.seasonId,
-          affectedMemberIds: group.affectedMemberIds,
-          matchIds: group.matchIds,
-        },
-      })
-      if (!isFunctionSuccess(analyticsRes)) analyticsOk = false
-      refreshedMatchIds.push(...group.matchIds)
     }
     return {
       analyticsStatus: analyticsOk ? 'success' : 'failed',

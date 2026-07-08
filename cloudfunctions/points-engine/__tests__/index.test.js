@@ -482,6 +482,58 @@ describe('rankList enhancements', () => {
     expect(res.data.cachedAt).toBeUndefined()
   })
 
+  test('rankList freshness scan invalidates cache from input row after 5000 matching rows', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'late', name: '迟到选手', publicProfileConsent: true })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T15:30:00Z'),
+      rankList: [
+        { _id: 'cached', name: '缓存选手', avatarUrl: '', totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null }
+      ]
+    })
+    for (let i = 0; i < 5000; i++) {
+      cloud.__rows.match_results.push({
+        _id: `old_${String(i).padStart(4, '0')}`,
+        seasonId: 'season_2026',
+        tournamentType: 'singles',
+        resultStatus: 'confirmed',
+        confirmedAt: new Date('2026-05-20T14:00:00Z'),
+        updateTime: new Date('2026-05-20T14:00:00Z'),
+        createTime: new Date(`2026-05-20T14:${String(Math.floor(i / 100)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}Z`),
+        pointsAwarded: { entries: [] }
+      })
+    }
+    cloud.__rows.match_results.push({
+      _id: 'late_after_5000',
+      seasonId: 'season_2026',
+      tournamentType: 'singles',
+      resultStatus: 'confirmed',
+      confirmedAt: new Date('2026-05-20T16:05:00Z'),
+      updateTime: new Date('2026-05-20T16:05:00Z'),
+      createTime: new Date('2026-05-20T16:05:00Z'),
+      pointsAwarded: { entries: [{ memberId: 'late', points: 20, role: 'winner' }] }
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.cachedAt).toBeUndefined()
+    expect(res.data.rankList).toEqual([
+      expect.objectContaining({
+        _id: 'late',
+        name: '迟到选手',
+        totalPoints: 20,
+        winCount: 1,
+        lossCount: 0,
+        winRate: 1
+      })
+    ])
+  })
+
   test('rankList recomputes live rows when stored scheduled cache is empty', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true })

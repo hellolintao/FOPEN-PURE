@@ -261,6 +261,48 @@ test('loadAll fetches analytics and maps recent form, best partner, and team h2h
   expect(ctx.data.bestPartnerWinRatePct).toBe('80%')
 })
 
+test('loadAll renders player detail with default analytics when analytics function rejects', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockImplementation(({ name, data }) => {
+    if (name === 'members') return Promise.resolve({ result: { data: { _id: 'A', name: '乐乐' } } })
+    if (name === 'points-engine' && data.action === 'playerStats') {
+      return Promise.resolve({
+        result: {
+          success: true,
+          data: {
+            stats: { singles: { winCount: 2, lossCount: 1, totalPoints: 50, winRate: 2 / 3 }, doubles: {} },
+            currentRank: { singles: 3 },
+            rankHistory: { singles: [{ rank: 3 }], doubles: [] },
+            recent: [{ _id: 'm1', tournamentType: 'singles', result: 'W' }]
+          }
+        }
+      })
+    }
+    if (name === 'points-engine' && data.action === 'playerH2H') {
+      return Promise.resolve({ result: { success: true, data: { singles: [{ memberId: 'B', name: '标子' }], doubles: [] } } })
+    }
+    if (name === 'analytics-engine' && data.action === 'getPlayerAnalytics') {
+      return Promise.reject(new Error('analytics-engine missing'))
+    }
+    return Promise.resolve({ result: { success: true, data: null } })
+  })
+  const ctx = makeCtx(def, { seasonYear: 2026 })
+
+  await ctx.loadAll('A')
+  await Promise.resolve()
+
+  expect(wx.showToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: '加载失败' }))
+  expect(ctx.data.player).toEqual({ _id: 'A', name: '乐乐' })
+  expect(ctx.data.activeStats).toMatchObject({ winCount: 2, lossCount: 1, totalPoints: 50 })
+  expect(ctx.data.analytics).toEqual({
+    singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
+    doubles: { lastFive: null, bestPartners: [], teamH2H: [], strongAgainst: [], strugglesAgainst: [] },
+    recentMatches: []
+  })
+  expect(ctx.data.activeH2H).toEqual([{ memberId: 'B', name: '标子' }])
+})
+
 test('doubles tab prefers analytics team h2h rows and toggles expanded key', async () => {
   const def = loadPage()
   const { callFunction } = require('../../../utils/cloud')

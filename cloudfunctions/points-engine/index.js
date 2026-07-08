@@ -330,7 +330,7 @@ async function fetchLatestCollectionTimestamp(collectionName, filter, fields) {
   try {
     let latest = 0
     const pageSize = 100
-    for (let skip = 0; skip < 5000; skip += pageSize) {
+    for (let skip = 0; ; skip += pageSize) {
       const page = (await db.collection(collectionName)
         .where(filter)
         .skip(skip)

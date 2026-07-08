@@ -92,6 +92,46 @@ test('buildBatchCtx.afterSettlement refreshes each season when successful rows s
   ])
 })
 
+test('buildBatchCtx.afterSettlement continues later season refreshes when first season analytics throws', async () => {
+  const calls = []
+  const ctx = buildBatchCtx({
+    _id: 'admin1',
+    openid: 'openid_admin',
+    isAdmin: true,
+  }, true, {
+    callFunction: async ({ name, data }) => {
+      calls.push({ name, data })
+      if (name === 'analytics-engine' && data.seasonId === 'season_2026') {
+        throw new Error('analytics unavailable')
+      }
+      if (name === 'points-engine') {
+        return { result: { success: true, data: { settlementImpact: [{ seasonId: data.seasonId, memberId: data.affectedMemberIds[0] }] } } }
+      }
+      return { result: { success: true, data: { analyticsStatus: 'success' } } }
+    },
+    getMatchesByIds: async () => [
+      { _id: 'm1', seasonId: 'season_2026', tournamentType: 'singles', playerIds: ['A', 'B'] },
+      { _id: 'm2', seasonId: 'season_2025', tournamentType: 'singles', playerIds: ['C', 'D'] },
+    ],
+  })
+
+  const result = await ctx.afterSettlement({ successIds: ['m1', 'm2'], requestId: 'req_multi_season_partial_failure' })
+
+  expect(result.analyticsStatus).toBe('failed')
+  expect(result.analyticsMessage).toBe('比分已确认，数据分析稍后重算')
+  expect(calls).toEqual([
+    { name: 'points-engine', data: { action: 'refreshRankCache', seasonId: 'season_2026', affectedMemberIds: ['A', 'B'], writeSnapshot: true, snapshotKind: 'settlement' } },
+    { name: 'analytics-engine', data: { action: 'refreshAfterSettlement', seasonId: 'season_2026', affectedMemberIds: ['A', 'B'], matchIds: ['m1'] } },
+    { name: 'points-engine', data: { action: 'refreshRankCache', seasonId: 'season_2025', affectedMemberIds: ['C', 'D'], writeSnapshot: true, snapshotKind: 'settlement' } },
+    { name: 'analytics-engine', data: { action: 'refreshAfterSettlement', seasonId: 'season_2025', affectedMemberIds: ['C', 'D'], matchIds: ['m2'] } },
+  ])
+  expect(result.settlementImpact).toEqual([
+    { seasonId: 'season_2026', memberId: 'A' },
+    { seasonId: 'season_2025', memberId: 'C' },
+  ])
+  expect(result.refreshedMatchIds).toEqual(['m1', 'm2'])
+})
+
 test('buildSubmitCtx exposes tournament-level settlement refresh hook', async () => {
   const calls = []
   const ctx = buildSubmitCtx({
