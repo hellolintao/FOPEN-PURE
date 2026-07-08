@@ -70,6 +70,15 @@
   min-width: 0;
 }
 
+.player-avatar {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
+  border-radius: 50%;
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
 .player-cell .name {
   font-size: 28rpx;
   font-weight: 700;

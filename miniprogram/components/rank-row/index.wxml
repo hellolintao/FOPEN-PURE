@@ -4,6 +4,7 @@
   </view>
 
   <view class="player-cell">
+    <image wx:if="{{avatarUrl}}" class="player-avatar" src="{{avatarUrl}}" mode="aspectFill" />
     <text class="name">{{name}}</text>
   </view>
 
