@@ -140,6 +140,22 @@ Use the fixture ids and actor mapping printed by `SMOKE_MODE=cleanup-seed-smoke`
    - Verify admin sees participant context and admin review/save controls.
    - Save or confirm a score and verify points are awarded once.
 
+## Ranking Analytics Smoke
+
+1. Deploy `analytics-engine`, `points-engine`, and `match-results` to the target environment.
+2. Rebuild current season rank snapshots:
+   `points-engine.rebuildRankSnapshots({ seasonId: 'season_2026', snapshotKind: 'baseline' })`
+3. Rebuild current season analytics:
+   `analytics-engine.rebuildSeason({ seasonId: 'season_2026' })`
+4. Confirm one singles score as admin through batch confirm.
+5. Verify `rank_cache` updates, rank snapshots receive a `settlement` row, and rank page no longer shows only `—` for trend states.
+6. Confirm one doubles score as admin through direct reconfirm.
+7. Open the affected player detail page.
+8. Verify recent form, best partner, strong/struggle opponent cards, and team-vs-team doubles H2H.
+9. Revoke public display for one affected member.
+10. Verify analytics rows render the revoked member through anonymous public identity.
+11. If analytics refresh fails, verify the score remains confirmed and `analytics_jobs` records `status: failed`.
+
 ## Last Verified
 
 Verified on 2026-05-17 against `cloud1-0gthnke69a09f52a` / `season_2026`.
