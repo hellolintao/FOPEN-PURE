@@ -1,7 +1,14 @@
-function loadPage(currentMember = { _id: 'me' }) {
+function loadPage(currentMember = { _id: 'me' }, appOverrides = {}) {
   jest.resetModules()
   let pageDef
-  global.getApp = () => ({ globalData: { currentMember } })
+  const app = {
+    ...appOverrides,
+    globalData: {
+      currentMember,
+      ...appOverrides.globalData
+    }
+  }
+  global.getApp = () => app
   global.wx = {
     navigateTo: jest.fn(),
     showToast: jest.fn(),
@@ -12,6 +19,7 @@ function loadPage(currentMember = { _id: 'me' }) {
   global.Page = (def) => { pageDef = def }
   jest.mock('../../../utils/cloud', () => ({ callFunction: jest.fn() }))
   require('../index')
+  pageDef.__app = app
   return pageDef
 }
 
@@ -338,6 +346,26 @@ test('_sanitizeRankRow keeps avatar only when current visitor can view rank avat
 
   expect(privateCtx._sanitizeRankRow({ _id: 'A', avatarUrl: 'a.png', winCount: 1, lossCount: 0 })).not.toHaveProperty('avatarUrl')
   expect(publicCtx._sanitizeRankRow({ _id: 'A', avatarUrl: 'a.png', winCount: 1, lossCount: 0 }).avatarUrl).toBe('a.png')
+})
+
+test('onShow restores identity before deciding whether ranking avatars are visible', async () => {
+  const restoredMember = { _id: 'me', publicProfileConsent: true }
+  const def = loadPage(null, { refreshIdentity: jest.fn() })
+  def.__app.refreshIdentity.mockImplementation(async () => {
+    def.__app.globalData.currentMember = restoredMember
+    return restoredMember
+  })
+  const ctx = makeCtx(def)
+  ctx.loadRank = jest.fn().mockResolvedValue()
+  ctx.loadHero = jest.fn().mockResolvedValue()
+
+  await ctx.onShow()
+
+  expect(def.__app.refreshIdentity).toHaveBeenCalled()
+  expect(ctx.data.currentMember).toBe(restoredMember)
+  expect(ctx.data.canViewRankAvatars).toBe(true)
+  expect(ctx.loadRank).toHaveBeenCalled()
+  expect(ctx.loadHero).toHaveBeenCalled()
 })
 
 test('loadRank preserves cloud avatars for visitors who can view ranking avatars', async () => {

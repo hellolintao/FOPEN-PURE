@@ -27,7 +27,7 @@ Page({
     syncTabBar(this, '/pages/rank/index')
     if (wx.hideShareMenu) wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
     this.refreshSeasonalTheme()
-    const currentMember = getApp().globalData.currentMember
+    const currentMember = await this._ensureCurrentMember()
     this.setData({
       currentMember,
       canViewRankAvatars: this._canViewRankAvatars(currentMember)
@@ -138,6 +138,21 @@ Page({
 
   _canViewRankAvatars(member) {
     return !!(member && member._id && member.publicProfileConsent === true)
+  },
+
+  async _ensureCurrentMember() {
+    const app = getApp()
+    if (!app || !app.globalData) return null
+    if (app.globalData.currentMember) return app.globalData.currentMember
+    if (app.identityReady && typeof app.identityReady.then === 'function') {
+      await app.identityReady
+      return app.globalData.currentMember || null
+    }
+    if (typeof app.refreshIdentity === 'function') {
+      app.identityReady = app.refreshIdentity()
+      return await app.identityReady
+    }
+    return null
   },
 
   _sanitizeRankRow(row) {
