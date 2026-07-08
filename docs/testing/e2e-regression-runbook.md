@@ -140,7 +140,7 @@ Use the fixture ids and actor mapping printed by `SMOKE_MODE=cleanup-seed-smoke`
    - Verify admin sees participant context and admin review/save controls.
    - Save or confirm a score and verify points are awarded once.
 
-## Ranking Analytics Smoke
+### Ranking Analytics Smoke
 
 1. Deploy `analytics-engine`, `points-engine`, and `match-results` to the target environment.
 2. Rebuild current season rank snapshots:
@@ -155,6 +155,17 @@ Use the fixture ids and actor mapping printed by `SMOKE_MODE=cleanup-seed-smoke`
 9. Revoke public display for one affected member.
 10. Verify analytics rows render the revoked member through anonymous public identity.
 11. If analytics refresh fails, verify the score remains confirmed and `analytics_jobs` records `status: failed`.
+
+### Ranking Analytics Local Verification 2026-07-08
+
+Local focused validation for the ranking analytics branch passed before final whole-branch review:
+
+- `cloudfunctions/analytics-engine`: `npm test` passed 6 suites / 20 tests.
+- `cloudfunctions/match-results`: `npm test -- __tests__/analytics-integration.test.js lib/__tests__/handlers/batch.test.js lib/__tests__/handlers/submit.test.js` passed 3 suites / 45 tests.
+- `cloudfunctions/points-engine`: `npm test -- lib/__tests__/settlement-impact.test.js __tests__/index.test.js` passed 2 suites / 36 tests.
+- `miniprogram`: `npm test -- pages/rank/__tests__/index.test.js pages/player-detail/__tests__/index.test.js pages/tournament-score/__tests__/index.test.js components/h2h-row/__tests__/index.test.js components/batch-result-sheet/__tests__/index.test.js` passed 5 suites / 68 tests.
+
+Post-deploy ranking analytics smoke still requires the target environment functions to be deployed first, then the `Ranking Analytics Smoke` checklist above should be run in WeChat DevTools with an admin session.
 
 ## Last Verified
 
