@@ -36,3 +36,10 @@ test('rank-row template renders avatar image only when avatarUrl exists', () => 
   expect(wxml).toContain('src="{{avatarUrl}}"')
   expect(wxml).not.toContain('default-avatar.png')
 })
+
+test('rank-row styles use enlarged avatar and roomier row spacing', () => {
+  const wxss = fs.readFileSync(path.join(__dirname, '../index.wxss'), 'utf8')
+  expect(wxss).toMatch(/\.player-avatar\s*{[\s\S]*width:\s*66rpx;[\s\S]*height:\s*66rpx;[\s\S]*margin-right:\s*18rpx;/)
+  expect(wxss).toContain('padding: 24rpx 24rpx;')
+  expect(wxss).toMatch(/\.rank-row\.highlight-pride\s*{[\s\S]*margin:\s*10rpx 0;[\s\S]*padding-top:\s*26rpx;[\s\S]*padding-bottom:\s*26rpx;/)
+})
