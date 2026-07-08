@@ -132,11 +132,12 @@ function registrationMemberIds(rows = []) {
   return ids
 }
 
-function publicRegistrationRow(row = {}, membersById, index) {
-  const safe = stripSensitivePublicFields(row)
-  delete safe.name
-  delete safe.avatarUrl
-
+function registrationRowWithMemberIdentity(row = {}, membersById, index, options = {}) {
+  const safe = options.stripSensitive ? stripSensitivePublicFields(row) : { ...row }
+  if (options.stripSensitive) {
+    delete safe.name
+    delete safe.avatarUrl
+  }
   if (row.playerId) {
     const identity = toPublicIdentity(membersById.get(row.playerId), { rank: row.seed, index })
     safe.playerName = identity.name
@@ -154,9 +155,17 @@ function publicRegistrationRow(row = {}, membersById, index) {
   return safe
 }
 
-async function publicRegistrationRows(rows = []) {
+async function registrationRowsWithMemberIdentity(rows = [], options = {}) {
   const membersById = await getMembersByIds(registrationMemberIds(rows))
-  return (rows || []).map((row, index) => publicRegistrationRow(row, membersById, index))
+  return (rows || []).map((row, index) => registrationRowWithMemberIdentity(row, membersById, index, options))
+}
+
+async function publicRegistrationRows(rows = []) {
+  return registrationRowsWithMemberIdentity(rows, { stripSensitive: true })
+}
+
+async function adminRegistrationRows(rows = []) {
+  return registrationRowsWithMemberIdentity(rows, { stripSensitive: false })
 }
 
 async function shouldReturnAdminRegistrationRows(wxContext) {
@@ -516,7 +525,7 @@ exports.main = async (event, context) => {
         const result = await db.collection('tournament_registrations').doc(id).get()
         const adminRows = await shouldReturnAdminRegistrationRows(wxContext)
         const data = adminRows
-          ? result.data
+          ? (await adminRegistrationRows(result.data ? [result.data] : []))[0]
           : (await publicRegistrationRows(result.data ? [result.data] : []))[0]
 
         return {
@@ -561,7 +570,7 @@ exports.main = async (event, context) => {
 
           return {
             success: true,
-            data: adminRows ? pageRows : await publicRegistrationRows(pageRows),
+            data: adminRows ? await adminRegistrationRows(pageRows) : await publicRegistrationRows(pageRows),
             total: filtered.length,
             pageNum,
             pageSize
@@ -582,7 +591,7 @@ exports.main = async (event, context) => {
 
         return {
           success: true,
-          data: adminRows ? result.data : await publicRegistrationRows(result.data || []),
+          data: adminRows ? await adminRegistrationRows(result.data || []) : await publicRegistrationRows(result.data || []),
           total: countResult.total,
           pageNum,
           pageSize

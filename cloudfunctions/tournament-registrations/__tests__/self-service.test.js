@@ -1052,3 +1052,72 @@ test('list returns public identities for non-admin callers without consent field
     expect(row).not.toHaveProperty('publicProfileConsentAt')
   }
 })
+
+test('list hydrates member avatars for admin callers when registration rows are missing avatar fields', async () => {
+  const rows = [
+    {
+      _id: 'reg-admin',
+      tournamentId: TID,
+      seasonId: 'season-2026',
+      type: 'singles',
+      playerId: 'member-visible',
+      playerName: 'Stored Name',
+      registrationStatus: 'confirmed',
+      seed: 1
+    }
+  ]
+  const members = {
+    'member-visible': {
+      _id: 'member-visible',
+      name: 'Visible Player',
+      avatarUrl: '/avatars/visible.png',
+      publicProfileConsent: true
+    }
+  }
+
+  const registrationChain = {
+    where: jest.fn(() => registrationChain),
+    orderBy: jest.fn(() => registrationChain),
+    skip: jest.fn(() => registrationChain),
+    limit: jest.fn(() => registrationChain),
+    get: jest.fn(async () => ({ data: rows })),
+    count: jest.fn(async () => ({ total: rows.length }))
+  }
+  const memberWhere = jest.fn((query) => ({
+    get: jest.fn(async () => {
+      if (query && Array.isArray(query.$or)) {
+        return { data: [{ _id: 'admin-a', openid: 'openid-a', admin: true }] }
+      }
+      const ids = query && query._id && query._id.$in
+      return { data: (ids || []).map(id => members[id]).filter(Boolean) }
+    })
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'tournament_registrations') return registrationChain
+    if (name === 'members') return { where: memberWhere }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({
+    action: 'list',
+    tournamentId: TID,
+    pageSize: 20,
+    pageNum: 1
+  }, {})
+
+  expect(res.success).toBe(true)
+  expect(res.data).toEqual([
+    expect.objectContaining({
+      _id: 'reg-admin',
+      playerId: 'member-visible',
+      playerName: 'Visible Player',
+      playerAvatarUrl: '/avatars/visible.png',
+      playerPublicProfileVisible: true
+    })
+  ])
+})
