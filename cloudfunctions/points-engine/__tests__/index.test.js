@@ -59,15 +59,20 @@ jest.mock('wx-server-sdk', () => {
       where(f) {
         const data = (rows[name] || []).filter(r => rowMatches(r, f))
         const orders = []
+        const getRows = async (start = 0, end) => {
+          if (rows.__missingCollections.has(name)) throw missingCollectionError(name)
+          const ordered = applyOrder(data, orders)
+          return { data: end == null ? ordered.slice(start) : ordered.slice(start, end) }
+        }
         const chain = {
-          get: async () => ({ data: applyOrder(data, orders) }),
+          get: async () => getRows(),
           orderBy(field, dir = 'asc') { orders.push({ field, dir }); return chain },
-          limit(n) { return { get: async () => ({ data: applyOrder(data, orders).slice(0, n) }) } },
+          limit(n) { return { get: async () => getRows(0, n) } },
           skip(s) {
             return {
               ...chain,
-              get: async () => ({ data: applyOrder(data, orders).slice(s) }),
-              limit(n) { return { get: async () => ({ data: applyOrder(data, orders).slice(s, s + n) }) } }
+              get: async () => getRows(s),
+              limit(n) { return { get: async () => getRows(s, s + n) } }
             }
           }
         }
@@ -592,6 +597,42 @@ describe('rankList enhancements', () => {
     ])
   })
 
+  test('rankList keeps live rank rows usable when rank_snapshots collection is missing', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.__missingCollections.add('rank_snapshots')
+    cloud.__rows.members.push({ _id: 'A', name: '甲', avatarUrl: 'a.png', publicProfileConsent: true })
+    cloud.__rows.baseline_standings.push({
+      _id: 'bs1',
+      seasonId: 'season_2026',
+      type: 'singles',
+      memberId: 'A',
+      totalPoints: 100,
+      wins: 4,
+      losses: 1,
+      createTime: '2026-05-01'
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.success).toBe(true)
+    expect(res.data.rankList).toEqual([
+      {
+        _id: 'A',
+        name: '甲',
+        avatarUrl: '',
+        publicProfileVisible: true,
+        totalPoints: 100,
+        winCount: 4,
+        lossCount: 1,
+        winRate: 0.8,
+        trendDelta: null,
+        trendState: 'no_history',
+        trendLabel: '暂无历史'
+      }
+    ])
+  })
+
   test('refreshRankCache writes singles and doubles scheduled cache rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push(
@@ -756,6 +797,8 @@ describe('playerStats — winRate', () => {
     cloud.__rows.members.length = 0
     cloud.__rows.rank_snapshots.length = 0
     cloud.__rows.baseline_standings.length = 0
+    cloud.__rows.__missingCollections.clear()
+    cloud.__rows.__missingDocs.clear()
   })
 
   test('singles 8W/2L → winRate 0.8 (≈0.8 within 5 decimals)', async () => {
@@ -778,6 +821,28 @@ describe('playerStats — winRate', () => {
     const { main } = require('../index')
     const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
     expect(res.data.stats.singles.winRate).toBeCloseTo(0.8, 5)
+  })
+
+  test('playerStats returns empty rank history when rank_snapshots collection is missing', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.__missingCollections.add('rank_snapshots')
+    cloud.__rows.members.push({ _id: 'P', name: 'p', avatarUrl: '' })
+    cloud.__rows.match_results.push({
+      _id: 'm1',
+      seasonId: 's2026',
+      tournamentType: 'singles',
+      resultStatus: 'confirmed',
+      confirmedAt: '2026-04-01',
+      createTime: '2026-04-01',
+      playerIds: ['P'],
+      pointsAwarded: { entries: [{ memberId: 'P', points: 20, role: 'winner' }] }
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'playerStats', playerId: 'P', currentSeasonId: 's2026' })
+
+    expect(res.success).toBe(true)
+    expect(res.data.rankHistory).toEqual({ singles: [], doubles: [] })
   })
 
   test('player with 0 matches → winRate = 0 (no divide-by-zero)', async () => {

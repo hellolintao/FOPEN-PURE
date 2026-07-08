@@ -2,6 +2,7 @@ jest.mock('wx-server-sdk', () => {
   const rows = {
     members: [],
     match_results: [],
+    rank_cache: [],
     player_analytics: [],
     pair_analytics: [],
     analytics_jobs: []
@@ -259,6 +260,120 @@ test('refreshAfterSettlement keeps cached analytics identity fields id-only', as
   expect(playerDoc.doubles.strongAgainst[0].name).toBeUndefined()
   expect(playerDoc.doubles.teamH2H[0].subjectTeam).toEqual([{ memberId: 'A' }, { memberId: 'B' }])
   expect(playerDoc.doubles.teamH2H[0].opponentTeam).toEqual([{ memberId: 'C' }, { memberId: 'D' }])
+})
+
+test('refreshAfterSettlement populates rankSnapshot from rank_cache without display identity fields', async () => {
+  const cloud = require('wx-server-sdk')
+  cloud.__rows.members.push(
+    { _id: 'A', name: '乐乐', avatarUrl: 'cloud://avatar-a', publicProfileConsent: true },
+    { _id: 'B', name: '小天', avatarUrl: 'cloud://avatar-b', publicProfileConsent: true }
+  )
+  cloud.__rows.rank_cache.push(
+    {
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      rankList: [
+        {
+          _id: 'A',
+          memberId: 'A',
+          rank: 1,
+          totalPoints: 120,
+          winCount: 6,
+          lossCount: 1,
+          winRate: 0.857,
+          trendDelta: 2,
+          trendState: 'up',
+          trendLabel: '▲2',
+          name: '乐乐',
+          avatarUrl: 'cloud://avatar-a',
+          publicProfileVisible: true
+        }
+      ]
+    },
+    {
+      _id: 'rank_cache_season_2026_doubles',
+      seasonId: 'season_2026',
+      type: 'doubles',
+      rankList: [
+        {
+          _id: 'A',
+          memberId: 'A',
+          rank: 3,
+          totalPoints: 88,
+          winCount: 4,
+          lossCount: 2,
+          winRate: 0.667,
+          trendDelta: -1,
+          trendState: 'down',
+          trendLabel: '▼1',
+          name: '乐乐',
+          avatarUrl: 'cloud://avatar-a'
+        }
+      ]
+    }
+  )
+  cloud.__rows.match_results.push({
+    _id: 'm1',
+    seasonId: 'season_2026',
+    tournamentType: 'singles',
+    resultStatus: 'confirmed',
+    confirmedAt: '2026-06-01',
+    createTime: '2026-06-01',
+    playerIds: ['A', 'B'],
+    player1: { id: 'A', name: '乐乐' },
+    player2: { id: 'B', name: '小天' },
+    pointsAwarded: {
+      entries: [
+        { memberId: 'A', points: 20, role: 'winner' },
+        { memberId: 'B', points: 10, role: 'loser' }
+      ]
+    }
+  })
+
+  const { main } = require('../index')
+  const res = await main({
+    action: 'refreshAfterSettlement',
+    seasonId: 'season_2026',
+    affectedMemberIds: ['A'],
+    matchIds: ['m1']
+  })
+
+  expect(res.success).toBe(true)
+  const playerDoc = cloud.__rows.player_analytics.find(row => row._id === 'pa_season_2026_A')
+  expect(playerDoc.rankSnapshot).toEqual({
+    singles: [
+      {
+        _id: 'A',
+        memberId: 'A',
+        rank: 1,
+        totalPoints: 120,
+        winCount: 6,
+        lossCount: 1,
+        winRate: 0.857,
+        trendDelta: 2,
+        trendState: 'up',
+        trendLabel: '▲2'
+      }
+    ],
+    doubles: [
+      {
+        _id: 'A',
+        memberId: 'A',
+        rank: 3,
+        totalPoints: 88,
+        winCount: 4,
+        lossCount: 2,
+        winRate: 0.667,
+        trendDelta: -1,
+        trendState: 'down',
+        trendLabel: '▼1'
+      }
+    ]
+  })
+  expect(playerDoc.rankSnapshot.singles[0].name).toBeUndefined()
+  expect(playerDoc.rankSnapshot.singles[0].avatarUrl).toBeUndefined()
+  expect(playerDoc.rankSnapshot.singles[0].publicProfileVisible).toBeUndefined()
 })
 
 test('rebuildSeason pages beyond the first 500 confirmed rows', async () => {

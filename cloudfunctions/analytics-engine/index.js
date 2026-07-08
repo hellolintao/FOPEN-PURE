@@ -42,6 +42,7 @@ async function refreshAfterSettlement({ seasonId, affectedMemberIds = [], matchI
 
   const rows = await fetchSeasonRows(seasonId)
   const membersById = await fetchMembersByIds([...new Set(rows.flatMap(row => row.playerIds || []))])
+  const rankRowsByMember = await fetchCachedRankRowsByMember(seasonId, affected)
 
   const playerRows = []
   for (const memberId of affected) {
@@ -50,7 +51,7 @@ async function refreshAfterSettlement({ seasonId, affectedMemberIds = [], matchI
       memberId,
       rows,
       membersById,
-      rankRowsByType: { singles: [], doubles: [] }
+      rankRowsByType: rankRowsByMember.get(memberId) || { singles: [], doubles: [] }
     })
     await upsert('player_analytics', doc._id, doc)
     playerRows.push(doc)
@@ -112,6 +113,32 @@ async function fetchSeasonRows(seasonId) {
   return fetchPagedRows('match_results', { seasonId, resultStatus: 'confirmed' }, query =>
     query.orderBy('createTime', 'asc').orderBy('_id', 'asc')
   )
+}
+
+async function fetchCachedRankRowsByMember(seasonId, memberIds) {
+  const out = new Map((memberIds || []).map(memberId => [memberId, { singles: [], doubles: [] }]))
+  if (!seasonId || out.size === 0) return out
+  for (const type of ['singles', 'doubles']) {
+    let cacheRows = []
+    try {
+      const res = await db.collection('rank_cache').where({ seasonId, type }).limit(1).get()
+      cacheRows = (res && res.data && res.data[0] && res.data[0].rankList) || []
+    } catch (err) {
+      if (isMissingCollectionError(err)) continue
+      throw err
+    }
+    for (const row of cacheRows) {
+      const memberId = row && (row.memberId || row._id)
+      if (!out.has(memberId)) continue
+      out.get(memberId)[type].push({ ...row, memberId })
+    }
+  }
+  return out
+}
+
+function isMissingCollectionError(err) {
+  const message = err && (err.message || err.errMsg || '')
+  return err && (err.errCode === -502005 || /collection .*not exists|collection .*not found/i.test(message))
 }
 
 async function fetchMembersByIds(ids) {

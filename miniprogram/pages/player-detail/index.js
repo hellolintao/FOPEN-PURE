@@ -288,11 +288,35 @@ Page({
   _getPreferredRecentRows(statsData, analytics) {
     const statsRecent = Array.isArray(statsData && statsData.recent) ? statsData.recent : [];
     const analyticsRecent = Array.isArray(analytics && analytics.recentMatches) ? analytics.recentMatches : [];
-    const recent = analyticsRecent.length ? analyticsRecent : statsRecent;
+    const recent = statsRecent.length
+      ? this._mergeRecentAnalyticsLabels(statsRecent, analyticsRecent)
+      : analyticsRecent;
     for (const row of recent) {
       if (row && !row._id) row._id = row.matchId || row.sourceMatchId || row._id;
     }
     return recent;
+  },
+
+  _mergeRecentAnalyticsLabels(statsRecent, analyticsRecent) {
+    const analyticsByMatchId = new Map();
+    for (const row of analyticsRecent || []) {
+      const key = row && (row.matchId || row.sourceMatchId || row._id);
+      if (key) analyticsByMatchId.set(key, row);
+    }
+    if (analyticsByMatchId.size === 0) return statsRecent;
+    let hasMergedLabel = false;
+    const mergedRows = (statsRecent || []).map((row) => {
+      const key = row && (row.matchId || row.sourceMatchId || row._id);
+      const analyticsRow = key ? analyticsByMatchId.get(key) : null;
+      if (!analyticsRow) return row;
+      hasMergedLabel = true;
+      return {
+        ...row,
+        subjectTeamLabel: analyticsRow.subjectTeamLabel || row.subjectTeamLabel,
+        opponentTeamLabel: analyticsRow.opponentTeamLabel || row.opponentTeamLabel
+      };
+    });
+    return hasMergedLabel ? mergedRows : statsRecent;
   },
 
   _groupRecentByType(rows) {

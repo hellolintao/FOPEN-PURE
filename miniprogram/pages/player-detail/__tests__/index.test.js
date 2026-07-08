@@ -69,6 +69,59 @@ test('setStateFromResponses maps stats, rank subtitle, active singles data, and 
   expect(ctx.data.activeRecent).toEqual([recent[0]])
 })
 
+test('setStateFromResponses preserves enriched stats recent rows and merges analytics team labels', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {
+    seasonYear: 2026,
+    h2hExpanded: { singles: false, doubles: false },
+  })
+  const statsRecent = [{
+    _id: 'm1',
+    matchId: 'm1',
+    tournamentId: 't1',
+    tournamentName: '夏季积分赛',
+    tournamentType: 'doubles',
+    score: '4-2',
+    opponent: '小天 / 标子',
+    result: 'W'
+  }]
+  const analyticsRecent = [{
+    matchId: 'm1',
+    tournamentType: 'doubles',
+    subjectTeamLabel: '乐乐 / 小野马',
+    opponentTeamLabel: '小天 / 标子'
+  }]
+
+  ctx.setStateFromResponses({
+    player: { _id: 'A', name: 'Alice' },
+    statsData: {
+      stats: { singles: {}, doubles: { winCount: 1, lossCount: 0 } },
+      currentRank: {},
+      rankHistory: {},
+      recent: statsRecent,
+    },
+    h2hData: { singles: [], doubles: [] },
+    analytics: {
+      recentMatches: analyticsRecent,
+      singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
+      doubles: { lastFive: null, bestPartners: [], teamH2H: [], strongAgainst: [], strugglesAgainst: [] }
+    }
+  })
+
+  expect(ctx.data.recent).toEqual([
+    expect.objectContaining({
+      _id: 'm1',
+      matchId: 'm1',
+      tournamentName: '夏季积分赛',
+      score: '4-2',
+      opponent: '小天 / 标子',
+      subjectTeamLabel: '乐乐 / 小野马',
+      opponentTeamLabel: '小天 / 标子'
+    })
+  ])
+  expect(ctx.data.recentByType.doubles[0].tournamentName).toBe('夏季积分赛')
+})
+
 test('onTabChange switches player detail data to doubles without refetching', () => {
   const def = loadPage()
   const ctx = makeCtx(def, {
@@ -269,7 +322,7 @@ test('doubles tab prefers analytics team h2h rows and toggles expanded key', asy
   expect(ctx.data.expandedTeamH2HKey).toBe('')
 })
 
-test('setStateFromResponses prefers analytics recent matches over stats recent and keeps doubles labels', () => {
+test('setStateFromResponses keeps stats recent matches when analytics rows are sparse', () => {
   const def = loadPage()
   const ctx = makeCtx(def, {
     seasonYear: 2026,
@@ -301,16 +354,16 @@ test('setStateFromResponses prefers analytics recent matches over stats recent a
     },
   })
 
-  expect(ctx.data.recent).toBe(analyticsRecent)
+  expect(ctx.data.recent).toEqual(statsRecent)
   expect(ctx.data.recentByType).toEqual({
-    singles: [analyticsRecent[0]],
-    doubles: [analyticsRecent[1]],
+    singles: [statsRecent[0]],
+    doubles: [statsRecent[1]],
   })
-  expect(ctx.data.activeRecent).toEqual([analyticsRecent[0]])
+  expect(ctx.data.activeRecent).toEqual([statsRecent[0]])
 
   ctx.onTabChange({ detail: { value: 'doubles' } })
 
-  expect(ctx.data.activeRecent).toEqual([analyticsRecent[1]])
+  expect(ctx.data.activeRecent).toEqual([statsRecent[1]])
 })
 
 test('template renders analytics cards and team h2h bindings', () => {

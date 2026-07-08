@@ -72,7 +72,7 @@
 |---|---|---|
 | `_id` | string | 推荐格式 `rs_<seasonId>_<weekId>_<type>_<memberId>`；唯一索引由 `(seasonId, type, weekId, memberId)` 兜底 |
 | `seasonId` | string | 赛季，例 `season_2026`（与现有 `seasons._id` 约定一致） |
-| `weekId` | string | weekly = `ws_YYYY-MM-DD`（Monday key，沿用 `getWeekId`）；baseline = `baseline_YYYY-MM-DD` |
+| `weekId` | string | weekly = `ws_YYYY-MM-DD`（Monday key，沿用 `getWeekId`）；baseline = `baseline_YYYY-MM-DD`；settlement = `settlement_YYYY-MM-DD` |
 | `weekStart` | string | yyyy-mm-dd（周一）；baseline 行使用当天日期 |
 | `weekEnd` | string | yyyy-mm-dd（周日）；baseline 行使用当天日期 |
 | `effectiveAt` | Date | trend/latest 排序的权威字段。weekly=weekEnd 23:59:59；baseline=回填时刻 |
@@ -82,7 +82,7 @@
 | `totalPoints` | number | 截至该周结束累计积分 |
 | `wins` | number | 累计胜场 |
 | `losses` | number | 累计负场 |
-| `snapshotKind` | string | `weekly` \| `baseline` |
+| `snapshotKind` | string | `weekly` \| `baseline` \| `settlement` |
 | `computedAt` | Date | 写入时间 |
 
 **索引（必建）：**

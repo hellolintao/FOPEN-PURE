@@ -445,18 +445,23 @@ async function fetchLatestSnapshotMap({ seasonId, type, memberIds }) {
   if (!memberIds || memberIds.length === 0) return new Map()
   const out = new Map()
   const chunkSize = 20
-  for (let i = 0; i < memberIds.length; i += chunkSize) {
-    const chunk = memberIds.slice(i, i + chunkSize)
-    for (const memberId of chunk) {
-      const res = await db.collection('rank_snapshots')
-        .where({ seasonId, type, memberId })
-        .orderBy('effectiveAt', 'desc')
-        .orderBy('computedAt', 'desc')
-        .limit(1)
-        .get()
-      const row = res && res.data && res.data[0]
-      if (row) out.set(memberId, row)
+  try {
+    for (let i = 0; i < memberIds.length; i += chunkSize) {
+      const chunk = memberIds.slice(i, i + chunkSize)
+      for (const memberId of chunk) {
+        const res = await db.collection('rank_snapshots')
+          .where({ seasonId, type, memberId })
+          .orderBy('effectiveAt', 'desc')
+          .orderBy('computedAt', 'desc')
+          .limit(1)
+          .get()
+        const row = res && res.data && res.data[0]
+        if (row) out.set(memberId, row)
+      }
     }
+  } catch (err) {
+    if (isMissingCollectionError(err)) return new Map()
+    throw err
   }
   return out
 }
@@ -512,11 +517,17 @@ async function rebuildRankSnapshots({ seasonId, snapshotKind = 'baseline', now }
 
 async function fetchRankHistory({ seasonId, type, memberId, limit = 12 }) {
   if (!seasonId) return []
-  const res = await db.collection('rank_snapshots')
-    .where({ seasonId, type, memberId })
-    .orderBy('weekStart', 'desc')
-    .limit(limit)
-    .get()
+  let res
+  try {
+    res = await db.collection('rank_snapshots')
+      .where({ seasonId, type, memberId })
+      .orderBy('weekStart', 'desc')
+      .limit(limit)
+      .get()
+  } catch (err) {
+    if (isMissingCollectionError(err)) return []
+    throw err
+  }
   const rows = (res && res.data) || []
   return rows
     .map(r => ({ weekStart: r.weekStart, rank: r.rank }))

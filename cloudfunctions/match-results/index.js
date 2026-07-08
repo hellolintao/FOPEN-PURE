@@ -467,10 +467,6 @@ function collectAffectedMemberIds(rows) {
   return [...new Set((rows || []).flatMap(row => row.playerIds || []).filter(Boolean))]
 }
 
-function collectSeasonIds(rows) {
-  return [...new Set((rows || []).map(row => row && row.seasonId).filter(Boolean))]
-}
-
 function normalizeFunctionResult(res) {
   return (res && typeof res === 'object' && Object.prototype.hasOwnProperty.call(res, 'result')) ? res.result : res
 }
@@ -487,36 +483,47 @@ function functionData(res) {
 
 async function refreshAfterSettlementRows({ callFunction, rows, successIds }) {
   try {
-    const seasonIds = collectSeasonIds(rows)
-    const affectedMemberIds = collectAffectedMemberIds(rows)
-    if (seasonIds.length !== 1 || affectedMemberIds.length === 0) {
+    const groups = groupSettlementRowsBySeason(rows)
+    if (groups.length === 0) {
       return { analyticsStatus: 'skipped', analyticsMessage: '', settlementImpact: [] }
     }
-    const seasonId = seasonIds[0]
-    const rankRes = await callFunction({
-      name: 'points-engine',
-      data: {
-        action: 'refreshRankCache',
-        seasonId,
-        affectedMemberIds,
-        writeSnapshot: true,
-        snapshotKind: 'settlement',
-      },
-    })
-    if (!isFunctionSuccess(rankRes)) {
-      return { analyticsStatus: 'failed', analyticsMessage: '比分已确认，数据分析稍后重算', settlementImpact: [] }
+    const settlementImpact = []
+    const refreshedMatchIds = []
+    let analyticsOk = true
+    for (const group of groups) {
+      const rankRes = await callFunction({
+        name: 'points-engine',
+        data: {
+          action: 'refreshRankCache',
+          seasonId: group.seasonId,
+          affectedMemberIds: group.affectedMemberIds,
+          writeSnapshot: true,
+          snapshotKind: 'settlement',
+        },
+      })
+      if (!isFunctionSuccess(rankRes)) {
+        analyticsOk = false
+        continue
+      }
+      const rankData = functionData(rankRes) || {}
+      settlementImpact.push(...(rankData.settlementImpact || []))
+      const analyticsRes = await callFunction({
+        name: 'analytics-engine',
+        data: {
+          action: 'refreshAfterSettlement',
+          seasonId: group.seasonId,
+          affectedMemberIds: group.affectedMemberIds,
+          matchIds: group.matchIds,
+        },
+      })
+      if (!isFunctionSuccess(analyticsRes)) analyticsOk = false
+      refreshedMatchIds.push(...group.matchIds)
     }
-    const rankData = functionData(rankRes) || {}
-    const analyticsRes = await callFunction({
-      name: 'analytics-engine',
-      data: { action: 'refreshAfterSettlement', seasonId, affectedMemberIds, matchIds: successIds },
-    })
-    const analyticsOk = isFunctionSuccess(analyticsRes)
     return {
       analyticsStatus: analyticsOk ? 'success' : 'failed',
       analyticsMessage: analyticsOk ? '排行榜已更新' : '比分已确认，数据分析稍后重算',
-      settlementImpact: rankData.settlementImpact || [],
-      refreshedMatchIds: successIds,
+      settlementImpact,
+      refreshedMatchIds: successIds && successIds.length ? successIds : refreshedMatchIds,
     }
   } catch (err) {
     return {
@@ -525,6 +532,23 @@ async function refreshAfterSettlementRows({ callFunction, rows, successIds }) {
       settlementImpact: [],
     }
   }
+}
+
+function groupSettlementRowsBySeason(rows) {
+  const groups = new Map()
+  for (const row of rows || []) {
+    if (!row || !row.seasonId) continue
+    const current = groups.get(row.seasonId) || { seasonId: row.seasonId, rows: [] }
+    current.rows.push(row)
+    groups.set(row.seasonId, current)
+  }
+  return [...groups.values()]
+    .map(group => ({
+      seasonId: group.seasonId,
+      affectedMemberIds: collectAffectedMemberIds(group.rows),
+      matchIds: group.rows.map(row => row && row._id).filter(Boolean)
+    }))
+    .filter(group => group.affectedMemberIds.length > 0)
 }
 
 function buildAfterSettlement({ callFunction, getMatchesByIds }) {
