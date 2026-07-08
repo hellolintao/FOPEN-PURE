@@ -63,7 +63,7 @@ test('loadRank maps decimal win rate to percent label', async () => {
     winRate: 0.75,
     winRatePct: '75%',
     trendState: 'no_history',
-    trendLabel: '暂无历史'
+    trendLabel: '-'
   }])
   expect(ctx.data.loading).toBe(false)
 })
@@ -256,7 +256,7 @@ test('loadRank renders fresh 2-hour page cache before refreshing cloud profile d
       winRate: 1,
       winRatePct: '100%',
       trendState: 'no_history',
-      trendLabel: '暂无历史'
+      trendLabel: '-'
     }
   ])
 })
@@ -295,7 +295,7 @@ test('loadRank ignores fresh empty page cache and fetches cloud data', async () 
       winRate: 1,
       winRatePct: '100%',
       trendState: 'no_history',
-      trendLabel: '暂无历史'
+      trendLabel: '-'
     }
   ])
 })
@@ -318,6 +318,25 @@ test('loadRank preserves backend trend labels', async () => {
   await ctx.loadRank()
 
   expect(ctx.data.rankList.map(row => row.trendLabel)).toEqual(['持平', '新上榜'])
+})
+
+test('loadRank normalizes legacy no-history trend copy to dash', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockResolvedValue({
+    result: {
+      data: {
+        rankList: [
+          { _id: 'A', winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+        ]
+      }
+    }
+  })
+  const ctx = makeCtx(def, { activeTab: 'singles', seasonYear: 2026 })
+
+  await ctx.loadRank()
+
+  expect(ctx.data.rankList[0].trendLabel).toBe('-')
 })
 
 test('_sanitizeRankRow derives fallback trend metadata from trendDelta', () => {

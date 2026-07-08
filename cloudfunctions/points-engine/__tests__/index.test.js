@@ -350,7 +350,7 @@ describe('rankList enhancements', () => {
     })
     const { main } = require('../index')
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
-    expect(res.data.rankList[0]).toMatchObject({ trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' })
+    expect(res.data.rankList[0]).toMatchObject({ trendDelta: null, trendState: 'no_history', trendLabel: '-' })
   })
 
   test('rankList returns stored scheduled cache without recomputing live rows', async () => {
@@ -372,7 +372,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '选手01', avatarUrl: '', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+      { _id: 'CACHED', name: '选手01', avatarUrl: '', publicProfileVisible: false, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '-' }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -397,7 +397,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '-' }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -613,7 +613,7 @@ describe('rankList enhancements', () => {
         winRate: 0.8,
         trendDelta: null,
         trendState: 'no_history',
-        trendLabel: '暂无历史'
+        trendLabel: '-'
       }
     ])
     expect(res.data.cachedAt).toBeUndefined()
@@ -650,7 +650,7 @@ describe('rankList enhancements', () => {
         winRate: 0.8,
         trendDelta: null,
         trendState: 'no_history',
-        trendLabel: '暂无历史'
+        trendLabel: '-'
       }
     ])
   })
@@ -686,7 +686,7 @@ describe('rankList enhancements', () => {
         winRate: 0.8,
         trendDelta: null,
         trendState: 'no_history',
-        trendLabel: '暂无历史'
+        trendLabel: '-'
       }
     ])
   })
@@ -722,7 +722,7 @@ describe('rankList enhancements', () => {
         winRate: 0.8,
         trendDelta: null,
         trendState: 'no_history',
-        trendLabel: '暂无历史'
+        trendLabel: '-'
       }
     ])
   })
@@ -765,7 +765,7 @@ describe('rankList enhancements', () => {
           winRate: 0.8,
           trendDelta: null,
           trendState: 'no_history',
-          trendLabel: '暂无历史'
+          trendLabel: '-'
         }
       ]
     })
@@ -777,7 +777,7 @@ describe('rankList enhancements', () => {
       totalPoints: 80,
       winRate: 0.5,
       trendState: 'no_history',
-      trendLabel: '暂无历史'
+      trendLabel: '-'
     })
   })
 

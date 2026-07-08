@@ -19,6 +19,12 @@ test('rank-row exposes trendState and trendLabel properties', () => {
   expect(def.properties.trendLabel).toBeTruthy()
 })
 
+test('rank-row defaults no-history trend copy to dash', () => {
+  const def = loadComponent()
+  expect(def.properties.trendState.value).toBe('no_history')
+  expect(def.properties.trendLabel.value).toBe('-')
+})
+
 test('rank-row exposes an optional avatarUrl property', () => {
   const def = loadComponent()
   expect(def.properties.avatarUrl).toBeTruthy()

@@ -424,7 +424,7 @@ function trendMetaFromDelta(trendDelta, hasAnySnapshot) {
   if (trendDelta === null || trendDelta === undefined) {
     return hasAnySnapshot
       ? { trendDelta: null, trendState: 'new', trendLabel: '新上榜' }
-      : { trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+      : { trendDelta: null, trendState: 'no_history', trendLabel: '-' }
   }
   if (trendDelta > 0) return { trendDelta, trendState: 'up', trendLabel: `▲${trendDelta}` }
   if (trendDelta < 0) return { trendDelta, trendState: 'down', trendLabel: `▼${Math.abs(trendDelta)}` }

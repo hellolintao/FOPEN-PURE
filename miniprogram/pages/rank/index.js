@@ -160,12 +160,22 @@ Page({
     if (!this.data.canViewRankAvatars) {
       delete safeRow.avatarUrl
     }
+    const trendState = safeRow.trendState || this._deriveTrendState(safeRow)
+    const trendLabel = this._normalizeTrendLabel(
+      trendState,
+      safeRow.trendLabel || this._deriveTrendLabel(safeRow)
+    )
     return {
       ...safeRow,
       winRatePct: this._formatWinRatePct(row),
-      trendState: safeRow.trendState || this._deriveTrendState(safeRow),
-      trendLabel: safeRow.trendLabel || this._deriveTrendLabel(safeRow)
+      trendState,
+      trendLabel
     }
+  },
+
+  _normalizeTrendLabel(trendState, trendLabel) {
+    if (trendState === 'no_history') return '-'
+    return trendLabel || ''
   },
 
   _deriveTrendState(row) {
@@ -176,7 +186,7 @@ Page({
   },
 
   _deriveTrendLabel(row) {
-    if (!row || row.trendDelta === null || row.trendDelta === undefined) return '暂无历史'
+    if (!row || row.trendDelta === null || row.trendDelta === undefined) return '-'
     if (row.trendDelta > 0) return `▲${row.trendDelta}`
     if (row.trendDelta < 0) return `▼${Math.abs(row.trendDelta)}`
     return '持平'
