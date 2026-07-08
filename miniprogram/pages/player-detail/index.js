@@ -147,7 +147,7 @@ Page({
     const weeklySnapshot = { ...DEFAULT_WEEKLY, ...(statsData && statsData.weeklySnapshot) };
     const h2h = normalizePair(h2hData, DEFAULT_H2H);
     const nextAnalytics = analytics || DEFAULT_ANALYTICS;
-    const recent = Array.isArray(statsData && statsData.recent) ? statsData.recent : [];
+    const recent = this._getPreferredRecentRows(statsData, nextAnalytics);
     const recentByType = this._groupRecentByType(recent);
     const h2hVisible = this._getH2HVisible(h2h, this.data.h2hExpanded);
     const rankSubtitle = this._formatRankSubtitle(currentRank);
@@ -285,6 +285,16 @@ Page({
       || (Array.isArray(doublesRankHistory) && doublesRankHistory.length > 0);
   },
 
+  _getPreferredRecentRows(statsData, analytics) {
+    const statsRecent = Array.isArray(statsData && statsData.recent) ? statsData.recent : [];
+    const analyticsRecent = Array.isArray(analytics && analytics.recentMatches) ? analytics.recentMatches : [];
+    const recent = analyticsRecent.length ? analyticsRecent : statsRecent;
+    for (const row of recent) {
+      if (row && !row._id) row._id = row.matchId || row.sourceMatchId || row._id;
+    }
+    return recent;
+  },
+
   _groupRecentByType(rows) {
     const out = { singles: [], doubles: [] };
     for (const row of (Array.isArray(rows) ? rows : [])) {
@@ -327,8 +337,7 @@ Page({
   _getAnalyticsActiveData(type, analytics = this.data.analytics || DEFAULT_ANALYTICS) {
     const activeType = type === 'doubles' ? 'doubles' : 'singles';
     const bucket = analytics[activeType] || {};
-    const doublesBucket = analytics.doubles || {};
-    const bestPartner = doublesBucket.bestPartners && doublesBucket.bestPartners[0] ? doublesBucket.bestPartners[0] : null;
+    const bestPartner = activeType === 'doubles' && bucket.bestPartners && bucket.bestPartners[0] ? bucket.bestPartners[0] : null;
     return {
       activeFormSummary: bucket.lastFive && bucket.lastFive.summary ? bucket.lastFive.summary : '',
       bestPartner,

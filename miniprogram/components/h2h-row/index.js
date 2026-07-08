@@ -3,6 +3,7 @@ Component({
     playerId: String,
     name: String,
     avatarUrl: String,
+    teamKey: String,
     subjectTeamLabel: String,
     opponentTeamLabel: String,
     recentMatches: { type: Array, value: [] },
@@ -46,7 +47,7 @@ Component({
     onTap() {
       if (this.data.subjectTeamLabel || this.data.opponentTeamLabel) {
         this.triggerEvent('toggle', {
-          key: `${this.data.subjectTeamLabel || ''}|${this.data.opponentTeamLabel || ''}`
+          key: this.data.teamKey || `${this.data.subjectTeamLabel || ''}|${this.data.opponentTeamLabel || ''}`
         })
         return
       }

@@ -95,6 +95,7 @@
           wx:for="{{activeH2HVisible}}"
           wx:key="memberId"
           player-id="{{item.memberId}}"
+          team-key="{{item.key}}"
           name="{{item.name}}"
           avatar-url="{{item.avatarUrl}}"
           subject-team-label="{{item.subjectTeamLabel}}"
@@ -134,7 +135,7 @@
           <view class="pd-recent-result">
             <view class="pd-recent-result-left">
               <text class="pd-recent-score num">{{item.score || '比分未录入'}}</text>
-              <text class="pd-recent-opp">vs {{item.opponentName || '对手'}}</text>
+              <text class="pd-recent-opp">vs {{item.opponentName || item.opponentTeamLabel || '对手'}}</text>
             </view>
             <text class="pd-recent-points {{item.won ? 'win' : 'loss'}} num">+{{item.pointsAwarded}}</text>
           </view>

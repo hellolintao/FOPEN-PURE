@@ -196,11 +196,16 @@ test('loadAll fetches analytics and maps recent form, best partner, and team h2h
   })
   expect(ctx.data.analytics.singles.lastFive.summary).toBe('4W-1L')
   expect(ctx.data.activeFormSummary).toBe('4W-1L')
-  expect(ctx.data.bestPartner).toMatchObject({ name: '小野马', matches: 5 })
-  expect(ctx.data.bestPartnerWinRatePct).toBe('80%')
+  expect(ctx.data.bestPartner).toBe(null)
+  expect(ctx.data.bestPartnerWinRatePct).toBe('')
   expect(ctx.data.advantageInsight.name).toBe('标子')
   expect(ctx.data.struggleInsight.name).toBe('小天')
   expect(ctx._teamH2HFromAnalytics().map((row) => row.opponentTeamLabel)).toEqual(['小天 / 标子'])
+
+  ctx.onTabChange({ detail: { value: 'doubles' } })
+
+  expect(ctx.data.bestPartner).toMatchObject({ name: '小野马', matches: 5 })
+  expect(ctx.data.bestPartnerWinRatePct).toBe('80%')
 })
 
 test('doubles tab prefers analytics team h2h rows and toggles expanded key', async () => {
@@ -264,6 +269,50 @@ test('doubles tab prefers analytics team h2h rows and toggles expanded key', asy
   expect(ctx.data.expandedTeamH2HKey).toBe('')
 })
 
+test('setStateFromResponses prefers analytics recent matches over stats recent and keeps doubles labels', () => {
+  const def = loadPage()
+  const ctx = makeCtx(def, {
+    seasonYear: 2026,
+    activeTab: 'singles',
+    h2hExpanded: { singles: false, doubles: false },
+  })
+  const statsRecent = [
+    { _id: 'stats-s', tournamentType: 'singles', opponentName: '统计单打对手' },
+    { _id: 'stats-d', tournamentType: 'doubles', opponentName: '统计双打对手' },
+  ]
+  const analyticsRecent = [
+    { matchId: 'analytics-s', tournamentType: 'singles', opponentName: '分析单打对手' },
+    { matchId: 'analytics-d', tournamentType: 'doubles', opponentTeamLabel: '对手A / 对手B' },
+  ]
+
+  ctx.setStateFromResponses({
+    player: { _id: 'A', name: 'Alice' },
+    statsData: {
+      stats: { singles: {}, doubles: {} },
+      currentRank: {},
+      rankHistory: {},
+      recent: statsRecent,
+    },
+    h2hData: { singles: [], doubles: [] },
+    analytics: {
+      singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
+      doubles: { lastFive: null, bestPartners: [], teamH2H: [], strongAgainst: [], strugglesAgainst: [] },
+      recentMatches: analyticsRecent,
+    },
+  })
+
+  expect(ctx.data.recent).toBe(analyticsRecent)
+  expect(ctx.data.recentByType).toEqual({
+    singles: [analyticsRecent[0]],
+    doubles: [analyticsRecent[1]],
+  })
+  expect(ctx.data.activeRecent).toEqual([analyticsRecent[0]])
+
+  ctx.onTabChange({ detail: { value: 'doubles' } })
+
+  expect(ctx.data.activeRecent).toEqual([analyticsRecent[1]])
+})
+
 test('template renders analytics cards and team h2h bindings', () => {
   const fs = require('fs')
   const path = require('path')
@@ -275,5 +324,7 @@ test('template renders analytics cards and team h2h bindings', () => {
   expect(wxml).toContain('bestPartner')
   expect(wxml).toContain('subject-team-label="{{item.subjectTeamLabel}}"')
   expect(wxml).toContain('opponent-team-label="{{item.opponentTeamLabel}}"')
+  expect(wxml).toContain('team-key="{{item.key}}"')
   expect(wxml).toContain('bind:toggle="onTeamH2HToggle"')
+  expect(wxml).toContain("item.opponentName || item.opponentTeamLabel || '对手'")
 })

@@ -45,6 +45,7 @@ test('component supports team-vs-team labels and expanded recent matches', () =>
 
   expect(def.properties.subjectTeamLabel).toBeTruthy()
   expect(def.properties.opponentTeamLabel).toBeTruthy()
+  expect(def.properties.teamKey).toBeTruthy()
   expect(def.properties.recentMatches).toBeTruthy()
 })
 
@@ -70,4 +71,17 @@ test('team rows emit toggle key instead of player navigation', () => {
     key: '自己 / 队友|对手1 / 对手2',
   })
   expect(ctx.triggerEvent).not.toHaveBeenCalledWith('tap', { playerId: 'B' })
+})
+
+test('team rows emit provided stable team key when available', () => {
+  const def = loadComponent()
+  const ctx = makeCtx(def, {
+    subjectTeamLabel: '自己 / 队友',
+    opponentTeamLabel: '对手1 / 对手2',
+    teamKey: 'team-key',
+  })
+
+  def.methods.onTap.call(ctx)
+
+  expect(ctx.triggerEvent).toHaveBeenCalledWith('toggle', { key: 'team-key' })
 })
