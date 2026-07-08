@@ -1,5 +1,6 @@
 .h2h-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3, 16rpx);
   min-height: 88rpx;
@@ -14,6 +15,7 @@
 }
 
 .avatar {
+  grid-column: 1;
   flex: 0 0 auto;
   width: 56rpx;
   height: 56rpx;
@@ -22,6 +24,7 @@
 }
 
 .name {
+  grid-column: 2;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -34,6 +37,7 @@
 }
 
 .pill {
+  grid-column: 3;
   flex: 0 0 auto;
   max-width: 140rpx;
   overflow: hidden;
@@ -57,4 +61,49 @@
 .pill-loss {
   background: rgba(220, 38, 38, 0.12);
   color: var(--color-danger, #dc2626);
+}
+
+.team {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.team-subject {
+  grid-column: 1;
+}
+
+.team-opponent {
+  grid-column: 3;
+  text-align: right;
+}
+
+.team-kicker {
+  color: var(--color-muted, #6b7280);
+  font-size: 20rpx;
+  font-weight: 800;
+}
+
+.team-name {
+  color: var(--color-text-primary, var(--color-ink, #0a0a0a));
+  font-size: 26rpx;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.h2h-recent {
+  grid-column: 1 / -1;
+  margin-top: 12rpx;
+  border-top: 1rpx solid var(--color-border, #f3f4f6);
+  padding-top: 10rpx;
+}
+
+.h2h-recent-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-muted, #6b7280);
+  font-size: 22rpx;
 }

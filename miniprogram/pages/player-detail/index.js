@@ -7,6 +7,11 @@ const DEFAULT_HISTORY = { singles: [], doubles: [] }
 const DEFAULT_WEEKLY = { singles: null, doubles: null }
 const DEFAULT_H2H = { singles: [], doubles: [] }
 const DEFAULT_RECENT_BY_TYPE = { singles: [], doubles: [] }
+const DEFAULT_ANALYTICS = {
+  singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
+  doubles: { lastFive: null, bestPartners: [], teamH2H: [], strongAgainst: [], strugglesAgainst: [] },
+  recentMatches: []
+}
 const H2H_DEFAULT_VISIBLE = 5
 const PLAY_TYPE_LABELS = { singles: '单打', doubles: '双打' }
 const PLAY_TYPE_TAPES = { singles: 'SINGLES · 单打', doubles: 'DOUBLES · 双打' }
@@ -41,6 +46,7 @@ Page({
     recentByType: normalizePair(null, DEFAULT_RECENT_BY_TYPE),
     h2h: normalizePair(null, DEFAULT_H2H),
     h2hVisible: normalizePair(null, DEFAULT_H2H),
+    analytics: DEFAULT_ANALYTICS,
     h2hExpanded: { singles: false, doubles: false },
     h2hDefaultVisible: H2H_DEFAULT_VISIBLE,
     activeTab: 'singles',
@@ -53,6 +59,12 @@ Page({
     activeH2H: [],
     activeH2HVisible: [],
     activeH2HExpanded: false,
+    activeFormSummary: '',
+    bestPartner: null,
+    bestPartnerWinRatePct: '',
+    advantageInsight: null,
+    struggleInsight: null,
+    expandedTeamH2HKey: '',
     activeRecent: [],
     rankSubtitle: '',
     playStyleLabel: '',
@@ -75,12 +87,13 @@ Page({
   },
 
   async loadAll(playerId) {
-    this.setData({ loading: true });
+    this.setData({ loading: true, expandedTeamH2HKey: '' });
     const seasonId = this._getCurrentSeasonId();
     try {
-      const [playerRes, statsRes] = await Promise.all([
+      const [playerRes, statsRes, analyticsRes] = await Promise.all([
         callFunction({ name: 'members', data: { action: 'getById', _id: playerId } }),
-        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } })
+        callFunction({ name: 'points-engine', data: { action: 'playerStats', playerId, currentSeasonId: seasonId } }),
+        callFunction({ name: 'analytics-engine', data: { action: 'getPlayerAnalytics', seasonId, memberId: playerId } })
       ]);
 
       if (statsRes && statsRes.result && statsRes.result.success === false) {
@@ -89,10 +102,13 @@ Page({
 
       const playerResult = playerRes && playerRes.result;
       const statsResult = statsRes && statsRes.result;
+      const analyticsResult = analyticsRes && analyticsRes.result;
+      const analytics = (analyticsResult && analyticsResult.success !== false && analyticsResult.data) || DEFAULT_ANALYTICS;
       this.setStateFromResponses({
         player: (playerResult && playerResult.data) || null,
         statsData: statsResult && statsResult.success === false ? {} : ((statsResult && statsResult.data) || {}),
-        h2hData: DEFAULT_H2H
+        h2hData: DEFAULT_H2H,
+        analytics
       });
       this._loadH2H(playerId, seasonId).then((h2hData) => {
         this._applyH2HData(h2hData);
@@ -124,12 +140,13 @@ Page({
     }
   },
 
-  setStateFromResponses({ player, statsData, h2hData }) {
+  setStateFromResponses({ player, statsData, h2hData, analytics }) {
     const stats = this._normalizeStats(statsData && statsData.stats);
     const currentRank = { ...DEFAULT_RANK, ...(statsData && statsData.currentRank) };
     const rankHistory = normalizePair(statsData && statsData.rankHistory, DEFAULT_HISTORY);
     const weeklySnapshot = { ...DEFAULT_WEEKLY, ...(statsData && statsData.weeklySnapshot) };
     const h2h = normalizePair(h2hData, DEFAULT_H2H);
+    const nextAnalytics = analytics || DEFAULT_ANALYTICS;
     const recent = Array.isArray(statsData && statsData.recent) ? statsData.recent : [];
     const recentByType = this._groupRecentByType(recent);
     const h2hVisible = this._getH2HVisible(h2h, this.data.h2hExpanded);
@@ -154,12 +171,14 @@ Page({
       recentByType,
       h2h,
       h2hVisible,
+      analytics: nextAnalytics,
       rankSubtitle,
       playStyleLabel,
       singlesPct: this._formatWinRate(stats.singles),
       doublesPct: this._formatWinRate(stats.doubles),
       hasDoubles,
-      ...activeData
+      ...activeData,
+      ...this._getAnalyticsActiveData(this.data.activeTab, nextAnalytics)
     });
   },
 
@@ -211,7 +230,15 @@ Page({
 
     this.setData({
       activeTab: tab,
-      ...this._getActiveTypeData(tab)
+      ...this._getActiveTypeData(tab),
+      ...this._getAnalyticsActiveData(tab)
+    });
+  },
+
+  onTeamH2HToggle(e) {
+    const key = e.detail && e.detail.key;
+    this.setData({
+      expandedTeamH2HKey: this.data.expandedTeamH2HKey === key ? '' : key
     });
   },
 
@@ -275,7 +302,14 @@ Page({
     const h2hVisible = overrides.h2hVisible || this.data.h2hVisible || DEFAULT_H2H;
     const h2hExpanded = overrides.h2hExpanded || this.data.h2hExpanded || { singles: false, doubles: false };
     const recentByType = overrides.recentByType || this.data.recentByType || DEFAULT_RECENT_BY_TYPE;
+    const analytics = overrides.analytics || this.data.analytics || DEFAULT_ANALYTICS;
     const activeStats = { ...DEFAULT_BUCKET, ...((stats && stats[activeType]) || {}) };
+    const activeH2H = Array.isArray(h2h && h2h[activeType]) ? h2h[activeType] : [];
+    const activeH2HVisible = Array.isArray(h2hVisible && h2hVisible[activeType]) ? h2hVisible[activeType] : [];
+    const teamH2H = activeType === 'doubles' ? this._teamH2HFromAnalytics(analytics) : [];
+    const visibleTeamH2H = h2hExpanded && h2hExpanded[activeType]
+      ? teamH2H
+      : teamH2H.slice(0, H2H_DEFAULT_VISIBLE);
 
     return {
       activeTypeLabel: PLAY_TYPE_LABELS[activeType],
@@ -283,11 +317,38 @@ Page({
       activeStats,
       activePct: this._formatWinRate(activeStats),
       activeRankHistory: Array.isArray(rankHistory && rankHistory[activeType]) ? rankHistory[activeType] : [],
-      activeH2H: Array.isArray(h2h && h2h[activeType]) ? h2h[activeType] : [],
-      activeH2HVisible: Array.isArray(h2hVisible && h2hVisible[activeType]) ? h2hVisible[activeType] : [],
+      activeH2H: teamH2H.length ? teamH2H : activeH2H,
+      activeH2HVisible: teamH2H.length ? visibleTeamH2H : activeH2HVisible,
       activeH2HExpanded: !!(h2hExpanded && h2hExpanded[activeType]),
       activeRecent: Array.isArray(recentByType && recentByType[activeType]) ? recentByType[activeType] : []
     };
+  },
+
+  _getAnalyticsActiveData(type, analytics = this.data.analytics || DEFAULT_ANALYTICS) {
+    const activeType = type === 'doubles' ? 'doubles' : 'singles';
+    const bucket = analytics[activeType] || {};
+    const doublesBucket = analytics.doubles || {};
+    const bestPartner = doublesBucket.bestPartners && doublesBucket.bestPartners[0] ? doublesBucket.bestPartners[0] : null;
+    return {
+      activeFormSummary: bucket.lastFive && bucket.lastFive.summary ? bucket.lastFive.summary : '',
+      bestPartner,
+      bestPartnerWinRatePct: bestPartner ? `${Math.round(Number(bestPartner.winRate || 0) * 100)}%` : '',
+      advantageInsight: bucket.strongAgainst && bucket.strongAgainst[0] ? bucket.strongAgainst[0] : null,
+      struggleInsight: bucket.strugglesAgainst && bucket.strugglesAgainst[0] ? bucket.strugglesAgainst[0] : null
+    };
+  },
+
+  _teamH2HFromAnalytics(analytics = this.data.analytics || DEFAULT_ANALYTICS) {
+    const rows = analytics && analytics.doubles && analytics.doubles.teamH2H;
+    return Array.isArray(rows) ? rows.map((row) => ({
+      key: row.key || `${row.subjectTeamLabel || ''}|${row.opponentTeamLabel || ''}`,
+      memberId: row.key || `${row.subjectTeamLabel || ''}|${row.opponentTeamLabel || ''}`,
+      subjectTeamLabel: row.subjectTeamLabel || '我方组合',
+      opponentTeamLabel: row.opponentTeamLabel || '对手组合',
+      wins: row.wins || 0,
+      losses: row.losses || 0,
+      recentMatches: row.recentMatches || []
+    })) : [];
   },
 
   _getH2HVisible(h2h, h2hExpanded) {

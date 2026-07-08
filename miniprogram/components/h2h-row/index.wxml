@@ -1,5 +1,24 @@
 <view class="h2h-row" bindtap="onTap" hover-class="h2h-row--active" hover-stay-time="80">
-  <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
-  <text class="name">{{name}}</text>
-  <text class="pill pill-{{pillClass}} num">{{record}}</text>
+  <block wx:if="{{subjectTeamLabel || opponentTeamLabel}}">
+    <view class="team team-subject">
+      <text class="team-kicker">我方组合</text>
+      <text class="team-name">{{subjectTeamLabel}}</text>
+    </view>
+    <text class="pill pill-{{pillClass}} num">{{record}}</text>
+    <view class="team team-opponent">
+      <text class="team-kicker">对手组合</text>
+      <text class="team-name">{{opponentTeamLabel}}</text>
+    </view>
+    <view wx:if="{{expanded && recentMatches.length}}" class="h2h-recent">
+      <view wx:for="{{recentMatches}}" wx:key="matchId" class="h2h-recent-row">
+        <text>{{item.confirmedAt || item.createTime}}</text>
+        <text>{{item.score || ''}}</text>
+      </view>
+    </view>
+  </block>
+  <block wx:else>
+    <image class="avatar" src="{{avatarUrl || '/images/icons/default-avatar.png'}}" mode="aspectFill" />
+    <text class="name">{{name}}</text>
+    <text class="pill pill-{{pillClass}} num">{{record}}</text>
+  </block>
 </view>

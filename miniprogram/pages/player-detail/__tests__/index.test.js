@@ -150,3 +150,130 @@ test('_formatPlayStyle returns label for new slug, fallback for unknown', () => 
   expect(ctx._formatPlayStyle({ playStyle: 'baseliner' })).toBe('打法未设置')
   expect(ctx._formatPlayStyle({})).toBe('打法未设置')
 })
+
+test('loadAll fetches analytics and maps recent form, best partner, and team h2h', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockImplementation(({ name, data }) => {
+    if (name === 'members') return Promise.resolve({ result: { data: { _id: 'A', name: '乐乐' } } })
+    if (name === 'points-engine' && data.action === 'playerStats') {
+      return Promise.resolve({ result: { success: true, data: { stats: { singles: {}, doubles: {} }, currentRank: {}, rankHistory: {}, recent: [] } } })
+    }
+    if (name === 'points-engine' && data.action === 'playerH2H') {
+      return Promise.resolve({ result: { success: true, data: { singles: [], doubles: [] } } })
+    }
+    if (name === 'analytics-engine' && data.action === 'getPlayerAnalytics') {
+      return Promise.resolve({ result: { success: true, data: {
+        singles: {
+          lastFive: { summary: '4W-1L' },
+          strongAgainst: [{ memberId: 'B', name: '标子', wins: 3, losses: 0 }],
+          strugglesAgainst: [{ memberId: 'C', name: '小天', wins: 1, losses: 2 }]
+        },
+        doubles: {
+          bestPartners: [{ memberId: 'P', name: '小野马', matches: 5, winRate: 0.8 }],
+          teamH2H: [{
+            key: 'A__P__vs__B__C',
+            subjectTeamLabel: '乐乐 / 小野马',
+            opponentTeamLabel: '小天 / 标子',
+            wins: 2,
+            losses: 1,
+            recentMatches: [{ matchId: 'd1', score: '4-2', confirmedAt: '2026-06-01' }]
+          }]
+        },
+        recentMatches: [{ matchId: 'd1', tournamentType: 'doubles', subjectTeamLabel: '乐乐 / 小野马', opponentTeamLabel: '小天 / 标子' }]
+      } } })
+    }
+    return Promise.resolve({ result: { success: true, data: null } })
+  })
+  const ctx = makeCtx(def, { seasonYear: 2026 })
+
+  await ctx.loadAll('A')
+  await Promise.resolve()
+
+  expect(callFunction).toHaveBeenCalledWith({
+    name: 'analytics-engine',
+    data: { action: 'getPlayerAnalytics', seasonId: 'season_2026', memberId: 'A' }
+  })
+  expect(ctx.data.analytics.singles.lastFive.summary).toBe('4W-1L')
+  expect(ctx.data.activeFormSummary).toBe('4W-1L')
+  expect(ctx.data.bestPartner).toMatchObject({ name: '小野马', matches: 5 })
+  expect(ctx.data.bestPartnerWinRatePct).toBe('80%')
+  expect(ctx.data.advantageInsight.name).toBe('标子')
+  expect(ctx.data.struggleInsight.name).toBe('小天')
+  expect(ctx._teamH2HFromAnalytics().map((row) => row.opponentTeamLabel)).toEqual(['小天 / 标子'])
+})
+
+test('doubles tab prefers analytics team h2h rows and toggles expanded key', async () => {
+  const def = loadPage()
+  const { callFunction } = require('../../../utils/cloud')
+  callFunction.mockImplementation(({ name, data }) => {
+    if (name === 'members') return Promise.resolve({ result: { data: { _id: 'A', name: '乐乐' } } })
+    if (name === 'points-engine' && data.action === 'playerStats') {
+      return Promise.resolve({ result: { success: true, data: {
+        stats: { singles: {}, doubles: { winCount: 1, lossCount: 0, totalPoints: 10 } },
+        currentRank: {},
+        rankHistory: {},
+        recent: []
+      } } })
+    }
+    if (name === 'points-engine' && data.action === 'playerH2H') {
+      return Promise.resolve({ result: { success: true, data: { singles: [], doubles: [{ memberId: 'legacy', name: '旧对手', wins: 1, losses: 0 }] } } })
+    }
+    if (name === 'analytics-engine' && data.action === 'getPlayerAnalytics') {
+      return Promise.resolve({ result: { success: true, data: {
+        singles: { lastFive: null, strongAgainst: [], strugglesAgainst: [] },
+        doubles: {
+          lastFive: null,
+          bestPartners: [],
+          strongAgainst: [],
+          strugglesAgainst: [],
+          teamH2H: [{
+            key: 'team-key',
+            subjectTeamLabel: '自己 / 队友',
+            opponentTeamLabel: '对手1 / 对手2',
+            wins: 2,
+            losses: 1,
+            recentMatches: [{ matchId: 'm1', score: '4-2' }]
+          }]
+        },
+        recentMatches: []
+      } } })
+    }
+    return Promise.resolve({ result: { success: true, data: null } })
+  })
+  const ctx = makeCtx(def, { seasonYear: 2026 })
+
+  await ctx.loadAll('A')
+  await Promise.resolve()
+  ctx.onTabChange({ detail: { value: 'doubles' } })
+
+  expect(ctx.data.activeH2H).toHaveLength(1)
+  expect(ctx.data.activeH2H[0]).toMatchObject({
+    key: 'team-key',
+    memberId: 'team-key',
+    subjectTeamLabel: '自己 / 队友',
+    opponentTeamLabel: '对手1 / 对手2',
+    wins: 2,
+    losses: 1,
+    recentMatches: [{ matchId: 'm1', score: '4-2' }]
+  })
+
+  ctx.onTeamH2HToggle({ detail: { key: 'team-key' } })
+  expect(ctx.data.expandedTeamH2HKey).toBe('team-key')
+  ctx.onTeamH2HToggle({ detail: { key: 'team-key' } })
+  expect(ctx.data.expandedTeamH2HKey).toBe('')
+})
+
+test('template renders analytics cards and team h2h bindings', () => {
+  const fs = require('fs')
+  const path = require('path')
+  loadPage()
+
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain('activeFormSummary')
+  expect(wxml).toContain('bestPartner')
+  expect(wxml).toContain('subject-team-label="{{item.subjectTeamLabel}}"')
+  expect(wxml).toContain('opponent-team-label="{{item.opponentTeamLabel}}"')
+  expect(wxml).toContain('bind:toggle="onTeamH2HToggle"')
+})

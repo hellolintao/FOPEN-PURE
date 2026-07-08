@@ -222,6 +222,44 @@
 .pd-stat-ink .pd-stat-num { color: var(--color-bg); }
 .pd-stat-ink .pd-stat-label { color: var(--color-muted-2); }
 
+.pd-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.pd-analytics-card {
+  min-width: 0;
+  padding: 18rpx;
+  border: 1rpx solid var(--color-border, #f3f4f6);
+  border-radius: 8rpx;
+  background: var(--color-bg-surface, var(--color-bg, #ffffff));
+}
+
+.pd-analytics-label {
+  color: var(--color-muted, #6b7280);
+  font-size: 20rpx;
+  font-weight: 800;
+}
+
+.pd-analytics-value {
+  display: block;
+  margin-top: 6rpx;
+  color: var(--color-text-primary, var(--color-ink, #0a0a0a));
+  font-size: 28rpx;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pd-analytics-meta {
+  display: block;
+  margin-top: 4rpx;
+  color: var(--color-muted, #6b7280);
+  font-size: 22rpx;
+}
+
 /* ============================================================
  * RANK CHART
  * ============================================================ */

@@ -39,3 +39,35 @@ test('template keeps row tap binding without rendering a right arrow icon', () =
   expect(wxml).toContain('bindtap="onTap"')
   expect(wxml).not.toMatch(/class=["']arrow["']|>→<\/text>|>➡️<\/text>/)
 })
+
+test('component supports team-vs-team labels and expanded recent matches', () => {
+  const def = loadComponent()
+
+  expect(def.properties.subjectTeamLabel).toBeTruthy()
+  expect(def.properties.opponentTeamLabel).toBeTruthy()
+  expect(def.properties.recentMatches).toBeTruthy()
+})
+
+test('template renders subject and opponent team labels', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+  expect(wxml).toContain('{{subjectTeamLabel}}')
+  expect(wxml).toContain('{{opponentTeamLabel}}')
+  expect(wxml).toContain('recentMatches')
+})
+
+test('team rows emit toggle key instead of player navigation', () => {
+  const def = loadComponent()
+  const ctx = makeCtx(def, {
+    playerId: 'B',
+    subjectTeamLabel: '自己 / 队友',
+    opponentTeamLabel: '对手1 / 对手2',
+  })
+
+  def.methods.onTap.call(ctx)
+
+  expect(ctx.triggerEvent).toHaveBeenCalledWith('toggle', {
+    key: '自己 / 队友|对手1 / 对手2',
+  })
+  expect(ctx.triggerEvent).not.toHaveBeenCalledWith('tap', { playerId: 'B' })
+})

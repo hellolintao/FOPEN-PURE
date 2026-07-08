@@ -3,6 +3,10 @@ Component({
     playerId: String,
     name: String,
     avatarUrl: String,
+    subjectTeamLabel: String,
+    opponentTeamLabel: String,
+    recentMatches: { type: Array, value: [] },
+    expanded: { type: Boolean, value: false },
     wins: { type: Number, value: 0 },
     losses: { type: Number, value: 0 }
   },
@@ -40,6 +44,12 @@ Component({
     },
 
     onTap() {
+      if (this.data.subjectTeamLabel || this.data.opponentTeamLabel) {
+        this.triggerEvent('toggle', {
+          key: `${this.data.subjectTeamLabel || ''}|${this.data.opponentTeamLabel || ''}`
+        })
+        return
+      }
       if (!this.data.playerId) return
       this.triggerEvent('tap', { playerId: this.data.playerId })
     }

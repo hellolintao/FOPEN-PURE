@@ -53,6 +53,28 @@
       </view>
     </view>
 
+    <view class="pd-section pd-analytics-grid anim-stage-rise anim-delay-4" wx:if="{{activeFormSummary || bestPartner || advantageInsight || struggleInsight}}">
+      <view class="pd-analytics-card" wx:if="{{activeFormSummary}}">
+        <text class="pd-analytics-label">近 5 场</text>
+        <text class="pd-analytics-value num">{{activeFormSummary}}</text>
+      </view>
+      <view class="pd-analytics-card" wx:if="{{bestPartner}}">
+        <text class="pd-analytics-label">最佳搭档</text>
+        <text class="pd-analytics-value">{{bestPartner.name}}</text>
+        <text class="pd-analytics-meta">{{bestPartner.matches}} 场 · {{bestPartnerWinRatePct}}</text>
+      </view>
+      <view class="pd-analytics-card" wx:if="{{advantageInsight}}">
+        <text class="pd-analytics-label">优势对手</text>
+        <text class="pd-analytics-value">{{advantageInsight.name}}</text>
+        <text class="pd-analytics-meta">{{advantageInsight.wins}}-{{advantageInsight.losses}}</text>
+      </view>
+      <view class="pd-analytics-card" wx:if="{{struggleInsight}}">
+        <text class="pd-analytics-label">苦主</text>
+        <text class="pd-analytics-value">{{struggleInsight.name}}</text>
+        <text class="pd-analytics-meta">{{struggleInsight.wins}}-{{struggleInsight.losses}}</text>
+      </view>
+    </view>
+
     <!-- ACTIVE RANK CHART -->
     <view class="pd-section anim-stage-rise anim-delay-4">
       <view class="pd-section-head">
@@ -75,9 +97,14 @@
           player-id="{{item.memberId}}"
           name="{{item.name}}"
           avatar-url="{{item.avatarUrl}}"
+          subject-team-label="{{item.subjectTeamLabel}}"
+          opponent-team-label="{{item.opponentTeamLabel}}"
           wins="{{item.wins}}"
           losses="{{item.losses}}"
+          recent-matches="{{item.recentMatches}}"
+          expanded="{{expandedTeamH2HKey === item.key}}"
           bind:tap="onH2HTap"
+          bind:toggle="onTeamH2HToggle"
         />
       </view>
       <view wx:else class="pd-recent-empty">
