@@ -201,6 +201,48 @@ describe('rankList enhancements', () => {
     expect(row).not.toHaveProperty('claimStatus')
   })
 
+  test('rankList returns avatars only for ranked members with public display consent', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'public-player', name: '公开选手', avatarUrl: 'public.png', publicProfileConsent: true },
+      { _id: 'private-player', name: '私密选手', avatarUrl: 'private.png', publicProfileConsent: false }
+    )
+    cloud.__rows.baseline_standings.push(
+      {
+        _id: 'baseline_public',
+        seasonId: 'season_2026',
+        type: 'singles',
+        memberId: 'public-player',
+        totalPoints: 100,
+        wins: 1,
+        losses: 0,
+        createTime: '2026-07-01'
+      },
+      {
+        _id: 'baseline_private',
+        seasonId: 'season_2026',
+        type: 'singles',
+        memberId: 'private-player',
+        totalPoints: 90,
+        wins: 0,
+        losses: 1,
+        createTime: '2026-07-01'
+      }
+    )
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.rankList.map(row => ({
+      _id: row._id,
+      avatarUrl: row.avatarUrl,
+      publicProfileVisible: row.publicProfileVisible
+    }))).toEqual([
+      { _id: 'public-player', avatarUrl: 'public.png', publicProfileVisible: true },
+      { _id: 'private-player', avatarUrl: '', publicProfileVisible: false }
+    ])
+  })
+
   test('winRate is 0 when member has 0 matches', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'A', name: 'a' })
@@ -355,7 +397,7 @@ describe('rankList enhancements', () => {
     const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
 
     expect(res.data.rankList).toEqual([
-      { _id: 'CACHED', name: '新头像用户', avatarUrl: '', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
+      { _id: 'CACHED', name: '新头像用户', avatarUrl: 'fresh.png', publicProfileVisible: true, totalPoints: 10, winCount: 1, lossCount: 0, winRate: 1, trendDelta: null, trendState: 'no_history', trendLabel: '暂无历史' }
     ])
     expect(res.data.cachedAt).toEqual(new Date('2026-05-20T15:30:00Z'))
   })
@@ -563,7 +605,7 @@ describe('rankList enhancements', () => {
       {
         _id: 'A',
         name: '甲',
-        avatarUrl: '',
+        avatarUrl: 'a.png',
         publicProfileVisible: true,
         totalPoints: 100,
         winCount: 4,
@@ -600,7 +642,7 @@ describe('rankList enhancements', () => {
       {
         _id: 'A',
         name: '甲',
-        avatarUrl: '',
+        avatarUrl: 'a.png',
         publicProfileVisible: true,
         totalPoints: 100,
         winCount: 4,
@@ -636,7 +678,7 @@ describe('rankList enhancements', () => {
       {
         _id: 'A',
         name: '甲',
-        avatarUrl: '',
+        avatarUrl: 'a.png',
         publicProfileVisible: true,
         totalPoints: 100,
         winCount: 4,
@@ -672,7 +714,7 @@ describe('rankList enhancements', () => {
       {
         _id: 'A',
         name: '甲',
-        avatarUrl: '',
+        avatarUrl: 'a.png',
         publicProfileVisible: true,
         totalPoints: 100,
         winCount: 4,
@@ -715,7 +757,7 @@ describe('rankList enhancements', () => {
         {
           _id: 'A',
           name: '甲',
-          avatarUrl: '',
+          avatarUrl: 'a.png',
           publicProfileVisible: true,
           totalPoints: 100,
           winCount: 4,
@@ -730,7 +772,7 @@ describe('rankList enhancements', () => {
     expect(cloud.__rows.rank_cache.find(row => row.type === 'doubles').rankList[0]).toMatchObject({
       _id: 'B',
       name: '乙',
-      avatarUrl: '',
+      avatarUrl: 'b.png',
       publicProfileVisible: true,
       totalPoints: 80,
       winRate: 0.5,

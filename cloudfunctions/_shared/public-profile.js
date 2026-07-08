@@ -26,9 +26,10 @@ function toPublicIdentity(member, options = {}) {
 
 function toRankingIdentity(member, options = {}) {
   const identity = toPublicIdentity(member, options)
+  const visible = hasPublicProfileConsent(member)
   return {
     ...identity,
-    avatarUrl: ''
+    avatarUrl: visible && member && member.avatarUrl ? member.avatarUrl : ''
   }
 }
 

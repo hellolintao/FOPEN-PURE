@@ -16,7 +16,20 @@ test('toPublicIdentity keeps avatars outside the ranking page even without publi
   })
 })
 
-test('toRankingIdentity hides avatars while preserving the public display name', () => {
+test('toRankingIdentity keeps avatars for members with public display consent', () => {
+  expect(toRankingIdentity({
+    _id: 'm1',
+    name: '张三',
+    avatarUrl: 'cloud://avatar',
+    publicProfileConsent: true
+  })).toEqual({
+    name: '张三',
+    avatarUrl: 'cloud://avatar',
+    publicProfileVisible: true
+  })
+})
+
+test('toRankingIdentity hides avatars for members without public display consent', () => {
   expect(toRankingIdentity({
     _id: 'm1',
     name: '张三',
