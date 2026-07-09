@@ -1564,4 +1564,60 @@ describe('tournament-detail score permissions', () => {
       jest.useRealTimers()
     }
   })
+
+  test('shares published schedule detail with schedule cover images', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-05T15:30:00+08:00'))
+    try {
+      const { pageDef } = loadPage()
+      const ctx = makeCtx(pageDef, {
+        tournamentId: 't1',
+        tournament: {
+          _id: 't1',
+          name: '七月周末赛',
+          status: 'upcoming',
+          scheduleStatus: 'published'
+        }
+      })
+
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '七月周末赛 · 赛程已发布',
+        path: '/pages/tournament-detail/index?id=t1',
+        imageUrl: '/images/share-schedule/schedule-share-01.jpg'
+      })
+      expect(ctx.onShareTimeline()).toEqual({
+        title: '七月周末赛 · 赛程已发布',
+        query: 'id=t1',
+        imageUrl: '/images/share-schedule/schedule-share-02.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test('shares group knockout published phase with schedule cover images while scheduleStatus remains none', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-05T15:30:00+08:00'))
+    try {
+      const { pageDef } = loadPage()
+      const ctx = makeCtx(pageDef, {
+        tournamentId: 't1',
+        tournament: {
+          _id: 't1',
+          name: '小组淘汰赛',
+          format: 'group_knockout',
+          type: 'singles',
+          groupKnockoutPhase: 'group_published',
+          status: 'upcoming',
+          scheduleStatus: 'none'
+        }
+      })
+
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '小组淘汰赛 · 小组赛进行中',
+        path: '/pages/tournament-detail/index?id=t1',
+        imageUrl: '/images/share-schedule/schedule-share-01.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
 })
