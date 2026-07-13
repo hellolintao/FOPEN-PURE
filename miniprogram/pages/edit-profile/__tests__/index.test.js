@@ -19,7 +19,7 @@ function loadPage(overrides = {}) {
     }),
     chooseMedia: jest.fn(),
     chooseImage: jest.fn(),
-    cloud: { uploadFile: jest.fn() }
+    cloud: { uploadFile: jest.fn(), deleteFile: jest.fn() }
   }
   global.getApp = () => app
   global.Page = (def) => { pageDef = def }
@@ -164,6 +164,19 @@ describe('edit-profile mode handling', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请先同意微信隐私授权', icon: 'none' })
   })
 
+  test('loadUserInfo preserves a strict legacy isAdmin member in global state', async () => {
+    const legacyAdmin = { _id: 'legacy-admin', name: '旧管理员', isAdmin: true }
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { data: [legacyAdmin] } })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadUserInfo()
+
+    expect(app.globalData.currentMember).toBe(legacyAdmin)
+    expect(app.globalData.isAdmin).toBe(true)
+  })
+
   test('tournament-register query stores return context for save', () => {
     const { pageDef } = loadPage({
       currentMember: { name: '李四', phone: '13800000000', avatarUrl: 'cloud://avatar', playStyle: 'vers' }
@@ -289,6 +302,30 @@ describe('edit-profile validation and save', () => {
 
     expect(callFunction).toHaveBeenCalledTimes(1)
     expect(callFunction.mock.calls[0][0].data.action).toBe('update')
+  })
+
+  test.each([
+    ['canonical boolean admin', { admin: true }, true],
+    ['legacy boolean isAdmin', { isAdmin: true }, true],
+    ['string admin', { admin: 'true' }, false],
+    ['numeric legacy isAdmin', { isAdmin: 1 }, false]
+  ])('edit save handles %s without privilege drift', async (_case, flags, expected) => {
+    jest.useFakeTimers()
+    try {
+      const currentMember = { _id: 'member-1', name: '旧昵称', ...flags }
+      const { pageDef, app } = loadPage({ currentMember, isAdmin: expected })
+      const { callFunction } = require('../../../utils/cloud')
+      callFunction.mockResolvedValueOnce({ result: { stats: { updated: 1 } } })
+      const ctx = makeCtx(pageDef, { isRegister: false })
+      ctx.data.formData = { name: '新昵称', avatarUrl: '', playStyle: 'vers' }
+
+      await ctx.onSave()
+      jest.runAllTimers()
+
+      expect(app.globalData.isAdmin).toBe(expected)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('saving profile does not send phone in members payload', async () => {
@@ -741,24 +778,62 @@ describe('edit-profile avatar', () => {
     expect(ctx.uploadAvatar).toHaveBeenCalledWith('wxfile://temp-path')
   })
 
-  test('uploadAvatar uploads to current cloud env and stores fileID', () => {
+  test('uploadAvatar verifies uploaded avatar content before storing fileID', async () => {
     const { pageDef } = loadPage({ env: 'cloud-test-env' })
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { success: true, data: { traceId: 'trace-avatar' } } })
     wx.cloud.uploadFile.mockImplementationOnce(({ success }) => {
       success({ fileID: 'cloud://avatar-file-id' })
     })
     const ctx = makeCtx(pageDef)
 
     ctx.uploadAvatar('wxfile://temp-avatar.png')
+    await flushPromises()
 
     expect(wx.cloud.uploadFile).toHaveBeenCalledWith(expect.objectContaining({
       cloudPath: expect.stringMatching(/^avatars\/\d+-[a-z0-9]+\.png$/),
       filePath: 'wxfile://temp-avatar.png',
       config: { env: 'cloud-test-env' }
     }))
+    expect(callFunction).toHaveBeenCalledWith({
+      name: 'members',
+      data: {
+        action: 'checkAvatarContent',
+        data: { fileID: 'cloud://avatar-file-id' }
+      }
+    })
     expect(ctx.data.formData.avatarUrl).toBe('cloud://avatar-file-id')
     expect(ctx.data.avatarPreviewUrl).toBe('cloud://avatar-file-id')
     expect(ctx.data.avatarUploading).toBe(false)
     expect(wx.showToast).toHaveBeenCalledWith({ title: '上传成功', icon: 'success' })
+  })
+
+  test('uploadAvatar rejects unsafe uploaded avatar and removes the temporary cloud file', async () => {
+    const { pageDef } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({
+      result: {
+        success: false,
+        error: { code: 'CONTENT_SECURITY_RISK', message: '发布内容含违规信息' }
+      }
+    })
+    wx.cloud.uploadFile.mockImplementationOnce(({ success }) => {
+      success({ fileID: 'cloud://unsafe-avatar-file-id' })
+    })
+    const ctx = makeCtx(pageDef)
+    ctx.data.formData.avatarUrl = 'cloud://old-avatar'
+    ctx.data.avatarPreviewUrl = 'wxfile://temp-avatar'
+
+    ctx.uploadAvatar('wxfile://temp-avatar')
+    await flushPromises()
+
+    expect(wx.cloud.deleteFile).toHaveBeenCalledWith(expect.objectContaining({
+      fileList: ['cloud://unsafe-avatar-file-id']
+    }))
+    expect(ctx.data.formData.avatarUrl).toBe('cloud://old-avatar')
+    expect(ctx.data.avatarPreviewUrl).toBe('cloud://old-avatar')
+    expect(ctx.data.avatarUploading).toBe(false)
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '发布内容含违规信息', icon: 'none' })
   })
 
   test('uploadAvatar failure restores previous avatar and shows readable error', () => {

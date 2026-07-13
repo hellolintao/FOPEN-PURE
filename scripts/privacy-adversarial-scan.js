@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { parse } = require('@babel/parser')
 
 const root = path.resolve(__dirname, '..')
 
@@ -25,81 +26,298 @@ function rel(file) {
   return path.relative(root, file)
 }
 
-function addFinding(findings, file, line, rule, text) {
-  findings.push({ file: rel(file), line, rule, text: text.trim() })
+function addFinding(findings, relative, line, rule, text) {
+  findings.push({ file: relative, line, rule, text: text.trim() })
 }
 
-function isAllowedSilentIdentityRestore(relative, lines, index) {
-  const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
-  return (
-    relative === 'miniprogram/pages/home/index.js' &&
-    /async\s+ensureIdentity\s*\(/.test(nearby)
-  ) || (
-    relative === 'miniprogram/pages/mine/index.js' &&
-    /async\s+restoreIdentity\s*\(/.test(nearby)
+const ALLOWED_PAGE_IDENTITY_METHODS = {
+  'miniprogram/pages/home/index.js': 'ensureIdentity',
+  'miniprogram/pages/mine/index.js': 'restoreIdentity',
+  'miniprogram/pages/rank/index.js': '_ensureCurrentMember',
+  'miniprogram/pages/tournament-detail/index.js': 'ensureIdentity'
+}
+
+function objectMemberName(node) {
+  if (node.computed) return ''
+  if (node.key.type === 'Identifier') return node.key.name
+  if (node.key.type === 'StringLiteral') return node.key.value
+  return ''
+}
+
+function isFunctionProperty(node) {
+  return node.type === 'ObjectProperty' && (
+    node.value.type === 'FunctionExpression' || node.value.type === 'ArrowFunctionExpression'
   )
 }
 
-function scanFile(file, findings) {
-  const relative = rel(file)
-  const body = fs.readFileSync(file, 'utf8')
+function staticStringValue(node) {
+  if (node.type === 'StringLiteral') return node.value
+  if (node.type === 'TemplateLiteral') {
+    let value = ''
+    for (let i = 0; i < node.quasis.length; i += 1) {
+      const quasi = node.quasis[i].value.cooked
+      if (quasi === null) return null
+      value += quasi
+      if (i < node.expressions.length) {
+        const expression = staticStringValue(node.expressions[i])
+        if (expression === null) return null
+        value += expression
+      }
+    }
+    return value
+  }
+  if (node.type === 'BinaryExpression' && node.operator === '+') {
+    const left = staticStringValue(node.left)
+    const right = staticStringValue(node.right)
+    return left === null || right === null ? null : left + right
+  }
+  return null
+}
+
+function staticPropertyName(node) {
+  if (node.computed) return staticStringValue(node.key)
+  if (node.key.type === 'Identifier') return node.key.name
+  if (node.key.type === 'StringLiteral') return node.key.value
+  return null
+}
+
+function isRefreshIdentityReference(node, parent) {
+  if (node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression') {
+    if (node.computed) return staticStringValue(node.property) === 'refreshIdentity'
+    return node.property.type === 'Identifier' && node.property.name === 'refreshIdentity'
+  }
+  return node.type === 'ObjectProperty' && parent && parent.type === 'ObjectPattern' &&
+    staticPropertyName(node) === 'refreshIdentity'
+}
+
+function isFunctionNode(node) {
+  return [
+    'ObjectMethod',
+    'FunctionExpression',
+    'ArrowFunctionExpression',
+    'FunctionDeclaration',
+    'ClassMethod',
+    'ClassPrivateMethod'
+  ].includes(node.type)
+}
+
+function patternBindsName(pattern, name) {
+  if (!pattern) return false
+  if (pattern.type === 'Identifier') return pattern.name === name
+  if (pattern.type === 'RestElement') return patternBindsName(pattern.argument, name)
+  if (pattern.type === 'AssignmentPattern') return patternBindsName(pattern.left, name)
+  if (pattern.type === 'ArrayPattern') {
+    return pattern.elements.some(element => patternBindsName(element, name))
+  }
+  if (pattern.type === 'ObjectPattern') {
+    return pattern.properties.some(property => (
+      property.type === 'RestElement'
+        ? patternBindsName(property.argument, name)
+        : patternBindsName(property.value, name)
+    ))
+  }
+  return false
+}
+
+function statementBindsName(statement, name) {
+  if (!statement) return false
+  if (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportDefaultDeclaration') {
+    return statementBindsName(statement.declaration, name)
+  }
+  if (statement.type === 'ImportDeclaration') {
+    return statement.specifiers.some(specifier => specifier.local && specifier.local.name === name)
+  }
+  if (statement.type === 'VariableDeclaration') {
+    return statement.declarations.some(declaration => patternBindsName(declaration.id, name))
+  }
+  if (statement.type === 'FunctionDeclaration' || statement.type === 'ClassDeclaration') {
+    return !!statement.id && statement.id.name === name
+  }
+  return false
+}
+
+function expectedRegistrationName(relative) {
+  if (relative === 'miniprogram/app.js') return 'App'
+  if (relative.startsWith('miniprogram/pages/') && path.extname(relative) === '.js') return 'Page'
+  return ''
+}
+
+function programExecutionRebindsName(node, name) {
+  if (Array.isArray(node)) return node.some(child => programExecutionRebindsName(child, name))
+  if (!node || typeof node !== 'object' || typeof node.type !== 'string') return false
+  if (node.type === 'FunctionDeclaration' && node.id && node.id.name === name) return true
+  if (node.type !== 'Program' && (
+    isFunctionNode(node) || node.type === 'ClassDeclaration' || node.type === 'ClassExpression'
+  )) return false
+  if (node.type === 'VariableDeclaration' && node.kind === 'var') {
+    if (node.declarations.some(declaration => patternBindsName(declaration.id, name))) return true
+  }
+  if (node.type === 'AssignmentExpression' && patternBindsName(node.left, name)) return true
+  if (node.type === 'UpdateExpression' && patternBindsName(node.argument, name)) return true
+  if ((node.type === 'ForInStatement' || node.type === 'ForOfStatement') &&
+    node.left.type !== 'VariableDeclaration' && patternBindsName(node.left, name)) return true
+  return Object.values(node).some(child => programExecutionRebindsName(child, name))
+}
+
+function uniqueTopLevelRegistration(ast, name) {
+  if (!name || ast.program.body.some(statement => statementBindsName(statement, name)) ||
+    programExecutionRebindsName(ast.program, name)) return null
+  const registrations = ast.program.body
+    .filter(statement => statement.type === 'ExpressionStatement')
+    .map(statement => statement.expression)
+    .filter(expression => (
+      expression.type === 'CallExpression' &&
+      expression.callee.type === 'Identifier' &&
+      expression.callee.name === name
+    ))
+  if (registrations.length !== 1) return null
+  return registrations[0].arguments[0] && registrations[0].arguments[0].type === 'ObjectExpression'
+    ? registrations[0]
+    : null
+}
+
+function directRegistrationOwner(node, ancestors, validRegistration) {
+  if (!validRegistration) return null
+  let member = node
+  let config = ancestors[ancestors.length - 1]
+  let registration = ancestors[ancestors.length - 2]
+
+  if (node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+    member = config
+    config = ancestors[ancestors.length - 2]
+    registration = ancestors[ancestors.length - 3]
+    if (!isFunctionProperty(member)) return null
+  } else if (node.type !== 'ObjectMethod' || node.kind !== 'method') {
+    return null
+  }
+
+  if (!config || config.type !== 'ObjectExpression') return null
+  if (registration !== validRegistration || registration.arguments[0] !== config) return null
+  return {
+    registration: registration.callee.name,
+    methodName: objectMemberName(member)
+  }
+}
+
+function collectIdentityReferences(ast, validRegistration) {
+  const references = []
+  function visit(node, owner = null, ancestors = []) {
+    if (Array.isArray(node)) {
+      node.forEach(child => visit(child, owner, ancestors))
+      return
+    }
+    if (!node || typeof node !== 'object' || typeof node.type !== 'string') return
+
+    const nextOwner = isFunctionNode(node)
+      ? directRegistrationOwner(node, ancestors, validRegistration)
+      : owner
+    const parent = ancestors[ancestors.length - 1]
+    if (isRefreshIdentityReference(node, parent)) references.push({ node, owner: nextOwner })
+    const nextAncestors = [...ancestors, node]
+    Object.values(node).forEach(child => visit(child, nextOwner, nextAncestors))
+  }
+
+  visit(ast)
+  return references
+}
+
+function scanIdentityRestores(relative, body, lines) {
+  if (path.extname(relative) !== '.js') return []
+
+  let ast
+  try {
+    ast = parse(body, { sourceType: 'unambiguous' })
+  } catch (err) {
+    const findings = []
+    addFinding(
+      findings,
+      relative,
+      (err.loc && err.loc.line) || 1,
+      'javascript-parse-failed',
+      err.message
+    )
+    return findings
+  }
+
+  const findings = []
+  const registration = uniqueTopLevelRegistration(ast, expectedRegistrationName(relative))
+  collectIdentityReferences(ast, registration).forEach(({ node, owner }) => {
+    const index = node.loc.start.line - 1
+    const text = lines[index] || ''
+
+    if (relative === 'miniprogram/app.js') {
+      if (!owner || owner.registration !== 'App' || owner.methodName !== 'onLaunch') {
+        addFinding(findings, relative, index + 1, 'launch-eager-member-identity', text)
+      }
+      return
+    }
+
+    if (!relative.startsWith('miniprogram/')) return
+    const isAllowedPageMethod = relative.startsWith('miniprogram/pages/') &&
+      owner && owner.registration === 'Page' &&
+      ALLOWED_PAGE_IDENTITY_METHODS[relative] === owner.methodName
+    if (!isAllowedPageMethod) {
+      addFinding(findings, relative, index + 1, 'page-eager-member-identity', text)
+    }
+  })
+  return findings
+}
+
+function scanSource(relative, body) {
   const lines = body.split(/\r?\n/)
+  const findings = scanIdentityRestores(relative, body, lines)
 
   lines.forEach((text, index) => {
     const line = index + 1
 
     if (relative.startsWith('miniprogram/') && /\bwx\.cloud\.database\s*\(/.test(text)) {
-      addFinding(findings, file, line, 'frontend-direct-database', text)
+      addFinding(findings, relative, line, 'frontend-direct-database', text)
     }
 
     if (relative.startsWith('miniprogram/') && /\bdb\.collection\s*\(/.test(text)) {
-      addFinding(findings, file, line, 'frontend-direct-collection', text)
+      addFinding(findings, relative, line, 'frontend-direct-collection', text)
     }
 
     if (relative.startsWith('miniprogram/') && /\bcreatedByOpenid\b|\bopenid\b|\bopenId\b|\bunionid\b/.test(text)) {
-      addFinding(findings, file, line, 'frontend-internal-identifier', text)
-    }
-
-    if (relative === 'miniprogram/app.js' && /identityReady\s*=\s*this\.refreshIdentity\s*\(/.test(text)) {
-      addFinding(findings, file, line, 'launch-eager-member-identity', text)
-    }
-
-    if (
-      relative.startsWith('miniprogram/pages/') &&
-      /\.refreshIdentity\s*\(/.test(text)
-    ) {
-      const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
-      const gatedByOfficialPrivacy = /options\.requirePrivacy/.test(nearby) &&
-        /ensureOfficialPrivacyAuthorization/.test(nearby)
-      if (!gatedByOfficialPrivacy && !isAllowedSilentIdentityRestore(relative, lines, index)) {
-        addFinding(findings, file, line, 'page-eager-member-identity', text)
-      }
+      addFinding(findings, relative, line, 'frontend-internal-identifier', text)
     }
 
     if (relative === 'miniprogram/pages/edit-profile/index.js' && /publicProfileConsent\s*[:=]\s*true/.test(text)) {
-      addFinding(findings, file, line, 'registration-forces-public-profile', text)
+      addFinding(findings, relative, line, 'registration-forces-public-profile', text)
     }
 
     if (/\b(wx\.getLocation|wx\.chooseLocation|wx\.openLocation|wx\.startLocationUpdate|scope\.userLocation)\b/.test(text)) {
-      addFinding(findings, file, line, 'location-api', text)
+      addFinding(findings, relative, line, 'location-api', text)
     }
   })
+
+  return findings.sort((left, right) => left.line - right.line)
 }
 
-const files = [
-  ...walk(path.join(root, 'miniprogram')),
-  ...walk(path.join(root, 'cloudfunctions'))
-]
-
-const findings = []
-files.forEach(file => scanFile(file, findings))
-
-if (findings.length > 0) {
-  console.error('Privacy adversarial scan failed:')
-  findings.forEach(item => {
-    console.error(`${item.file}:${item.line} [${item.rule}] ${item.text}`)
-  })
-  process.exit(1)
+function scanFile(file) {
+  return scanSource(rel(file), fs.readFileSync(file, 'utf8'))
 }
 
-console.log('Privacy adversarial scan passed')
+function main() {
+  const files = [
+    ...walk(path.join(root, 'miniprogram')),
+    ...walk(path.join(root, 'cloudfunctions'))
+  ]
+  const findings = files.flatMap(scanFile)
+
+  if (findings.length > 0) {
+    console.error('Privacy adversarial scan failed:')
+    findings.forEach(item => {
+      console.error(`${item.file}:${item.line} [${item.rule}] ${item.text}`)
+    })
+    process.exitCode = 1
+    return findings
+  }
+
+  console.log('Privacy adversarial scan passed')
+  return findings
+}
+
+if (require.main === module) main()
+
+module.exports = { scanSource }

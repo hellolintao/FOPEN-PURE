@@ -214,3 +214,45 @@ test('getGroupKnockoutBracket strips tournament and actor metadata for non-admin
   expect(res.data.tournament.groupRankSnapshot.manualOverrides.A).not.toHaveProperty('overrideBy')
   expect(JSON.stringify(res.data)).not.toContain('admin-openid')
 })
+
+test('getByTournament replaces stale match identity when the member no longer exists', async () => {
+  mockState.collections.tournament_brackets.set('bracket-missing-member', {
+    _id: 'bracket-missing-member',
+    tournamentId: 't-missing-member',
+    round: 1,
+    type: 'singles',
+    matches: [{
+      matchId: 'match-missing-member',
+      round: 1,
+      position: 1,
+      player1: {
+        id: 'deleted-member',
+        name: 'Deleted Player Real Name',
+        avatarUrl: '/deleted-player.png',
+        openid: 'deleted-openid',
+        phone: '13900000000'
+      },
+      winner: {
+        id: 'deleted-member',
+        name: 'Deleted Player Real Name',
+        avatarUrl: '/deleted-player.png'
+      },
+      resultStatus: 'confirmed'
+    }]
+  })
+
+  const res = await main({ action: 'getByTournament', tournamentId: 't-missing-member' })
+
+  const match = res.data[0].matches[0]
+  for (const side of [match.player1, match.winner]) {
+    expect(side).toMatchObject({
+      id: 'deleted-member',
+      name: '选手01',
+      avatarUrl: '/images/icons/default-avatar.png',
+      publicProfileVisible: false
+    })
+    expect(side).not.toHaveProperty('openid')
+    expect(side).not.toHaveProperty('phone')
+    expect(side.name).not.toBe('Deleted Player Real Name')
+  }
+})

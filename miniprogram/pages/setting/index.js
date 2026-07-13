@@ -97,6 +97,7 @@ Page({
       const app = getApp()
       app.globalData.currentMember = null
       app.globalData.isAdmin = false
+      app.identityReady = null
       this.setData({ currentMember: null })
       clearPrivacyPageCaches()
       wx.showToast({ title: '已删除资料', icon: 'success' })

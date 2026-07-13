@@ -78,6 +78,15 @@ describe('match page tournament entry permissions', () => {
     expect(wxml).toContain('<view wx:if="{{!loading && tournaments.length === 0}}" class="match-empty">')
   })
 
+  test('empty state uses neutral waiting copy instead of follow prompting copy', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+    expect(wxml).toContain('本赛季还未发布赛事，请等待开赛通知')
+    expect(wxml).not.toContain('关注')
+  })
+
   test('opens unified tournament detail page from events list', () => {
     const { pageDef } = loadPage()
     const ctx = makeCtx(pageDef)

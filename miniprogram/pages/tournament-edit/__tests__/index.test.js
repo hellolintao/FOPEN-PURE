@@ -195,6 +195,20 @@ describe('tournament-edit mixed regular flow', () => {
     expect(wxml).toContain("form.format === 'knockout' || form.format === 'group_knockout' ? 'disabled' : ''")
   })
 
+  test('registration publish action uses neutral publish copy instead of share prompting copy', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('发布报名')
+    expect(wxml).not.toContain('发布并分享到微信')
+  })
+
+  test('group setup copy avoids fortune-test keyword wording', () => {
+    const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
+
+    expect(wxml).toContain('现场分组后录入')
+    expect(wxml).not.toContain('现场抽签后录入')
+  })
+
   test('mixed regular default schedule alternates singles, doubles, free play each hour', () => {
     const def = loadPage()
     const ctx = makeCtx(def, {

@@ -60,9 +60,10 @@ Page({
 		app.globalData.isAdmin = false
 	},
 	applyMember(user, options = {}) {
+		const isAdmin = user.admin === true || user.isAdmin === true
 		this.setData({
 			isLogin: true,
-			isAdmin: user.admin || false,
+			isAdmin,
 			userInfo: {
 				avatarUrl: user.avatarUrl || options.defaultAvatar || '',
 				name: user.name || ''
@@ -70,7 +71,7 @@ Page({
 			currentMemberId: user._id
 		})
 		app.globalData.currentMember = user
-		app.globalData.isAdmin = !!user.admin
+		app.globalData.isAdmin = isAdmin
 	},
 	// 获取用户积分
 	async loadUserPoints(memberId) {

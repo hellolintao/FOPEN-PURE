@@ -8,7 +8,12 @@ const mockState = {
   whereRemoveResult: { stats: { removed: 1 } },
   docUpdateResult: { stats: { updated: 1 } },
   docRemoveResult: { stats: { removed: 1 } },
-  docGetResult: { data: null }
+  docGetResult: { data: null },
+  msgSecCheckResult: { errcode: 0, errmsg: 'ok', result: { suggest: 'pass', label: 100 } },
+  downloadFileResult: { fileContent: Buffer.from('avatar-image') },
+  imgSecCheckResult: { errCode: 0, errMsg: 'openapi.security.imgSecCheck:ok' },
+  imgSecCheckError: null,
+  mediaCheckAsyncResult: { errcode: 0, errmsg: 'ok', trace_id: 'trace-avatar' }
 };
 
 const mockQuery = {
@@ -66,7 +71,18 @@ jest.mock('wx-server-sdk', () => ({
   getWXContext: jest.fn(() => ({ OPENID: mockState.openid })),
   database: jest.fn(() => mockDb),
   getTempFileURL: jest.fn(() => Promise.resolve(mockState.tempFileURLResult)),
-  deleteFile: jest.fn(() => Promise.resolve({ fileList: [] }))
+  downloadFile: jest.fn(() => Promise.resolve(mockState.downloadFileResult)),
+  deleteFile: jest.fn(() => Promise.resolve({ fileList: [] })),
+  openapi: {
+    security: {
+      msgSecCheck: jest.fn(() => Promise.resolve(mockState.msgSecCheckResult)),
+      imgSecCheck: jest.fn(() => {
+        if (mockState.imgSecCheckError) return Promise.reject(mockState.imgSecCheckError);
+        return Promise.resolve(mockState.imgSecCheckResult);
+      }),
+      mediaCheckAsync: jest.fn(() => Promise.resolve(mockState.mediaCheckAsyncResult))
+    }
+  }
 }));
 
 const cloud = require('wx-server-sdk');
@@ -86,6 +102,11 @@ describe('members cloud function', () => {
     mockState.docUpdateResult = { stats: { updated: 1 } };
     mockState.docRemoveResult = { stats: { removed: 1 } };
     mockState.docGetResult = { data: null };
+    mockState.msgSecCheckResult = { errcode: 0, errmsg: 'ok', result: { suggest: 'pass', label: 100 } };
+    mockState.downloadFileResult = { fileContent: Buffer.from('avatar-image') };
+    mockState.imgSecCheckResult = { errCode: 0, errMsg: 'openapi.security.imgSecCheck:ok' };
+    mockState.imgSecCheckError = null;
+    mockState.mediaCheckAsyncResult = { errcode: 0, errmsg: 'ok', trace_id: 'trace-avatar' };
     mockCollection.collectionName = 'members';
     mockQuery.collectionName = 'members';
     jest.isolateModules(() => {
@@ -351,6 +372,28 @@ describe('members cloud function', () => {
     expect(mockCollection.where).not.toHaveBeenCalled();
   });
 
+  test('action=get resolves a legacy openId member row', async () => {
+    const legacyMember = { _id: 'legacy-member', openId: mockState.openid, name: '旧会员' };
+    mockState.whereGetData = (filter) => {
+      if (filter && Array.isArray(filter.$or)) return [legacyMember];
+      return [];
+    };
+
+    const result = await main({ action: 'get' }, {});
+
+    expect(mockDb.command.or).toHaveBeenCalledWith([
+      { openid: mockState.openid },
+      { openId: mockState.openid }
+    ]);
+    expect(mockCollection.where).toHaveBeenCalledWith({
+      $or: [
+        { openid: mockState.openid },
+        { openId: mockState.openid }
+      ]
+    });
+    expect(result).toEqual({ data: [legacyMember] });
+  });
+
   test('action=add creates new claimed member when matching unclaimed name already has openid', async () => {
     const unavailable = {
       _id: 'member-already-linked',
@@ -442,6 +485,79 @@ describe('members cloud function', () => {
         playStyle: 'slicer',
         updateTime: mockState.serverDate
       }
+    });
+  });
+
+  test('action=update rejects unsafe profile nickname before writing member row', async () => {
+    mockState.msgSecCheckResult = {
+      errcode: 0,
+      errmsg: 'ok',
+      result: { suggest: 'risky', label: 20006 }
+    };
+
+    const result = await main({
+      action: 'update',
+      data: {
+        name: '违规昵称',
+        playStyle: 'slicer'
+      }
+    }, {});
+
+    expect(cloud.openapi.security.msgSecCheck).toHaveBeenCalledWith({
+      openid: mockState.openid,
+      scene: 1,
+      version: 2,
+      content: '违规昵称'
+    });
+    expect(result).toEqual({
+      success: false,
+      error: { code: 'CONTENT_SECURITY_RISK', message: '发布内容含违规信息' }
+    });
+    expect(mockQuery.update).not.toHaveBeenCalled();
+  });
+
+  test('action=checkAvatarContent blocks until uploaded avatar image has a synchronous safety pass', async () => {
+    const fileID = 'cloud://cloud1-0gthnke69a09f52a.avatars/avatar.png';
+    mockState.downloadFileResult = { fileContent: Buffer.from('safe-avatar') };
+
+    const result = await main({
+      action: 'checkAvatarContent',
+      data: { fileID }
+    }, {});
+
+    expect(cloud.downloadFile).toHaveBeenCalledWith({ fileID });
+    expect(cloud.openapi.security.imgSecCheck).toHaveBeenCalledWith({
+      media: {
+        contentType: 'image/png',
+        value: Buffer.from('safe-avatar')
+      }
+    });
+    expect(cloud.openapi.security.mediaCheckAsync).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success: true,
+      data: { checked: true }
+    });
+  });
+
+  test('action=checkAvatarContent rejects unsafe avatar image before it can be saved', async () => {
+    const fileID = 'cloud://cloud1-0gthnke69a09f52a.avatars/avatar.jpg';
+    mockState.imgSecCheckError = Object.assign(new Error('risky content'), { errCode: 87014 });
+
+    const result = await main({
+      action: 'checkAvatarContent',
+      data: { fileID }
+    }, {});
+
+    expect(cloud.downloadFile).toHaveBeenCalledWith({ fileID });
+    expect(cloud.openapi.security.imgSecCheck).toHaveBeenCalledWith({
+      media: {
+        contentType: 'image/jpeg',
+        value: Buffer.from('avatar-image')
+      }
+    });
+    expect(result).toEqual({
+      success: false,
+      error: { code: 'CONTENT_SECURITY_RISK', message: '发布内容含违规信息' }
     });
   });
 
@@ -581,6 +697,7 @@ describe('members cloud function', () => {
   });
 
   test('action=claimSelf persists claimed status for openid-bound unclaimed member', async () => {
+    const avatarUrl = 'cloud://cloud1-0gthnke69a09f52a.avatars/claimed-avatar.png';
     const existing = {
       _id: 'member-openid-unclaimed',
       openid: mockState.openid,
@@ -590,13 +707,18 @@ describe('members cloud function', () => {
       admin: false
     };
     mockState.whereGetData = [existing];
+    mockState.tempFileURLResult = {
+      fileList: [
+        { fileID: avatarUrl, tempFileURL: 'https://tmp.example.com/claimed-avatar.png' }
+      ]
+    };
 
     const result = await main({
       action: 'claimSelf',
       data: {
         name: '张三',
         phone: '13800000000',
-        avatarUrl: 'cloud://avatar',
+        avatarUrl,
         playStyle: 'vers'
       }
     }, {});
@@ -605,7 +727,7 @@ describe('members cloud function', () => {
     expect(mockQuery.update).toHaveBeenCalledWith({
       data: {
         name: '张三',
-        avatarUrl: 'cloud://avatar',
+        avatarUrl,
         playStyle: 'vers',
         claimStatus: 'claimed',
         status: 'active',
@@ -616,7 +738,7 @@ describe('members cloud function', () => {
       data: {
         ...existing,
         name: '张三',
-        avatarUrl: 'cloud://avatar',
+        avatarUrl,
         playStyle: 'vers',
         claimStatus: 'claimed',
         status: 'active',

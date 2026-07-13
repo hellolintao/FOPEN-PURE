@@ -108,6 +108,7 @@ describe('setting privacy controls', () => {
 
   test('onDeleteAccount calls self-scoped deletion action, clears local member state, and clears privacy page caches', async () => {
     const { pageDef, app, pageCache } = loadPage(() => Promise.resolve({ result: { success: true } }))
+    app.identityReady = Promise.resolve(app.globalData.currentMember)
     const ctx = makeCtx(pageDef, { currentMember: app.globalData.currentMember })
 
     await ctx.onDeleteAccount()
@@ -118,6 +119,7 @@ describe('setting privacy controls', () => {
     })
     expect(app.globalData.currentMember).toBeNull()
     expect(app.globalData.isAdmin).toBe(false)
+    expect(app.identityReady).toBeNull()
     expect(ctx.data.currentMember).toBeNull()
     expect(pageCache.removeCachesByPrefix.mock.calls.map(call => call[0])).toEqual(PRIVACY_PAGE_CACHE_PREFIXES)
   })

@@ -1053,6 +1053,70 @@ test('list returns public identities for non-admin callers without consent field
   }
 })
 
+test('list replaces stale registration identity when the member no longer exists', async () => {
+  const rows = [{
+    _id: 'reg-missing-member',
+    tournamentId: TID,
+    seasonId: 'season-2026',
+    type: 'singles',
+    playerId: 'deleted-member',
+    playerName: 'Deleted Player Real Name',
+    playerAvatarUrl: '/deleted-player.png',
+    registrationStatus: 'confirmed',
+    seed: 9,
+    openid: 'deleted-openid',
+    phone: '13900000000'
+  }]
+
+  const registrationChain = {
+    where: jest.fn(() => registrationChain),
+    orderBy: jest.fn(() => registrationChain),
+    skip: jest.fn(() => registrationChain),
+    limit: jest.fn(() => registrationChain),
+    get: jest.fn(async () => ({ data: rows })),
+    count: jest.fn(async () => ({ total: rows.length }))
+  }
+  const memberWhere = jest.fn((query) => ({
+    get: jest.fn(async () => {
+      if (query && Array.isArray(query.$or)) {
+        return { data: [{ _id: 'viewer', openid: 'openid-a', admin: false }] }
+      }
+      return { data: [] }
+    })
+  }))
+  mockDb.collection.mockImplementation(name => {
+    if (name === 'tournament_registrations') return registrationChain
+    if (name === 'members') return { where: memberWhere }
+    return { where: jest.fn(() => ({ get: jest.fn(async () => ({ data: [] })) })) }
+  })
+
+  let main
+  jest.isolateModules(() => {
+    ;({ main } = require('../index'))
+  })
+
+  const res = await main({
+    action: 'list',
+    tournamentId: TID,
+    pageSize: 20,
+    pageNum: 1
+  }, {})
+
+  expect(res.success).toBe(true)
+  expect(res.data).toEqual([
+    expect.objectContaining({
+      _id: 'reg-missing-member',
+      playerId: 'deleted-member',
+      playerName: '选手09',
+      playerAvatarUrl: '/images/icons/default-avatar.png',
+      playerPublicProfileVisible: false
+    })
+  ])
+  expect(res.data[0].playerName).not.toBe('Deleted Player Real Name')
+  expect(res.data[0]).not.toHaveProperty('openid')
+  expect(res.data[0]).not.toHaveProperty('phone')
+})
+
 test('list hydrates member avatars for admin callers when registration rows are missing avatar fields', async () => {
   const rows = [
     {
