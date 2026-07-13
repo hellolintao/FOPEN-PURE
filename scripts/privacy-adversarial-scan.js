@@ -110,8 +110,25 @@ function expectedRegistrationName(relative) {
   return ''
 }
 
+function programExecutionRebindsName(node, name) {
+  if (Array.isArray(node)) return node.some(child => programExecutionRebindsName(child, name))
+  if (!node || typeof node !== 'object' || typeof node.type !== 'string') return false
+  if (node.type !== 'Program' && (
+    isFunctionNode(node) || node.type === 'ClassDeclaration' || node.type === 'ClassExpression'
+  )) return false
+  if (node.type === 'VariableDeclaration' && node.kind === 'var') {
+    if (node.declarations.some(declaration => patternBindsName(declaration.id, name))) return true
+  }
+  if (node.type === 'AssignmentExpression' && patternBindsName(node.left, name)) return true
+  if (node.type === 'UpdateExpression' && patternBindsName(node.argument, name)) return true
+  if ((node.type === 'ForInStatement' || node.type === 'ForOfStatement') &&
+    node.left.type !== 'VariableDeclaration' && patternBindsName(node.left, name)) return true
+  return Object.values(node).some(child => programExecutionRebindsName(child, name))
+}
+
 function uniqueTopLevelRegistration(ast, name) {
-  if (!name || ast.program.body.some(statement => statementBindsName(statement, name))) return null
+  if (!name || ast.program.body.some(statement => statementBindsName(statement, name)) ||
+    programExecutionRebindsName(ast.program, name)) return null
   const registrations = ast.program.body
     .filter(statement => statement.type === 'ExpressionStatement')
     .map(statement => statement.expression)

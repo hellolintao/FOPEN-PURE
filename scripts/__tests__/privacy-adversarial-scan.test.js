@@ -317,4 +317,58 @@ App({
       expect.objectContaining({ rule: 'page-eager-member-identity' })
     ])
   })
+
+  test.each([
+    [
+      'var hoisted from control flow',
+      `if (false) {
+  var Page
+}
+Page({
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'Program assignment rebinding',
+      `Page = config => config
+Page({
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects Page restore after %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'var hoisted from control flow',
+      `if (false) {
+  var App
+}
+App({
+  onLaunch() {
+    this.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'Program assignment rebinding',
+      `App = config => config
+App({
+  onLaunch() {
+    this.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects App restore after %s', (_name, source) => {
+    expect(identityFindings('miniprogram/app.js', source)).toEqual([
+      expect.objectContaining({ rule: 'launch-eager-member-identity' })
+    ])
+  })
 })
