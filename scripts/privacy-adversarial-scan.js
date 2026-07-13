@@ -52,8 +52,19 @@ function isFunctionProperty(node) {
 
 function staticStringValue(node) {
   if (node.type === 'StringLiteral') return node.value
-  if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
-    return node.quasis.map(quasi => quasi.value.cooked).join('')
+  if (node.type === 'TemplateLiteral') {
+    let value = ''
+    for (let i = 0; i < node.quasis.length; i += 1) {
+      const quasi = node.quasis[i].value.cooked
+      if (quasi === null) return null
+      value += quasi
+      if (i < node.expressions.length) {
+        const expression = staticStringValue(node.expressions[i])
+        if (expression === null) return null
+        value += expression
+      }
+    }
+    return value
   }
   if (node.type === 'BinaryExpression' && node.operator === '+') {
     const left = staticStringValue(node.left)

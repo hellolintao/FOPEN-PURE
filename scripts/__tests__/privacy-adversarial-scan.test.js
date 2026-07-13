@@ -437,6 +437,22 @@ App({
     app?.[\`refreshIdentity\`]?.()
   }
 })`
+    ],
+    [
+      'interpolated template literal',
+      `Page({
+  onShow() {
+    app[\`refresh\${'Identity'}\`]()
+  }
+})`
+    ],
+    [
+      'optional interpolated template literal',
+      `Page({
+  onShow() {
+    app?.[\`refresh\${'Identity'}\`]?.()
+  }
+})`
     ]
   ])('rejects a computed refreshIdentity %s', (_name, source) => {
     expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
