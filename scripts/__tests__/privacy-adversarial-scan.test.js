@@ -195,4 +195,126 @@ Page({ helper })`
       expect.objectContaining({ rule: 'launch-eager-member-identity' })
     ])
   })
+
+  test.each([
+    [
+      'shadowed global',
+      `const Page = config => config
+Page({
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'nested fake registration',
+      `function registerFake() {
+  Page({
+    async ensureIdentity() {
+      app.refreshIdentity()
+    }
+  })
+}
+Page({})`
+    ],
+    [
+      'duplicate top-level registration',
+      `Page({})
+Page({
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects Page restore through a %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'shadowed global',
+      `const App = config => config
+App({
+  onLaunch() {
+    this.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'nested fake registration',
+      `function registerFake() {
+  App({
+    onLaunch() {
+      this.refreshIdentity()
+    }
+  })
+}
+App({})`
+    ],
+    [
+      'duplicate top-level registration',
+      `App({})
+App({
+  onLaunch() {
+    this.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects App restore through a %s', (_name, source) => {
+    expect(identityFindings('miniprogram/app.js', source)).toEqual([
+      expect.objectContaining({ rule: 'launch-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'getter',
+      `Page({
+  get ensureIdentity() {
+    app.refreshIdentity()
+    return null
+  }
+})`
+    ],
+    [
+      'setter',
+      `Page({
+  set ensureIdentity(value) {
+    app.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects an allowlisted name implemented as a %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'comment',
+      `Page({
+  onShow() {
+    /* options.requirePrivacy ensureOfficialPrivacyAuthorization */
+    app.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'string',
+      `Page({
+  onShow() {
+    const fakeGate = 'options.requirePrivacy ensureOfficialPrivacyAuthorization'
+    app.refreshIdentity()
+    return fakeGate
+  }
+})`
+    ]
+  ])('rejects unauthorized restore despite a nearby privacy %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
 })

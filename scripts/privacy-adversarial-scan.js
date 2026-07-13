@@ -69,7 +69,65 @@ function isFunctionNode(node) {
   ].includes(node.type)
 }
 
-function directRegistrationOwner(node, ancestors) {
+function patternBindsName(pattern, name) {
+  if (!pattern) return false
+  if (pattern.type === 'Identifier') return pattern.name === name
+  if (pattern.type === 'RestElement') return patternBindsName(pattern.argument, name)
+  if (pattern.type === 'AssignmentPattern') return patternBindsName(pattern.left, name)
+  if (pattern.type === 'ArrayPattern') {
+    return pattern.elements.some(element => patternBindsName(element, name))
+  }
+  if (pattern.type === 'ObjectPattern') {
+    return pattern.properties.some(property => (
+      property.type === 'RestElement'
+        ? patternBindsName(property.argument, name)
+        : patternBindsName(property.value, name)
+    ))
+  }
+  return false
+}
+
+function statementBindsName(statement, name) {
+  if (!statement) return false
+  if (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportDefaultDeclaration') {
+    return statementBindsName(statement.declaration, name)
+  }
+  if (statement.type === 'ImportDeclaration') {
+    return statement.specifiers.some(specifier => specifier.local && specifier.local.name === name)
+  }
+  if (statement.type === 'VariableDeclaration') {
+    return statement.declarations.some(declaration => patternBindsName(declaration.id, name))
+  }
+  if (statement.type === 'FunctionDeclaration' || statement.type === 'ClassDeclaration') {
+    return !!statement.id && statement.id.name === name
+  }
+  return false
+}
+
+function expectedRegistrationName(relative) {
+  if (relative === 'miniprogram/app.js') return 'App'
+  if (relative.startsWith('miniprogram/pages/') && path.extname(relative) === '.js') return 'Page'
+  return ''
+}
+
+function uniqueTopLevelRegistration(ast, name) {
+  if (!name || ast.program.body.some(statement => statementBindsName(statement, name))) return null
+  const registrations = ast.program.body
+    .filter(statement => statement.type === 'ExpressionStatement')
+    .map(statement => statement.expression)
+    .filter(expression => (
+      expression.type === 'CallExpression' &&
+      expression.callee.type === 'Identifier' &&
+      expression.callee.name === name
+    ))
+  if (registrations.length !== 1) return null
+  return registrations[0].arguments[0] && registrations[0].arguments[0].type === 'ObjectExpression'
+    ? registrations[0]
+    : null
+}
+
+function directRegistrationOwner(node, ancestors, validRegistration) {
+  if (!validRegistration) return null
   let member = node
   let config = ancestors[ancestors.length - 1]
   let registration = ancestors[ancestors.length - 2]
@@ -79,21 +137,19 @@ function directRegistrationOwner(node, ancestors) {
     config = ancestors[ancestors.length - 2]
     registration = ancestors[ancestors.length - 3]
     if (!isFunctionProperty(member)) return null
-  } else if (node.type !== 'ObjectMethod') {
+  } else if (node.type !== 'ObjectMethod' || node.kind !== 'method') {
     return null
   }
 
   if (!config || config.type !== 'ObjectExpression') return null
-  if (!registration || registration.type !== 'CallExpression') return null
-  if (registration.arguments[0] !== config || registration.callee.type !== 'Identifier') return null
-  if (registration.callee.name !== 'App' && registration.callee.name !== 'Page') return null
+  if (registration !== validRegistration || registration.arguments[0] !== config) return null
   return {
     registration: registration.callee.name,
     methodName: objectMemberName(member)
   }
 }
 
-function collectIdentityCalls(ast) {
+function collectIdentityCalls(ast, validRegistration) {
   const calls = []
   function visit(node, owner = null, ancestors = []) {
     if (Array.isArray(node)) {
@@ -102,7 +158,9 @@ function collectIdentityCalls(ast) {
     }
     if (!node || typeof node !== 'object' || typeof node.type !== 'string') return
 
-    const nextOwner = isFunctionNode(node) ? directRegistrationOwner(node, ancestors) : owner
+    const nextOwner = isFunctionNode(node)
+      ? directRegistrationOwner(node, ancestors, validRegistration)
+      : owner
     if (isRefreshIdentityCall(node)) calls.push({ node, owner: nextOwner })
     const nextAncestors = [...ancestors, node]
     Object.values(node).forEach(child => visit(child, nextOwner, nextAncestors))
@@ -131,7 +189,8 @@ function scanIdentityRestores(relative, body, lines) {
   }
 
   const findings = []
-  collectIdentityCalls(ast).forEach(({ node, owner }) => {
+  const registration = uniqueTopLevelRegistration(ast, expectedRegistrationName(relative))
+  collectIdentityCalls(ast, registration).forEach(({ node, owner }) => {
     const index = node.loc.start.line - 1
     const text = lines[index] || ''
 
@@ -143,12 +202,9 @@ function scanIdentityRestores(relative, body, lines) {
     }
 
     if (!relative.startsWith('miniprogram/pages/')) return
-    const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
-    const gatedByOfficialPrivacy = /options\.requirePrivacy/.test(nearby) &&
-      /ensureOfficialPrivacyAuthorization/.test(nearby)
     const isAllowedPageMethod = owner && owner.registration === 'Page' &&
       ALLOWED_PAGE_IDENTITY_METHODS[relative] === owner.methodName
-    if (!gatedByOfficialPrivacy && !isAllowedPageMethod) {
+    if (!isAllowedPageMethod) {
       addFinding(findings, relative, index + 1, 'page-eager-member-identity', text)
     }
   })
