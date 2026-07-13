@@ -76,4 +76,67 @@ describe('privacy adversarial identity restore allowlist', () => {
       expect.objectContaining({ rule: 'page-eager-member-identity' })
     ])
   })
+
+  test.each([
+    [
+      'same-line second method',
+      `Page({
+  async ensureIdentity() { app.refreshIdentity() }, onShow() { app.refreshIdentity() }
+})`
+    ],
+    [
+      'block-comment fake signature',
+      `Page({
+  async ensureIdentity() { app.refreshIdentity() },
+  /*
+  async ensureIdentity() {
+  */
+  onShow: async function() {
+    app.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'template-literal fake signature',
+      `Page({
+  async ensureIdentity() { app.refreshIdentity() },
+  data: { fake: \`
+  async ensureIdentity() {
+  \` },
+  onShow: async () => {
+    app.refreshIdentity()
+  }
+})`
+    ],
+    [
+      'computed onShow',
+      `Page({
+  async ensureIdentity() { app.refreshIdentity() },
+  ['on' + 'Show']() {
+    app.refreshIdentity()
+  }
+})`
+    ]
+  ])('rejects %s outside the real allowlisted AST owner', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test('allows a restore when a regex literal contains a closing brace', () => {
+    const source = `Page({
+  async ensureIdentity() {
+    const closingBrace = /}/
+    app.refreshIdentity()
+  }
+})`
+
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([])
+  })
+
+  test('fails closed when JavaScript cannot be parsed', () => {
+    expect(scanSource('miniprogram/pages/broken/index.js', 'Page({ onShow() {')).toEqual([
+      expect.objectContaining({ rule: 'javascript-parse-failed' })
+    ])
+  })
 })

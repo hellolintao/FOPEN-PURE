@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { parse } = require('@babel/parser')
 
 const root = path.resolve(__dirname, '..')
 
@@ -29,94 +30,105 @@ function addFinding(findings, relative, line, rule, text) {
   findings.push({ file: relative, line, rule, text: text.trim() })
 }
 
-const CONTROL_STATEMENTS = new Set(['if', 'for', 'while', 'switch', 'catch', 'with'])
-const METHOD_DECLARATION_PATTERNS = [
-  /^\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/,
-  /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/,
-  /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{/
-]
+const ALLOWED_PAGE_IDENTITY_METHODS = {
+  'miniprogram/pages/home/index.js': 'ensureIdentity',
+  'miniprogram/pages/mine/index.js': 'restoreIdentity',
+  'miniprogram/pages/rank/index.js': '_ensureCurrentMember',
+  'miniprogram/pages/tournament-detail/index.js': 'ensureIdentity'
+}
 
-function maskNonCode(body) {
-  return body.replace(
-    /\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g,
-    value => value.replace(/[^\r\n]/g, ' ')
+function objectMemberName(node) {
+  if (node.computed) return ''
+  if (node.key.type === 'Identifier') return node.key.name
+  if (node.key.type === 'StringLiteral') return node.key.value
+  return ''
+}
+
+function isFunctionProperty(node) {
+  return node.type === 'ObjectProperty' && (
+    node.value.type === 'FunctionExpression' || node.value.type === 'ArrowFunctionExpression'
   )
 }
 
-function findClosingBrace(code, openIndex) {
-  let depth = 0
-  for (let i = openIndex; i < code.length; i += 1) {
-    if (code[i] === '{') {
-      depth += 1
-    } else if (code[i] === '}') {
-      depth -= 1
-      if (depth === 0) return i
-    }
-  }
-
-  return -1
+function isRefreshIdentityCall(node) {
+  if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return false
+  const callee = node.callee
+  if (!callee || (callee.type !== 'MemberExpression' && callee.type !== 'OptionalMemberExpression')) return false
+  if (callee.computed) return callee.property.type === 'StringLiteral' && callee.property.value === 'refreshIdentity'
+  return callee.property.type === 'Identifier' && callee.property.name === 'refreshIdentity'
 }
 
-function lineStartOffsets(body, lineCount) {
-  const offsets = []
-  let offset = 0
-  for (let i = 0; i < lineCount; i += 1) {
-    offsets.push(offset)
-    const newline = body.indexOf('\n', offset)
-    offset = newline === -1 ? body.length : newline + 1
+function collectIdentityCalls(node, ownerMethod = '', calls = []) {
+  if (Array.isArray(node)) {
+    node.forEach(child => collectIdentityCalls(child, ownerMethod, calls))
+    return calls
   }
-  return offsets
-}
+  if (!node || typeof node !== 'object' || typeof node.type !== 'string') return calls
 
-function findMethodRanges(body, lines, offsets) {
-  const code = maskNonCode(body)
-  const ranges = []
-  lines.forEach((text, index) => {
-    for (const pattern of METHOD_DECLARATION_PATTERNS) {
-      const match = text.match(pattern)
-      if (!match || CONTROL_STATEMENTS.has(match[1])) continue
-      const openIndex = offsets[index] + match.index + match[0].lastIndexOf('{')
-      const closeIndex = findClosingBrace(code, openIndex)
-      if (closeIndex !== -1) ranges.push({ name: match[1], openIndex, closeIndex })
-      break
+  if (isFunctionProperty(node)) {
+    if (node.computed) collectIdentityCalls(node.key, ownerMethod, calls)
+    collectIdentityCalls(node.value, objectMemberName(node), calls)
+    return calls
+  }
+
+  const nextOwner = node.type === 'ObjectMethod' ? objectMemberName(node) : ownerMethod
+  if (isRefreshIdentityCall(node)) calls.push({ node, ownerMethod: nextOwner })
+
+  Object.entries(node).forEach(([key, child]) => {
+    if (!['loc', 'start', 'end', 'extra'].includes(key)) {
+      collectIdentityCalls(child, nextOwner, calls)
     }
   })
-  return ranges
+  return calls
 }
 
-function enclosingMethodName(ranges, targetIndex) {
-  const enclosing = ranges
-    .filter(({ openIndex, closeIndex }) => openIndex < targetIndex && targetIndex < closeIndex)
-    .sort((left, right) => right.openIndex - left.openIndex)[0]
-  return enclosing ? enclosing.name : ''
-}
+function scanIdentityRestores(relative, body, lines) {
+  if (path.extname(relative) !== '.js') return []
 
-function isAllowedSilentIdentityRestore(relative, methodName) {
-  const allowedMethods = {
-    'miniprogram/pages/home/index.js': 'ensureIdentity',
-    'miniprogram/pages/mine/index.js': 'restoreIdentity',
-    'miniprogram/pages/rank/index.js': '_ensureCurrentMember',
-    'miniprogram/pages/tournament-detail/index.js': 'ensureIdentity'
+  let ast
+  try {
+    ast = parse(body, { sourceType: 'unambiguous' })
+  } catch (err) {
+    const findings = []
+    addFinding(
+      findings,
+      relative,
+      (err.loc && err.loc.line) || 1,
+      'javascript-parse-failed',
+      err.message
+    )
+    return findings
   }
-  return allowedMethods[relative] === methodName
-}
 
-function isAllowedLaunchIdentityRestore(relative, methodName) {
-  return relative === 'miniprogram/app.js' && methodName === 'onLaunch'
+  const findings = []
+  collectIdentityCalls(ast).forEach(({ node, ownerMethod }) => {
+    const index = node.loc.start.line - 1
+    const text = lines[index] || ''
+
+    if (relative === 'miniprogram/app.js') {
+      if (ownerMethod !== 'onLaunch') {
+        addFinding(findings, relative, index + 1, 'launch-eager-member-identity', text)
+      }
+      return
+    }
+
+    if (!relative.startsWith('miniprogram/pages/')) return
+    const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
+    const gatedByOfficialPrivacy = /options\.requirePrivacy/.test(nearby) &&
+      /ensureOfficialPrivacyAuthorization/.test(nearby)
+    if (!gatedByOfficialPrivacy && ALLOWED_PAGE_IDENTITY_METHODS[relative] !== ownerMethod) {
+      addFinding(findings, relative, index + 1, 'page-eager-member-identity', text)
+    }
+  })
+  return findings
 }
 
 function scanSource(relative, body) {
-  const findings = []
   const lines = body.split(/\r?\n/)
-  const offsets = lineStartOffsets(body, lines.length)
-  const methodRanges = findMethodRanges(body, lines, offsets)
+  const findings = scanIdentityRestores(relative, body, lines)
 
   lines.forEach((text, index) => {
     const line = index + 1
-    const refreshIdentityIndex = text.indexOf('refreshIdentity')
-    const methodName = refreshIdentityIndex === -1
-      ? ''
-      : enclosingMethodName(methodRanges, offsets[index] + refreshIdentityIndex)
 
     if (relative.startsWith('miniprogram/') && /\bwx\.cloud\.database\s*\(/.test(text)) {
       addFinding(findings, relative, line, 'frontend-direct-database', text)
@@ -130,26 +142,6 @@ function scanSource(relative, body) {
       addFinding(findings, relative, line, 'frontend-internal-identifier', text)
     }
 
-    if (
-      relative === 'miniprogram/app.js' &&
-      /identityReady\s*=\s*this\.refreshIdentity\s*\(/.test(text) &&
-      !isAllowedLaunchIdentityRestore(relative, methodName)
-    ) {
-      addFinding(findings, relative, line, 'launch-eager-member-identity', text)
-    }
-
-    if (
-      relative.startsWith('miniprogram/pages/') &&
-      /\.refreshIdentity\s*\(/.test(text)
-    ) {
-      const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
-      const gatedByOfficialPrivacy = /options\.requirePrivacy/.test(nearby) &&
-        /ensureOfficialPrivacyAuthorization/.test(nearby)
-      if (!gatedByOfficialPrivacy && !isAllowedSilentIdentityRestore(relative, methodName)) {
-        addFinding(findings, relative, line, 'page-eager-member-identity', text)
-      }
-    }
-
     if (relative === 'miniprogram/pages/edit-profile/index.js' && /publicProfileConsent\s*[:=]\s*true/.test(text)) {
       addFinding(findings, relative, line, 'registration-forces-public-profile', text)
     }
@@ -159,7 +151,7 @@ function scanSource(relative, body) {
     }
   })
 
-  return findings
+  return findings.sort((left, right) => left.line - right.line)
 }
 
 function scanFile(file) {
