@@ -15,6 +15,7 @@ App({
       return;
     }
     wx.cloud.init({ env: this.globalData.env, traceUser: true });
+    this.identityReady = this.refreshIdentity();
   },
 
   async refreshIdentity() {
@@ -23,7 +24,7 @@ App({
       const data = res && res.result && res.result.data;
       const member = Array.isArray(data) ? data[0] : null;
       this.globalData.currentMember = member || null;
-      this.globalData.isAdmin = !!(member && member.admin);
+      this.globalData.isAdmin = !!(member && (member.admin || member.isAdmin));
       const pages = getCurrentPages();
       const last = pages[pages.length - 1];
       if (last && last.getTabBar) {

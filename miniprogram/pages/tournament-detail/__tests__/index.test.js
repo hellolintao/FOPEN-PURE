@@ -208,8 +208,14 @@ describe('tournament-detail score permissions', () => {
     expect(db.collection).not.toHaveBeenCalledWith('tournaments')
   })
 
-  test('does not refresh identity while browsing public tournament detail', async () => {
-    const app = { globalData: {}, refreshIdentity: jest.fn().mockResolvedValue(null) }
+  test('cold-start participant share entry restores identity before deriving footer actions', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockImplementation(async () => {
+        app.globalData.currentMember = { _id: 'm1', name: 'Alice' }
+        return app.globalData.currentMember
+      })
+    }
     const { pageDef } = loadPage({
       tournament: {
         _id: 't1',
@@ -218,13 +224,39 @@ describe('tournament-detail score permissions', () => {
         format: 'regular',
         scheduleStatus: 'published'
       },
+      registrations: [{ _id: 'r1', playerId: 'm1', playerName: 'Alice', status: 'registered' }],
       app
     })
-    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', entry: 'register' })
 
     await ctx.refresh()
 
-    expect(app.refreshIdentity).not.toHaveBeenCalled()
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['share', 'enterScore'])
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
+  })
+
+  test('failed cold-start identity restoration keeps the viewer public-only', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockRejectedValue(new Error('identity unavailable'))
+    }
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: 'FU Open',
+        type: 'singles',
+        format: 'regular',
+        scheduleStatus: 'published'
+      },
+      registrations: [{ _id: 'r1', playerId: 'm1', playerName: 'Alice', status: 'registered' }],
+      app
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', entry: 'register' })
+
+    await ctx.refresh()
+
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['share'])
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
   })
 
   test('group knockout draft shows edit and arrange bracket footer actions', async () => {

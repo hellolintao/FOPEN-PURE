@@ -68,6 +68,7 @@ Page({
   },
 
   async refresh() {
+    await this.ensureIdentity()
     await Promise.all([
       this.loadTournamentDetail(),
       this.loadRegistrations(),
@@ -122,7 +123,8 @@ Page({
         if (!authorized) return false
       }
       if (app.globalData && !app.globalData.currentMember && typeof app.refreshIdentity === 'function') {
-        await app.refreshIdentity()
+        if (!app.identityReady) app.identityReady = app.refreshIdentity()
+        await app.identityReady
       }
       return true
     } catch (err) {

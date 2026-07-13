@@ -16,9 +16,10 @@ function loadApp() {
 }
 
 describe('app launch identity loading', () => {
-  test('onLaunch initializes cloud without eagerly fetching member identity', () => {
+  test('onLaunch initializes cloud and exposes the startup identity promise', () => {
     const app = loadApp()
-    const { callFunction } = require('../utils/cloud')
+    const identityReady = Promise.resolve({ _id: 'm1' })
+    app.refreshIdentity = jest.fn().mockReturnValue(identityReady)
 
     app.onLaunch()
 
@@ -26,9 +27,8 @@ describe('app launch identity loading', () => {
       env: 'cloud1-0gthnke69a09f52a',
       traceUser: true
     })
-    expect(callFunction).not.toHaveBeenCalled()
-    expect(app.globalData.currentMember).toBeNull()
-    expect(app.globalData.isAdmin).toBe(false)
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
+    expect(app.identityReady).toBe(identityReady)
   })
 
   test('refreshIdentity fetches member identity on demand', async () => {
@@ -47,6 +47,20 @@ describe('app launch identity loading', () => {
       data: { action: 'get' }
     })
     expect(app.globalData.currentMember).toMatchObject({ _id: 'm1' })
+    expect(app.globalData.isAdmin).toBe(true)
+  })
+
+  test('refreshIdentity accepts the legacy isAdmin member field', async () => {
+    const app = loadApp()
+    const { callFunction } = require('../utils/cloud')
+    callFunction.mockResolvedValueOnce({
+      result: {
+        data: [{ _id: 'm1', name: '张三', isAdmin: true }]
+      }
+    })
+
+    await app.refreshIdentity()
+
     expect(app.globalData.isAdmin).toBe(true)
   })
 })
