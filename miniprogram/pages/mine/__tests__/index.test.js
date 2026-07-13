@@ -164,6 +164,38 @@ describe('mine onLogin', () => {
     expect(ctx.loadUserPoints).toHaveBeenCalledWith('member-1')
   })
 
+  test('checkLogin preserves a strict legacy isAdmin member in page and global state', async () => {
+    const user = {
+      _id: 'legacy-admin',
+      name: '旧管理员',
+      isAdmin: true
+    }
+    const { pageDef, app } = loadPage(jest.fn())
+    app.globalData.currentMember = user
+    app.globalData.isAdmin = true
+    const ctx = makeCtx(pageDef)
+    ctx.loadUserPoints = jest.fn()
+
+    await ctx.checkLogin()
+
+    expect(ctx.data.isAdmin).toBe(true)
+    expect(app.globalData.isAdmin).toBe(true)
+  })
+
+  test.each([
+    ['canonical boolean admin', { admin: true }, true],
+    ['string admin', { admin: 'true' }, false],
+    ['numeric legacy isAdmin', { isAdmin: 1 }, false]
+  ])('applyMember handles %s without truthy privilege escalation', (_case, flags, expected) => {
+    const { pageDef, app } = loadPage(jest.fn())
+    const ctx = makeCtx(pageDef)
+
+    ctx.applyMember({ _id: 'member-1', name: '张三', ...flags })
+
+    expect(ctx.data.isAdmin).toBe(expected)
+    expect(app.globalData.isAdmin).toBe(expected)
+  })
+
   test('checkLogin silently restores an existing member after app restart', async () => {
     const restored = {
       _id: 'member-restored',
