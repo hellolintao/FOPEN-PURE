@@ -50,11 +50,24 @@ function isFunctionProperty(node) {
   )
 }
 
+function staticStringValue(node) {
+  if (node.type === 'StringLiteral') return node.value
+  if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+    return node.quasis.map(quasi => quasi.value.cooked).join('')
+  }
+  if (node.type === 'BinaryExpression' && node.operator === '+') {
+    const left = staticStringValue(node.left)
+    const right = staticStringValue(node.right)
+    return left === null || right === null ? null : left + right
+  }
+  return null
+}
+
 function isRefreshIdentityCall(node) {
   if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return false
   const callee = node.callee
   if (!callee || (callee.type !== 'MemberExpression' && callee.type !== 'OptionalMemberExpression')) return false
-  if (callee.computed) return callee.property.type === 'StringLiteral' && callee.property.value === 'refreshIdentity'
+  if (callee.computed) return staticStringValue(callee.property) === 'refreshIdentity'
   return callee.property.type === 'Identifier' && callee.property.name === 'refreshIdentity'
 }
 
@@ -219,8 +232,9 @@ function scanIdentityRestores(relative, body, lines) {
       return
     }
 
-    if (!relative.startsWith('miniprogram/pages/')) return
-    const isAllowedPageMethod = owner && owner.registration === 'Page' &&
+    if (!relative.startsWith('miniprogram/')) return
+    const isAllowedPageMethod = relative.startsWith('miniprogram/pages/') &&
+      owner && owner.registration === 'Page' &&
       ALLOWED_PAGE_IDENTITY_METHODS[relative] === owner.methodName
     if (!isAllowedPageMethod) {
       addFinding(findings, relative, index + 1, 'page-eager-member-identity', text)

@@ -404,4 +404,43 @@ App({
       expect.objectContaining({ rule })
     ])
   })
+
+  test('rejects identity restore from a non-page miniprogram JavaScript module', () => {
+    const source = 'module.exports = () => getApp().refreshIdentity()'
+
+    expect(identityFindings('miniprogram/utils/eager.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'template literal',
+      `Page({
+  onShow() {
+    app[\`refreshIdentity\`]()
+  }
+})`
+    ],
+    [
+      'static string concatenation',
+      `Page({
+  onShow() {
+    app['refresh' + 'Identity']()
+  }
+})`
+    ],
+    [
+      'optional computed call',
+      `Page({
+  onShow() {
+    app?.[\`refreshIdentity\`]?.()
+  }
+})`
+    ]
+  ])('rejects a computed refreshIdentity %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
 })
