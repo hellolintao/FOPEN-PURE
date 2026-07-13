@@ -351,6 +351,28 @@ describe('members cloud function', () => {
     expect(mockCollection.where).not.toHaveBeenCalled();
   });
 
+  test('action=get resolves a legacy openId member row', async () => {
+    const legacyMember = { _id: 'legacy-member', openId: mockState.openid, name: '旧会员' };
+    mockState.whereGetData = (filter) => {
+      if (filter && Array.isArray(filter.$or)) return [legacyMember];
+      return [];
+    };
+
+    const result = await main({ action: 'get' }, {});
+
+    expect(mockDb.command.or).toHaveBeenCalledWith([
+      { openid: mockState.openid },
+      { openId: mockState.openid }
+    ]);
+    expect(mockCollection.where).toHaveBeenCalledWith({
+      $or: [
+        { openid: mockState.openid },
+        { openId: mockState.openid }
+      ]
+    });
+    expect(result).toEqual({ data: [legacyMember] });
+  });
+
   test('action=add creates new claimed member when matching unclaimed name already has openid', async () => {
     const unavailable = {
       _id: 'member-already-linked',

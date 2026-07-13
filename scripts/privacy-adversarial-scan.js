@@ -29,15 +29,27 @@ function addFinding(findings, file, line, rule, text) {
   findings.push({ file: rel(file), line, rule, text: text.trim() })
 }
 
+function enclosingMethodName(lines, index) {
+  const controlStatements = new Set(['if', 'for', 'while', 'switch', 'catch', 'with'])
+  for (let i = index; i >= 0; i -= 1) {
+    const match = lines[i].match(/^\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{\s*$/)
+    if (match && !controlStatements.has(match[1])) return match[1]
+  }
+  return ''
+}
+
 function isAllowedSilentIdentityRestore(relative, lines, index) {
-  const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
-  return (
-    relative === 'miniprogram/pages/home/index.js' &&
-    /async\s+ensureIdentity\s*\(/.test(nearby)
-  ) || (
-    relative === 'miniprogram/pages/mine/index.js' &&
-    /async\s+restoreIdentity\s*\(/.test(nearby)
-  )
+  const allowedMethods = {
+    'miniprogram/pages/home/index.js': 'ensureIdentity',
+    'miniprogram/pages/mine/index.js': 'restoreIdentity',
+    'miniprogram/pages/rank/index.js': '_ensureCurrentMember',
+    'miniprogram/pages/tournament-detail/index.js': 'ensureIdentity'
+  }
+  return allowedMethods[relative] === enclosingMethodName(lines, index)
+}
+
+function isAllowedLaunchIdentityRestore(relative, lines, index) {
+  return relative === 'miniprogram/app.js' && enclosingMethodName(lines, index) === 'onLaunch'
 }
 
 function scanFile(file, findings) {
@@ -60,7 +72,11 @@ function scanFile(file, findings) {
       addFinding(findings, file, line, 'frontend-internal-identifier', text)
     }
 
-    if (relative === 'miniprogram/app.js' && /identityReady\s*=\s*this\.refreshIdentity\s*\(/.test(text)) {
+    if (
+      relative === 'miniprogram/app.js' &&
+      /identityReady\s*=\s*this\.refreshIdentity\s*\(/.test(text) &&
+      !isAllowedLaunchIdentityRestore(relative, lines, index)
+    ) {
       addFinding(findings, file, line, 'launch-eager-member-identity', text)
     }
 

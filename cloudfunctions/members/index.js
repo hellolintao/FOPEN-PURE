@@ -500,7 +500,10 @@ exports.main = async (event, context) => {
       if (!openid) {
         return { data: [] }
       }
-      const result = await collection.where({ openid }).get()
+      const result = await collection.where(_.or([
+        { openid },
+        { openId: openid }
+      ])).get()
       return {
         ...result,
         data: (result.data || []).map(stripLegacyPhoneField)
