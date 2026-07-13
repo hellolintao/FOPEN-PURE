@@ -259,6 +259,85 @@ describe('tournament-detail score permissions', () => {
     expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
   })
 
+  test('retries identity after a transient failure and then recognizes the participant', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn()
+        .mockRejectedValueOnce(new Error('identity unavailable'))
+        .mockImplementationOnce(async () => {
+          app.globalData.currentMember = { _id: 'm1', name: 'Alice' }
+          return app.globalData.currentMember
+        })
+    }
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: 'FU Open',
+        type: 'singles',
+        format: 'regular',
+        scheduleStatus: 'published'
+      },
+      registrations: [{ _id: 'r1', playerId: 'm1', playerName: 'Alice', status: 'registered' }],
+      app
+    })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1', entry: 'register' })
+
+    await expect(ctx.ensureIdentity()).resolves.toBe(false)
+    await ctx.refresh()
+
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(2)
+    expect(ctx.data.isParticipant).toBe(true)
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['share', 'enterScore'])
+  })
+
+  test('concurrent identity checks reuse a successful empty-member lookup and stay guest-only', async () => {
+    const app = {
+      globalData: { currentMember: null, isAdmin: false },
+      refreshIdentity: jest.fn().mockResolvedValue(null)
+    }
+    const { pageDef } = loadPage({ app })
+    const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+    await Promise.all([ctx.ensureIdentity(), ctx.ensureIdentity()])
+
+    expect(app.refreshIdentity).toHaveBeenCalledTimes(1)
+    expect(app.globalData.currentMember).toBeNull()
+    expect(app.globalData.isAdmin).toBe(false)
+    expect(app.identityReady).toEqual(expect.objectContaining({ then: expect.any(Function) }))
+  })
+
+  test('coalesces concurrent onLoad and onShow refreshes, then permits a later manual refresh', async () => {
+    const { pageDef } = loadPage({
+      tournament: {
+        _id: 't1',
+        name: 'FU Open',
+        type: 'singles',
+        format: 'regular',
+        scheduleStatus: 'published'
+      },
+      app: { globalData: { currentMember: { _id: 'm1' }, isAdmin: false } }
+    })
+    const ctx = makeCtx(pageDef)
+    const requestNames = [
+      'tournaments',
+      'tournament-registrations',
+      'tournament-brackets',
+      'free-plays',
+      'match-results'
+    ]
+    const requestCount = name => wx.cloud.callFunction.mock.calls.filter(([request]) => request.name === name).length
+
+    ctx.onLoad({ id: 't1' })
+    ctx.onShow()
+    await new Promise(resolve => setImmediate(resolve))
+
+    requestNames.forEach(name => expect(requestCount(name)).toBe(1))
+
+    await ctx.refresh()
+
+    requestNames.forEach(name => expect(requestCount(name)).toBe(2))
+  })
+
   test('group knockout draft shows edit and arrange bracket footer actions', async () => {
     const ctx = await loadDetail({
       tournament: { _id: 't1', format: 'group_knockout', type: 'singles', bracketSize: 16, groupKnockoutPhase: 'group_draft', status: 'upcoming', scheduleStatus: 'none' },

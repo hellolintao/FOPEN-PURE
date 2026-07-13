@@ -68,19 +68,28 @@ Page({
   },
 
   async refresh() {
-    await this.ensureIdentity()
-    await Promise.all([
-      this.loadTournamentDetail(),
-      this.loadRegistrations(),
-      this.loadBrackets(),
-      this.loadFreePlays(),
-      this.loadResultSummary()
-    ])
-    this.syncTournamentDisplayState()
-    this.syncResultDisplayState()
-    this._rebuildScheduleView()
-    this.syncDetailPhaseState()
-    this.scrollToRegistrationSectionIfNeeded()
+    if (this._refreshPromise) return this._refreshPromise
+    const refreshPromise = (async () => {
+      await this.ensureIdentity()
+      await Promise.all([
+        this.loadTournamentDetail(),
+        this.loadRegistrations(),
+        this.loadBrackets(),
+        this.loadFreePlays(),
+        this.loadResultSummary()
+      ])
+      this.syncTournamentDisplayState()
+      this.syncResultDisplayState()
+      this._rebuildScheduleView()
+      this.syncDetailPhaseState()
+      this.scrollToRegistrationSectionIfNeeded()
+    })()
+    this._refreshPromise = refreshPromise
+    try {
+      return await refreshPromise
+    } finally {
+      if (this._refreshPromise === refreshPromise) this._refreshPromise = null
+    }
   },
 
   ensureOfficialPrivacyAuthorization(rejectTitle) {
@@ -128,6 +137,7 @@ Page({
       }
       return true
     } catch (err) {
+      app.identityReady = null
       console.warn('[tournament-detail] refresh identity failed', err)
       return false
     }
