@@ -13,9 +13,20 @@ const { buildGroupKnockoutPointEntries } = require('./lib/group-knockout')
 const { buildSettlementImpact } = require('./lib/settlement-impact')
 const { toRankingIdentity } = require('../_shared/public-profile')
 
+const WRITE_ACTIONS = new Set([
+  'recompute',
+  'recalculateMatch',
+  'refreshRankCache',
+  'rebuildRankSnapshots'
+])
+
 exports.main = async (event = {}) => {
   const action = event.action || 'refreshRankCache'
   try {
+    if (WRITE_ACTIONS.has(action)) {
+      const accessGate = await guardWriteActionAccess(action)
+      if (accessGate) return accessGate
+    }
     if (action === 'rankAggregate')    return await rankAggregate(event)
     if (action === 'recompute')        return await recompute(event)
     if (action === 'refreshRankCache') return await refreshRankCache(event)
@@ -47,6 +58,8 @@ async function recompute({ tournamentId }) {
   const tRes = await db.collection('tournaments').doc(tournamentId).get()
   const t = tRes.data
   if (!t) return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+  const tournamentGate = guardTournamentPointsWrite(t)
+  if (tournamentGate) return tournamentGate
   if (t.format === 'group_knockout') return await recomputeGroupKnockout({ tournamentId, tournament: t })
   const rows = (await db.collection('match_results').where({ tournamentId, resultStatus: 'confirmed' }).limit(500).get()).data
   let count = 0
@@ -197,10 +210,17 @@ async function rankListCompat({ type = 'singles', currentSeasonId }) {
   const cached = await fetchRankCache({ seasonId: currentSeasonId, type })
   if (cached && cached.rankList.length > 0 && await isRankCacheCurrent({ cached, seasonId: currentSeasonId, type })) {
     const hasHistory = await hasAnyRankSnapshot({ seasonId: currentSeasonId, type })
+    const repairedRankList = hasHistory
+      ? null
+      : await repairCachedNoHistoryTrends({
+        seasonId: currentSeasonId,
+        type,
+        rankList: cached.rankList || []
+      })
     return {
       success: true,
       data: {
-        rankList: await refreshRankMemberProfiles(cached.rankList || [], { hasHistory }),
+        rankList: await refreshRankMemberProfiles(repairedRankList || cached.rankList || [], { hasHistory: hasHistory || !!repairedRankList }),
         cachedAt: cached.computedAt || null,
         cacheDate: cached.cacheDate || null
       }
@@ -213,8 +233,8 @@ async function rankListCompat({ type = 'singles', currentSeasonId }) {
   return { success: true, data: { rankList } }
 }
 
-async function buildRankList({ seasonId, type = 'singles' }) {
-  const list = await aggregateRanks({ db, seasonId, type, pageSize: 100 })
+async function buildRankList({ seasonId, type = 'singles', asOf = null }) {
+  const list = await aggregateRanks({ db, seasonId, type, pageSize: 100, asOf })
   const joined = await joinMembers(list)
   const withWinRate = joined.map(row => {
     const matches = (row.winCount || 0) + (row.lossCount || 0)
@@ -263,7 +283,10 @@ async function refreshRankCache({ seasonId, now, affectedMemberIds = [], writeSn
   for (const type of ['singles', 'doubles']) {
     const previousCache = await fetchRankCache({ seasonId: resolvedSeasonId, type })
     const beforeRankRows = withRankNumbers((previousCache && previousCache.rankList) || [])
-    const rankList = withRankNumbers(await buildRankList({ seasonId: resolvedSeasonId, type }))
+    const rankList = applySettlementTrendBaseline(
+      withRankNumbers(await buildRankList({ seasonId: resolvedSeasonId, type })),
+      (writeSnapshot || affectedMemberIds.length > 0) ? beforeRankRows : []
+    )
     settlementImpact.push(...buildSettlementImpact({
       type,
       beforeRankRows,
@@ -324,6 +347,14 @@ async function fetchLatestRankInputAt({ seasonId, type }) {
     fetchLatestCollectionTimestamp('baseline_standings', { seasonId, type }, ['updateTime', 'createTime'])
   ])
   return Math.max(latestMatchAt, latestPlacementAt, latestBaselineAt, 0)
+}
+
+async function fetchLatestRankMovementEffectiveAt({ seasonId, type }) {
+  const [latestMatchAt, latestPlacementAt] = await Promise.all([
+    fetchLatestCollectionTimestamp('match_results', { seasonId, resultStatus: 'confirmed', tournamentType: type }, ['confirmedAt', 'createTime']),
+    fetchLatestCollectionTimestamp('tournament_points', { seasonId, tournamentType: type }, ['awardedAt', 'createTime'])
+  ])
+  return Math.max(latestMatchAt, latestPlacementAt, 0)
 }
 
 async function fetchLatestCollectionTimestamp(collectionName, filter, fields) {
@@ -407,8 +438,53 @@ function rankCacheId(seasonId, type) {
   return `rank_cache_${seasonId}_${type}`
 }
 
+async function repairCachedNoHistoryTrends({ seasonId, type, rankList }) {
+  if (!needsNoHistoryTrendRepair(rankList)) return null
+  const latestInputAt = await fetchLatestRankMovementEffectiveAt({ seasonId, type })
+  if (!Number.isFinite(latestInputAt) || latestInputAt <= 0) return null
+  const beforeRankRows = withRankNumbers(await buildRankList({
+    seasonId,
+    type,
+    asOf: new Date(latestInputAt - 1)
+  }))
+  if (beforeRankRows.length === 0) return null
+  return applySettlementTrendBaseline(withRankNumbers(rankList), beforeRankRows)
+}
+
+function needsNoHistoryTrendRepair(rankList) {
+  return Array.isArray(rankList) && rankList.some(row => {
+    if (!row) return false
+    const state = row.trendState || ''
+    const label = row.trendLabel || ''
+    return (row.trendDelta === null || row.trendDelta === undefined) &&
+      (state === 'no_history' || label === '-' || (!state && !label))
+  })
+}
+
 function withRankNumbers(rankList) {
   return (rankList || []).map((row, index) => ({ ...row, rank: Number(row.rank) || index + 1 }))
+}
+
+function applySettlementTrendBaseline(rankList, beforeRankRows) {
+  if (!Array.isArray(beforeRankRows) || beforeRankRows.length === 0) return rankList
+  const beforeRankByMemberId = new Map()
+  beforeRankRows.forEach((row, index) => {
+    const memberId = row && (row._id || row.memberId)
+    if (!memberId) return
+    beforeRankByMemberId.set(memberId, Number(row.rank) || index + 1)
+  })
+  if (beforeRankByMemberId.size === 0) return rankList
+
+  return (rankList || []).map((row, index) => {
+    const memberId = row && (row._id || row.memberId)
+    const currentRank = Number(row && row.rank) || index + 1
+    const hasPreviousRank = beforeRankByMemberId.has(memberId)
+    const previousRank = beforeRankByMemberId.get(memberId)
+    return {
+      ...row,
+      ...trendMetaFromDelta(hasPreviousRank ? previousRank - currentRank : null, true)
+    }
+  })
 }
 
 function toBeijingDateKey(date) {
@@ -663,6 +739,8 @@ async function recalculateMatchCompat({ matchId }) {
   const tRes = await db.collection('tournaments').doc(row.tournamentId).get()
   const t = tRes.data
   if (!t) return { success: false, error: { code: 'NOT_FOUND', message: row.tournamentId } }
+  const tournamentGate = guardTournamentPointsWrite(t)
+  if (tournamentGate) return tournamentGate
   const rule = (t.pointsRules && t.pointsRules.winLoss) || { win: 20, loss: 10, walkover: 0 }
   const entries = award.buildAwardEntries(row, rule, t.type)
   const pointsAwarded = { source: 'match', entries }
@@ -671,6 +749,42 @@ async function recalculateMatchCompat({ matchId }) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
+
+async function guardWriteActionAccess(action) {
+  if (action === 'refreshRankCache' && process.env.TRIGGER_SRC === 'timer') return null
+  const wxContext = cloud.getWXContext()
+  // wx-server-sdk appends an exact "scf" source token for cloud-to-cloud calls.
+  const sources = String((wxContext && wxContext.SOURCE) || '')
+    .split(',')
+    .map(source => source.trim())
+    .filter(Boolean)
+  if (sources.includes('scf')) return null
+
+  const openid = wxContext && wxContext.OPENID
+  if (!openid) return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+  const member = await resolveMemberByOpenid(openid)
+  if (!member || (member.admin !== true && member.isAdmin !== true)) {
+    return { success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } }
+  }
+  return null
+}
+
+async function resolveMemberByOpenid(openid) {
+  const byOpenid = await db.collection('members').where({ openid }).limit(1).get().catch(() => ({ data: [] }))
+  if (byOpenid.data && byOpenid.data[0]) return byOpenid.data[0]
+  const byLegacyOpenId = await db.collection('members').where({ openId: openid }).limit(1).get().catch(() => ({ data: [] }))
+  return (byLegacyOpenId.data && byLegacyOpenId.data[0]) || null
+}
+
+function guardTournamentPointsWrite(tournament) {
+  if (tournament && tournament.status === 'draft') {
+    return { success: false, error: { code: 'TOURNAMENT_DRAFT', message: '草稿赛事不可重算积分' } }
+  }
+  if (tournament && tournament.status === 'cancelled') {
+    return { success: false, error: { code: 'TOURNAMENT_CANCELLED', message: '赛事已取消，仅可查看历史' } }
+  }
+  return null
+}
 
 async function replacePointsAwarded(resultId, pointsAwarded) {
   if (_ && typeof _.remove === 'function') {

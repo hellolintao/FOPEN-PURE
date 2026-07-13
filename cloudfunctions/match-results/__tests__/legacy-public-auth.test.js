@@ -141,6 +141,8 @@ describe('legacy match-results public identity and auth', () => {
   beforeEach(() => resetState())
 
   test.each([
+    ['get', () => ({ action: 'get', id: 'r1' }), res => res.data],
+    ['getById', () => ({ action: 'getById', id: 'r1' }), res => res.data],
     ['list', () => ({ action: 'list', data: { tournamentId: 't1' } }), res => res.data[0]],
     ['getByTournament', () => ({ action: 'getByTournament', data: { tournamentId: 't1' } }), res => res.data[0]],
     ['getByPlayer', () => ({ action: 'getByPlayer', data: { playerId: 'private' } }), res => res.data[0]],
@@ -181,6 +183,7 @@ describe('legacy match-results public identity and auth', () => {
     for (const identity of [row.player1, row.player2, row.winner, ...row.players]) {
       expect(identity).not.toHaveProperty('openid')
       expect(identity).not.toHaveProperty('openId')
+      expect(identity).not.toHaveProperty('unionid')
       expect(identity).not.toHaveProperty('phone')
       expect(identity).not.toHaveProperty('admin')
       expect(identity).not.toHaveProperty('publicProfileConsent')
@@ -188,14 +191,19 @@ describe('legacy match-results public identity and auth', () => {
     }
   })
 
-  test('admin legacy reads keep raw score-row identities', async () => {
+  test.each([
+    ['get', { action: 'get', id: 'r1' }, res => res.data],
+    ['getById', { action: 'getById', id: 'r1' }, res => res.data],
+    ['getByTournament', { action: 'getByTournament', data: { tournamentId: 't1' } }, res => res.data[0]],
+  ])('admin legacy %s keeps raw score-row identities', async (_action, event, pickRow) => {
     resetState({ isAdmin: true })
 
-    const res = await main({ action: 'getByTournament', data: { tournamentId: 't1' } })
+    const res = await main(event)
 
-    expect(res.data[0].player1).toMatchObject({
+    expect(pickRow(res).player1).toMatchObject({
       name: 'Raw Private Name',
       openid: 'private-openid',
+      unionid: 'private-unionid',
       publicProfileConsent: false,
     })
   })
@@ -232,6 +240,7 @@ function publicFacingRow() {
       name: 'Raw Private Name',
       avatarUrl: '/raw-private.png',
       openid: 'private-openid',
+      unionid: 'private-unionid',
       phone: '13800000000',
       publicProfileConsent: false,
     },

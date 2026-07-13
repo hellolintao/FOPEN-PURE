@@ -54,59 +54,49 @@
       </view>
     </view>
 
-    <!-- GROUP KNOCKOUT BRACKET -->
-    <view wx:if="{{tournament.format === 'group_knockout'}}" class="td-section anim-stage-rise anim-delay-2">
+    <!-- RESULTS -->
+    <view wx:if="{{showResultsSection && resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-2">
       <view class="td-section-head">
-        <text class="tape">签表 · BRACKET</text>
-        <text class="td-section-count">{{tournamentDisplay.groupKnockoutProgressText}}</text>
+        <text class="tape">赛果 · RESULTS</text>
+        <text class="td-section-count num">{{resultDisplay.completedText}}</text>
       </view>
-      <view class="gk-summary">
-        <view class="gk-summary-row">
-          <text class="gk-summary-title">分组签表</text>
-          <text class="gk-summary-status">{{tournamentDisplay.groupDrawStatusText}}</text>
+      <view wx:if="{{resultDisplay.standings.length > 0}}" class="result-standings">
+        <view class="result-standing-head">
+          <text class="result-standing-member">会员</text>
+          <text class="result-standing-record">胜负</text>
+          <text class="result-standing-points">单打</text>
+          <text class="result-standing-points">双打</text>
         </view>
-        <view class="gk-summary-row">
-          <text class="gk-summary-title">小组赛签表</text>
-          <text class="gk-summary-status">{{tournamentDisplay.groupStageStatusText}}</text>
-        </view>
-        <view class="gk-summary-row">
-          <text class="gk-summary-title">淘汰赛签表</text>
-          <text class="gk-summary-status">{{tournamentDisplay.knockoutStatusText}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- REGISTRATIONS -->
-    <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-3">
-      <view class="td-section-head">
-        <text class="tape">参赛人员 · ROSTER</text>
-        <text class="td-section-count num">{{activeRegistrationCount}}</text>
-      </view>
-      <view wx:if="{{activeRegistrationCount === 0}}" class="td-empty">
-        <text>暂无报名</text>
-      </view>
-      <view wx:else class="roster-grid">
-        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
-          <view class="roster-seed">
-            <text class="num">{{item.seed}}</text>
+        <view class="result-standing-row" wx:for="{{resultDisplay.standings}}" wx:key="standingKey">
+          <view class="result-standing-member">
+            <text class="result-rank num">{{item.rank}}</text>
+            <image wx:if="{{item.avatarUrl}}" class="result-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="result-avatar result-avatar-fallback">
+              <text class="result-avatar-initial">{{item.playerInitial}}</text>
+            </view>
+            <text class="result-member-name">{{item.memberName}}</text>
           </view>
-          <view class="roster-avatar-wrap">
-            <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view wx:else class="roster-avatar roster-avatar-fallback">
-              <text class="roster-avatar-initial">{{item.playerInitial}}</text>
+          <text class="result-standing-record num">{{item.recordText}}</text>
+          <text class="result-standing-points num">{{item.singlesPointsText}}</text>
+          <text class="result-standing-points num">{{item.doublesPointsText}}</text>
+        </view>
+      </view>
+      <view class="result-groups">
+        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="key">
+          <text class="result-group-label">{{group.label}}</text>
+          <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
+            <view class="result-match-main">
+              <text class="result-side">{{match.p1Label}}</text>
+              <text class="result-score num">{{match.scoreText || '—'}}</text>
+              <text class="result-side result-side-right">{{match.p2Label}}</text>
             </view>
           </view>
-          <text class="roster-name singles">{{item.playerName}}</text>
         </view>
-      </view>
-      <view wx:if="{{showRegistrationModule && phase === 'pending_schedule'}}" class="next-stage-copy">
-        <text>报名已截止，管理员正在安排对局。</text>
-        <text wx:if="{{withdrawDeadlineLabel}}">可退赛至 {{withdrawDeadlineLabel}}</text>
       </view>
     </view>
 
     <!-- SCHEDULE -->
-    <view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-4">
+    <view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-3">
       <view class="td-section-head">
         <text class="tape">赛程 · SCHEDULE</text>
       </view>
@@ -165,8 +155,59 @@
       </scroll-view>
     </view>
 
+    <!-- GROUP KNOCKOUT BRACKET -->
+    <view wx:if="{{tournament.format === 'group_knockout'}}" class="td-section anim-stage-rise anim-delay-4">
+      <view class="td-section-head">
+        <text class="tape">签表 · BRACKET</text>
+        <text class="td-section-count">{{tournamentDisplay.groupKnockoutProgressText}}</text>
+      </view>
+      <view class="gk-summary">
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">分组签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.groupDrawStatusText}}</text>
+        </view>
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">小组赛签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.groupStageStatusText}}</text>
+        </view>
+        <view class="gk-summary-row">
+          <text class="gk-summary-title">淘汰赛签表</text>
+          <text class="gk-summary-status">{{tournamentDisplay.knockoutStatusText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- REGISTRATIONS -->
+    <view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-5">
+      <view class="td-section-head">
+        <text class="tape">参赛人员 · ROSTER</text>
+        <text class="td-section-count num">{{activeRegistrationCount}}</text>
+      </view>
+      <view wx:if="{{activeRegistrationCount === 0}}" class="td-empty">
+        <text>暂无报名</text>
+      </view>
+      <view wx:else class="roster-grid">
+        <view class="roster-card {{item.displayStatus}}" wx:for="{{registrations}}" wx:key="_id">
+          <view class="roster-seed">
+            <text class="num">{{item.seed}}</text>
+          </view>
+          <view class="roster-avatar-wrap">
+            <image wx:if="{{item.avatarUrl}}" class="roster-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="roster-avatar roster-avatar-fallback">
+              <text class="roster-avatar-initial">{{item.playerInitial}}</text>
+            </view>
+          </view>
+          <text class="roster-name singles">{{item.playerName}}</text>
+        </view>
+      </view>
+      <view wx:if="{{showRegistrationModule && phase === 'pending_schedule'}}" class="next-stage-copy">
+        <text>报名已截止，管理员正在安排对局。</text>
+        <text wx:if="{{withdrawDeadlineLabel}}">可退赛至 {{withdrawDeadlineLabel}}</text>
+      </view>
+    </view>
+
     <!-- POINTS RULES -->
-    <view class="td-section anim-stage-rise anim-delay-5">
+    <view class="td-section anim-stage-rise anim-delay-6">
       <view class="td-section-head">
         <text class="tape">积分规则 · POINTS</text>
       </view>
@@ -199,47 +240,6 @@
           <text class="placement-label">{{item.label}}</text>
           <text class="placement-divider"></text>
           <text class="placement-num num">{{item.value}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- RESULTS -->
-    <view wx:if="{{showResultsSection && resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-6">
-      <view class="td-section-head">
-        <text class="tape">赛果 · RESULTS</text>
-        <text class="td-section-count num">{{resultDisplay.completedText}}</text>
-      </view>
-      <view wx:if="{{resultDisplay.standings.length > 0}}" class="result-standings">
-        <view class="result-standing-head">
-          <text class="result-standing-member">会员</text>
-          <text class="result-standing-record">胜负</text>
-          <text class="result-standing-points">单打</text>
-          <text class="result-standing-points">双打</text>
-        </view>
-        <view class="result-standing-row" wx:for="{{resultDisplay.standings}}" wx:key="standingKey">
-          <view class="result-standing-member">
-            <text class="result-rank num">{{item.rank}}</text>
-            <image wx:if="{{item.avatarUrl}}" class="result-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view wx:else class="result-avatar result-avatar-fallback">
-              <text class="result-avatar-initial">{{item.playerInitial}}</text>
-            </view>
-            <text class="result-member-name">{{item.memberName}}</text>
-          </view>
-          <text class="result-standing-record num">{{item.recordText}}</text>
-          <text class="result-standing-points num">{{item.singlesPointsText}}</text>
-          <text class="result-standing-points num">{{item.doublesPointsText}}</text>
-        </view>
-      </view>
-      <view class="result-groups">
-        <view class="result-group" wx:for="{{resultDisplay.groups}}" wx:for-item="group" wx:key="key">
-          <text class="result-group-label">{{group.label}}</text>
-          <view class="result-match" wx:for="{{group.matches}}" wx:for-item="match" wx:key="matchId">
-            <view class="result-match-main">
-              <text class="result-side">{{match.p1Label}}</text>
-              <text class="result-score num">{{match.scoreText || '—'}}</text>
-              <text class="result-side result-side-right">{{match.p2Label}}</text>
-            </view>
-          </view>
         </view>
       </view>
     </view>

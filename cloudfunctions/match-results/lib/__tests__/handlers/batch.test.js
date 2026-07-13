@@ -433,6 +433,34 @@ test('batchSubmit rejects group knockout draft tournament when scheduleStatus is
   expect(ctx._state.matchesById.mr_group_draft.resultStatus).toBe('pending')
 })
 
+test('batchSubmit rejects cancelled group knockout even when its phase is published', async () => {
+  const ctx = makeSubmitCtx({
+    tournaments: {
+      t1: {
+        _id: 't1',
+        format: 'group_knockout',
+        status: 'cancelled',
+        groupKnockoutPhase: 'group_published',
+        scheduleStatus: 'none'
+      }
+    },
+    matches: [{ _id: 'mr_cancelled', tournamentId: 't1', resultStatus: 'pending', playerIds: ['mA', 'mB'] }]
+  })
+
+  const result = await batchSubmit(ctx, {
+    submissions: [{ matchId: 'mr_cancelled', score: { sets: [{ a: 4, b: 2 }], tiebreak: null } }],
+    requestId: 'req_submit_cancelled'
+  })
+
+  expect(result.successIds).toEqual([])
+  expect(result.failures[0]).toMatchObject({
+    matchId: 'mr_cancelled',
+    code: 'SCHEDULE_NOT_PUBLISHED'
+  })
+  expect(ctx._state.matchesById.mr_cancelled.resultStatus).toBe('pending')
+  expect(ctx._state.matchesById.mr_cancelled.score).toBeUndefined()
+})
+
 test('batchAdminSave confirms pending matches with supplied scores', async () => {
   const ctx = makeCtx({
     matches: [
@@ -716,6 +744,43 @@ test('applyScheduleImpact archives affected confirmed rows, resets canonical row
     tournamentId: 't1',
     patch: expect.objectContaining({ status: 'ongoing', completedAt: null }),
   }])
+})
+
+test('applyScheduleImpact rejects a cancelled group knockout before changing results', async () => {
+  const ctx = makeCtx({
+    tournaments: {
+      t1: {
+        _id: 't1',
+        format: 'group_knockout',
+        status: 'cancelled',
+        groupKnockoutPhase: 'group_published'
+      }
+    },
+    matches: [{
+      _id: 'r1',
+      tournamentId: 't1',
+      resultStatus: 'confirmed',
+      player1: { id: 'a' },
+      player2: { id: 'b' },
+      score: { sets: [{ a: 4, b: 2 }] },
+      courtId: 'c1',
+      queueOrder: 0
+    }]
+  })
+
+  await expect(applyScheduleImpact(ctx, {
+    tournamentId: 't1',
+    mode: 'invalidate_scores',
+    matches: [],
+    queues: [],
+    dryRun: false
+  })).rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+
+  expect(ctx._state.matchesById.r1).toMatchObject({
+    resultStatus: 'confirmed',
+    score: { sets: [{ a: 4, b: 2 }] }
+  })
+  expect(ctx._state.historyById).toEqual({})
 })
 
 test('applyScheduleImpact invalidates result-affecting rows while preserving slot-only confirmed scores', async () => {

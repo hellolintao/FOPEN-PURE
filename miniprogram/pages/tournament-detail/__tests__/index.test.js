@@ -2,28 +2,56 @@ const fs = require('fs')
 const path = require('path')
 
 describe('tournament-detail WXML layout', () => {
-  test('orders phase, hero, roster, schedule, points, results, and delete sections in main content', () => {
+  test('orders unique detail sections with their visibility and animation bindings', () => {
     const wxml = fs.readFileSync(path.join(__dirname, '../index.wxml'), 'utf8')
-    const markers = [
-      '<!-- PHASE -->',
-      '<!-- HERO -->',
-      '<!-- REGISTRATIONS -->',
-      '<!-- SCHEDULE -->',
-      '<!-- POINTS RULES -->',
-      '<!-- RESULTS -->',
-      '<!-- DELETE -->'
+    const sections = [
+      {
+        marker: '<!-- PHASE -->',
+        root: '<view class="td-section phase-strip anim-stage-rise">'
+      },
+      {
+        marker: '<!-- HERO -->',
+        root: '<view class="td-hero anim-stage-rise">'
+      },
+      {
+        marker: '<!-- RESULTS -->',
+        root: '<view wx:if="{{showResultsSection && resultDisplay.visible}}" class="td-section result-section anim-stage-rise anim-delay-2">'
+      },
+      {
+        marker: '<!-- SCHEDULE -->',
+        root: '<view wx:if="{{showScheduleSection}}" class="td-section anim-stage-rise anim-delay-3">'
+      },
+      {
+        marker: '<!-- GROUP KNOCKOUT BRACKET -->',
+        root: '<view wx:if="{{tournament.format === \'group_knockout\'}}" class="td-section anim-stage-rise anim-delay-4">'
+      },
+      {
+        marker: '<!-- REGISTRATIONS -->',
+        root: '<view id="registration-section" wx:if="{{showRegistrationModule || activeRegistrationCount > 0 || showScheduleSection || showResultsSection}}" class="td-section anim-stage-rise anim-delay-5">'
+      },
+      {
+        marker: '<!-- POINTS RULES -->',
+        root: '<view class="td-section anim-stage-rise anim-delay-6">'
+      },
+      {
+        marker: '<!-- DELETE -->',
+        root: '<view wx:if="{{isAdmin}}" class="td-danger">'
+      }
     ]
-    const positions = markers.map(marker => wxml.indexOf(marker))
+    const positions = sections.map(({ marker, root }) => {
+      expect(wxml.split(marker)).toHaveLength(2)
+      expect(wxml.split(root)).toHaveLength(2)
 
-    positions.forEach(position => {
-      expect(position).toBeGreaterThan(-1)
+      const markerPosition = wxml.indexOf(marker)
+      const rootPosition = wxml.indexOf(root)
+      expect(rootPosition).toBeGreaterThan(markerPosition)
+      expect(wxml.slice(markerPosition + marker.length, rootPosition).trim()).toBe('')
+      return rootPosition
     })
-    expect(positions[0]).toBeLessThan(positions[1])
-    expect(positions[1]).toBeLessThan(positions[2])
-    expect(positions[2]).toBeLessThan(positions[3])
-    expect(positions[3]).toBeLessThan(positions[4])
-    expect(positions[4]).toBeLessThan(positions[5])
-    expect(positions[5]).toBeLessThan(positions[6])
+
+    positions.slice(1).forEach((position, index) => {
+      expect(positions[index]).toBeLessThan(position)
+    })
   })
 
   test('uses a standings table above stable keyed result match rows', () => {
@@ -120,6 +148,7 @@ function loadPage(options = {}) {
     showLoading: jest.fn(),
     hideLoading: jest.fn(),
     showShareMenu: jest.fn(),
+    hideShareMenu: jest.fn(),
     pageScrollTo: jest.fn(),
     createSelectorQuery: jest.fn(() => ({
       select: jest.fn(() => ({
@@ -254,6 +283,142 @@ describe('tournament-detail score permissions', () => {
       'enterScore',
       'resettleGroupKnockout'
     ]))
+  })
+
+  test('legacy completed group knockout without phase shows settled detail state', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'completed',
+        scheduleStatus: 'none'
+      },
+      matchResults: [{
+        _id: 'r1',
+        tournamentId: 't1',
+        player1: { id: 'A', name: 'A' },
+        player2: { id: 'B', name: 'B' },
+        winner: { id: 'A', name: 'A' },
+        score: { sets: [{ a: 4, b: 2 }] },
+        resultStatus: 'confirmed'
+      }],
+      isAdmin: false
+    })
+
+    expect(ctx.data.phase).toBe('completed')
+    expect(ctx.data.showResultsSection).toBe(true)
+    expect(ctx.data.resultDisplay.visible).toBe(true)
+    expect(ctx.data.tournamentDisplay.groupKnockoutProgressText).toBe('已完成')
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['share', 'viewBracket'])
+  })
+
+  test('draft group knockout ignores a stale published phase', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'draft',
+        scheduleStatus: 'none',
+        groupKnockoutPhase: 'group_published'
+      },
+      isAdmin: true
+    })
+
+    expect(ctx.data.phase).toBe('group_draft')
+    expect(ctx.data.showResultsSection).toBe(false)
+    expect(ctx.data.tournamentDisplay.groupKnockoutProgressText).toBe('待安排签表')
+    expect(ctx.data.shareEnabled).toBe(false)
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['edit', 'arrangeGroupBracket'])
+  })
+
+  test('settled group knockout in knockout phase keeps the resettle recovery action', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'settled',
+        scheduleStatus: 'none',
+        groupKnockoutPhase: 'knockout_published'
+      },
+      isAdmin: true
+    })
+
+    expect(ctx.data.phase).toBe('knockout_published')
+    expect(ctx.data.footerActions.map(action => action.key)).toContain('resettleGroupKnockout')
+  })
+
+  test('invalid phase on a completed group knockout falls back to completed everywhere', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'completed',
+        scheduleStatus: 'none',
+        groupKnockoutPhase: 'unknown_phase'
+      },
+      isAdmin: false
+    })
+
+    expect(ctx.data.phase).toBe('completed')
+    expect(ctx.data.showResultsSection).toBe(true)
+    expect(ctx.data.tournamentDisplay.groupKnockoutProgressText).toBe('已完成')
+  })
+
+  test('cancelled group knockout keeps an explicit completed phase for history', async () => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'cancelled',
+        scheduleStatus: 'none',
+        groupKnockoutPhase: 'completed'
+      },
+      isAdmin: true
+    })
+
+    expect(ctx.data.tournamentDisplay.statusLabel).toBe('已取消')
+    expect(ctx.data.phase).toBe('completed')
+    expect(ctx.data.showResultsSection).toBe(true)
+    expect(ctx.data.shareEnabled).toBe(false)
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['viewBracket'])
+  })
+
+  test.each([
+    ['missing phase', undefined, 'group_draft'],
+    ['invalid phase', 'unknown_phase', 'group_draft'],
+    ['group draft', 'group_draft', 'group_draft'],
+    ['group stage', 'group_published', 'group_published'],
+    ['group completed', 'group_completed', 'group_completed'],
+    ['knockout stage', 'knockout_published', 'knockout_published']
+  ])('cancelled group knockout with %s is read-only', async (_label, groupKnockoutPhase, expectedPhase) => {
+    const ctx = await loadDetail({
+      tournament: {
+        _id: 't1',
+        format: 'group_knockout',
+        type: 'singles',
+        status: 'cancelled',
+        scheduleStatus: 'none',
+        groupKnockoutPhase
+      },
+      isAdmin: true
+    })
+
+    expect(ctx.data.phase).toBe(expectedPhase)
+    expect(ctx.data.showResultsSection).toBe(false)
+    expect(ctx.data.shareEnabled).toBe(false)
+    expect(ctx.data.footerActions.map(action => action.key)).toEqual(['viewBracket'])
+    expect(ctx.data.canEnterScore).toBe(false)
+    expect(ctx.data.canOpenScore).toBe(false)
+
+    ctx.onEnterScore()
+
+    expect(wx.navigateTo).not.toHaveBeenCalled()
+    expect(wx.showToast).toHaveBeenCalledWith({ title: '赛事已取消，仅可查看历史', icon: 'none' })
   })
 
   test('group knockout knockout phase uses score label even when registration deadline is still open', async () => {
@@ -1540,6 +1705,31 @@ describe('tournament-detail score permissions', () => {
     }
   })
 
+  test('hides the system share menu until the tournament status has loaded', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef)
+    ctx.refresh = jest.fn()
+
+    ctx.onLoad({ id: 't1' })
+
+    expect(wx.hideShareMenu).toHaveBeenCalledWith({
+      menus: ['shareAppMessage', 'shareTimeline']
+    })
+    expect(wx.showShareMenu).not.toHaveBeenCalled()
+  })
+
+  test.each(['draft', 'cancelled'])('share handlers reject a %s tournament even if invoked directly', status => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      shareEnabled: true,
+      tournament: { _id: 't1', name: '不可分享赛事', status }
+    })
+
+    expect(ctx.onShareAppMessage()).toBeUndefined()
+    expect(ctx.onShareTimeline()).toBeUndefined()
+  })
+
   test('shares registration-open detail with registration entry path', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-06-05T15:30:00+08:00'))
     try {
@@ -1615,6 +1805,58 @@ describe('tournament-detail score permissions', () => {
         title: '小组淘汰赛 · 小组赛进行中',
         path: '/pages/tournament-detail/index?id=t1',
         imageUrl: '/images/share-schedule/schedule-share-01.jpg'
+      })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test('shares a group knockout resettlement state with a matching active-phase title and schedule cover', () => {
+    const { pageDef } = loadPage()
+    const ctx = makeCtx(pageDef, {
+      tournamentId: 't1',
+      tournament: {
+        _id: 't1',
+        name: '小组淘汰赛',
+        format: 'group_knockout',
+        type: 'singles',
+        groupKnockoutPhase: 'knockout_published',
+        status: 'completed',
+        scheduleStatus: 'published'
+      }
+    })
+
+    expect(ctx.onShareAppMessage()).toEqual({
+      title: '小组淘汰赛 · 淘汰赛进行中',
+      path: '/pages/tournament-detail/index?id=t1',
+      imageUrl: '/images/share-schedule/schedule-share-01.jpg'
+    })
+  })
+
+  test('shares fully confirmed tournament results with result cover images', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-05T15:30:00+08:00'))
+    try {
+      const { pageDef } = loadPage()
+      const ctx = makeCtx(pageDef, {
+        tournamentId: 't1',
+        tournament: {
+          _id: 't1',
+          name: '七月周末赛',
+          status: 'ongoing',
+          scheduleStatus: 'published'
+        },
+        resultSummary: { playableCount: 2, confirmedCount: 2 }
+      })
+
+      expect(ctx.onShareAppMessage()).toEqual({
+        title: '七月周末赛 · 已结算',
+        path: '/pages/tournament-detail/index?id=t1',
+        imageUrl: '/images/share-results/results-share-01.jpg'
+      })
+      expect(ctx.onShareTimeline()).toEqual({
+        title: '七月周末赛 · 已结算',
+        query: 'id=t1',
+        imageUrl: '/images/share-results/results-share-02.jpg'
       })
     } finally {
       jest.useRealTimers()

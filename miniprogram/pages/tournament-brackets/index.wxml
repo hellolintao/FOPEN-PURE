@@ -39,7 +39,7 @@
       </view>
 
       <view wx:if="{{activeTab === 'group'}}" class="gk-panel">
-        <block wx:if="{{tournament.groupKnockoutPhase === 'group_draft'}}">
+        <block wx:if="{{effectiveGroupKnockoutPhase === 'group_draft' && !groupKnockoutReadOnly}}">
           <view class="gk-group-grid">
             <view
               wx:for="{{arrangeGroups}}"

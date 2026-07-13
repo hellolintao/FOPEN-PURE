@@ -1,3 +1,8 @@
+const {
+  canWriteGroupKnockoutScores,
+  resolveGroupKnockoutPhase
+} = require('../../utils/tournament-status')
+
 Page({
   data: {
     tournamentId: '',
@@ -18,6 +23,8 @@ Page({
     registrationCandidates: [],
     arrangePicker: emptyArrangePicker(),
     showGroupScoreEntry: false,
+    effectiveGroupKnockoutPhase: 'group_draft',
+    groupKnockoutReadOnly: false,
     groupScoreActionLabel: '录入小组赛赛果'
   },
 
@@ -137,6 +144,8 @@ Page({
       decoratedCourts: [],
       scheduleGateBlocked: false,
       scheduleGateMessage: '',
+      effectiveGroupKnockoutPhase: resolveGroupKnockoutPhase(tournament),
+      groupKnockoutReadOnly: tournament.status === 'cancelled',
       showGroupScoreEntry: shouldShowGroupScoreEntry(tournament),
       groupScoreActionLabel: groupScoreActionLabel(tournament)
     })
@@ -148,6 +157,7 @@ Page({
   },
 
   onArrangeGroupTap(e) {
+    if (this._blockGroupKnockoutWrite()) return
     const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
     const groupIndex = Number(dataset.groupIndex)
     const group = this.data.arrangeGroups[groupIndex]
@@ -174,6 +184,7 @@ Page({
   },
 
   onArrangeSlotTap(e) {
+    if (this._blockGroupKnockoutWrite()) return
     const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
     const groupIndex = Number(dataset.groupIndex)
     const slotIndex = Number(dataset.slotIndex)
@@ -234,6 +245,7 @@ Page({
   },
 
   onArrangePickerConfirm() {
+    if (this._blockGroupKnockoutWrite()) return
     const picker = this.data.arrangePicker || emptyArrangePicker()
     const ctx = picker.ctx
     if (ctx && ctx.mode === 'group') {
@@ -302,6 +314,7 @@ Page({
   },
 
   onClearArrangeSlot(e) {
+    if (this._blockGroupKnockoutWrite()) return
     const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
     const groupIndex = Number(dataset.groupIndex)
     const slotIndex = Number(dataset.slotIndex)
@@ -314,6 +327,7 @@ Page({
   },
 
   async onGenerateGroupMatches() {
+    if (this._blockGroupKnockoutWrite()) return
     try {
       const save = await wx.cloud.callFunction({
         name: 'tournament-brackets',
@@ -356,13 +370,21 @@ Page({
   },
 
   onEnterScore() {
+    if (this._blockGroupKnockoutWrite()) return
     wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}` })
   },
 
   onMatchScoreTap(e) {
+    if (this._blockGroupKnockoutWrite()) return
     const matchId = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.matchId
     if (!matchId) return
     wx.navigateTo({ url: `/pages/tournament-score/index?tournamentId=${this.data.tournamentId}&matchId=${matchId}` })
+  },
+
+  _blockGroupKnockoutWrite() {
+    if (!this.data.groupKnockoutReadOnly) return false
+    wx.showToast({ title: '赛事已取消，仅可查看历史', icon: 'none' })
+    return true
   }
 })
 
@@ -383,13 +405,13 @@ function isScheduleBlocked(tournament) {
 }
 
 function shouldShowGroupScoreEntry(tournament) {
-  if (!tournament || tournament.format !== 'group_knockout') return false
-  return ['group_published', 'knockout_published', 'completed'].includes(tournament.groupKnockoutPhase)
+  return canWriteGroupKnockoutScores(tournament)
 }
 
 function groupScoreActionLabel(tournament) {
-  if (tournament && tournament.groupKnockoutPhase === 'completed') return '查看赛果'
-  if (tournament && tournament.groupKnockoutPhase === 'knockout_published') return '录入赛果'
+  const phase = resolveGroupKnockoutPhase(tournament)
+  if (phase === 'completed') return '查看赛果'
+  if (phase === 'knockout_published') return '录入赛果'
   return '录入小组赛赛果'
 }
 

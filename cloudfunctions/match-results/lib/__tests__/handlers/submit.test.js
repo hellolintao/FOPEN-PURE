@@ -1,4 +1,4 @@
-const { confirmAll, reconfirmMatch } = require('../../handlers/submit')
+const { confirmAll, reconfirmMatch, voidMatch } = require('../../handlers/submit')
 
 function makeCtx(overrides = {}) {
   return {
@@ -61,4 +61,39 @@ test('confirmAll returns skipped analytics envelope when ctx.afterSettlementByTo
     analyticsMessage: '',
     settlementImpact: [],
   })
+})
+
+test('voidMatch checks score-write access before mutating a match', async () => {
+  const err = new Error('赛程发布后才能录入成绩')
+  err.code = 'SCHEDULE_NOT_PUBLISHED'
+  const ctx = makeCtx({
+    stateSvc: {
+      assertSchedulePublishedForMatch: jest.fn(async () => { throw err }),
+      voidMatch: jest.fn()
+    }
+  })
+
+  await expect(voidMatch(ctx, { matchId: 'm1', reason: '未完赛' }))
+    .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  expect(ctx.stateSvc.assertSchedulePublishedForMatch).toHaveBeenCalledWith('m1')
+  expect(ctx.stateSvc.voidMatch).not.toHaveBeenCalled()
+})
+
+test('confirmAll checks score-write access before confirming or settling a tournament', async () => {
+  const err = new Error('赛程发布后才能录入成绩')
+  err.code = 'SCHEDULE_NOT_PUBLISHED'
+  const afterSettlementByTournament = jest.fn()
+  const ctx = makeCtx({
+    stateSvc: {
+      assertSchedulePublishedForTournament: jest.fn(async () => { throw err }),
+      confirmAll: jest.fn()
+    },
+    afterSettlementByTournament
+  })
+
+  await expect(confirmAll(ctx, { tournamentId: 't1' }))
+    .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  expect(ctx.stateSvc.assertSchedulePublishedForTournament).toHaveBeenCalledWith('t1')
+  expect(ctx.stateSvc.confirmAll).not.toHaveBeenCalled()
+  expect(afterSettlementByTournament).not.toHaveBeenCalled()
 })

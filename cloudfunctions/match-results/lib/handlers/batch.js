@@ -1,7 +1,7 @@
 // v2.1 batch handlers — batchConfirm + batchSubmit
 
 const { isActiveScoreRow } = require('../active-row')
-const { canExposeScoreRows } = require('./query')
+const { canWriteScoreRows, isGroupKnockoutReadOnly } = require('../score-access')
 
 const STALE_MESSAGE = '该比分已被其他管理员处理（数据已更新）'
 const SCHEDULE_NOT_PUBLISHED = {
@@ -369,6 +369,14 @@ async function applyScheduleImpact(ctx, payload) {
     err.code = 'INVALID_CONTEXT'
     throw err
   }
+  const tournament = typeof ctx.db.getTournament === 'function'
+    ? await ctx.db.getTournament(tournamentId)
+    : null
+  if (!dryRun && isGroupKnockoutReadOnly(tournament)) {
+    const err = new Error(SCHEDULE_NOT_PUBLISHED.message)
+    err.code = SCHEDULE_NOT_PUBLISHED.code
+    throw err
+  }
 
   const rows = await ctx.db.listMatchesByTournament(tournamentId)
   const confirmedRows = (rows || []).filter(row => isActiveScoreRow(row) && row.resultStatus === 'confirmed')
@@ -538,7 +546,7 @@ function normalizeOrder(value) {
 }
 
 function isScheduleBlocked(tournament) {
-  return !!(tournament && !canExposeScoreRows(tournament))
+  return !!(tournament && !canWriteScoreRows(tournament))
 }
 
 module.exports = { batchConfirm, batchSubmit, batchAdminSave, applyScheduleImpact }

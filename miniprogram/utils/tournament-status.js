@@ -135,13 +135,27 @@ const GROUP_KNOCKOUT_PHASE_META = {
   }
 }
 
+const GROUP_KNOCKOUT_PHASES = new Set(Object.keys(GROUP_KNOCKOUT_PHASE_META))
+const GROUP_KNOCKOUT_SCORE_PHASES = new Set([
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed'
+])
+const SETTLED_LIFECYCLE_STATUSES = new Set(['completed', 'settled'])
+
 function getTournamentStatusMeta(input, options = {}) {
   const tournament = normalizeTournamentInput(input)
   const raw = tournament.status || 'upcoming'
   const phase = derivePhase(tournament, options)
   const phaseMeta = phase !== PHASE.LEGACY ? PHASE_META[phase] : null
   const fixedMeta = fixedLifecycleMeta(raw)
-  const groupKnockoutMeta = fixedMeta ? null : groupKnockoutPhaseMeta(tournament)
+  const canOverrideFixedGroupStatus = raw !== 'draft' &&
+    raw !== 'cancelled' &&
+    !!normalizeGroupKnockoutPhase(tournament.groupKnockoutPhase)
+  const groupKnockoutMeta = !fixedMeta || canOverrideFixedGroupStatus
+    ? groupKnockoutPhaseMeta(tournament)
+    : null
   const resultMeta = resultLifecycleMeta(tournament.resultSummary || options.resultSummary)
   const meta = groupKnockoutMeta || phaseMeta || fixedMeta || resultMeta || STATUS_META[deriveDateKind(tournament, options.now)] || STATUS_META[raw] || {
     kind: 'unknown',
@@ -197,8 +211,28 @@ function fixedLifecycleMeta(raw) {
 
 function groupKnockoutPhaseMeta(tournament) {
   if (!tournament || tournament.format !== 'group_knockout') return null
-  const phase = tournament.groupKnockoutPhase || 'group_draft'
-  return GROUP_KNOCKOUT_PHASE_META[phase] || null
+  return GROUP_KNOCKOUT_PHASE_META[resolveGroupKnockoutPhase(tournament)] || null
+}
+
+function resolveGroupKnockoutPhase(tournament) {
+  const safeTournament = tournament || {}
+  if (safeTournament.status === 'draft') return 'group_draft'
+  const storedPhase = normalizeGroupKnockoutPhase(safeTournament.groupKnockoutPhase)
+  if (storedPhase) return storedPhase
+  if (SETTLED_LIFECYCLE_STATUSES.has(safeTournament.status)) return 'completed'
+  return 'group_draft'
+}
+
+function normalizeGroupKnockoutPhase(value) {
+  if (typeof value !== 'string') return ''
+  const phase = value.trim()
+  return GROUP_KNOCKOUT_PHASES.has(phase) ? phase : ''
+}
+
+function canWriteGroupKnockoutScores(tournament) {
+  if (!tournament || tournament.format !== 'group_knockout') return false
+  if (tournament.status === 'draft' || tournament.status === 'cancelled') return false
+  return GROUP_KNOCKOUT_SCORE_PHASES.has(normalizeGroupKnockoutPhase(tournament.groupKnockoutPhase))
 }
 
 function resultLifecycleMeta(summary) {
@@ -351,5 +385,7 @@ module.exports = {
   getTournamentStatusMeta,
   decorateTournamentStatus,
   getTournamentShareTitle,
-  isCompletedStatus
+  isCompletedStatus,
+  resolveGroupKnockoutPhase,
+  canWriteGroupKnockoutScores
 }

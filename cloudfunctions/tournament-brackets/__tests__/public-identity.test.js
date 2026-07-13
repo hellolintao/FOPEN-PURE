@@ -1,7 +1,13 @@
 let mockState
 
 function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value))
+  if (value == null || typeof value !== 'object') return value
+  if (value instanceof Date) return new Date(value.getTime())
+  if (Array.isArray(value)) return value.map(clone)
+  return Object.keys(value).reduce((copy, key) => {
+    copy[key] = clone(value[key])
+    return copy
+  }, {})
 }
 
 function valueMatches(actual, expected) {
@@ -117,6 +123,7 @@ beforeEach(() => {
               name: 'Raw Private Name',
               avatarUrl: '/raw-private.png',
               openid: 'private-openid',
+              unionid: 'private-unionid',
               phone: '13800000000',
               publicProfileConsent: false
             },
@@ -166,9 +173,44 @@ test('getByTournament returns match participant avatars without sensitive fields
   })
   for (const side of [match.player1, match.player2, match.winner]) {
     expect(side).not.toHaveProperty('openid')
+    expect(side).not.toHaveProperty('unionid')
     expect(side).not.toHaveProperty('phone')
     expect(side).not.toHaveProperty('admin')
     expect(side).not.toHaveProperty('publicProfileConsent')
     expect(side).not.toHaveProperty('publicProfileConsentAt')
   }
+})
+
+test('getGroupKnockoutBracket strips tournament and actor metadata for non-admin callers', async () => {
+  mockState.collections.tournaments = new Map([[
+    't1',
+    {
+      _id: 't1',
+      name: '周末小组赛',
+      format: 'group_knockout',
+      createTime: new Date('2026-07-13T00:00:00.000Z'),
+      createdByOpenid: 'creator-openid',
+      creatorUnionid: 'creator-unionid',
+      groupRankSnapshot: {
+        metadata: { confirmedBy: 'seed-admin-openid' },
+        manualOverrides: {
+          A: { overrideBy: 'override-admin-openid', finalRows: [] }
+        }
+      }
+    }
+  ]])
+  mockState.collections.tournament_groups = new Map()
+  mockState.collections.match_results = new Map()
+
+  const res = await main({ action: 'getGroupKnockoutBracket', tournamentId: 't1' })
+
+  expect(res.success).toBe(true)
+  expect(res.data.tournament).toBeDefined()
+  expect(res.data.tournament.name).toBe('周末小组赛')
+  expect(res.data.tournament.createTime).toEqual(new Date('2026-07-13T00:00:00.000Z'))
+  expect(res.data.tournament).not.toHaveProperty('createdByOpenid')
+  expect(res.data.tournament).not.toHaveProperty('creatorUnionid')
+  expect(res.data.tournament.groupRankSnapshot.metadata).not.toHaveProperty('confirmedBy')
+  expect(res.data.tournament.groupRankSnapshot.manualOverrides.A).not.toHaveProperty('overrideBy')
+  expect(JSON.stringify(res.data)).not.toContain('admin-openid')
 })

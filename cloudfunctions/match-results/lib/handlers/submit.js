@@ -52,6 +52,7 @@ async function reconfirmMatch(ctx, event) {
 
 async function voidMatch(ctx, event) {
   const admin = ctx.submitter
+  await assertSchedulePublishedForMatch(ctx, event.matchId)
   return ctx.stateSvc.voidMatch({ matchId: event.matchId, reason: event.reason, admin })
 }
 

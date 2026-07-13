@@ -54,7 +54,8 @@ jest.mock('wx-server-sdk', () => {
   return {
     init: jest.fn(),
     DYNAMIC_CURRENT_ENV: 'test-env',
-    database: jest.fn(() => ({ command, collection: makeCollection }))
+    database: jest.fn(() => ({ command, collection: makeCollection })),
+    getWXContext: jest.fn(() => mockState.wxContext)
   }
 })
 
@@ -113,6 +114,7 @@ function pendingGroupRow(id, player1, player2) {
 
 function seedState() {
   mockState = {
+    wxContext: { SOURCE: ',scf' },
     collections: {
       tournaments: new Map([
         ['t1', { _id: 't1', format: 'group_knockout', bracketSize: 16, type: 'singles', seasonId: 's1' }]
@@ -220,4 +222,40 @@ test('group_knockout recompute rejects active pending rows without clearing stal
     source: 'stale',
     entries: [{ memberId: 'pending_a', points: 999, rank: 'stale' }]
   })
+})
+
+test.each([
+  ['draft', 'TOURNAMENT_DRAFT'],
+  ['cancelled', 'TOURNAMENT_CANCELLED']
+])('recompute rejects %s tournament before mutating points or phase', async (status, errorCode) => {
+  const before = mockState.collections.match_results.get('final').pointsAwarded
+  mockState.collections.tournaments.set('t1', {
+    ...mockState.collections.tournaments.get('t1'),
+    status,
+    groupKnockoutPhase: 'knockout_published'
+  })
+  const { main } = require('../index')
+
+  const res = await main({ action: 'recompute', tournamentId: 't1' })
+
+  expect(res).toMatchObject({ success: false, error: { code: errorCode } })
+  expect(mockState.collections.match_results.get('final').pointsAwarded).toBe(before)
+  expect(mockState.collections.tournaments.get('t1').groupKnockoutPhase).toBe('knockout_published')
+})
+
+test.each([
+  ['draft', 'TOURNAMENT_DRAFT'],
+  ['cancelled', 'TOURNAMENT_CANCELLED']
+])('recalculateMatch rejects %s tournament before mutating points', async (status, errorCode) => {
+  const before = mockState.collections.match_results.get('g_a1_a3').pointsAwarded
+  mockState.collections.tournaments.set('t1', {
+    ...mockState.collections.tournaments.get('t1'),
+    status
+  })
+  const { main } = require('../index')
+
+  const res = await main({ action: 'recalculateMatch', matchId: 'g_a1_a3' })
+
+  expect(res).toMatchObject({ success: false, error: { code: errorCode } })
+  expect(mockState.collections.match_results.get('g_a1_a3').pointsAwarded).toBe(before)
 })

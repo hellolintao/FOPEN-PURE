@@ -2,7 +2,8 @@ const app = getApp()
 const {
   getTournamentStatusMeta,
   getTournamentShareTitle,
-  isCompletedStatus
+  isCompletedStatus,
+  resolveGroupKnockoutPhase
 } = require('../../utils/tournament-status')
 const {
   PHASE,
@@ -51,7 +52,7 @@ Page({
   },
 
   onLoad(options = {}) {
-    this.enableShareMenu()
+    this.enableShareMenu(false)
     const { id, entry } = options
     if (id) {
       this.setData({ tournamentId: id, entry: entry || '' })
@@ -150,7 +151,7 @@ Page({
   buildAccessState({ tournament, isAdmin, isParticipant, resultSummary }) {
     const tournamentWithSummary = withResultSummary(tournament, resultSummary)
     const statusMeta = getTournamentStatusMeta(tournamentWithSummary)
-    const canEnterScore = !!(isAdmin || isParticipant)
+    const canEnterScore = tournamentWithSummary.status !== 'cancelled' && !!(isAdmin || isParticipant)
     return {
       canEnterScore,
       canOpenScore: canEnterScore || isCompletedStatus(tournamentWithSummary),
@@ -372,6 +373,10 @@ Page({
   },
 
   onEnterScore() {
+    if (this.data.tournament && this.data.tournament.status === 'cancelled') {
+      wx.showToast({ title: '赛事已取消，仅可查看历史', icon: 'none' })
+      return
+    }
     if (!this.data.canOpenScore && !this.data.canEnterScore) {
       wx.showToast({ title: '仅参赛者可录入', icon: 'none' })
       return
@@ -580,24 +585,32 @@ Page({
   onShareAppMessage() {
     const tournament = this.data.tournament || {}
     const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
+    if (!tournament._id || !getTournamentStatusMeta(tournamentWithSummary).canShare) {
+      this.enableShareMenu(false)
+      return undefined
+    }
     const tournamentId = this.data.tournamentId || tournament._id || ''
     const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
       path: tournamentId ? `/pages/tournament-detail/index?id=${encodeURIComponent(tournamentId)}${entry}` : '/pages/match/index',
-      imageUrl: getNextTournamentShareImage(tournament, { registrationEntry: this.data.showRegistrationModule })
+      imageUrl: getNextTournamentShareImage(tournamentWithSummary, { registrationEntry: this.data.showRegistrationModule })
     }
   },
 
   onShareTimeline() {
     const tournament = this.data.tournament || {}
     const tournamentWithSummary = withResultSummary(tournament, this.data.resultSummary)
+    if (!tournament._id || !getTournamentStatusMeta(tournamentWithSummary).canShare) {
+      this.enableShareMenu(false)
+      return undefined
+    }
     const tournamentId = this.data.tournamentId || tournament._id || ''
     const entry = this.data.showRegistrationModule ? '&entry=register' : ''
     return {
       title: getTournamentShareTitle(tournamentWithSummary),
       query: tournamentId ? `id=${encodeURIComponent(tournamentId)}${entry}` : '',
-      imageUrl: getNextTournamentShareImage(tournament, { registrationEntry: this.data.showRegistrationModule })
+      imageUrl: getNextTournamentShareImage(tournamentWithSummary, { registrationEntry: this.data.showRegistrationModule })
     }
   },
 
@@ -719,12 +732,22 @@ function buildGroupKnockoutDetailPhaseState({
   entry
 }) {
   const activeRegs = (registrations || []).filter(isActiveRegistration)
-  const phase = tournament.groupKnockoutPhase || 'group_draft'
+  const phase = resolveGroupKnockoutPhase(tournament)
+  const isReadOnly = tournament.status === 'cancelled'
   const withdraw = getWithdrawDeadline(tournament)
-  const footerActions = [footerAction('share', '分享', 'cta-secondary share-cta', { openType: 'share' })]
-  const needsResettle = !!(isAdmin && phase === 'knockout_published' && tournament.status === 'completed')
+  const footerActions = getTournamentStatusMeta(tournament).canShare
+    ? [footerAction('share', '分享', 'cta-secondary share-cta', { openType: 'share' })]
+    : []
+  const needsResettle = !!(
+    isAdmin &&
+    !isReadOnly &&
+    phase === 'knockout_published' &&
+    (tournament.status === 'completed' || tournament.status === 'settled')
+  )
 
-  if (isAdmin && phase === 'group_draft') {
+  if (isReadOnly) {
+    footerActions.push(footerAction('viewBracket', '查看签表', 'cta-lime flex-1'))
+  } else if (isAdmin && phase === 'group_draft') {
     footerActions.push(footerAction('edit', '编辑', 'cta-secondary'))
     footerActions.push(footerAction('arrangeGroupBracket', '安排签表', 'cta-lime flex-1'))
   } else if (isAdmin && phase === 'group_completed') {
@@ -753,7 +776,7 @@ function buildGroupKnockoutDetailPhaseState({
     showScheduleSection: false,
     showResultsSection: phase === 'completed',
     footerActions,
-    canOpenScore,
+    canOpenScore: isReadOnly ? false : canOpenScore,
     primaryActionLabel: primaryAction ? primaryAction.label : '',
     selfRegistrationSupported: true
   }
@@ -885,7 +908,7 @@ function buildTournamentDisplay(tournament, resultSummary) {
   const isGroupKnockout = safeTournament.format === 'group_knockout'
   const groupKnockoutPoints = getGroupKnockoutPointRules(safeTournament)
   const displayPlacement = isGroupKnockout ? groupKnockoutPoints.placement : placement
-  const groupKnockoutStatus = buildGroupKnockoutStatusText(safeTournament.groupKnockoutPhase || 'group_draft')
+  const groupKnockoutStatus = buildGroupKnockoutStatusText(resolveGroupKnockoutPhase(safeTournament))
   const statusMeta = getTournamentStatusMeta(withResultSummary(safeTournament, resultSummary))
 
   const placementRows = [

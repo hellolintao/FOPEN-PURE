@@ -1,6 +1,7 @@
 const app = getApp()
 const { call } = require('../../utils/cloud')
 const { removeCachesByPrefix } = require('../../utils/page-cache')
+const { canWriteGroupKnockoutScores } = require('../../utils/tournament-status')
 
 Page({
   data: {
@@ -524,8 +525,7 @@ Page({
 
 function isScheduleBlocked(tournament) {
   if (tournament && tournament.format === 'group_knockout') {
-    return !['group_published', 'group_completed', 'knockout_published', 'completed']
-      .includes(tournament.groupKnockoutPhase)
+    return !canWriteGroupKnockoutScores(tournament)
   }
   return !!(
     tournament &&

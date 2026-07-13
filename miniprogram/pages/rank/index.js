@@ -3,7 +3,7 @@ const { syncTabBar } = require('../../utils/tab-bar')
 const { getCacheEntry, removeCache, setCache } = require('../../utils/page-cache')
 const { isPrideMonthSkinActive } = require('../../utils/seasonal-theme')
 
-const RANK_CACHE_VERSION = 'v5'
+const RANK_CACHE_VERSION = 'v6'
 const RANK_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000
 const RANK_CLOUD_TIMEOUT_MS = 20 * 1000
 

@@ -420,6 +420,51 @@ test('group knockout draft phase remains blocked even when match rows exist', as
   expect(ctx.data.error).toBe('赛程发布后才能录入成绩')
 })
 
+test.each([
+  ['draft with stale published phase', { status: 'draft', groupKnockoutPhase: 'group_published' }],
+  ['cancelled with published phase', { status: 'cancelled', groupKnockoutPhase: 'group_published' }],
+  ['completed without phase', { status: 'completed' }],
+  ['settled with invalid phase', { status: 'settled', groupKnockoutPhase: 'unknown_phase' }]
+])('group knockout %s remains score-write blocked', async (_label, fields) => {
+  const pageDef = loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      scheduleStatus: 'none',
+      ...fields
+    },
+    matchResults: [matchA]
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.scheduleGateBlocked).toBe(true)
+  expect(ctx.data.rowsByRound).toEqual([])
+  expect(ctx.data.error).toBe('赛程发布后才能录入成绩')
+})
+
+test.each([
+  ['trimmed published phase', { status: 'upcoming', groupKnockoutPhase: ' group_published ' }],
+  ['settled resettlement phase', { status: 'settled', groupKnockoutPhase: 'knockout_published' }]
+])('group knockout %s allows the score page', async (_label, fields) => {
+  const pageDef = loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      scheduleStatus: 'none',
+      ...fields
+    },
+    matchResults: [matchA]
+  })
+  const ctx = makeCtx(pageDef, { tournamentId: 't1' })
+
+  await ctx.refresh()
+
+  expect(ctx.data.scheduleGateBlocked).toBe(false)
+  expect(ctx.data.rowsByRound[0].matches).toHaveLength(1)
+})
+
 test('admin adjust mode can edit confirmed rows', async () => {
   const pageDef = loadPage({
     app: { globalData: { isAdmin: true, currentMember: { _id: 'admin1' } } },

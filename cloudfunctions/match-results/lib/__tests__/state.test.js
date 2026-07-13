@@ -268,6 +268,8 @@ describe('schedule gate · group knockout phases', () => {
 
     await expect(svc.assertSchedulePublishedForMatch('group_a_1'))
       .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+    await expect(svc.assertSchedulePublishedForTournament('tournament_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
   })
 
   test.each([
@@ -280,6 +282,36 @@ describe('schedule gate · group knockout phases', () => {
     seed.tournaments[0].scheduleStatus = 'none'
     if (typeof groupKnockoutPhase === 'undefined') delete seed.tournaments[0].groupKnockoutPhase
     else seed.tournaments[0].groupKnockoutPhase = groupKnockoutPhase
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.assertSchedulePublishedForMatch('group_a_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+    await expect(svc.assertSchedulePublishedForTournament('tournament_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  })
+
+  test.each([
+    ['group stage', 'group_published'],
+    ['knockout stage', 'knockout_published'],
+    ['completed history', 'completed']
+  ])('assertSchedulePublishedForMatch rejects cancelled group knockout in %s', async (_label, groupKnockoutPhase) => {
+    const seed = seedGroupKnockoutGroupsOnly()
+    seed.tournaments[0].status = 'cancelled'
+    seed.tournaments[0].groupKnockoutPhase = groupKnockoutPhase
+    const db = makeDb(seed)
+    const svc = createMatchStateService({ db, awardLib: award, scoreRule })
+
+    await expect(svc.assertSchedulePublishedForMatch('group_a_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+    await expect(svc.assertSchedulePublishedForTournament('tournament_1'))
+      .rejects.toMatchObject({ code: 'SCHEDULE_NOT_PUBLISHED' })
+  })
+
+  test('assertSchedulePublishedForMatch rejects draft lifecycle with a stale published group phase', async () => {
+    const seed = seedGroupKnockoutGroupsOnly()
+    seed.tournaments[0].status = 'draft'
+    seed.tournaments[0].groupKnockoutPhase = 'group_published'
     const db = makeDb(seed)
     const svc = createMatchStateService({ db, awardLib: award, scoreRule })
 

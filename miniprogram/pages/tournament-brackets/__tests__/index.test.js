@@ -216,6 +216,70 @@ test('group knockout draft bracket page does not show bottom score entry', async
   expect(ctx.data.showGroupScoreEntry).toBe(false)
 })
 
+test('raw draft overrides a stale published group phase on the bracket page', async () => {
+  const ctx = await loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'draft',
+      groupKnockoutPhase: 'group_published',
+      bracketSize: 12
+    }
+  })
+
+  expect(ctx.data.effectiveGroupKnockoutPhase).toBe('group_draft')
+  expect(ctx.data.groupKnockoutReadOnly).toBe(false)
+  expect(ctx.data.showGroupScoreEntry).toBe(false)
+})
+
+test('cancelled group draft bracket is history-only and cannot generate matches', async () => {
+  const calls = []
+  const ctx = await loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_draft',
+      bracketSize: 12
+    },
+    cloudCalls: calls
+  })
+
+  expect(ctx.data.effectiveGroupKnockoutPhase).toBe('group_draft')
+  expect(ctx.data.groupKnockoutReadOnly).toBe(true)
+  expect(ctx.data.showGroupScoreEntry).toBe(false)
+
+  await ctx.onGenerateGroupMatches()
+
+  expect(calls).toEqual([])
+  expect(wx.showToast).toHaveBeenCalledWith({ title: '赛事已取消，仅可查看历史', icon: 'none' })
+})
+
+test('cancelled published bracket cannot navigate to score entry', async () => {
+  const ctx = await loadPage({
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_published',
+      bracketSize: 12
+    }
+  })
+
+  expect(ctx.data.showGroupScoreEntry).toBe(false)
+  ctx.onMatchScoreTap({ currentTarget: { dataset: { matchId: 'match_A_1_2' } } })
+
+  expect(wx.navigateTo).not.toHaveBeenCalled()
+  expect(wx.showToast).toHaveBeenCalledWith({ title: '赛事已取消，仅可查看历史', icon: 'none' })
+})
+
+test('group arrangement markup uses the resolved phase and hides editors for read-only history', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+  expect(wxml).toContain("effectiveGroupKnockoutPhase === 'group_draft' && !groupKnockoutReadOnly")
+  expect(wxml).not.toContain("tournament.groupKnockoutPhase === 'group_draft'")
+})
+
 test('group knockout arrange slots pick registered players and exclude assigned players', async () => {
   const ctx = await loadPage({
     tournament: { _id: 't1', format: 'group_knockout', groupKnockoutPhase: 'group_draft', bracketSize: 12 },

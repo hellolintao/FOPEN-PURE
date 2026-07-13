@@ -102,6 +102,8 @@ jest.mock('wx-server-sdk', () => {
     DYNAMIC_CURRENT_ENV: 'dyn',
     init: () => {},
     database: () => ({ command: _, collection: makeCollection }),
+    getWXContext: () => api.__wxContext,
+    __wxContext: { SOURCE: ',scf' },
     __rows: rows
   }
   return api
@@ -524,6 +526,56 @@ describe('rankList enhancements', () => {
     expect(res.data.cachedAt).toBeUndefined()
   })
 
+  test('rankList repairs current cached no-history trends from latest confirmed match', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'A', name: '甲', publicProfileConsent: true },
+      { _id: 'B', name: '乙', publicProfileConsent: true }
+    )
+    cloud.__rows.baseline_standings.push(
+      { _id: 'bs_A', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 100, wins: 1, losses: 0, createTime: new Date('2026-05-01T00:00:00Z') },
+      { _id: 'bs_B', seasonId: 'season_2026', type: 'singles', memberId: 'B', totalPoints: 120, wins: 1, losses: 0, createTime: new Date('2026-05-01T00:00:00Z') }
+    )
+    cloud.__rows.match_results.push({
+      _id: 'm_latest',
+      seasonId: 'season_2026',
+      tournamentType: 'singles',
+      resultStatus: 'confirmed',
+      confirmedAt: new Date('2026-05-20T16:00:00Z'),
+      updateTime: new Date('2026-05-20T16:00:00Z'),
+      createTime: new Date('2026-05-20T15:55:00Z'),
+      pointsAwarded: { entries: [{ memberId: 'A', points: 40, role: 'winner' }] }
+    })
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      cacheDate: '2026-05-20',
+      computedAt: new Date('2026-05-20T17:00:00Z'),
+      rankList: [
+        { _id: 'A', name: '旧缓存甲', totalPoints: 140, winCount: 2, lossCount: 0, rank: 1, trendDelta: null, trendState: 'no_history', trendLabel: '-' },
+        { _id: 'B', name: '旧缓存乙', totalPoints: 120, winCount: 1, lossCount: 0, rank: 2, trendDelta: null, trendState: 'no_history', trendLabel: '-' }
+      ]
+    })
+
+    const { main } = require('../index')
+    const res = await main({ action: 'rankList', type: 'singles', currentSeasonId: 'season_2026' })
+
+    expect(res.data.cachedAt).toEqual(new Date('2026-05-20T17:00:00Z'))
+    expect(res.data.rankList.find(row => row._id === 'A')).toMatchObject({
+      rank: 1,
+      trendDelta: 1,
+      trendState: 'up',
+      trendLabel: '▲1'
+    })
+    expect(res.data.rankList.find(row => row._id === 'B')).toMatchObject({
+      rank: 2,
+      trendDelta: -1,
+      trendState: 'down',
+      trendLabel: '▼1'
+    })
+  })
+
   test('rankList freshness scan invalidates cache from input row after 5000 matching rows', async () => {
     const cloud = require('wx-server-sdk')
     cloud.__rows.members.push({ _id: 'late', name: '迟到选手', publicProfileConsent: true })
@@ -825,6 +877,45 @@ describe('rankList enhancements', () => {
       row.memberId === 'A' &&
       row.snapshotKind === 'settlement'
     ))).toBe(true)
+  })
+
+  test('refreshRankCache uses previous cache as settlement trend baseline when snapshots are absent', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push(
+      { _id: 'A', name: '甲', publicProfileConsent: true },
+      { _id: 'B', name: '乙', publicProfileConsent: true }
+    )
+    cloud.__rows.baseline_standings.push(
+      { _id: 'bs_A', seasonId: 'season_2026', type: 'singles', memberId: 'A', totalPoints: 140, wins: 2, losses: 0, createTime: '2026-05-01' },
+      { _id: 'bs_B', seasonId: 'season_2026', type: 'singles', memberId: 'B', totalPoints: 120, wins: 1, losses: 1, createTime: '2026-05-01' }
+    )
+    cloud.__rows.rank_cache.push({
+      _id: 'rank_cache_season_2026_singles',
+      seasonId: 'season_2026',
+      type: 'singles',
+      rankList: [
+        { _id: 'B', name: '乙', totalPoints: 120, winCount: 1, lossCount: 1, rank: 1 },
+        { _id: 'A', name: '甲', totalPoints: 100, winCount: 1, lossCount: 0, rank: 2 }
+      ]
+    })
+
+    const { main } = require('../index')
+    const res = await main({
+      action: 'refreshRankCache',
+      seasonId: 'season_2026',
+      affectedMemberIds: ['A', 'B'],
+      writeSnapshot: true,
+      snapshotKind: 'settlement',
+      now: '2026-07-07T10:00:00.000Z'
+    })
+
+    const singlesCache = cloud.__rows.rank_cache.find(row => row._id === 'rank_cache_season_2026_singles')
+    const rowA = singlesCache.rankList.find(row => row._id === 'A')
+    const rowB = singlesCache.rankList.find(row => row._id === 'B')
+
+    expect(res.success).toBe(true)
+    expect(rowA).toMatchObject({ rank: 1, trendDelta: 1, trendState: 'up', trendLabel: '▲1' })
+    expect(rowB).toMatchObject({ rank: 2, trendDelta: -1, trendState: 'down', trendLabel: '▼1' })
   })
 
   test('rebuildRankSnapshots writes baseline snapshots for current rank lists', async () => {
@@ -1237,5 +1328,129 @@ describe('playerH2H action', () => {
     const res = await main({ action: 'playerH2H', playerId: 'P' })
     expect(res.success).toBe(true)
     expect(res.data).toEqual({ singles: [], doubles: [] })
+  })
+})
+
+describe('write action access control', () => {
+  const originalTriggerSrc = process.env.TRIGGER_SRC
+
+  beforeEach(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = { SOURCE: 'wx_client', OPENID: 'member-openid' }
+    cloud.__rows.match_results.length = 0
+    cloud.__rows.tournament_points.length = 0
+    cloud.__rows.members.length = 0
+    cloud.__rows.rank_snapshots.length = 0
+    cloud.__rows.tournaments.length = 0
+    cloud.__rows.baseline_standings.length = 0
+    cloud.__rows.rank_cache.length = 0
+    delete process.env.TRIGGER_SRC
+  })
+
+  afterAll(() => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = { SOURCE: ',scf' }
+    if (originalTriggerSrc === undefined) delete process.env.TRIGGER_SRC
+    else process.env.TRIGGER_SRC = originalTriggerSrc
+  })
+
+  test.each([
+    ['recompute', { tournamentId: 't1' }],
+    ['recalculateMatch', { matchId: 'm1' }],
+    ['refreshRankCache', { seasonId: 's2026' }],
+    ['rebuildRankSnapshots', { seasonId: 's2026' }]
+  ])('direct non-admin cannot invoke %s', async (action, payload) => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'member1', openid: 'member-openid', admin: false })
+    const { main } = require('../index')
+
+    const res = await main({ action, ...payload })
+
+    expect(res).toEqual({ success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } })
+    expect(cloud.__rows.rank_cache).toHaveLength(0)
+    expect(cloud.__rows.rank_snapshots).toHaveLength(0)
+  })
+
+  test('direct admin can invoke a write action using legacy openId/isAdmin fields', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = { SOURCE: 'wx_client', OPENID: 'admin-openid' }
+    cloud.__rows.members.push({ _id: 'admin1', openId: 'admin-openid', isAdmin: true })
+    const { main } = require('../index')
+
+    const res = await main({ action: 'refreshRankCache', seasonId: 's2026', now: '2026-07-13T00:00:00.000Z' })
+
+    expect(res.success).toBe(true)
+    expect(cloud.__rows.rank_cache).toHaveLength(2)
+  })
+
+  test.each([
+    ['admin', { admin: 'true' }],
+    ['isAdmin', { isAdmin: 'true' }]
+  ])('direct caller cannot use a truthy string in %s to invoke writes', async (_field, identity) => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'member1', openid: 'member-openid', ...identity })
+    const { main } = require('../index')
+
+    const res = await main({ action: 'refreshRankCache', seasonId: 's2026' })
+
+    expect(res).toEqual({ success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } })
+    expect(cloud.__rows.rank_cache).toHaveLength(0)
+  })
+
+  test('server-to-server source can refresh cache without a propagated user identity', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = { SOURCE: 'wx_client,scf' }
+    const { main } = require('../index')
+
+    const res = await main({ action: 'refreshRankCache', seasonId: 's2026', now: '2026-07-13T00:00:00.000Z' })
+
+    expect(res.success).toBe(true)
+    expect(cloud.__rows.rank_cache).toHaveLength(2)
+  })
+
+  test('source names containing scf are not treated as server-to-server calls', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = { SOURCE: 'wx_scf_client' }
+    const { main } = require('../index')
+
+    const res = await main({ action: 'refreshRankCache', seasonId: 's2026' })
+
+    expect(res).toEqual({ success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } })
+    expect(cloud.__rows.rank_cache).toHaveLength(0)
+  })
+
+  test('empty timer event keeps the scheduled refreshRankCache behavior', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = {}
+    process.env.TRIGGER_SRC = 'timer'
+    const { main } = require('../index')
+
+    const res = await main({})
+
+    expect(res.success).toBe(true)
+    expect(cloud.__rows.rank_cache).toHaveLength(2)
+  })
+
+  test('timer context does not bypass access control for explicit non-timer writes', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__wxContext = {}
+    process.env.TRIGGER_SRC = 'timer'
+    const { main } = require('../index')
+
+    const res = await main({ action: 'recompute', tournamentId: 't1' })
+
+    expect(res).toEqual({ success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } })
+    expect(cloud.__rows.tournament_points).toHaveLength(0)
+  })
+
+  test('empty direct-user event is not treated as a trusted timer refresh', async () => {
+    const cloud = require('wx-server-sdk')
+    cloud.__rows.members.push({ _id: 'member1', openid: 'member-openid', admin: false })
+    const { main } = require('../index')
+
+    const res = await main({})
+
+    expect(res).toEqual({ success: false, error: { code: 'FORBIDDEN', message: '需要管理员权限' } })
+    expect(cloud.__rows.rank_cache).toHaveLength(0)
   })
 })

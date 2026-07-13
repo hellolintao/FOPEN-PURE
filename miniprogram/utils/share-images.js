@@ -1,3 +1,5 @@
+const { getTournamentStatusMeta } = require('./tournament-status')
+
 const REGISTRATION_SHARE_IMAGES = [
   '/images/share-registration/registration-share-01.jpg',
   '/images/share-registration/registration-share-02.jpg',
@@ -20,6 +22,13 @@ const SCHEDULE_SHARE_IMAGES = [
   '/images/share-schedule/schedule-share-04.jpg'
 ]
 
+const RESULTS_SHARE_IMAGES = [
+  '/images/share-results/results-share-01.jpg',
+  '/images/share-results/results-share-02.jpg',
+  '/images/share-results/results-share-03.jpg',
+  '/images/share-results/results-share-04.jpg'
+]
+
 const GROUP_KNOCKOUT_SCHEDULE_PHASES = [
   'group_published',
   'group_completed',
@@ -29,9 +38,11 @@ const GROUP_KNOCKOUT_SCHEDULE_PHASES = [
 
 const REGISTRATION_SHARE_IMAGE_INDEX_KEY = 'fopen.registrationShareImageIndex'
 const SCHEDULE_SHARE_IMAGE_INDEX_KEY = 'fopen.scheduleShareImageIndex'
+const RESULTS_SHARE_IMAGE_INDEX_KEY = 'fopen.resultsShareImageIndex'
 
 let fallbackRegistrationShareImageIndex = 0
 let fallbackScheduleShareImageIndex = 0
+let fallbackResultsShareImageIndex = 0
 
 function getNextRegistrationShareImage(options = {}) {
   const images = getRegistrationShareImageSet(options)
@@ -50,14 +61,32 @@ function getNextScheduleShareImage() {
   })
 }
 
+function getNextResultsShareImage() {
+  return getNextRotatingImage(RESULTS_SHARE_IMAGES, {
+    storageKey: RESULTS_SHARE_IMAGE_INDEX_KEY,
+    getFallback: () => fallbackResultsShareImageIndex,
+    setFallback: index => { fallbackResultsShareImageIndex = index }
+  })
+}
+
 function getNextTournamentShareImage(tournament = {}, options = {}) {
   if (options.registrationEntry) {
     return getNextRegistrationShareImage(options)
+  }
+  if (shouldUseResultsShareImage(tournament)) {
+    return getNextResultsShareImage()
   }
   if (shouldUseScheduleShareImage(tournament)) {
     return getNextScheduleShareImage()
   }
   return getNextRegistrationShareImage(options)
+}
+
+function shouldUseResultsShareImage(tournament = {}) {
+  if (tournament.format === 'group_knockout' && tournament.groupKnockoutPhase) {
+    return tournament.groupKnockoutPhase === 'completed'
+  }
+  return getTournamentStatusMeta(tournament).kind === 'settled'
 }
 
 function shouldUseScheduleShareImage(tournament = {}) {
@@ -119,8 +148,10 @@ module.exports = {
   REGISTRATION_SHARE_IMAGES,
   JUNE_2026_REGISTRATION_SHARE_IMAGES,
   SCHEDULE_SHARE_IMAGES,
+  RESULTS_SHARE_IMAGES,
   getRegistrationShareImageSet,
   getNextRegistrationShareImage,
   getNextScheduleShareImage,
+  getNextResultsShareImage,
   getNextTournamentShareImage
 }

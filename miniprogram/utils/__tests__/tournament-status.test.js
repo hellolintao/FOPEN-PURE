@@ -1,7 +1,9 @@
 const {
   getTournamentStatusMeta,
   decorateTournamentStatus,
-  getTournamentShareTitle
+  getTournamentShareTitle,
+  resolveGroupKnockoutPhase,
+  canWriteGroupKnockoutScores
 } = require('../tournament-status')
 
 describe('tournament status helpers', () => {
@@ -219,6 +221,63 @@ describe('tournament status helpers', () => {
       hint: '淘汰赛进行中',
       scoreActionLabel: '录入赛果'
     })
+  })
+
+  test('keeps an active group knockout phase when stored completion awaits resettlement', () => {
+    const tournament = {
+      name: '小组淘汰赛',
+      format: 'group_knockout',
+      type: 'singles',
+      groupKnockoutPhase: 'knockout_published',
+      status: 'completed',
+      scheduleStatus: 'published'
+    }
+
+    expect(getTournamentStatusMeta(tournament)).toMatchObject({
+      kind: 'ongoing',
+      label: '淘汰赛进行中',
+      scoreActionLabel: '录入赛果'
+    })
+    expect(getTournamentShareTitle(tournament)).toBe('小组淘汰赛 · 淘汰赛进行中')
+  })
+
+  test('keeps legacy completed group knockout records settled when phase is absent', () => {
+    const tournament = {
+      name: '旧版小组淘汰赛',
+      format: 'group_knockout',
+      status: 'completed',
+      scheduleStatus: 'published'
+    }
+
+    expect(getTournamentStatusMeta(tournament)).toMatchObject({
+      kind: 'settled',
+      label: '已结算',
+      scoreActionLabel: '查看成绩'
+    })
+    expect(getTournamentShareTitle(tournament)).toBe('旧版小组淘汰赛 · 已结算')
+  })
+
+  test.each([
+    ['draft overrides a stale published phase', { status: 'draft', groupKnockoutPhase: 'group_published' }, 'group_draft'],
+    ['trims a legal stored phase', { status: 'upcoming', groupKnockoutPhase: ' knockout_published ' }, 'knockout_published'],
+    ['completed falls back when phase is missing', { status: 'completed' }, 'completed'],
+    ['settled falls back when phase is invalid', { status: 'settled', groupKnockoutPhase: 'unknown_phase' }, 'completed'],
+    ['upcoming falls back when phase is blank', { status: 'upcoming', groupKnockoutPhase: '   ' }, 'group_draft'],
+    ['cancelled preserves a completed history phase', { status: 'cancelled', groupKnockoutPhase: 'completed' }, 'completed'],
+    ['cancelled preserves an active history phase', { status: 'cancelled', groupKnockoutPhase: 'group_published' }, 'group_published']
+  ])('resolves group knockout phase: %s', (_label, tournament, expected) => {
+    expect(resolveGroupKnockoutPhase({ format: 'group_knockout', ...tournament })).toBe(expected)
+  })
+
+  test.each([
+    ['published group phase', { status: 'upcoming', groupKnockoutPhase: 'group_published' }, true],
+    ['trimmed knockout phase', { status: 'settled', groupKnockoutPhase: ' knockout_published ' }, true],
+    ['draft with stale phase', { status: 'draft', groupKnockoutPhase: 'group_published' }, false],
+    ['cancelled with active phase', { status: 'cancelled', groupKnockoutPhase: 'group_published' }, false],
+    ['completed without phase', { status: 'completed' }, false],
+    ['settled with invalid phase', { status: 'settled', groupKnockoutPhase: 'unknown_phase' }, false]
+  ])('checks group knockout score-write access: %s', (_label, tournament, expected) => {
+    expect(canWriteGroupKnockoutScores({ format: 'group_knockout', ...tournament })).toBe(expected)
   })
 
   test('keeps legacy date-window behavior when new phase fields are absent', () => {

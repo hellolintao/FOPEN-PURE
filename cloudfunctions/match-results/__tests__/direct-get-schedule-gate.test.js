@@ -55,7 +55,13 @@ jest.mock('wx-server-sdk', () => {
       }
       return {
         doc: id => ({
-          get: jest.fn(async () => ({ data: mockState.rows[id] || null })),
+          get: jest.fn(async () => {
+            if (mockState.failNextMatchGet) {
+              mockState.failNextMatchGet = false
+              throw new Error('DB_UNAVAILABLE')
+            }
+            return { data: mockState.rows[id] || null }
+          }),
           update: jest.fn(async ({ data }) => {
             mockState.rows[id] = { ...(mockState.rows[id] || { _id: id }), ...data }
             return { updated: 1 }
@@ -84,7 +90,13 @@ jest.mock('wx-server-sdk', () => {
     if (name === 'tournaments') {
       return {
         doc: id => ({
-          get: jest.fn(async () => ({ data: mockState.tournaments[id] || null })),
+          get: jest.fn(async () => {
+            if (mockState.failNextTournamentGet) {
+              mockState.failNextTournamentGet = false
+              throw new Error('DB_UNAVAILABLE')
+            }
+            return { data: mockState.tournaments[id] || null }
+          }),
         }),
         where: jest.fn(() => mockChainableQuery([])),
       }
@@ -130,6 +142,8 @@ function setState({ scheduleStatus, isAdmin = false }) {
     },
     brackets: [],
     tournaments: { t1: tournament },
+    failNextMatchGet: false,
+    failNextTournamentGet: false,
   }
 }
 
@@ -226,6 +240,20 @@ describe('direct get schedule visibility gate', () => {
     }
 
     const res = await main({ action: 'get', id: 'r1' })
+
+    expect(res).toEqual({ data: mockState.rows.r1 })
+  })
+
+  test('allows non-admin direct get for a legacy completed group knockout without phase', async () => {
+    setState({ scheduleStatus: 'none' })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'completed',
+      scheduleStatus: 'none'
+    }
+
+    const res = await main({ action: 'getById', id: 'r1' })
 
     expect(res).toEqual({ data: mockState.rows.r1 })
   })
@@ -602,6 +630,110 @@ describe('direct legacy score writes schedule gate', () => {
     })
   })
 
+  test('blocks updateScore for cancelled group knockout even when its phase is published', async () => {
+    setState({ scheduleStatus: 'none', isAdmin: true })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none'
+    }
+
+    const res = await main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' }
+    })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' }
+    })
+    expect(mockState.rows.r1.score).toBeUndefined()
+  })
+
+  test('direct score write fails closed when the tournament lookup throws', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.failNextTournamentGet = true
+
+    await expect(main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' }
+    })).rejects.toThrow('DB_UNAVAILABLE')
+
+    expect(mockState.rows.r1.score).toBeUndefined()
+  })
+
+  test('direct score write fails closed when the source row lookup throws', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.failNextMatchGet = true
+
+    await expect(main({
+      action: 'updateScore',
+      id: 'r1',
+      data: { score: '4-2', winnerId: 'a', loserId: 'b' }
+    })).rejects.toThrow('DB_UNAVAILABLE')
+
+    expect(mockState.rows.r1.score).toBeUndefined()
+  })
+
+  test('batch context propagates tournament lookup failures', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.failNextTournamentGet = true
+    const { buildBatchCtx } = require('../index').__test__
+    const ctx = buildBatchCtx({ _id: 'admin1', openid: 'admin-openid' }, true)
+
+    await expect(ctx.db.getTournament('t1')).rejects.toThrow('DB_UNAVAILABLE')
+  })
+
+  test('blocks moving an active score row into a cancelled group knockout', async () => {
+    setState({ scheduleStatus: 'published', isAdmin: true })
+    mockState.tournaments.t2 = {
+      _id: 't2',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none'
+    }
+
+    const res = await main({
+      action: 'update',
+      id: 'r1',
+      data: { ...validMatchData, tournamentId: 't2' }
+    })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' }
+    })
+    expect(mockState.rows.r1.tournamentId).toBe('t1')
+  })
+
+  test.each([
+    ['delete', { action: 'delete', id: 'r1' }],
+    ['updateStatus', { action: 'updateStatus', id: 'r1', data: { status: 'completed' } }],
+    ['voidMatch', { action: 'voidMatch', matchId: 'r1', reason: '未完赛' }]
+  ])('blocks %s for a cancelled group knockout', async (_label, event) => {
+    setState({ scheduleStatus: 'none', isAdmin: true })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none'
+    }
+
+    const res = await main(event)
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' }
+    })
+    expect(mockState.rows.r1).toMatchObject({ _id: 'r1', resultStatus: 'pending' })
+  })
+
   test('blocks non-admin bulkUpsertScheduledMatches', async () => {
     setState({ scheduleStatus: 'published' })
 
@@ -616,6 +748,30 @@ describe('direct legacy score writes schedule gate', () => {
       success: false,
       error: { code: 'FORBIDDEN', message: '需要管理员权限' },
     })
+  })
+
+  test('blocks bulkUpsertScheduledMatches for a cancelled group knockout', async () => {
+    setState({ scheduleStatus: 'none', isAdmin: true })
+    mockState.tournaments.t1 = {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'cancelled',
+      groupKnockoutPhase: 'group_published',
+      scheduleStatus: 'none'
+    }
+
+    const res = await main({
+      action: 'bulkUpsertScheduledMatches',
+      tournamentId: 't1',
+      matches: [],
+      queues: []
+    })
+
+    expect(res).toEqual({
+      success: false,
+      error: { code: 'SCHEDULE_NOT_PUBLISHED', message: '赛程发布后才能录入成绩' }
+    })
+    expect(mockState.rows.r1).toMatchObject({ _id: 'r1', resultStatus: 'pending' })
   })
 
   test('allows admin bulkUpsertScheduledMatches past auth gate', async () => {

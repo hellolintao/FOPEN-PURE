@@ -2,6 +2,7 @@
 const cloud = require('wx-server-sdk')
 const { validateResultSubmission } = require('./lib/validate')
 const { canExposeScoreRows, publicScoreRows } = require('./lib/handlers/query')
+const { canWriteScoreRows, isGroupKnockoutReadOnly } = require('./lib/score-access')
 const { isActiveScoreRow } = require('./lib/active-row')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -84,7 +85,7 @@ async function guardDirectScoreRowRead(row) {
 
 async function guardDirectScoreWriteByTournamentId(tournamentId) {
   if (!tournamentId) return null
-  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+  const tournamentRes = await db.collection('tournaments').doc(tournamentId).get()
   const tournament = tournamentRes && tournamentRes.data
   if (!isScheduleWriteBlocked(tournament)) return null
   return fail('SCHEDULE_NOT_PUBLISHED', SCHEDULE_NOT_PUBLISHED_MESSAGE)
@@ -92,7 +93,15 @@ async function guardDirectScoreWriteByTournamentId(tournamentId) {
 
 async function guardDirectScoreWriteForRow(row, fallbackTournamentId) {
   if (row && !isActiveScoreRow(row)) return fail('INVALID_STATE', '成绩记录已失效，请重新打开页面')
-  return guardDirectScoreWriteByTournamentId((row && row.tournamentId) || fallbackTournamentId)
+  const tournamentIds = [...new Set([
+    row && row.tournamentId,
+    fallbackTournamentId
+  ].filter(Boolean))]
+  for (const tournamentId of tournamentIds) {
+    const gate = await guardDirectScoreWriteByTournamentId(tournamentId)
+    if (gate) return gate
+  }
+  return null
 }
 
 async function requireAdmin() {
@@ -146,8 +155,14 @@ async function sanitizeScoreRowsResultForSubmitter(result) {
   return { ...result, data: await publicScoreRows(ctx, result.data) }
 }
 
+async function sanitizeScoreRowResultForSubmitter(result) {
+  if (!result || !result.data) return result
+  const sanitized = await sanitizeScoreRowsResultForSubmitter({ data: [result.data] })
+  return { ...result, data: sanitized.data[0] }
+}
+
 function isScheduleWriteBlocked(tournament) {
-  return !!(tournament && !canExposeScoreRows(tournament))
+  return !canWriteScoreRows(tournament)
 }
 
 function filterActiveScoreRowsResult(result) {
@@ -218,6 +233,9 @@ async function handleBulkUpsert({ tournamentId, matches, queues }) {
     const tournament = tournamentRes && tournamentRes.data
     if (!tournament) {
       return { success: false, error: { code: 'NOT_FOUND', message: tournamentId } }
+    }
+    if (isGroupKnockoutReadOnly(tournament)) {
+      return fail('SCHEDULE_NOT_PUBLISHED', SCHEDULE_NOT_PUBLISHED_MESSAGE)
     }
 
     // Build queueMap: matchId → { courtId, queueOrder }
@@ -590,7 +608,7 @@ function buildBatchCtx(submitter, isAdminFlag, options = {}) {
         return r ? r.data : null
       },
       getTournament: async (tournamentId) => {
-        const r = await db.collection('tournaments').doc(tournamentId).get().catch(() => null)
+        const r = await db.collection('tournaments').doc(tournamentId).get()
         return r ? r.data : null
       },
       listMatchesByTournament: async (tournamentId) => (await collection.where({ tournamentId }).limit(500).get()).data,
@@ -882,7 +900,7 @@ exports.main = async (event, context) => {
       const result = await collection.doc(_id || id).get()
       const forbidden = await guardDirectScoreRowRead(result && result.data)
       if (forbidden) return forbidden
-      return result
+      return await sanitizeScoreRowResultForSubmitter(result)
     }
 
     case 'getById': {
@@ -893,7 +911,7 @@ exports.main = async (event, context) => {
       const result = await collection.doc(id || _id).get()
       const forbidden = await guardDirectScoreRowRead(result && result.data)
       if (forbidden) return forbidden
-      return result
+      return await sanitizeScoreRowResultForSubmitter(result)
     }
 
     case 'update': {
@@ -908,7 +926,7 @@ exports.main = async (event, context) => {
       if (errors.length > 0) {
         return { errMsg: 'validation failed', errors }
       }
-      const current = await collection.doc(_id || id).get().catch(() => null)
+      const current = await collection.doc(_id || id).get()
       const scheduleGate = await guardDirectScoreWriteForRow(current && current.data, data && data.tournamentId)
       if (scheduleGate) return scheduleGate
 
@@ -941,6 +959,9 @@ exports.main = async (event, context) => {
       if (!_id && !id) {
         return { errMsg: '_id or id is required' }
       }
+      const current = await collection.doc(_id || id).get()
+      const scheduleGate = await guardDirectScoreWriteForRow(current && current.data)
+      if (scheduleGate) return scheduleGate
       return await collection.doc(_id || id).remove()
     }
 
@@ -1041,6 +1062,9 @@ exports.main = async (event, context) => {
       if (!data || !data.status) {
         return { errMsg: 'status is required' }
       }
+      const current = await collection.doc(_id || id).get()
+      const scheduleGate = await guardDirectScoreWriteForRow(current && current.data)
+      if (scheduleGate) return scheduleGate
 
       return await collection.doc(_id || id).update({
         data: {
@@ -1060,7 +1084,7 @@ exports.main = async (event, context) => {
       if (!data) {
         return { errMsg: 'score data is required' }
       }
-      const current = await collection.doc(_id || id).get().catch(() => null)
+      const current = await collection.doc(_id || id).get()
       const scheduleGate = await guardDirectScoreWriteForRow(current && current.data)
       if (scheduleGate) return scheduleGate
 
@@ -1209,7 +1233,7 @@ exports.main = async (event, context) => {
         const data = await voidMatch(ctx, event)
         return ok(data)
       } catch (e) {
-        return fail(e.message || 'INTERNAL', e.message)
+        return fail(e.code || e.message || 'INTERNAL', e.message)
       }
     }
 

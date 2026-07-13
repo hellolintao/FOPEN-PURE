@@ -75,6 +75,14 @@ function mockCollection(name) {
     doc(id) {
       return {
         async get() {
+          if (name === 'tournament_brackets' && mockState.failNextBracketGet) {
+            mockState.failNextBracketGet = false
+            throw new Error('DB_UNAVAILABLE')
+          }
+          if (name === 'tournaments' && mockState.failNextTournamentGet) {
+            mockState.failNextTournamentGet = false
+            throw new Error('DB_UNAVAILABLE')
+          }
           const map = getMap()
           return { data: mockClone(map.get(id)) || null }
         },
@@ -332,6 +340,8 @@ beforeEach(() => {
   mockState = {
     openid: 'admin-openid',
     collections: createCollections(),
+    failNextBracketGet: false,
+    failNextTournamentGet: false,
   }
   seedAdminMember()
   jest.clearAllMocks()
@@ -400,18 +410,17 @@ test.each([
   ['null', null],
   ['empty string', ''],
   ['false', false],
-])('saveGroups rejects explicit %s phase as locked', async (_label, phase) => {
+])('saveGroups treats explicit invalid %s phase as group_draft', async (_label, phase) => {
   const tournament = seedTournament({ groupKnockoutPhase: phase })
 
   const result = await saveGroupsForTournament(tournament._id)
 
-  expect(result.success).toBe(false)
-  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase })
-  expect(mockState.collections.tournament_groups.size).toBe(0)
+  expect(result).toEqual({ success: true, data: { count: 4 } })
+  expect(mockState.collections.tournament_groups.size).toBe(4)
   expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
     groupKnockoutPhase: phase,
     scheduleStatus: 'none',
-    updateTime: 'OLD_TIME',
+    updateTime: 'SERVER_DATE',
   })
 })
 
@@ -427,6 +436,16 @@ test.each([
 
   expect(result.success).toBe(false)
   expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase })
+  expect(mockState.collections.tournament_groups.size).toBe(0)
+})
+
+test('saveGroups trims a valid phase before applying the write lock', async () => {
+  const tournament = seedTournament({ groupKnockoutPhase: ' group_published ' })
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result.success).toBe(false)
+  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: 'group_published' })
   expect(mockState.collections.tournament_groups.size).toBe(0)
 })
 
@@ -1092,7 +1111,8 @@ test.each([
   const result = await main({ action: 'confirmKnockoutSeeds', tournamentId: tournament._id })
 
   expect(result.success).toBe(false)
-  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: phase === undefined ? 'group_draft' : phase })
+  const expectedPhase = [undefined, null, '', false].includes(phase) ? 'group_draft' : phase
+  expect(result.error).toMatchObject({ code: 'PHASE_LOCKED', currentPhase: expectedPhase })
   expect(mockState.collections.tournament_brackets.get(groupBracketId)).toEqual(groupBracket)
   expect(mockState.collections.tournament_brackets.get(knockoutBracketId)).toEqual(knockoutBracket)
   expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
@@ -1121,9 +1141,6 @@ test.each([
   ['group_completed', 'group_completed'],
   ['knockout_published', 'knockout_published'],
   ['completed', 'completed'],
-  ['null', null],
-  ['empty string', ''],
-  ['false', false],
 ])('generateGroupMatches rejects locked phase %s without deleting brackets or rewriting tournament', async (_label, phase) => {
   const tournament = seedTournament({ groupKnockoutPhase: phase })
   seedSavedGroups(tournament._id)
@@ -1140,6 +1157,24 @@ test.each([
     groupKnockoutPhase: phase,
     scheduleStatus: 'none',
     updateTime: 'OLD_TIME',
+  })
+})
+
+test.each([
+  ['null', null],
+  ['empty string', ''],
+  ['false', false],
+])('generateGroupMatches treats explicit invalid %s phase as group_draft', async (_label, phase) => {
+  const tournament = seedTournament({ groupKnockoutPhase: phase })
+  seedSavedGroups(tournament._id)
+
+  const result = await main({ action: 'generateGroupMatches', tournamentId: tournament._id })
+
+  expect(result).toEqual({ success: true, data: { count: 12 } })
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_published',
+    scheduleStatus: 'none',
+    updateTime: 'SERVER_DATE',
   })
 })
 
@@ -1396,6 +1431,138 @@ test('resetKnockoutSeeds rejects locked group_completed phase without mutation',
     groupKnockoutPhase: 'group_completed',
     updateTime: 'OLD_TIME',
   })
+})
+
+test.each([
+  ['saveGroups', 'group_draft', { groups: buildGroups() }],
+  ['generateGroupMatches', 'group_draft', {}],
+  ['confirmKnockoutSeeds', 'group_completed', {}],
+  ['resetGroups', 'group_published', {}],
+  ['resetKnockoutSeeds', 'knockout_published', {}],
+])('%s rejects a cancelled group knockout tournament before mutation', async (action, phase, payload) => {
+  const tournament = seedTournament({ status: 'cancelled', groupKnockoutPhase: phase })
+  const before = mockClone(tournament)
+
+  const result = await main({ action, tournamentId: tournament._id, ...payload })
+
+  expect(result).toEqual({
+    success: false,
+    error: { code: 'TOURNAMENT_CANCELLED', message: '赛事已取消，仅可查看历史' },
+  })
+  expect(mockState.collections.tournaments.get(tournament._id)).toEqual(before)
+  expect(mockState.collections.tournament_groups.size).toBe(0)
+  expect(mockState.collections.tournament_brackets.size).toBe(0)
+  expect(mockState.collections.match_results.size).toBe(0)
+})
+
+test.each([
+  ['completed', undefined],
+  ['completed', 'invalid_phase'],
+  ['settled', undefined],
+  ['settled', 'invalid_phase'],
+])('legacy %s tournament with phase %s resolves to completed and cannot overwrite groups', async (status, phase) => {
+  const tournament = seedTournament({ status, groupKnockoutPhase: phase })
+  if (phase === undefined) delete tournament.groupKnockoutPhase
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result).toEqual({
+    success: false,
+    error: {
+      code: 'PHASE_LOCKED',
+      message: '当前阶段不允许调整小组签表',
+      currentPhase: 'completed',
+    },
+  })
+  expect(mockState.collections.tournament_groups.size).toBe(0)
+})
+
+test('raw draft overrides a stale published phase when arranging groups', async () => {
+  const tournament = seedTournament({ status: 'draft', groupKnockoutPhase: 'group_published' })
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result).toEqual({ success: true, data: { count: 4 } })
+})
+
+test.each([
+  ['add', tournamentId => ({ data: { tournamentId } })],
+  ['update', tournamentId => ({ id: groupBracketDocId(tournamentId, 'A'), data: { tournamentId } })],
+  ['delete', tournamentId => ({ id: groupBracketDocId(tournamentId, 'A') })],
+  ['updateMatch', tournamentId => ({ id: groupBracketDocId(tournamentId, 'A'), matchId: 'old-A', data: { match: { status: 'ongoing' } } })],
+  ['updateMatchScore', tournamentId => ({ id: groupBracketDocId(tournamentId, 'A'), matchId: 'old-A', data: { score: '4-2' } })],
+  ['updateMatchStatus', tournamentId => ({ id: groupBracketDocId(tournamentId, 'A'), matchId: 'old-A', data: { status: 'ongoing' } })],
+  ['saveInitialMatches', tournamentId => ({ tournamentId, matches: [] })],
+  ['saveSchedule', tournamentId => ({ tournamentId, queues: [] })],
+])('%s cannot mutate legacy bracket data for a cancelled group knockout tournament', async (action, payloadFor) => {
+  const tournament = seedTournament({ status: 'cancelled', groupKnockoutPhase: 'group_published' })
+  const bracketId = seedGroupBracket(tournament._id)
+  const bracketBefore = mockClone(mockState.collections.tournament_brackets.get(bracketId))
+
+  const result = await main({ action, ...payloadFor(tournament._id) })
+
+  expect(result).toEqual({
+    success: false,
+    error: { code: 'TOURNAMENT_CANCELLED', message: '赛事已取消，仅可查看历史' },
+  })
+  expect(mockState.collections.tournament_brackets.get(bracketId)).toEqual(bracketBefore)
+})
+
+test('update cannot move an active bracket into a cancelled group knockout tournament', async () => {
+  const source = seedTournament({ _id: 'tournament_active', status: 'ongoing', groupKnockoutPhase: 'group_published' })
+  const destination = seedTournament({ _id: 'tournament_cancelled', status: 'cancelled', groupKnockoutPhase: 'group_published' })
+  const bracketId = seedGroupBracket(source._id)
+  const bracketBefore = mockClone(mockState.collections.tournament_brackets.get(bracketId))
+
+  const result = await main({ action: 'update', id: bracketId, data: { tournamentId: destination._id } })
+
+  expect(result).toEqual({
+    success: false,
+    error: { code: 'TOURNAMENT_CANCELLED', message: '赛事已取消，仅可查看历史' },
+  })
+  expect(mockState.collections.tournament_brackets.get(bracketId)).toEqual(bracketBefore)
+})
+
+test('regenerateDraft cannot wipe a cancelled group knockout tournament', async () => {
+  const tournament = seedTournament({ status: 'cancelled', groupKnockoutPhase: 'group_published' })
+  const bracketId = seedGroupBracket(tournament._id)
+  seedKnockoutResult(tournament._id, 'result-history', 'confirmed')
+
+  const result = await main({ action: 'regenerateDraft', tournamentId: tournament._id })
+
+  expect(result).toEqual({
+    success: false,
+    error: { code: 'TOURNAMENT_CANCELLED', message: '赛事已取消，仅可查看历史' },
+  })
+  expect(mockState.collections.tournament_brackets.has(bracketId)).toBe(true)
+  expect(mockState.collections.match_results.has('result-history')).toBe(true)
+})
+
+test('write guard fails closed when the tournament lookup throws', async () => {
+  const tournament = seedTournament()
+  mockState.failNextTournamentGet = true
+
+  const result = await saveGroupsForTournament(tournament._id)
+
+  expect(result.errMsg).toBe('DB_UNAVAILABLE')
+  expect(mockState.collections.tournament_groups.size).toBe(0)
+  expect(mockState.collections.tournaments.get(tournament._id)).toMatchObject({
+    groupKnockoutPhase: 'group_draft',
+    scheduleStatus: 'none',
+    updateTime: 'OLD_TIME',
+  })
+})
+
+test('write guard fails closed when the bracket lookup throws', async () => {
+  const tournament = seedTournament()
+  const bracketId = seedGroupBracket(tournament._id)
+  const bracketBefore = mockClone(mockState.collections.tournament_brackets.get(bracketId))
+  mockState.failNextBracketGet = true
+
+  const result = await main({ action: 'delete', id: bracketId })
+
+  expect(result.errMsg).toBe('DB_UNAVAILABLE')
+  expect(mockState.collections.tournament_brackets.get(bracketId)).toEqual(bracketBefore)
 })
 
 test.each([

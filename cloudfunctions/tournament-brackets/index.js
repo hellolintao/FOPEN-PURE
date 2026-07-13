@@ -18,6 +18,14 @@ const {
 } = require('./lib/group-knockout')
 const { toPublicIdentity } = require('../_shared/public-profile')
 
+const GROUP_KNOCKOUT_PHASES = new Set([
+  'group_draft',
+  'group_published',
+  'group_completed',
+  'knockout_published',
+  'completed'
+])
+
 // 生成对位表ID
 function generateBracketId(tournamentId, round) {
   const tournamentIdWithoutPrefix = tournamentId.replace('tournament_', '')
@@ -154,10 +162,13 @@ function identityOrdinalMap(values = []) {
 function isSensitiveIdentityField(key) {
   const normalized = String(key || '').toLowerCase()
   return normalized.includes('openid') ||
+    normalized.includes('unionid') ||
     normalized.includes('phone') ||
     normalized.includes('admin') ||
     normalized.includes('publicprofileconsent') ||
-    normalized.includes('playstyle')
+    normalized.includes('playstyle') ||
+    normalized === 'overrideby' ||
+    normalized === 'confirmedby'
 }
 
 function stripSensitiveIdentityFields(value = {}) {
@@ -180,6 +191,7 @@ async function getMembersByIds(ids, database = db, command = _) {
 function publicIdentityValue(value, membersById, ordinals) {
   if (!value) return value
   if (Array.isArray(value)) return value.map(item => publicIdentityValue(item, membersById, ordinals))
+  if (value instanceof Date) return value
   if (typeof value !== 'object') return value
 
   const safe = stripSensitiveIdentityFields(value)
@@ -217,6 +229,17 @@ function publicIdentityValue(value, membersById, ordinals) {
   return safe
 }
 
+function publicMetadataValue(value) {
+  if (!value) return value
+  if (Array.isArray(value)) return value.map(publicMetadataValue)
+  if (value instanceof Date) return value
+  if (typeof value !== 'object') return value
+  return Object.keys(value).reduce((safe, key) => {
+    if (!isSensitiveIdentityField(key)) safe[key] = publicMetadataValue(value[key])
+    return safe
+  }, {})
+}
+
 async function shouldReturnRawIdentity() {
   const wxContext = cloud.getWXContext()
   const openid = wxContext && wxContext.OPENID
@@ -230,6 +253,11 @@ async function publicIdentityPayload(payload) {
   const membersById = await getMembersByIds(ids)
   const ordinals = identityOrdinalMap(payload)
   return publicIdentityValue(payload, membersById, ordinals)
+}
+
+async function publicTournamentPayload(tournament) {
+  if (await shouldReturnRawIdentity()) return tournament
+  return publicMetadataValue(tournament)
 }
 
 async function resolveMemberByOpenid(openid, database = db, command = _) {
@@ -251,6 +279,35 @@ async function requireAdmin() {
   return null
 }
 
+function cancelledGroupKnockoutWriteError() {
+  return fail('TOURNAMENT_CANCELLED', '赛事已取消，仅可查看历史')
+}
+
+function isCancelledGroupKnockout(tournament) {
+  return !!(
+    tournament &&
+    tournament.format === 'group_knockout' &&
+    tournament.status === 'cancelled'
+  )
+}
+
+async function guardCancelledGroupKnockoutWrite({ bracketId, tournamentIds = [] } = {}) {
+  const ids = (tournamentIds || []).filter(Boolean)
+  if (bracketId) {
+    const bracketRes = await collection.doc(bracketId).get()
+    const bracketTournamentId = bracketRes && bracketRes.data && bracketRes.data.tournamentId
+    if (bracketTournamentId) ids.push(bracketTournamentId)
+  }
+
+  for (const tournamentId of [...new Set(ids)]) {
+    const tournamentRes = await db.collection('tournaments').doc(tournamentId).get()
+    if (isCancelledGroupKnockout(tournamentRes && tournamentRes.data)) {
+      return cancelledGroupKnockoutWriteError()
+    }
+  }
+  return null
+}
+
 exports.main = async (event, context) => {
   const { action, data, id, tournamentId, round, matchId, position } = event
   const now = db.serverDate()
@@ -260,6 +317,10 @@ exports.main = async (event, context) => {
       case 'add': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({
+          tournamentIds: [data && data.tournamentId]
+        })
+        if (lifecycleGate) return lifecycleGate
 
         // 新增对位表
         const errors = validateBracket(data)
@@ -291,6 +352,11 @@ exports.main = async (event, context) => {
       case 'update': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({
+          bracketId: id,
+          tournamentIds: [data && data.tournamentId]
+        })
+        if (lifecycleGate) return lifecycleGate
 
         // 更新对位表
         const errors = validateBracket(data)
@@ -311,6 +377,8 @@ exports.main = async (event, context) => {
       case 'delete': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ bracketId: id })
+        if (lifecycleGate) return lifecycleGate
 
         // 删除对位表
         return await collection.doc(id).remove()
@@ -372,6 +440,8 @@ exports.main = async (event, context) => {
       case 'updateMatch': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ bracketId: id })
+        if (lifecycleGate) return lifecycleGate
 
         // 更新单场比赛
         if (!id || !matchId) {
@@ -406,6 +476,8 @@ exports.main = async (event, context) => {
       case 'updateMatchScore': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ bracketId: id })
+        if (lifecycleGate) return lifecycleGate
 
         // 更新比赛比分
         if (!id || !matchId) {
@@ -442,6 +514,8 @@ exports.main = async (event, context) => {
       case 'updateMatchStatus': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ bracketId: id })
+        if (lifecycleGate) return lifecycleGate
 
         // 更新比赛状态
         if (!id || !matchId) {
@@ -515,24 +589,32 @@ exports.main = async (event, context) => {
       case 'saveInitialMatches': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleSaveInitialMatches(event)
       }
 
       case 'saveSchedule': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleSaveSchedule(event)
       }
 
       case 'saveGroups': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleSaveGroups(event)
       }
 
       case 'generateGroupMatches': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleGenerateGroupMatches(event)
       }
 
@@ -543,24 +625,32 @@ exports.main = async (event, context) => {
       case 'confirmKnockoutSeeds': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleConfirmKnockoutSeeds(event)
       }
 
       case 'resetGroups': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleResetGroups(event)
       }
 
       case 'resetKnockoutSeeds': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleResetKnockoutSeeds(event)
       }
 
       case 'regenerateDraft': {
         const adminGate = await requireAdmin()
         if (adminGate) return adminGate
+        const lifecycleGate = await guardCancelledGroupKnockoutWrite({ tournamentIds: [tournamentId] })
+        if (lifecycleGate) return lifecycleGate
         return await handleRegenerateDraft(event)
       }
 
@@ -789,9 +879,14 @@ function orderGroups(groups) {
 }
 
 function currentGroupKnockoutPhase(tournament) {
-  return Object.prototype.hasOwnProperty.call(tournament, 'groupKnockoutPhase')
-    ? tournament.groupKnockoutPhase
-    : 'group_draft'
+  const safeTournament = tournament || {}
+  if (safeTournament.status === 'draft') return 'group_draft'
+  const rawPhase = typeof safeTournament.groupKnockoutPhase === 'string'
+    ? safeTournament.groupKnockoutPhase.trim()
+    : ''
+  if (GROUP_KNOCKOUT_PHASES.has(rawPhase)) return rawPhase
+  if (safeTournament.status === 'completed' || safeTournament.status === 'settled') return 'completed'
+  return 'group_draft'
 }
 
 function sortGroupBrackets(brackets) {
@@ -827,11 +922,12 @@ async function handleGetGroupKnockoutBracket({ tournamentId }) {
     groupBrackets: sortGroupBrackets(groupBrackets),
     knockoutBrackets: sortRoundBrackets(knockoutBrackets)
   })
+  const safeTournament = await publicTournamentPayload(ctx.tournament)
 
   return {
     success: true,
     data: {
-      tournament: ctx.tournament,
+      tournament: safeTournament,
       ...safePayload
     }
   }

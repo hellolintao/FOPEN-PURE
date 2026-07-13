@@ -1,3 +1,7 @@
+const crypto = require('crypto')
+const fs = require('fs')
+const path = require('path')
+
 const EXPECTED_REGISTRATION_SHARE_IMAGES = [
   '/images/share-registration/registration-share-01.jpg',
   '/images/share-registration/registration-share-02.jpg',
@@ -19,6 +23,21 @@ const EXPECTED_SCHEDULE_SHARE_IMAGES = [
   '/images/share-schedule/schedule-share-03.jpg',
   '/images/share-schedule/schedule-share-04.jpg'
 ]
+
+const EXPECTED_RESULTS_SHARE_IMAGES = [
+  '/images/share-results/results-share-01.jpg',
+  '/images/share-results/results-share-02.jpg',
+  '/images/share-results/results-share-03.jpg',
+  '/images/share-results/results-share-04.jpg'
+]
+
+function readPackagedAsset(imagePath) {
+  return fs.readFileSync(path.join(__dirname, '..', '..', imagePath.replace(/^\//, '')))
+}
+
+function sha256(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
 
 describe('registration share images', () => {
   beforeEach(() => {
@@ -43,6 +62,17 @@ describe('registration share images', () => {
       ...EXPECTED_REGISTRATION_SHARE_IMAGES,
       EXPECTED_REGISTRATION_SHARE_IMAGES[0]
     ])
+  })
+
+  test('packages distinct registration cover assets instead of duplicate replacements', () => {
+    const allRegistrationImages = [
+      ...EXPECTED_REGISTRATION_SHARE_IMAGES,
+      ...EXPECTED_JUNE_2026_SHARE_IMAGES
+    ]
+    const assets = allRegistrationImages.map(readPackagedAsset)
+
+    expect(assets.every(buffer => buffer[0] === 0xff && buffer[1] === 0xd8)).toBe(true)
+    expect(new Set(assets.map(sha256)).size).toBe(allRegistrationImages.length)
   })
 
   test('uses the temporary June 2026 share image set only during June 2026', () => {
@@ -90,6 +120,32 @@ describe('registration share images', () => {
     expect(getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[1])
   })
 
+  test('cycles through packaged result share images without advancing registration or schedule covers', () => {
+    const {
+      RESULTS_SHARE_IMAGES,
+      getNextRegistrationShareImage,
+      getNextScheduleShareImage,
+      getNextResultsShareImage
+    } = require('../share-images')
+
+    expect(RESULTS_SHARE_IMAGES).toEqual(EXPECTED_RESULTS_SHARE_IMAGES)
+    expect(getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[0])
+    expect(getNextScheduleShareImage()).toBe(EXPECTED_SCHEDULE_SHARE_IMAGES[0])
+    expect(Array.from({ length: 5 }, () => getNextResultsShareImage())).toEqual([
+      ...EXPECTED_RESULTS_SHARE_IMAGES,
+      EXPECTED_RESULTS_SHARE_IMAGES[0]
+    ])
+    expect(getNextRegistrationShareImage({ now: new Date('2026-07-01T00:00:00+08:00') })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[1])
+    expect(getNextScheduleShareImage()).toBe(EXPECTED_SCHEDULE_SHARE_IMAGES[1])
+  })
+
+  test('packages four distinct result cover assets', () => {
+    const assets = EXPECTED_RESULTS_SHARE_IMAGES.map(readPackagedAsset)
+
+    expect(assets.every(buffer => buffer[0] === 0xff && buffer[1] === 0xd8)).toBe(true)
+    expect(new Set(assets.map(sha256)).size).toBe(EXPECTED_RESULTS_SHARE_IMAGES.length)
+  })
+
   test('uses schedule covers only after a schedule is published', () => {
     const { getNextTournamentShareImage } = require('../share-images')
 
@@ -112,7 +168,54 @@ describe('registration share images', () => {
     })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[1])
   })
 
-  test('treats group knockout published phases as arranged schedules even when scheduleStatus stays none', () => {
+  test('uses result covers for settled tournaments before considering schedule covers', () => {
+    const { getNextTournamentShareImage } = require('../share-images')
+
+    expect(getNextTournamentShareImage({
+      status: 'completed',
+      scheduleStatus: 'published'
+    })).toBe(EXPECTED_RESULTS_SHARE_IMAGES[0])
+
+    expect(getNextTournamentShareImage({
+      status: 'ongoing',
+      scheduleStatus: 'published',
+      resultSummary: { playableCount: 2, confirmedCount: 2 }
+    })).toBe(EXPECTED_RESULTS_SHARE_IMAGES[1])
+
+    expect(getNextTournamentShareImage({
+      format: 'group_knockout',
+      status: 'ongoing',
+      scheduleStatus: 'published',
+      groupKnockoutPhase: 'completed'
+    })).toBe(EXPECTED_RESULTS_SHARE_IMAGES[2])
+
+    expect(getNextTournamentShareImage({
+      format: 'group_knockout',
+      status: 'completed',
+      scheduleStatus: 'published'
+    })).toBe(EXPECTED_RESULTS_SHARE_IMAGES[3])
+  })
+
+  test('keeps active group knockout phases on schedule covers and registration entries on registration covers', () => {
+    const { getNextTournamentShareImage } = require('../share-images')
+
+    expect(getNextTournamentShareImage({
+      format: 'group_knockout',
+      status: 'completed',
+      scheduleStatus: 'published',
+      groupKnockoutPhase: 'knockout_published'
+    })).toBe(EXPECTED_SCHEDULE_SHARE_IMAGES[0])
+
+    expect(getNextTournamentShareImage({
+      status: 'completed',
+      scheduleStatus: 'published'
+    }, {
+      registrationEntry: true,
+      now: new Date('2026-07-02T00:00:00+08:00')
+    })).toBe(EXPECTED_REGISTRATION_SHARE_IMAGES[0])
+  })
+
+  test('treats active group knockout phases as arranged schedules even when scheduleStatus stays none', () => {
     const { getNextTournamentShareImage } = require('../share-images')
 
     expect(getNextTournamentShareImage({
@@ -124,12 +227,11 @@ describe('registration share images', () => {
     expect([
       'group_published',
       'group_completed',
-      'knockout_published',
-      'completed'
+      'knockout_published'
     ].map(groupKnockoutPhase => getNextTournamentShareImage({
       format: 'group_knockout',
       groupKnockoutPhase,
       scheduleStatus: 'none'
-    }, { now: new Date('2026-07-02T00:00:00+08:00') }))).toEqual(EXPECTED_SCHEDULE_SHARE_IMAGES)
+    }, { now: new Date('2026-07-02T00:00:00+08:00') }))).toEqual(EXPECTED_SCHEDULE_SHARE_IMAGES.slice(0, 3))
   })
 })

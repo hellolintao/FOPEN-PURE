@@ -75,6 +75,28 @@ test.each([
   expect(canExposeScoreRows(tournament)).toBe(false)
 })
 
+test.each([
+  ['completed with a missing phase', { status: 'completed' }],
+  ['settled with a missing phase', { status: 'settled' }],
+  ['completed with an invalid phase', { status: 'completed', groupKnockoutPhase: 'unknown_phase' }],
+  ['settled with a blank phase', { status: 'settled', groupKnockoutPhase: '   ' }]
+])('canExposeScoreRows: legacy group knockout %s is exposed', (_label, fields) => {
+  expect(canExposeScoreRows({
+    format: 'group_knockout',
+    scheduleStatus: 'none',
+    ...fields
+  })).toBe(true)
+})
+
+test('canExposeScoreRows: draft lifecycle overrides a stale published group phase', () => {
+  expect(canExposeScoreRows({
+    format: 'group_knockout',
+    status: 'draft',
+    groupKnockoutPhase: 'group_published',
+    scheduleStatus: 'none'
+  })).toBe(false)
+})
+
 test('listByTournament returns empty rows when scheduleStatus is draft', async () => {
   const ctx = makeQueryCtx({
     isAdmin: false,
@@ -97,6 +119,23 @@ test('listByTournament exposes group knockout rows after group bracket publish e
       scheduleStatus: 'none',
     },
     rows: [{ _id: 'r1', tournamentId: 't1', resultStatus: 'pending' }]
+  })
+
+  const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
+
+  expect(res.results.map(row => row._id)).toEqual(['r1'])
+})
+
+test('listByTournament exposes legacy completed group knockout rows without a phase', async () => {
+  const ctx = makeQueryCtx({
+    isAdmin: false,
+    tournament: {
+      _id: 't1',
+      format: 'group_knockout',
+      status: 'completed',
+      scheduleStatus: 'none'
+    },
+    rows: [{ _id: 'r1', tournamentId: 't1', resultStatus: 'confirmed' }]
   })
 
   const res = await __test__.listByTournamentWithCtx(ctx, { tournamentId: 't1' })
