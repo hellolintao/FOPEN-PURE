@@ -1,4 +1,5 @@
 const {
+  DEFAULT_PUBLIC_AVATAR_URL,
   toPublicIdentity,
   toRankingIdentity
 } = require('../public-profile')
@@ -12,6 +13,14 @@ test('toPublicIdentity keeps avatars outside the ranking page even without publi
   })).toEqual({
     name: '张三',
     avatarUrl: 'cloud://avatar',
+    publicProfileVisible: false
+  })
+})
+
+test('toPublicIdentity anonymizes only missing members with a stable ordinal', () => {
+  expect(toPublicIdentity(undefined, { rank: 6, index: 1 })).toEqual({
+    name: '选手06',
+    avatarUrl: DEFAULT_PUBLIC_AVATAR_URL,
     publicProfileVisible: false
   })
 })
