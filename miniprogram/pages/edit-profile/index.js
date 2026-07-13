@@ -3,6 +3,10 @@ const { removeCachesByPrefix } = require('../../utils/page-cache')
 const { PLAY_STYLE_OPTIONS, PLAY_STYLE_VALUES } = require('../../utils/play-style')
 const { DEFAULT_AVATAR_URL } = require('../../config')
 
+function isAdminMember(member) {
+  return !!(member && (member.admin === true || member.isAdmin === true))
+}
+
 Page({
   data: {
     isRegister: false,
@@ -87,7 +91,7 @@ Page({
         const app = getApp()
         if (app && app.globalData) {
           app.globalData.currentMember = user
-          app.globalData.isAdmin = !!user.admin
+          app.globalData.isAdmin = isAdminMember(user)
         }
         this.setUserForm(user)
       }
@@ -453,7 +457,7 @@ Page({
 
       if (app && app.globalData) {
         app.globalData.currentMember = savedMember
-        app.globalData.isAdmin = !!savedMember.admin
+        app.globalData.isAdmin = isAdminMember(savedMember)
       }
       removeCachesByPrefix('rank:')
 

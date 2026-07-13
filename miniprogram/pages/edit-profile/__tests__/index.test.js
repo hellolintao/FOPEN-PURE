@@ -164,6 +164,19 @@ describe('edit-profile mode handling', () => {
     expect(wx.showToast).toHaveBeenCalledWith({ title: '请先同意微信隐私授权', icon: 'none' })
   })
 
+  test('loadUserInfo preserves a strict legacy isAdmin member in global state', async () => {
+    const legacyAdmin = { _id: 'legacy-admin', name: '旧管理员', isAdmin: true }
+    const { pageDef, app } = loadPage()
+    const { callFunction } = require('../../../utils/cloud')
+    callFunction.mockResolvedValueOnce({ result: { data: [legacyAdmin] } })
+    const ctx = makeCtx(pageDef)
+
+    await ctx.loadUserInfo()
+
+    expect(app.globalData.currentMember).toBe(legacyAdmin)
+    expect(app.globalData.isAdmin).toBe(true)
+  })
+
   test('tournament-register query stores return context for save', () => {
     const { pageDef } = loadPage({
       currentMember: { name: '李四', phone: '13800000000', avatarUrl: 'cloud://avatar', playStyle: 'vers' }
@@ -289,6 +302,30 @@ describe('edit-profile validation and save', () => {
 
     expect(callFunction).toHaveBeenCalledTimes(1)
     expect(callFunction.mock.calls[0][0].data.action).toBe('update')
+  })
+
+  test.each([
+    ['canonical boolean admin', { admin: true }, true],
+    ['legacy boolean isAdmin', { isAdmin: true }, true],
+    ['string admin', { admin: 'true' }, false],
+    ['numeric legacy isAdmin', { isAdmin: 1 }, false]
+  ])('edit save handles %s without privilege drift', async (_case, flags, expected) => {
+    jest.useFakeTimers()
+    try {
+      const currentMember = { _id: 'member-1', name: '旧昵称', ...flags }
+      const { pageDef, app } = loadPage({ currentMember, isAdmin: expected })
+      const { callFunction } = require('../../../utils/cloud')
+      callFunction.mockResolvedValueOnce({ result: { stats: { updated: 1 } } })
+      const ctx = makeCtx(pageDef, { isRegister: false })
+      ctx.data.formData = { name: '新昵称', avatarUrl: '', playStyle: 'vers' }
+
+      await ctx.onSave()
+      jest.runAllTimers()
+
+      expect(app.globalData.isAdmin).toBe(expected)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('saving profile does not send phone in members payload', async () => {
