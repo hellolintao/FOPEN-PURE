@@ -139,4 +139,60 @@ describe('privacy adversarial identity restore allowlist', () => {
       expect.objectContaining({ rule: 'javascript-parse-failed' })
     ])
   })
+
+  test.each([
+    [
+      'nested object method',
+      `Page({
+  onShow() {
+    const helper = {
+      async ensureIdentity() {
+        app.refreshIdentity()
+      }
+    }
+    return helper
+  }
+})`
+    ],
+    [
+      'Page.data function property',
+      `Page({
+  data: {
+    ensureIdentity: async () => {
+      app.refreshIdentity()
+    }
+  }
+})`
+    ],
+    [
+      'top-level helper method',
+      `const helper = {
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+}
+Page({ helper })`
+    ]
+  ])('rejects an allowlisted name owned by a %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test('rejects nested onLaunch inside App.onShow', () => {
+    const source = `App({
+  onShow() {
+    const helper = {
+      onLaunch() {
+        this.refreshIdentity()
+      }
+    }
+    return helper
+  }
+})`
+
+    expect(identityFindings('miniprogram/app.js', source)).toEqual([
+      expect.objectContaining({ rule: 'launch-eager-member-identity' })
+    ])
+  })
 })

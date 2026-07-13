@@ -58,27 +58,57 @@ function isRefreshIdentityCall(node) {
   return callee.property.type === 'Identifier' && callee.property.name === 'refreshIdentity'
 }
 
-function collectIdentityCalls(node, ownerMethod = '', calls = []) {
-  if (Array.isArray(node)) {
-    node.forEach(child => collectIdentityCalls(child, ownerMethod, calls))
-    return calls
+function isFunctionNode(node) {
+  return [
+    'ObjectMethod',
+    'FunctionExpression',
+    'ArrowFunctionExpression',
+    'FunctionDeclaration',
+    'ClassMethod',
+    'ClassPrivateMethod'
+  ].includes(node.type)
+}
+
+function directRegistrationOwner(node, ancestors) {
+  let member = node
+  let config = ancestors[ancestors.length - 1]
+  let registration = ancestors[ancestors.length - 2]
+
+  if (node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+    member = config
+    config = ancestors[ancestors.length - 2]
+    registration = ancestors[ancestors.length - 3]
+    if (!isFunctionProperty(member)) return null
+  } else if (node.type !== 'ObjectMethod') {
+    return null
   }
-  if (!node || typeof node !== 'object' || typeof node.type !== 'string') return calls
 
-  if (isFunctionProperty(node)) {
-    if (node.computed) collectIdentityCalls(node.key, ownerMethod, calls)
-    collectIdentityCalls(node.value, objectMemberName(node), calls)
-    return calls
+  if (!config || config.type !== 'ObjectExpression') return null
+  if (!registration || registration.type !== 'CallExpression') return null
+  if (registration.arguments[0] !== config || registration.callee.type !== 'Identifier') return null
+  if (registration.callee.name !== 'App' && registration.callee.name !== 'Page') return null
+  return {
+    registration: registration.callee.name,
+    methodName: objectMemberName(member)
   }
+}
 
-  const nextOwner = node.type === 'ObjectMethod' ? objectMemberName(node) : ownerMethod
-  if (isRefreshIdentityCall(node)) calls.push({ node, ownerMethod: nextOwner })
-
-  Object.entries(node).forEach(([key, child]) => {
-    if (!['loc', 'start', 'end', 'extra'].includes(key)) {
-      collectIdentityCalls(child, nextOwner, calls)
+function collectIdentityCalls(ast) {
+  const calls = []
+  function visit(node, owner = null, ancestors = []) {
+    if (Array.isArray(node)) {
+      node.forEach(child => visit(child, owner, ancestors))
+      return
     }
-  })
+    if (!node || typeof node !== 'object' || typeof node.type !== 'string') return
+
+    const nextOwner = isFunctionNode(node) ? directRegistrationOwner(node, ancestors) : owner
+    if (isRefreshIdentityCall(node)) calls.push({ node, owner: nextOwner })
+    const nextAncestors = [...ancestors, node]
+    Object.values(node).forEach(child => visit(child, nextOwner, nextAncestors))
+  }
+
+  visit(ast)
   return calls
 }
 
@@ -101,12 +131,12 @@ function scanIdentityRestores(relative, body, lines) {
   }
 
   const findings = []
-  collectIdentityCalls(ast).forEach(({ node, ownerMethod }) => {
+  collectIdentityCalls(ast).forEach(({ node, owner }) => {
     const index = node.loc.start.line - 1
     const text = lines[index] || ''
 
     if (relative === 'miniprogram/app.js') {
-      if (ownerMethod !== 'onLaunch') {
+      if (!owner || owner.registration !== 'App' || owner.methodName !== 'onLaunch') {
         addFinding(findings, relative, index + 1, 'launch-eager-member-identity', text)
       }
       return
@@ -116,7 +146,9 @@ function scanIdentityRestores(relative, body, lines) {
     const nearby = lines.slice(Math.max(0, index - 12), index + 1).join('\n')
     const gatedByOfficialPrivacy = /options\.requirePrivacy/.test(nearby) &&
       /ensureOfficialPrivacyAuthorization/.test(nearby)
-    if (!gatedByOfficialPrivacy && ALLOWED_PAGE_IDENTITY_METHODS[relative] !== ownerMethod) {
+    const isAllowedPageMethod = owner && owner.registration === 'Page' &&
+      ALLOWED_PAGE_IDENTITY_METHODS[relative] === owner.methodName
+    if (!gatedByOfficialPrivacy && !isAllowedPageMethod) {
       addFinding(findings, relative, index + 1, 'page-eager-member-identity', text)
     }
   })
