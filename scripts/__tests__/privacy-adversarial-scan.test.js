@@ -459,4 +459,90 @@ App({
       expect.objectContaining({ rule: 'page-eager-member-identity' })
     ])
   })
+
+  test.each([
+    [
+      'Function.call',
+      `Page({
+  onShow() {
+    app.refreshIdentity.call(app)
+  }
+})`
+    ],
+    [
+      'Reflect.apply',
+      `Page({
+  onShow() {
+    Reflect.apply(app.refreshIdentity, app, [])
+  }
+})`
+    ],
+    [
+      'property alias',
+      `Page({
+  onShow() {
+    const restore = app.refreshIdentity
+    restore()
+  }
+})`
+    ],
+    [
+      'optional property alias',
+      `Page({
+  onShow() {
+    const restore = app?.refreshIdentity
+    restore?.()
+  }
+})`
+    ]
+  ])('rejects an indirect refreshIdentity reference through %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test.each([
+    [
+      'shorthand',
+      `Page({
+  onShow() {
+    const { refreshIdentity } = app
+    refreshIdentity()
+  }
+})`
+    ],
+    [
+      'alias',
+      `Page({
+  onShow() {
+    const { refreshIdentity: restore } = app
+    restore()
+  }
+})`
+    ],
+    [
+      'static computed alias',
+      `Page({
+  onShow() {
+    const { ['refresh' + 'Identity']: restore } = app
+    restore()
+  }
+})`
+    ]
+  ])('rejects a refreshIdentity ObjectPattern %s', (_name, source) => {
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([
+      expect.objectContaining({ rule: 'page-eager-member-identity' })
+    ])
+  })
+
+  test('ignores object data keys and method definitions named refreshIdentity', () => {
+    const source = `Page({
+  data: { refreshIdentity: 'display-only' },
+  refreshIdentity() {
+    return null
+  }
+})`
+
+    expect(identityFindings('miniprogram/pages/tournament-detail/index.js', source)).toEqual([])
+  })
 })

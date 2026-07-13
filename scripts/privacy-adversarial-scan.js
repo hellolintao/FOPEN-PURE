@@ -74,12 +74,20 @@ function staticStringValue(node) {
   return null
 }
 
-function isRefreshIdentityCall(node) {
-  if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return false
-  const callee = node.callee
-  if (!callee || (callee.type !== 'MemberExpression' && callee.type !== 'OptionalMemberExpression')) return false
-  if (callee.computed) return staticStringValue(callee.property) === 'refreshIdentity'
-  return callee.property.type === 'Identifier' && callee.property.name === 'refreshIdentity'
+function staticPropertyName(node) {
+  if (node.computed) return staticStringValue(node.key)
+  if (node.key.type === 'Identifier') return node.key.name
+  if (node.key.type === 'StringLiteral') return node.key.value
+  return null
+}
+
+function isRefreshIdentityReference(node, parent) {
+  if (node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression') {
+    if (node.computed) return staticStringValue(node.property) === 'refreshIdentity'
+    return node.property.type === 'Identifier' && node.property.name === 'refreshIdentity'
+  }
+  return node.type === 'ObjectProperty' && parent && parent.type === 'ObjectPattern' &&
+    staticPropertyName(node) === 'refreshIdentity'
 }
 
 function isFunctionNode(node) {
@@ -191,8 +199,8 @@ function directRegistrationOwner(node, ancestors, validRegistration) {
   }
 }
 
-function collectIdentityCalls(ast, validRegistration) {
-  const calls = []
+function collectIdentityReferences(ast, validRegistration) {
+  const references = []
   function visit(node, owner = null, ancestors = []) {
     if (Array.isArray(node)) {
       node.forEach(child => visit(child, owner, ancestors))
@@ -203,13 +211,14 @@ function collectIdentityCalls(ast, validRegistration) {
     const nextOwner = isFunctionNode(node)
       ? directRegistrationOwner(node, ancestors, validRegistration)
       : owner
-    if (isRefreshIdentityCall(node)) calls.push({ node, owner: nextOwner })
+    const parent = ancestors[ancestors.length - 1]
+    if (isRefreshIdentityReference(node, parent)) references.push({ node, owner: nextOwner })
     const nextAncestors = [...ancestors, node]
     Object.values(node).forEach(child => visit(child, nextOwner, nextAncestors))
   }
 
   visit(ast)
-  return calls
+  return references
 }
 
 function scanIdentityRestores(relative, body, lines) {
@@ -232,7 +241,7 @@ function scanIdentityRestores(relative, body, lines) {
 
   const findings = []
   const registration = uniqueTopLevelRegistration(ast, expectedRegistrationName(relative))
-  collectIdentityCalls(ast, registration).forEach(({ node, owner }) => {
+  collectIdentityReferences(ast, registration).forEach(({ node, owner }) => {
     const index = node.loc.start.line - 1
     const text = lines[index] || ''
 
