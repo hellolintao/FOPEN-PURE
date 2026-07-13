@@ -64,7 +64,7 @@
     <view wx:if="{{form.format === 'group_knockout'}}" class="field">
       <text class="label label-strong">分组方式</text>
       <view class="chip-row">
-        <text class="chip {{form.groupDrawMode === 'onsite' ? 'active' : ''}}" bindtap="onChipTap" data-k="groupDrawMode" data-v="onsite">现场抽签后录入</text>
+        <text class="chip {{form.groupDrawMode === 'onsite' ? 'active' : ''}}" bindtap="onChipTap" data-k="groupDrawMode" data-v="onsite">现场分组后录入</text>
         <text class="chip {{form.groupDrawMode === 'preset' ? 'active' : ''}}" bindtap="onChipTap" data-k="groupDrawMode" data-v="preset">提前设计</text>
       </view>
     </view>
@@ -169,7 +169,7 @@
     <view class="back tap-scale" bindtap="onBack">上一步</view>
     <view wx:if="{{form.format !== 'group_knockout'}}" class="next secondary tap-scale" bindtap="onNext">下一步排程</view>
     <view wx:else class="next secondary tap-scale" bindtap="onNext">进入详情</view>
-    <view class="next tap-scale" bindtap="onPublishRegistration">发布并分享到微信</view>
+    <view class="next tap-scale" bindtap="onPublishRegistration">发布报名</view>
   </view>
   <view wx:elif="{{step === 2 && !registrationPublished && scheduleStarted}}" class="footer">
     <view class="back tap-scale" bindtap="onBack">上一步</view>

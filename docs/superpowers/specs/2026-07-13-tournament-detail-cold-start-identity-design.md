@@ -11,7 +11,7 @@
 3. 参赛者从分享链接进入已发布赛程时，底部显示“分享”和“录入成绩”。
 4. 管理员仍显示“分享、编辑赛程、录入成绩”；没有会员记录的真实游客仍只显示“分享”。
 5. 兼容历史会员字段 `openId` 与 `isAdmin`。
-6. 部署当前版本的 `tournament-brackets`、`tournament-registrations`，并上传只包含本次前端修复的小程序包。
+6. 部署合并后的 `members`、`tournament-brackets`、`tournament-registrations`，并上传保留 2.3.3 审核基线的本次小程序包。
 
 ## 设计
 
@@ -45,6 +45,16 @@ this.identityReady = this.refreshIdentity()
 
 不扩大公共数据字段。部署当前 `_shared/public-profile.js` 契约：赛事报名和赛程对已有会员记录保留昵称；排行榜头像仍按单独规则限制。若部署后仍出现“选手NN”，再按赛程 ID 检查对应 `playerId` 是否缺少会员记录，本次不擅自保留已删除账号的历史昵称。
 
+### 2.3.3 部署基线保留
+
+版本 2.3.4 从隔离 worktree 上传，但不能回退 2.3.3 已上传的 7 月 8 日审核整改：
+
+- `edit-profile` 在头像上传后同步调用 `members.checkAvatarContent`，风险或检测失败时不写入新头像，并删除临时云文件。
+- 首页、赛事空状态和赛事发布页继续使用去“赞助/广告”“关注”“抽签”“发布并分享到微信”的中性文案。
+- `members` 是 2.3.3 的 `msgSecCheck`、`imgSecCheck`、`checkAvatarContent` 内容安全实现与本次 `openid/openId` 查询兼容的合并产物，部署时不得用任一版本整文件覆盖另一版本。
+
+本次明确排除 7 月 10 日的赛果分享图、分享状态、排行榜趋势修复，以及 7 月 13 日主工作区未完成的赛事详情模块重排和小组淘汰状态修复。
+
 ## 失败处理
 
 - `members.get` 失败：`refreshIdentity()` 清空身份并返回 `null`；赛事详情继续公开加载，只显示游客权限。
@@ -65,6 +75,6 @@ this.identityReady = this.refreshIdentity()
 
 ## 部署边界
 
-- 云函数：`tournament-brackets`、`tournament-registrations`；部署脚本自动打包当前 `_shared`。
-- 小程序：版本 `2.3.4`，从隔离 worktree 上传，排除主工作区未提交内容。
-- 不部署当前主工作区中未提交的 `members` 内容安全改动；`members` 的 `openId` 兼容修复随本次代码保留，但不作为匿名赛程修复的线上部署依赖。
+- 云函数：`members`、`tournament-brackets`、`tournament-registrations`；后两个部署包自动包含当前 `_shared`。
+- `members` 部署源必须同时通过内容安全回归和 legacy `openId` 查询回归。
+- 小程序：版本 `2.3.4`，从隔离 worktree 上传；包含本次身份修复和上述 2.3.3 前端基线，只排除明确列出的 7 月 10 日、7 月 13 日后续内容。

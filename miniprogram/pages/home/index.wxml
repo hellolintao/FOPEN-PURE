@@ -36,7 +36,7 @@
     <text wx:if="{{isPrideMonthSkinActive}}" class="hero-pride-label">PRIDE MONTH</text>
     <view class="hero-foot">
       <text class="hero-foot-zh">FU OPEN 官方小程序</text>
-      <text class="hero-foot-en">/ 福州默宁装饰赞助</text>
+      <text class="hero-foot-en">/ TENNIS CLUB SYSTEM</text>
     </view>
   </view>
 

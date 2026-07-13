@@ -4,7 +4,7 @@
 
 **Goal:** Restore member identity before tournament-detail permission derivation, keep guest fallback safe, deploy the current tournament identity cloud contract, and upload mini-program version 2.3.4.
 
-**Architecture:** `App.onLaunch()` owns a single `identityReady` Promise. Tournament detail awaits that Promise before parallel data reads, while failure falls back to public viewing. Compatibility fixes align `admin/isAdmin` and `openid/openId`; deployment packages only the two tournament identity cloud functions plus shared code.
+**Architecture:** `App.onLaunch()` owns a single `identityReady` Promise. Tournament detail awaits that Promise before parallel data reads, while failure falls back to public viewing. Compatibility fixes align `admin/isAdmin` and `openid/openId`; deployment includes the merged `members` content-safety/compatibility function and the two tournament identity functions plus shared code.
 
 **Tech Stack:** WeChat Mini Program JavaScript, WeChat Cloud Functions, Jest 29, WeChat DevTools CLI.
 
@@ -14,8 +14,9 @@
 - Cold-start guest or failed identity lookup must remain public-only and must never receive participant/admin actions.
 - Use one identity restoration Promise per cold start; do not add duplicate `members.get` calls.
 - Preserve the existing public identity deletion boundary: missing member records remain anonymous.
-- Deploy only `tournament-brackets` and `tournament-registrations`; their packages include `_shared` automatically.
-- Upload mini-program version `2.3.4` from the isolated worktree and exclude unrelated dirty files from the primary checkout.
+- Deploy `members`, `tournament-brackets`, and `tournament-registrations`; the tournament packages include `_shared` automatically.
+- Preserve the uploaded 2.3.3 baseline: synchronous avatar checking, profile text checking, unsafe-avatar cleanup, and the July 8 neutral review copy.
+- Upload mini-program version `2.3.4` from the isolated worktree and exclude the July 10 result-cover/ranking work and July 13 unfinished tournament-detail work from the primary checkout.
 
 ---
 
@@ -188,6 +189,11 @@ git commit -m "test(tournament): harden public identity boundaries"
 - Consumes: verified worktree source and WeChat DevTools CLI.
 - Produces: deployed cloud functions and uploaded mini-program version 2.3.4 with audit records.
 
+**Deployment baseline:**
+- `cloudfunctions/members/index.js`, `config.json`, and `__tests__/index.test.js` must retain both the 2.3.3 `msgSecCheck` / `imgSecCheck` / `checkAvatarContent` contract and the new `members.get` `openid/openId` query.
+- The mini-program package must retain the July 8 `edit-profile`, home, match, and tournament-edit production changes with their regression tests.
+- Do not include the primary checkout's July 10 result-cover/rank changes or July 13 tournament-detail module/state changes.
+
 - [ ] **Step 1: Run the complete local verification matrix**
 
 ```bash
@@ -205,10 +211,10 @@ git diff --check
 ```bash
 node scripts/deploy-cloud-functions.js \
   --env cloud1-0gthnke69a09f52a \
-  tournament-brackets tournament-registrations
+  members tournament-brackets tournament-registrations
 ```
 
-Require CLI exit 0 and success=true for both functions before continuing.
+Require CLI exit 0 and success=true for all three functions before continuing.
 
 - [ ] **Step 3: Upload mini-program 2.3.4**
 

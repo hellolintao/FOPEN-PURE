@@ -189,6 +189,31 @@ Page({
     wx.showToast({ title: '头像选择失败', icon: 'none' })
   },
 
+  async checkUploadedAvatarContent(fileID) {
+    const res = await callFunction({
+      name: 'members',
+      data: {
+        action: 'checkAvatarContent',
+        data: { fileID }
+      }
+    })
+    const result = res && res.result
+    if (result && result.success === false) {
+      const error = new Error((result.error && result.error.message) || '头像安全检测失败')
+      error.code = result.error && result.error.code
+      throw error
+    }
+    return result
+  },
+
+  deleteUploadedAvatar(fileID) {
+    if (!fileID || !wx.cloud || typeof wx.cloud.deleteFile !== 'function') return
+    wx.cloud.deleteFile({
+      fileList: [fileID],
+      fail: err => console.warn('[edit-profile] delete unsafe avatar', err)
+    })
+  },
+
   uploadAvatar(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
       this.setData({ avatarPreviewUrl: this.data.formData.avatarUrl || '' })
@@ -207,7 +232,7 @@ Page({
     const uploadOptions = {
       cloudPath,
       filePath,
-      success: uploadRes => {
+      success: async uploadRes => {
         if (!uploadRes || !uploadRes.fileID) {
           this.setData({
             avatarPreviewUrl: this.data.formData.avatarUrl || '',
@@ -215,6 +240,25 @@ Page({
           })
           wx.hideLoading()
           wx.showToast({ title: '头像上传失败', icon: 'none' })
+          return
+        }
+
+        try {
+          await this.checkUploadedAvatarContent(uploadRes.fileID)
+        } catch (err) {
+          if (!err || err.code !== 'CONTENT_SECURITY_RISK') {
+            console.error('[edit-profile] checkAvatarContent', err)
+          }
+          this.deleteUploadedAvatar(uploadRes.fileID)
+          this.setData({
+            avatarPreviewUrl: this.data.formData.avatarUrl || '',
+            avatarUploading: false
+          })
+          wx.hideLoading()
+          wx.showToast({
+            title: err && err.code === 'CONTENT_SECURITY_RISK' ? '发布内容含违规信息' : '头像安全检测失败',
+            icon: 'none'
+          })
           return
         }
 

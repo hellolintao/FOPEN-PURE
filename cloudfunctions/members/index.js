@@ -422,6 +422,176 @@ async function resolveSafeMemberRows(members = []) {
   return await resolveAvatarDisplayUrls((members || []).map(stripLegacyPhoneField))
 }
 
+function contentSecurityFailure(code, message) {
+  return {
+    success: false,
+    error: {
+      code,
+      message
+    }
+  }
+}
+
+function contentRiskFailure() {
+  return contentSecurityFailure('CONTENT_SECURITY_RISK', '发布内容含违规信息')
+}
+
+function contentCheckUnavailableFailure(message) {
+  return contentSecurityFailure('CONTENT_SECURITY_UNAVAILABLE', message || '内容安全检测失败，请稍后重试')
+}
+
+function isSecurityOpenApiAvailable(methodName) {
+  return !!(
+    cloud.openapi &&
+    cloud.openapi.security &&
+    typeof cloud.openapi.security[methodName] === 'function'
+  )
+}
+
+function getSecurityErrorCode(value) {
+  if (!value) return null
+  const rawCode = value.errCode !== undefined ? value.errCode : value.errcode
+  if (rawCode === undefined || rawCode === null || rawCode === '') return null
+  const code = Number(rawCode)
+  return Number.isFinite(code) ? code : null
+}
+
+function isContentRiskCode(code) {
+  return Number(code) === 87014
+}
+
+function hasSecurityApiError(result) {
+  const code = getSecurityErrorCode(result)
+  return code !== null && code !== 0
+}
+
+function hasUnsafeSecurityResult(result) {
+  const suggest = result && result.result && result.result.suggest
+  return !!(suggest && suggest !== 'pass')
+}
+
+async function checkProfileTextContent(content, openid) {
+  const text = typeof content === 'string' ? content.trim() : ''
+  if (!text) return { success: true }
+  if (!openid) {
+    return contentSecurityFailure('MEMBER_REQUIRED', '请先登录')
+  }
+  if (!isSecurityOpenApiAvailable('msgSecCheck')) {
+    return contentCheckUnavailableFailure()
+  }
+
+  try {
+    const result = await cloud.openapi.security.msgSecCheck({
+      openid,
+      scene: 1,
+      version: 2,
+      content: text
+    })
+    const errCode = getSecurityErrorCode(result)
+    if (isContentRiskCode(errCode)) {
+      return contentRiskFailure()
+    }
+    if (hasSecurityApiError(result)) {
+      return contentCheckUnavailableFailure()
+    }
+    if (hasUnsafeSecurityResult(result)) {
+      return contentRiskFailure()
+    }
+    return { success: true, data: result }
+  } catch (err) {
+    if (isContentRiskCode(getSecurityErrorCode(err))) {
+      return contentRiskFailure()
+    }
+    console.warn('[members] profile text content security check failed', err)
+    return contentCheckUnavailableFailure()
+  }
+}
+
+function inferImageContentType(fileID) {
+  const extMatch = String(fileID || '').toLowerCase().match(/\.([a-z0-9]+)(?:[?#].*)?$/)
+  const ext = extMatch ? extMatch[1] : ''
+  if (ext === 'png') return 'image/png'
+  if (ext === 'gif') return 'image/gif'
+  if (ext === 'bmp') return 'image/bmp'
+  return 'image/jpeg'
+}
+
+function normalizeFileContent(fileContent) {
+  if (Buffer.isBuffer(fileContent)) return fileContent
+  if (fileContent instanceof ArrayBuffer) return Buffer.from(fileContent)
+  if (ArrayBuffer.isView(fileContent)) {
+    return Buffer.from(fileContent.buffer, fileContent.byteOffset, fileContent.byteLength)
+  }
+  return null
+}
+
+async function downloadCloudFileContent(fileID) {
+  if (typeof cloud.downloadFile !== 'function') return null
+  const result = await cloud.downloadFile({ fileID })
+  return normalizeFileContent(result && (result.fileContent || result.buffer))
+}
+
+async function checkAvatarFileContent(fileID, openid) {
+  if (!isCloudFileId(fileID)) return { success: true }
+  if (!openid) {
+    return contentSecurityFailure('MEMBER_REQUIRED', '请先登录')
+  }
+  if (!isSecurityOpenApiAvailable('imgSecCheck')) {
+    return contentCheckUnavailableFailure('头像安全检测失败，请稍后重试')
+  }
+
+  let fileContent = null
+  try {
+    fileContent = await downloadCloudFileContent(fileID)
+  } catch (err) {
+    console.warn('[members] download avatar file for content security failed', err)
+  }
+  if (!fileContent) {
+    return contentCheckUnavailableFailure('头像安全检测失败，请稍后重试')
+  }
+
+  try {
+    const result = await cloud.openapi.security.imgSecCheck({
+      media: {
+        contentType: inferImageContentType(fileID),
+        value: fileContent
+      }
+    })
+    const errCode = getSecurityErrorCode(result)
+    if (isContentRiskCode(errCode)) {
+      return contentRiskFailure()
+    }
+    if (hasSecurityApiError(result)) {
+      return contentCheckUnavailableFailure('头像安全检测失败，请稍后重试')
+    }
+    if (hasUnsafeSecurityResult(result)) {
+      return contentRiskFailure()
+    }
+    return {
+      success: true,
+      data: {
+        checked: true
+      }
+    }
+  } catch (err) {
+    if (isContentRiskCode(getSecurityErrorCode(err))) {
+      return contentRiskFailure()
+    }
+    console.warn('[members] avatar content security check failed', err)
+    return contentCheckUnavailableFailure('头像安全检测失败，请稍后重试')
+  }
+}
+
+async function validateProfileContent(payload, openid) {
+  const textCheck = await checkProfileTextContent(payload && payload.name, openid)
+  if (textCheck.success === false) return textCheck
+
+  const avatarCheck = await checkAvatarFileContent(payload && payload.avatarUrl, openid)
+  if (avatarCheck.success === false) return avatarCheck
+
+  return { success: true }
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
@@ -439,6 +609,8 @@ exports.main = async (event, context) => {
       if (exist.data && exist.data.length > 0) {
         return { errMsg: 'already registered', data: stripLegacyPhoneField(exist.data[0]) }
       }
+      const contentCheck = await validateProfileContent(payload, openid)
+      if (contentCheck.success === false) return contentCheck
       const now = db.serverDate()
       payload = withPublicProfileConsentMetadata(payload, now)
       const unclaimed = await collection.where({
@@ -516,6 +688,8 @@ exports.main = async (event, context) => {
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
+      const contentCheck = await validateProfileContent(payload, openid)
+      if (contentCheck.success === false) return contentCheck
       const now = db.serverDate()
       payload = withPublicProfileConsentMetadata(payload, now)
       return await collection.where({ openid }).update({
@@ -539,6 +713,8 @@ exports.main = async (event, context) => {
       if (!existing) {
         return { success: false, error: { code: 'MEMBER_REQUIRED', message: '请先完善资料' } }
       }
+      const contentCheck = await validateProfileContent(payload, openid)
+      if (contentCheck.success === false) return contentCheck
       const now = db.serverDate()
       payload = withPublicProfileConsentMetadata(payload, now)
       const updateData = {
@@ -556,6 +732,13 @@ exports.main = async (event, context) => {
         }
       }
       return { data: stripLegacyPhoneField({ ...existing, ...updateData }) }
+    }
+    case 'checkAvatarContent': {
+      const fileID = data && (data.fileID || data.avatarUrl)
+      if (!fileID) {
+        return { success: false, error: { code: 'MISSING_PARAM', message: 'fileID is required' } }
+      }
+      return await checkAvatarFileContent(fileID, openid)
     }
     case 'revokePublicProfile': {
       if (!openid) {
@@ -639,6 +822,8 @@ exports.main = async (event, context) => {
       if (!v.valid) {
         return { success: false, error: { code: 'VALIDATION_FAILED', message: v.errors.join('; ') } }
       }
+      const contentCheck = await validateProfileContent(payload, openid)
+      if (contentCheck.success === false) return contentCheck
       const now = db.serverDate()
       payload = withPublicProfileConsentMetadata(payload, now)
       return await collection.doc(_id).update({

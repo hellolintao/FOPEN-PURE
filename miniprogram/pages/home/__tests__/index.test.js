@@ -134,6 +134,15 @@ describe('home stats', () => {
     expect(wxml).toContain('PRIDE MONTH')
   })
 
+  test('home hero copy avoids sponsor or advertising wording', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const wxml = fs.readFileSync(path.join(__dirname, '..', 'index.wxml'), 'utf8')
+
+    expect(wxml).not.toContain('赞助')
+    expect(wxml).not.toContain('广告')
+  })
+
   test('home Pride wave uses violet as a compact trailing band', () => {
     const fs = require('fs')
     const path = require('path')
