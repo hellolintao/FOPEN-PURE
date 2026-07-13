@@ -1,0 +1,41 @@
+Date: 2026-07-13 12:26:02 CST
+Environment: cloud1-0gthnke69a09f52a
+Source commit: 817ec8be9bc78d643934c41579a47165a9ecb7b8
+Branch: codex/restore-tournament-identity
+Functions: members tournament-brackets tournament-registrations
+Command: node scripts/deploy-cloud-functions.js --env cloud1-0gthnke69a09f52a members tournament-brackets tournament-registrations
+--- output ---
+Prepared deploy package: /var/folders/8z/pvssbmwj6997pc26g1hytlc40000gn/T/fopen-clouddeploy-Dwqmkl
+
+┌──────────────────────────┬─────────┬────────────┬───────────┐
+│         (index)          │ success │ filesCount │ packSize  │
+├──────────────────────────┼─────────┼────────────┼───────────┤
+│         members          │  true   │     10     │ '56.6 KB' │
+│   tournament-brackets    │  true   │     14     │ '75.1 KB' │
+│ tournament-registrations │  true   │     9      │ '61.5 KB' │
+└──────────────────────────┴─────────┴────────────┴───────────┘
+- initialize
+
+✔ IDE server has started, listening on http://127.0.0.1:28392
+- deploy cloudfunctions
+- fetching cloud env list
+- [members] Fetching info of cloudfunction members
+✔ [members] cloudfunction members exists in the cloud, will update it
+- [members] upload cloud function members - preparing
+✔ [members] upload cloud function members - deploy
+- [tournament-brackets] Fetching info of cloudfunction tournament-brackets
+✔ [tournament-brackets] cloudfunction tournament-brackets exists in the cloud, will update it
+- [tournament-brackets] upload cloud function tournament-brackets - preparing
+✔ [tournament-brackets] upload cloud function tournament-brackets - deploy
+- [tournament-registrations] Fetching info of cloudfunction tournament-registrations
+✔ [tournament-registrations] cloudfunction tournament-registrations exists in the cloud, will update it
+- [tournament-registrations] upload cloud function tournament-registrations - preparing
+✔ [tournament-registrations] upload cloud function tournament-registrations - deploy
+✔ deploy cloudfunctions
+zsh:12: read-only variable: status
+
+Verification: deployment succeeded for all three functions. The CLI returned
+success=true for members, tournament-brackets, and tournament-registrations and
+printed "deploy cloudfunctions" complete. The trailing zsh error came from this
+recording wrapper assigning the reserved variable name `status` after the CLI
+had already completed; it did not affect the cloud deployment.

@@ -1,0 +1,30 @@
+Date: 2026-07-13 12:31 CST
+Tool: WeChat DevTools Stable 2.01.2510280 / base library 3.15.1
+Project: /Users/liaoxiaole/FOPEN-PURE/.worktrees/restore-tournament-identity
+Source commit: 817ec8be9bc78d643934c41579a47165a9ecb7b8
+
+Result: PASS
+
+1. `cli auto` compiled the isolated worktree successfully.
+2. A fresh home-page launch restored the real member immediately: the header
+   displayed `FU OPEN · ADMIN` and `你好，乐乐` without first entering Mine.
+3. Opened `7月练习赛（台风版）` (2026-07-12) at
+   `pages/tournament-detail/index` against the deployed cloud functions.
+4. The roster and schedule displayed real member identities rather than stale
+   `选手NN` placeholders. The 19:20 rows included:
+   - S2: 小飞 / 小童 vs 剑锋 / 抖抖
+   - S3: 小叶 / Ella vs 乐乐 / 林大
+5. The footer displayed `分享` plus the authorized `调整成绩` action instead of
+   only `分享`.
+
+Scope note: the current DevTools member `乐乐` is both in this tournament roster
+and an administrator, so this live smoke proves cold-start identity restoration,
+real-name hydration, and an authorized action footer, but does not isolate the
+non-admin participant-only branch. That branch is covered by the tournament
+detail regression tests.
+
+Non-blocking existing DevTools noise observed: reserved `__tests__` directory
+warning, base-library deprecation notices, and a season lookup warning because
+`season_2026` is not a document id. Tournament detail still loaded completely.
+
+Screenshot: appeal-evidence/devtools-smoke-20260713-tournament-detail.png

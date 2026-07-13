@@ -1,0 +1,23 @@
+Date: 2026-07-13 12:28:18 CST
+Project: /Users/liaoxiaole/FOPEN-PURE/.worktrees/restore-tournament-identity
+Source commit: 817ec8be9bc78d643934c41579a47165a9ecb7b8
+Version: 2.3.4
+Description: 修复分享冷启动参赛者身份与赛事昵称显示
+Command: WeChat DevTools CLI upload --version 2.3.4
+--- output ---
+- 初始化
+
+✔ IDE 已启动，HTTP 服务地址 http://127.0.0.1:28392
+- 准备中
+- 获取 AppID () 权限信息
+✔ 使用 AppID: wxd3c473f026505b61
+- 上传
+
+┌─────────┬──────────┬─────────────┐
+│ (index) │   size   │ size (Byte) │
+├─────────┼──────────┼─────────────┤
+│  TOTAL  │ '1.7 MB' │   1813019   │
+└─────────┴──────────┴─────────────┘
+
+✔ upload
+Exit status: 0
