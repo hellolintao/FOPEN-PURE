@@ -113,6 +113,7 @@ function expectedRegistrationName(relative) {
 function programExecutionRebindsName(node, name) {
   if (Array.isArray(node)) return node.some(child => programExecutionRebindsName(child, name))
   if (!node || typeof node !== 'object' || typeof node.type !== 'string') return false
+  if (node.type === 'FunctionDeclaration' && node.id && node.id.name === name) return true
   if (node.type !== 'Program' && (
     isFunctionNode(node) || node.type === 'ClassDeclaration' || node.type === 'ClassExpression'
   )) return false

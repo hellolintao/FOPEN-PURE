@@ -371,4 +371,37 @@ App({
       expect.objectContaining({ rule: 'launch-eager-member-identity' })
     ])
   })
+
+  test.each([
+    [
+      'Page',
+      'miniprogram/pages/tournament-detail/index.js',
+      `if (false) {
+  function Page() {}
+}
+Page({
+  async ensureIdentity() {
+    app.refreshIdentity()
+  }
+})`,
+      'page-eager-member-identity'
+    ],
+    [
+      'App',
+      'miniprogram/app.js',
+      `if (false) {
+  function App() {}
+}
+App({
+  onLaunch() {
+    this.refreshIdentity()
+  }
+})`,
+      'launch-eager-member-identity'
+    ]
+  ])('rejects %s restore after an Annex B block function declaration', (_name, relative, source, rule) => {
+    expect(identityFindings(relative, source)).toEqual([
+      expect.objectContaining({ rule })
+    ])
+  })
 })
